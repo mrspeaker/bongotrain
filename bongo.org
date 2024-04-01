@@ -1,0 +1,133 @@
+* Mame debugging
+./mame bongo -autoboot_script scripts/bongo.lua
+
+start: mame -debug
+debug -> new memory window
+drop down device dropdown, look for the "zero page" (seems to be 8000-83fff for bongo)
+find the cheat (I just eyeballed it... cheat didn't seem to work?) - lives at 32 (actually 8032!)
+set it with: `do b@8032 = 10`... boom, 10 lives.
+look for write: wpset 8032,1,w 
+0247 ld (hl),a ... one opcode! 77. How to nop it out?
+
+video ram:
+0x3a0 = top left corner
+0x3bf = bottom left corner - 0xF = bottom, second column
+
+330 = copywrite symbol on splash
+
+function printt(t)
+   for i,j in pairs(t) do
+      print(i,j)
+   end
+end
+
+printt(manager.machine.devices[":maincpu"].items)
+
+cpu = manager.machine.devices[":maincpu"]
+mem = cpu.spaces["program"]
+--vid = cpu.items["0/:videoram"]
+
+cheatinit
+cheatnext +
+cheatnext -
+ (eq, ne, https://docs.mamedev.org/debugger/cheats.html)
+ cheatlist
+cheatnextf (search compared to start)
+cheatundo 
+
+ 8002: copy of player ypos?
+ 8004: use screen num, or screen num + 1 ? scratch location?
+ 8005: fire button held down.
+ 800b: controls: jump/left/right: 00J0 LR00
+ 800e: copy of 800b? "normalized"
+ 800f: jump acceleration
+ 8014/15/16(lo): score in bcd
+ 8017/18/19: p2 score
+ 801d: score to add
+ 8020/21: something to do with room layout
+ 8024: bongo/troll jump timer...
+ 8029: Current screen
+ 8032: Lives
+ 8034: attract mode? 0 true, 1 false?
+ 8036: rock reset counter
+ 8037: rock 1 Y pos.
+ 8039: bird flying enabled? (switch to 0 and it stops)
+ 8140: x pos head
+ 8141: sprite head
+ 8143: y pos
+ 8147: y pos legs
+ 8148: troll x pos
+ 814d: dino head sprite
+ 8303; # credits
+ 83f1: player 1/2 button (low byte) : 1 = p1 , 2 = p2
+
+ $934B - bonus covering the number
+
+
+ ; bonus is capped to 40000 
+ 29E8: 3A 62 80    ld   a,($BONUS_MULT)
+29EB: 3C          inc  a
+29EC: FE 04       cp   $04
+29EE: 20 02       jr   nz,$29F2
+29F0: 3E 03       ld   a,$03
+29F2: 32 62 80    ld   ($BONUS_MULT),a
+29F5: AF          xor  a
+29F6: 32 60 80    ld   ($BONUSES),a
+
+* TG
+
+https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
+
+- frameskip set to 0 and "draw all frames"
+- must show dip settings before and after.
+
+  - aspect ration is 224x768 - but this is some internal ratio (from Galaxian).
+    to get it to save at native:
+ mame bongo -snapsize 224x256
+ - f12 snapshot.
+   shft-f12 record mni?
+   ctrl-shift-f12 record avi
+   records to /snap
+
+ record inp file:
+ mame bongo -record bongorecord
+ records to /inp
+playback inp:
+mame bongo -playback bongorecor
+ 
+ 
+-nvram_directory NUL
+
+ You can use -wavwrite to record audio in WAV format.
+
+You can use -mngwrite to record video in MNG format.
+
+You can use -aviwrite to record audio and video in uncompressed AVI format. 
+
+
+-iv 1 on playback lets you "Del" to see dips and speed up playback?
+
+
+0.263W (mame0263-706-g35e85bbfe63)%
+
+
+----------
+Submitters should use MAME version 183 or higher, preferably 183 or 220.
+
+Submitters should name their inp and zip file in the following manner:
+
+xxx_yyy_score_zzz
+
+Example:
+
+elf_bosco_588800_w183.inp inp
+elf_bosco_588800_w183 zip file
+so name the inp the same as the zip
+
+xxx your initials
+yyy rom name
+zzz version of wolfmame
+_separator 
+
+-----------
+
