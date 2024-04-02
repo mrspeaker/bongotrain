@@ -3949,19 +3949,9 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B6C: 77          ld   (hl),a
 1B6D: CD B0 2C    call $2CB0
 1B70: C3 00 10    jp   $BIG_RESET
-1B73: FF          rst  $38
-1B74: FF          rst  $38
-1B75: FF          rst  $38
-1B76: FF          rst  $38
-1B77: FF          rst  $38
-1B78: FF          rst  $38
-1B79: FF          rst  $38
-1B7A: FF          rst  $38
-1B7B: FF          rst  $38
-1B7C: FF          rst  $38
-1B7D: FF          rst  $38
-1B7E: FF          rst  $38
-1B7F: FF          rst  $38
+
+1B73: FF x 13
+
 1B80: 3A 31 80    ld   a,($8031)
 1B83: A7          and  a
 1B84: 20 0B       jr   nz,$1B91
@@ -4002,6 +3992,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1BCF: 3E 08       ld   a,$08
 1BD1: 32 86 80    ld   ($8086),a
 1BD4: C9          ret
+
 1BD5: FF          rst  $38
 1BD6: CD 10 03    call $0310
 1BD9: 1B          dec  de
@@ -4039,18 +4030,16 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1BFD: FF          rst  $38
 1BFE: FF          rst  $38
 1BFF: FF          rst  $38
+
 1C00: 1E 18       ld   e,$18
 1C02: CD A0 13    call $WAIT_VBLANK
 1C05: 1D          dec  e
 1C06: 20 FA       jr   nz,$1C02
 1C08: C9          ret
-1C09: FF          rst  $38
-1C0A: FF          rst  $38
-1C0B: FF          rst  $38
-1C0C: FF          rst  $38
-1C0D: FF          rst  $38
-1C0E: FF          rst  $38
-1C0F: FF          rst  $38
+
+1C09: FF x 7
+
+    ;;
 1C10: 3A 40 81    ld   a,($PLAYER_X)
 1C13: C6 08       add  a,$08
 1C15: 32 4C 81    ld   ($DINO_X),a
@@ -4070,14 +4059,17 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C3A: CD 00 1C    call $1C00
 1C3D: CD 33 0A    call $0A33
 1C40: C9          ret
+
+    ;;
 1C41: 3E 0F       ld   a,$0F
 1C43: 32 44 80    ld   ($8044),a
 1C46: AF          xor  a
 1C47: 32 42 80    ld   ($8042),a
 1C4A: CD E0 24    call $24E0
 1C4D: C9          ret
-1C4E: FF          rst  $38
-1C4F: FF          rst  $38
+
+1C4E: FF FF
+
 1C50: 3A 40 81    ld   a,($PLAYER_X)
 1C53: D6 08       sub  $08
 1C55: 32 4C 81    ld   ($DINO_X),a
@@ -4097,18 +4089,16 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C7A: CD 00 1C    call $1C00
 1C7D: CD 33 0A    call $0A33
 1C80: C9          ret
+
 1C81: E9          jp   (hl)
 1C82: 10 40       djnz $1CC4
 1C84: 01 81 1C    ld   bc,$1C81
 1C87: C5          push bc
 1C88: E5          push hl
 1C89: C9          ret
-1C8A: FF          rst  $38
-1C8B: FF          rst  $38
-1C8C: FF          rst  $38
-1C8D: FF          rst  $38
-1C8E: FF          rst  $38
-1C8F: FF          rst  $38
+
+1C8A: FF x 6
+
 1C90: 3A 40 81    ld   a,($PLAYER_X)
 1C93: 47          ld   b,a
 1C94: 3A 4C 81    ld   a,($DINO_X)
@@ -4146,6 +4136,7 @@ DINO_COLLISION
 1CD1: D0          ret  nc
 1CD2: CD 90 1C    call $1C90
 1CD5: C9          ret
+
 
 1CD6: FF          rst  $38
 1CD7: FF          rst  $38
