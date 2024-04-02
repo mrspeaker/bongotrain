@@ -11,6 +11,10 @@ mem = manager.machine.devices[":maincpu"].spaces["program"]
 --enable's hidden speed-run timers!
 mem:write_direct_u8(0x1410, 0x0); -- nop out ret
 
+--mem:write_direct_u8(0x0d40, 0x0); -- nop out ret
+--mem:write_direct_u8(0x1CD1, 0xC9); -- dino collision
+
+
 started = false
 loop_len = #loop_screens
 loop_idx = 0

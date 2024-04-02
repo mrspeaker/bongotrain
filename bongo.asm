@@ -13,20 +13,40 @@
     ;; P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
     ;; P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
     ;; SCORE_TO_ADD   $801D  ; amount to add to the current score
+    ;; BONGO_ANIM_TIMER $8023 ; [0,1,2] updated every 8 ticks
+    ;; BONGO_JUMP_TIMER $8024 ; amount of ticks keep jumping for
+    ;; BONGO_DIR_FLAG $8025 ; 4 = jump | 2 = left | 1 = right
+    ;; BONGO_TIMER    $8027  ; ticks 0-1f for troll
+
     ;; SCREEN_NUM:    $8029
     ;; SCREEN_NUM_P2: $802A  ; Player 2 screen
+    ;; DINO_COUNTER   $802D  ; Ticks up sparodically? for dino AI?
+
     ;; PLAYER_PREV_X  $8030  ; maybe previous x (used to calc score move)
     ;; LIVES:         $8032
     ;; LIVES_P2:      $8033
     ;; IS_PLAYING:    $8034  ; attract mode = 0, 1P = 1, 2P = 2
 
     ;; IS_HIT_CAGE    $8051  ; did player trigger cage?
+    ;; SPEED_DELAY_P1 $805b  : speed for dino/rocks, start=1f, 10, d, then dec 2...
+    ;; SPEED_DELAY_P2 $805c  : ...until dead. Smaller delay = faster dino/rock fall
+
     ;; BONUSES        $8060
     ;; BONUS_MULT     $8062  ; Bonus multiplier.
     ;; PLAYER_X:      $8140  ; might be multip purpose? other sprites too?
     ;; PLAYER_Y:      $8143
     ;; PLAYER_Y_LEGS: $8147
+    ;; BONGO_X        $8148  ; troll x pos?
+    ;; BONGO_FRAME    $8149  ; anim frame
+    ;; BONGO_COL      $814A  ; troll color
+    ;; BONGO_Y        $814B  ; troll y pos
+    ;; DINO_X         $814C
+    ;; DINO_FRAME     $814D
+    ;; DINO_Y         $814F
+    ;; DINO_X_MIN8    $8150  ; seems like x - 8
+    ;; DINO_Y_ADD16   $8153  ; seems like y + 10
 
+    ;; TICK_NUM       $8312  ; adds 1 every tick
     ;; INPUT_BUTTONS  $83F1  ; copied to 800C and 800D
     ;; INPUT_BUTTONS_2 $83F2 ?
 
@@ -41,6 +61,10 @@
 ;;;  constants
 
     ;; $SCREEN_WIDTH   $E0 ; 224
+    ;; ROUND1_SPEED    $1f
+    ;; ROUND2_SPEED    $10
+    ;; ROUND3_SPEED    $0D
+
 
 0000: A2          and  d
 0001: 32 01 B0    ld   ($B001),a
@@ -97,7 +121,7 @@
 0074: 20 03       jr   nz,$0079
 0076: CD 90 01    call $DID_PLAYER_PRESS_START
 0079: 06 01       ld   b,$01
-007B: CD 00 11    call $1100
+007B: CD 00 11    call $FALLING_ROCKS
 007E: CD 20 24    call $2420
 0081: 00          nop
 0082: 3A 00 A0    ld   a,($A000) ; coin 2 addr
@@ -282,9 +306,9 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01E6: C9          ret
 ;;;
 
-01E7: 3E 1F       ld   a,$1F
-01E9: 32 5B 80    ld   ($805B),a
-01EC: 32 5C 80    ld   ($805C),a
+01E7: 3E 1F       ld   a,$ROUND1_SPEED
+01E9: 32 5B 80    ld   ($SPEED_DELAY_P1),a
+01EC: 32 5C 80    ld   ($SPEED_DELAY_P2),a
 01EF: 00          nop
 01F0: 3A F2 83    ld   a,($83F2)
 01F3: E6 06       and  $06
@@ -653,9 +677,9 @@ COINAGE_ROUTINE
 04BD: 3A 04 80    ld   a,($PLAYER_NUM)
 04C0: A7          and  a
 04C1: 20 05       jr   nz,$04C8
-04C3: 3A 5B 80    ld   a,($805B)
+04C3: 3A 5B 80    ld   a,($SPEED_DELAY_P1)
 04C6: 18 03       jr   $04CB
-04C8: 3A 5C 80    ld   a,($805C)
+04C8: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
 04CB: 47          ld   b,a
 04CC: 3A 5D 80    ld   a,($805D)
 04CF: 3C          inc  a
@@ -907,7 +931,7 @@ NORMALIZE_INPUT
 067E: FF x 10
 
 PLAYER_INPUT
-0688: 3A 12 83    ld   a,($8312)
+0688: 3A 12 83    ld   a,($TICK_NUM)
 068B: E6 03       and  $03
 068D: C0          ret  nz
 068E: 3A 12 80    ld   a,($8012)
@@ -1004,53 +1028,20 @@ PLAYER_PHYSICS
 0725: FF          rst  $38
 0726: FF          rst  $38
 0727: FF          rst  $38
-0728: FA 8C 8D    jp   m,$8D8C
-072B: 0C          inc  c
-072C: FA 8E 8F    jp   m,$8F8E
-072F: 0C          inc  c
-0730: FA 90 91    jp   m,$9190
-0733: 06 FA       ld   b,$FA
-0735: 90          sub  b
-0736: 96          sub  (hl)
-0737: 00          nop
-0738: FA 90 91    jp   m,$9190
-073B: FA FA 8E    jp   m,$8EFA
-073E: 8F          adc  a,a
-073F: F4 FA 8C    call p,$8CFA
-0742: 8D          adc  a,l
-0743: F4 FF FF    call p,$FFFF
-0746: FF          rst  $38
-0747: FF          rst  $38
-0748: FF          rst  $38
-0749: FF          rst  $38
-074A: FF          rst  $38
-074B: FF          rst  $38
-074C: FF          rst  $38
-074D: FF          rst  $38
-074E: FF          rst  $38
-074F: FF          rst  $38
-0750: 06 0C       ld   b,$0C
-0752: 0D          dec  c
-0753: 0C          inc  c
-0754: 06 0E       ld   b,$0E
-0756: 0F          rrca
-0757: 0C          inc  c
-0758: 06 10       ld   b,$10
-075A: 11 06 06    ld   de,$0606
-075D: 10 16       djnz $0775
-075F: 00          nop
-0760: 06 10       ld   b,$10
-0762: 11 FA 06    ld   de,$06FA
-0765: 0E 0F       ld   c,$0F
-0767: F4 06 0C    call p,$0C06
-076A: 0D          dec  c
-076B: F4 FF FF    call p,$FFFF
-076E: FF          rst  $38
-076F: FF          rst  $38
-0770: FF          rst  $38
-0771: FF          rst  $38
-0772: FF          rst  $38
-0773: FF          rst  $38
+
+PHYS_LOOKUP
+0728: FA 8C 8D 0C FA 8E 8F 0C
+0730: FA 90 91 06 FA 90 96 00
+0738: FA 90 91 FA FA 8E 8F F4
+0740: FA 8C 8D F4 FF FF FF FF
+0748: FF FF FF FF FF FF FF FF
+
+PHYS_LOOKUP2
+0750: 06 0C 0D 0C 06 0E 0F 0C
+0758: 06 10 11 06 06 10 16 00
+0760: 06 10 11 FA 06 0E 0F F4
+0768: 06 0C 0D F4 FF FF FF FF
+0770: FF FF FF FF
 
 PHYSICS_SOMETHING
 0774: 3A 16 83    ld   a,($8316) ; timer?
@@ -1067,7 +1058,7 @@ PHYSICS_SOMETHING
 0789: 3A 0E 80    ld   a,($CONTROLSN)
 078C: CB 57       bit  2,a      ; right
 078E: 28 07       jr   z,$0797
-0790: 21 28 07    ld   hl,$0728
+0790: 21 28 07    ld   hl,$PHYS_LOOKUP
 0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
@@ -1116,7 +1107,7 @@ PHYSICS_SOMETHING
 
 07E0: CB 5F       bit  3,a      ; left?
 07E2: 28 07       jr   z,$07EB
-07E4: 21 50 07    ld   hl,$0750
+07E4: 21 50 07    ld   hl,$PHYS_LOOKUP2
 07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
 07EB: 21 48 09    ld   hl,$0948 ; not left or right?
@@ -1280,53 +1271,36 @@ PHYSICS_SOMETHING
     
 08DC: FF x 12
     
-08E8: 3A 12 83    ld   a,($8312)
+08E8: 3A 12 83    ld   a,($TICK_NUM)
 08EB: E6 07       and  $07
 08ED: 20 15       jr   nz,$0904
-08EF: 3A 23 80    ld   a,($8023)
+08EF: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
 08F2: 3C          inc  a
 08F3: E6 03       and  $03
 08F5: 00          nop
 08F6: 00          nop
 08F7: 00          nop
-08F8: 32 23 80    ld   ($8023),a
-08FB: 21 18 09    ld   hl,$0918
+08F8: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
+08FB: 21 18 09    ld   hl,$BONGO_LOOKUP3
 08FE: 85          add  a,l
 08FF: 6F          ld   l,a
 0900: 7E          ld   a,(hl)
-0901: 32 49 81    ld   ($8149),a
-0904: 3A 12 83    ld   a,($8312)
+0901: 32 49 81    ld   ($BONGO_FRAME),a
+0904: 3A 12 83    ld   a,($TICK_NUM)
 0907: E6 01       and  $01
 0909: C0          ret  nz
-090A: 3A 48 81    ld   a,($8148)
+090A: 3A 48 81    ld   a,($BONGO_X)
 090D: 3C          inc  a
-090E: 32 48 81    ld   ($8148),a
+090E: 32 48 81    ld   ($BONGO_X),a
 0911: C9          ret
     
 0912: FF x 6
 
-0918: 29          add  hl,hl
-0919: 2A 2B 2A    ld   hl,($2A2B)
-091C: FF          rst  $38
-091D: FF          rst  $38
-091E: FF          rst  $38
-091F: FF          rst  $38
-0920: A9          xor  c
-0921: AA          xor  d
-0922: AB          xor  e
-0923: AA          xor  d
-0924: FF          rst  $38
-0925: FF          rst  $38
-0926: FF          rst  $38
-0927: FF          rst  $38
-0928: FF          rst  $38
-0929: FF          rst  $38
-092A: FF          rst  $38
-092B: FF          rst  $38
-092C: FF          rst  $38
-092D: FF          rst  $38
-092E: FF          rst  $38
-092F: FF          rst  $38
+BONGO_LOOKUP3
+0918: 29 2A 2B 2A FF FF FF FF
+0920: A9 AA AB AA FF FF FF FF
+0928: FF FF FF FF FF FF FF FF
+
 0930: 3E 18       ld   a,$18
 0932: 32 45 81    ld   ($8145),a
 0935: 3E 04       ld   a,$04
@@ -1448,27 +1422,27 @@ ON_GROUND_KIND_OF_CHECK
     
 09FF: FF x 9
     
-0A08: 3A 12 83    ld   a,($8312)
+0A08: 3A 12 83    ld   a,($TICK_NUM)
 0A0B: E6 07       and  $07
 0A0D: 20 15       jr   nz,$0A24
-0A0F: 3A 23 80    ld   a,($8023)
+0A0F: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
 0A12: 3C          inc  a
 0A13: E6 03       and  $03
 0A15: 00          nop
 0A16: 00          nop
 0A17: 00          nop
-0A18: 32 23 80    ld   ($8023),a
+0A18: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
 0A1B: 21 20 09    ld   hl,$0920
 0A1E: 85          add  a,l
 0A1F: 6F          ld   l,a
 0A20: 7E          ld   a,(hl)
-0A21: 32 49 81    ld   ($8149),a
-0A24: 3A 12 83    ld   a,($8312)
+0A21: 32 49 81    ld   ($BONGO_FRAME),a
+0A24: 3A 12 83    ld   a,($TICK_NUM)
 0A27: E6 01       and  $01
 0A29: C0          ret  nz
-0A2A: 3A 48 81    ld   a,($8148)
+0A2A: 3A 48 81    ld   a,($BONGO_X)
 0A2D: 3D          dec  a
-0A2E: 32 48 81    ld   ($8148),a
+0A2E: 32 48 81    ld   ($BONGO_X),a
 0A31: C9          ret
 0A32: FF          rst  $38
 0A33: 00          nop
@@ -1476,11 +1450,12 @@ ON_GROUND_KIND_OF_CHECK
 0A35: 00          nop
 0A36: 00          nop
 0A37: 00          nop
+
 0A38: 3E 01       ld   a,$01
 0A3A: 32 12 80    ld   ($8012),a
 0A3D: C9          ret
-0A3E: FF          rst  $38
-0A3F: FF          rst  $38
+
+0A3E: FF FF
 
 ;;;
 JUMP_UPWARDS
@@ -1623,7 +1598,7 @@ JUMP_UPWARDS
 0B9C: FD 35 04    dec  (iy+$04)
 0B9F: C9          ret
 0BA0: AF          xor  a
-0BA1: 32 2D 80    ld   ($802D),a
+0BA1: 32 2D 80    ld   ($DINO_COUNTER),a
 0BA4: C9          ret
 0BA5: FF x 11
     
@@ -1847,21 +1822,24 @@ JUMP_UPWARDS_2
 0D2D: C9          ret
 0D2E: FF          rst  $38
 0D2F: FF          rst  $38
-0D30: 3A 24 80    ld   a,($8024)
+0D30: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D33: A7          and  a
 0D34: C0          ret  nz
 0D35: 3E 10       ld   a,$10
-0D37: 32 24 80    ld   ($8024),a
+0D37: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
 0D3A: C9          ret
 
 0D3B: FF x 5
 
     ;; Oooh, mystery function - commented out.
-REDACTED
+    ;; Think it was going to place Bongo on the
+    ;; bottom right for levels where player is
+    ;; up top.
+MOVE_BONGO_REDACTED
 0D40: C9          ret           ; just rets.
-0D41: 3A 48 81    ld   a,($8148)
+0D41: 3A 48 81    ld   a,($BONGO_X)
 0D44: 67          ld   h,a
-0D45: 32 4B 81    ld   ($814B),a
+0D45: 32 4B 81    ld   ($BONGO_Y),a
 0D48: C6 10       add  a,$10
 0D4A: 6F          ld   l,a
 0D4B: CD 68 09    call $0968
@@ -1871,61 +1849,58 @@ REDACTED
 0D51: D6 C0       sub  $C0
 0D53: D8          ret  c
 0D54: AF          xor  a
-0D55: 32 24 80    ld   ($8024),a
+0D55: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
 0D58: C9          ret
 
 0D59: FF x 7
 
-0D60: CD 40 0D    call $REDACTED
-0D63: 3A 24 80    ld   a,($8024)
+0D60: CD 40 0D    call $MOVE_BONGO_REDACTED
+0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D66: A7          and  a
 0D67: C8          ret  z
 0D68: 3D          dec  a
-0D69: 32 24 80    ld   ($8024),a
+0D69: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
 0D6C: E6 08       and  $08
 0D6E: 28 09       jr   z,$0D79
-0D70: 3A 4B 81    ld   a,($814B)
+0D70: 3A 4B 81    ld   a,($BONGO_Y)
 0D73: 3D          dec  a
 0D74: 3D          dec  a
-0D75: 32 4B 81    ld   ($814B),a
+0D75: 32 4B 81    ld   ($BONGO_Y),a
 0D78: C9          ret
-0D79: 3A 4B 81    ld   a,($814B)
+0D79: 3A 4B 81    ld   a,($BONGO_Y)
 0D7C: 3C          inc  a
 0D7D: 3C          inc  a
-0D7E: 32 4B 81    ld   ($814B),a
+0D7E: 32 4B 81    ld   ($BONGO_Y),a
 0D81: C9          ret
 
 0D82: FF x 6
 
-0D88: 3A 12 83    ld   a,($8312)
+0D88: 3A 12 83    ld   a,($TICK_NUM)
 0D8B: E6 07       and  $07
 0D8D: C0          ret  nz
-0D8E: 3A 23 80    ld   a,($8023)
+0D8E: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
 0D91: 3C          inc  a
 0D92: E6 03       and  $03
 0D94: 00          nop
 0D95: 00          nop
 0D96: 00          nop
-0D97: 32 23 80    ld   ($8023),a
+0D97: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
 0D9A: 21 B0 0D    ld   hl,$0DB0
 0D9D: 85          add  a,l
 0D9E: 6F          ld   l,a
 0D9F: 7E          ld   a,(hl)
-0DA0: 32 49 81    ld   ($8149),a
+0DA0: 32 49 81    ld   ($BONGO_X),a
 0DA3: C9          ret
 
 0DA4: FF x 12
-0DB0: 05          dec  b
-0DB1: 06 07       ld   b,$07
-0DB3: 08          ex   af,af'
-0DB4: FF          rst  $38
-0DB5: FF          rst  $38
-0DB6: FF          rst  $38
-0DB7: FF          rst  $38
+
+0DB0: 05 06 07 08 FF FF FF FF
+
+DRAW_BONGO
 0DB8: AF          xor  a
-0DB9: 32 24 80    ld   ($8024),a
-0DBC: 32 25 80    ld   ($8025),a
-0DBF: 32 27 80    ld   ($8027),a
+0DB9: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
+0DBC: 32 25 80    ld   ($BONGO_DIR_FLAG),a
+0DBF: 32 27 80    ld   ($BONGO_TIMER),a
 0DC2: 3A 04 80    ld   a,($PLAYER_NUM)
 0DC5: A7          and  a
 0DC6: 20 05       jr   nz,$0DCD
@@ -1934,78 +1909,35 @@ REDACTED
 0DCD: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 0DD0: 3D          dec  a
 0DD1: CB 27       sla  a
-0DD3: 21 00 0E    ld   hl,$0E00
+0DD3: 21 00 0E    ld   hl,$BONGO_LOOKUP2
 0DD6: 85          add  a,l
 0DD7: 6F          ld   l,a
 0DD8: 7E          ld   a,(hl)
-0DD9: 32 48 81    ld   ($8148),a
+0DD9: 32 48 81    ld   ($BONGO_X),a
 0DDC: 23          inc  hl
 0DDD: 7E          ld   a,(hl)
-0DDE: 32 4B 81    ld   ($814B),a
+0DDE: 32 4B 81    ld   ($BONGO_Y),a
 0DE1: 3E 12       ld   a,$12
-0DE3: 32 4A 81    ld   ($814A),a
+0DE3: 32 4A 81    ld   ($BONGO_COL),a
 0DE6: 3E 05       ld   a,$05
-0DE8: 32 49 81    ld   ($8149),a
+0DE8: 32 49 81    ld   ($BONGO_FRAME),a
 0DEB: C9          ret
-0DEC: FF          rst  $38
-0DED: FF          rst  $38
-0DEE: FF          rst  $38
-0DEF: FF          rst  $38
-0DF0: FF          rst  $38
-0DF1: FF          rst  $38
-0DF2: FF          rst  $38
-0DF3: FF          rst  $38
-0DF4: FF          rst  $38
-0DF5: FF          rst  $38
-0DF6: FF          rst  $38
-0DF7: FF          rst  $38
-0DF8: FF          rst  $38
-0DF9: FF          rst  $38
-0DFA: FF          rst  $38
-0DFB: FF          rst  $38
-0DFC: FF          rst  $38
-0DFD: FF          rst  $38
-0DFE: FF          rst  $38
-0DFF: FF          rst  $38
-0E00: E0          ret  po
-0E01: 38 E0       jr   c,$0DE3
-0E03: 38 E0       jr   c,$0DE5
-0E05: 38 E0       jr   c,$0DE7
-0E07: 38 E0       jr   c,$0DE9
-0E09: 38 E0       jr   c,$0DEB
-0E0B: 38 E0       jr   c,$0DED
-0E0D: 38 E0       jr   c,$0DEF
-0E0F: 38 E0       jr   c,$0DF1
-0E11: 38 E0       jr   c,$0DF3
-0E13: 38 E0       jr   c,$0DF5
-0E15: 38 E0       jr   c,$0DF7
-0E17: 38 E0       jr   c,$0DF9
-0E19: 38 E0       jr   c,$0DFB
-0E1B: 38 E0       jr   c,$0DFD
-0E1D: 38 D0       jr   c,$0DEF
-0E1F: 38 E0       jr   c,$0E01
-0E21: 38 E0       jr   c,$0E03
-0E23: 38 D0       jr   c,$0DF5
-0E25: 38 E0       jr   c,$0E07
-0E27: 38 E0       jr   c,$0E09
-0E29: 38 E0       jr   c,$0E0B
-0E2B: 38 E0       jr   c,$0E0D
-0E2D: 38 E0       jr   c,$0E0F
-0E2F: 38 E0       jr   c,$0E11
-0E31: 38 E0       jr   c,$0E13
-0E33: 38 D0       jr   c,$0E05
-0E35: 38 00       jr   c,$0E37
-0E37: 00          nop
-0E38: 00          nop
-0E39: 00          nop
-0E3A: 00          nop
-0E3B: 00          nop
-0E3C: 00          nop
-0E3D: 00          nop
-0E3E: FF          rst  $38
-0E3F: FF          rst  $38
-0E40: 3A 25 80    ld   a,($8025)
-0E43: E6 03       and  $03
+
+0DEC: FF x 20
+
+BONGO_LOOKUP2
+0E00: E0 38 E0 38 E0 38 E0 38
+0E08: E0 38 E0 38 E0 38 E0 38
+0E10: E0 38 E0 38 E0 38 E0 38
+0E18: E0 38 E0 38 E0 38 D0 38
+0E20: E0 38 E0 38 D0 38 E0 38
+0E28: E0 38 E0 38 E0 38 E0 38
+0E30: E0 38 E0 38 D0 38 00 00
+0E38: 00 00 00 00 00 00 FF FF
+
+    ;;
+0E40: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
+0E43: E6 03       and  $03      ;left or right
 0E45: 20 05       jr   nz,$0E4C
 0E47: CD 88 0D    call $0D88
 0E4A: 18 0C       jr   $0E58
@@ -2014,26 +1946,16 @@ REDACTED
 0E50: CD E8 08    call $08E8
 0E53: 18 03       jr   $0E58
 0E55: CD 08 0A    call $0A08
-0E58: 3A 25 80    ld   a,($8025)
-0E5B: CB 57       bit  2,a
+0E58: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
+0E5B: CB 57       bit  2,a      ; left
 0E5D: C8          ret  z
 0E5E: CD 30 0D    call $0D30
 0E61: C9          ret
-0E62: FF          rst  $38
-0E63: FF          rst  $38
-0E64: FF          rst  $38
-0E65: FF          rst  $38
-0E66: FF          rst  $38
-0E67: FF          rst  $38
-0E68: FF          rst  $38
-0E69: FF          rst  $38
-0E6A: FF          rst  $38
-0E6B: FF          rst  $38
-0E6C: FF          rst  $38
-0E6D: FF          rst  $38
-0E6E: FF          rst  $38
-0E6F: FF          rst  $38
-0E70: 3A 12 83    ld   a,($8312)
+
+0E62: FF x 14
+
+BONGO_ANIMATE
+0E70: 3A 12 83    ld   a,($TICK_NUM)
 0E73: E6 07       and  $07
 0E75: C0          ret  nz
 0E76: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -2047,7 +1969,7 @@ REDACTED
 0E88: 78          ld   a,b
 0E89: 3D          dec  a
 0E8A: CB 27       sla  a
-0E8C: 21 C0 0E    ld   hl,$0EC0
+0E8C: 21 C0 0E    ld   hl,$BONGO_LOOKUP
 0E8F: 85          add  a,l
 0E90: 6F          ld   l,a
 0E91: 4E          ld   c,(hl)
@@ -2055,154 +1977,53 @@ REDACTED
 0E93: 46          ld   b,(hl)
 0E94: C5          push bc
 0E95: E1          pop  hl
-0E96: 3A 27 80    ld   a,($8027)
+0E96: 3A 27 80    ld   a,($BONGO_TIMER)
 0E99: 3C          inc  a
-0E9A: FE 20       cp   $20
+0E9A: FE 20       cp   $20      ; timer hit top, reset
 0E9C: 20 01       jr   nz,$0E9F
 0E9E: AF          xor  a
-0E9F: 32 27 80    ld   ($8027),a
+0E9F: 32 27 80    ld   ($BONGO_TIMER),a
 0EA2: 85          add  a,l
 0EA3: 6F          ld   l,a
-0EA4: 7E          ld   a,(hl)
-0EA5: 32 25 80    ld   ($8025),a
+0EA4: 7E          ld   a,(hl)   ; animation lookup
+0EA5: 32 25 80    ld   ($BONGO_DIR_FLAG),a
 0EA8: C9          ret
-0EA9: FF          rst  $38
-0EAA: FF          rst  $38
-0EAB: FF          rst  $38
-0EAC: FF          rst  $38
-0EAD: FF          rst  $38
-0EAE: FF          rst  $38
-0EAF: FF          rst  $38
-0EB0: FF          rst  $38
-0EB1: FF          rst  $38
-0EB2: FF          rst  $38
-0EB3: FF          rst  $38
-0EB4: FF          rst  $38
-0EB5: FF          rst  $38
-0EB6: FF          rst  $38
-0EB7: FF          rst  $38
-0EB8: FF          rst  $38
-0EB9: FF          rst  $38
-0EBA: FF          rst  $38
-0EBB: FF          rst  $38
-0EBC: FF          rst  $38
-0EBD: FF          rst  $38
-0EBE: FF          rst  $38
-0EBF: FF          rst  $38
-0EC0: 08          ex   af,af'
-0EC1: 0F          rrca
-0EC2: 08          ex   af,af'
-0EC3: 0F          rrca
-0EC4: 68          ld   l,b
-0EC5: 0F          rrca
-0EC6: 08          ex   af,af'
-0EC7: 0F          rrca
-0EC8: 08          ex   af,af'
-0EC9: 0F          rrca
-0ECA: 68          ld   l,b
-0ECB: 0F          rrca
-0ECC: 08          ex   af,af'
-0ECD: 0F          rrca
-0ECE: 08          ex   af,af'
-0ECF: 0F          rrca
-0ED0: 68          ld   l,b
-0ED1: 0F          rrca
-0ED2: 08          ex   af,af'
-0ED3: 0F          rrca
-0ED4: 68          ld   l,b
-0ED5: 0F          rrca
-0ED6: 08          ex   af,af'
-0ED7: 0F          rrca
-0ED8: 08          ex   af,af'
-0ED9: 0F          rrca
-0EDA: 68          ld   l,b
-0EDB: 0F          rrca
-0EDC: 08          ex   af,af'
-0EDD: 0F          rrca
-0EDE: 08          ex   af,af'
-0EDF: 0F          rrca
-0EE0: 08          ex   af,af'
-0EE1: 0F          rrca
-0EE2: 08          ex   af,af'
-0EE3: 0F          rrca
-0EE4: 08          ex   af,af'
-0EE5: 0F          rrca
-0EE6: 08          ex   af,af'
-0EE7: 0F          rrca
-0EE8: 68          ld   l,b
-0EE9: 0F          rrca
-0EEA: 68          ld   l,b
-0EEB: 0F          rrca
-0EEC: 08          ex   af,af'
-0EED: 0F          rrca
-0EEE: 68          ld   l,b
-0EEF: 0F          rrca
-0EF0: 68          ld   l,b
-0EF1: 0F          rrca
-0EF2: 08          ex   af,af'
-0EF3: 0F          rrca
-0EF4: 08          ex   af,af'
-0EF5: 0F          rrca
-0EF6: 00          nop
-0EF7: 00          nop
-0EF8: 00          nop
-0EF9: 00          nop
-0EFA: 00          nop
-0EFB: 00          nop
-0EFC: 00          nop
-0EFD: 00          nop
-0EFE: 00          nop
-0EFF: 00          nop
-0F00: FF          rst  $38
-0F01: FF          rst  $38
-0F02: FF          rst  $38
-0F03: FF          rst  $38
-0F04: FF          rst  $38
-0F05: FF          rst  $38
-0F06: FF          rst  $38
-0F07: FF          rst  $38
-0F08: 01 01 01    ld   bc,$0101
-0F0B: 01 06 05    ld   bc,$0506
-0F0E: 02          ld   (bc),a
-0F0F: 02          ld   (bc),a
-0F10: 02          ld   (bc),a
-0F11: 02          ld   (bc),a
-0F12: 04          inc  b
-0F13: 00          nop
-0F14: 00          nop
-0F15: 00          nop
-0F16: 00          nop
-0F17: 00          nop
-0F18: 00          nop
-0F19: 04          inc  b
-0F1A: 02          ld   (bc),a
-0F1B: 02          ld   (bc),a
-0F1C: 02          ld   (bc),a
-0F1D: 02          ld   (bc),a
-0F1E: 05          dec  b
-0F1F: 06 01       ld   b,$01
-0F21: 01 01 01    ld   bc,$0101
-0F24: 00          nop
-0F25: 00          nop
-0F26: 00          nop
-0F27: 00          nop
-0F28: FF          rst  $38
-0F29: FF          rst  $38
-0F2A: FF          rst  $38
-0F2B: FF          rst  $38
-0F2C: FF          rst  $38
-0F2D: FF          rst  $38
-0F2E: FF          rst  $38
-0F2F: FF          rst  $38
-0F30: 3A 48 81    ld   a,($8148)
+
+0EA9: FF x 23
+
+    ;; what's this data for?
+BONGO_LOOKUP
+0EC0: 08 0F 08 0F 68 0F 08 0F
+0EC8: 08 0F 68 0F 08 0F 08 0F
+0ED0: 68 0F 08 0F 68 0F 08 0F
+0ED8: 08 0F 68 0F 08 0F 08 0F
+0EE0: 08 0F 08 0F 08 0F 08 0F
+0EE8: 68 0F 68 0F 08 0F 68 0F
+0EF0: 68 0F 08 0F 08 0F 00 00
+0EF8: 00 00 00 00 00 00 00 00
+
+0F00: FF x 8
+
+    ;; this looks like bongo anim data
+    ;; 4 = jump | 2 = left | 1 = right
+BONGO_ANIM_DATA
+0F08: 01 01 01 01 06 05 02 02
+0F10: 02 02 04 00 00 00 00 00
+0F18: 00 04 02 02 02 02 05 06
+0F20: 01 01 01 01 00 00 00 00
+
+0F28: FF x 8
+
+    ;;
+0F30: 3A 48 81    ld   a,($BONGO_X)
 0F33: 37          scf
 0F34: 3F          ccf
 0F35: C6 08       add  a,$08
 0F37: 30 0B       jr   nc,$0F44
 0F39: AF          xor  a
-0F3A: 32 25 80    ld   ($8025),a
+0F3A: 32 25 80    ld   ($BONGO_DIR_FLAG),a ; stop moving
 0F3D: 3E FF       ld   a,$FF
-0F3F: 32 48 81    ld   ($8148),a
+0F3F: 32 48 81    ld   ($BONGO_X),a
 0F42: E1          pop  hl
 0F43: C9          ret
 0F44: 3A 43 81    ld   a,($PLAYER_Y)
@@ -2216,21 +2037,12 @@ REDACTED
 0F52: 3F          ccf
 0F53: C6 70       add  a,$70
 0F55: D0          ret  nc
-0F56: 3E 01       ld   a,$01
-0F58: 32 25 80    ld   ($8025),a
+0F56: 3E 01       ld   a,$01    ; right
+0F58: 32 25 80    ld   ($BONGO_DIR_FLAG),a
 0F5B: E1          pop  hl
 0F5C: C9          ret
-0F5D: FF          rst  $38
-0F5E: FF          rst  $38
-0F5F: FF          rst  $38
-0F60: FF          rst  $38
-0F61: FF          rst  $38
-0F62: FF          rst  $38
-0F63: FF          rst  $38
-0F64: FF          rst  $38
-0F65: FF          rst  $38
-0F66: FF          rst  $38
-0F67: FF          rst  $38
+0F5D: FF x 11
+
 0F68: 00          nop
 0F69: 00          nop
 0F6A: 00          nop
@@ -2358,7 +2170,7 @@ BIG_RESET
 103A: CD 98 08    call $0898
 103D: CD B8 12    call $12B8
 1040: CD D0 0A    call $0AD0
-1043: CD B8 0D    call $0DB8
+1043: CD B8 0D    call $DRAW_BONGO
 1046: 3E 02       ld   a,$02
 1048: 32 3F 81    ld   ($813F),a
 104B: CD E0 10    call $10E0
@@ -2425,6 +2237,7 @@ EXTRA_LIFE
 
 10CA: FF x 23
 
+    ;;
 10E0: 3A 00 80    ld   a,($8000)
 10E3: 3C          inc  a
 10E4: FE 03       cp   $03
@@ -2436,18 +2249,23 @@ EXTRA_LIFE
 10F0: CD 90 13    call $1390
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
+
 ;;;  um, nothing calls 10f7?
 10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
-
-10FB: CD 18 25    call $2518
+;;;  or 10fb! - done in an interupt?
+10FB: CD 18 25    call $TEST_THEN_DINO_COLLISION
 10FE: C9          ret
-10FF: FF          rst  $38
-1100: 3A 12 83    ld   a,($8312)
+
+10FF: FF
+
+FALLING_ROCKS
+1100: 3A 12 83    ld   a,($TICK_NUM)
 1103: 3C          inc  a
-1104: 32 12 83    ld   ($8312),a
-1107: CD 80 16    call $1680
+1104: 32 12 83    ld   ($TICK_NUM),a
+1107: CD 80 16    call $UPDATE_FALLING_ROCKS
 110A: C9          ret
+
 110B: FF FF FF FF FF
 
 1110: F5          push af
@@ -2530,10 +2348,10 @@ MAIN_LOOP
 1194: CD 50 17    call $1750
 1197: CD 88 08    call $0888
 119A: CD 60 0D    call $0D60    ; also calls $REDACTED
-119D: CD 40 0D    call $REDACTED
+119D: CD 40 0D    call $MOVE_BONGO_REDACTED
 11A0: CD 40 0E    call $0E40
-11A3: CD 70 0E    call $0E70
-11A6: CD F0 19    call $19F0
+11A3: CD 70 0E    call $BONGO_ANIMATE
+11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $04BA
 11AC: CD 50 2B    call $2B50
 11AF: CD A8 3B    call $3BA8
@@ -2804,7 +2622,7 @@ MAIN_LOOP
 137F: 32 02 80    ld   ($8002),a
 1382: 32 03 80    ld   ($8003),a
 1385: CD 20 18    call $1820
-1388: CD B8 0D    call $0DB8
+1388: CD B8 0D    call $DRAW_BONGO
 138B: CD 08 04    call $0408
 138E: C9          ret
 138F: FF          rst  $38
@@ -2837,7 +2655,7 @@ WAIT_VBLANK
 
 13B7: FF
 
-13B8: 21 48 81    ld   hl,$8148
+13B8: 21 48 81    ld   hl,$BONGO_X
 13BB: 36 00       ld   (hl),$00
 13BD: 23          inc  hl
 13BE: 7D          ld   a,l
@@ -3231,16 +3049,17 @@ INIT_GAME
 167D: ED          db   $ed
 167E: EF          rst  $28
 167F: F1          pop  af
-;;;
+
+UPDATE_FALLING_ROCKS
 1680: 3A 04 80    ld   a,($PLAYER_NUM)
 1683: A7          and  a
 1684: 20 05       jr   nz,$168B
-1686: 3A 5B 80    ld   a,($805B)
+1686: 3A 5B 80    ld   a,($SPEED_DELAY_P1)
 1689: 18 03       jr   $168E
-168B: 3A 5C 80    ld   a,($805C)
-168E: FE 1F       cp   $1F
-1690: 20 19       jr   nz,$16AB ; jump to player 2 versoin
-    ;;  player 1
+168B: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
+168E: FE 1F       cp   $ROUND1_SPEED
+1690: 20 19       jr   nz,$16AB
+    ;;  Round 1
 1692: 3A 15 83    ld   a,($8315)
 1695: 3C          inc  a
 1696: FE 03       cp   $03
@@ -3254,7 +3073,7 @@ INIT_GAME
 16A6: AF          xor  a
 16A7: 32 16 83    ld   ($8316),a
 16AA: C9          ret
-;;; player 2
+;;; Round 2+
 16AB: 3A 15 83    ld   a,($8315)
 16AE: 3C          inc  a
 16AF: FE 02       cp   $02
@@ -3268,18 +3087,8 @@ INIT_GAME
 16BF: AF          xor  a
 16C0: 32 16 83    ld   ($8316),a
 16C3: C9          ret
-16C4: FF          rst  $38
-16C5: FF          rst  $38
-16C6: FF          rst  $38
-16C7: FF          rst  $38
-16C8: FF          rst  $38
-16C9: FF          rst  $38
-16CA: FF          rst  $38
-16CB: FF          rst  $38
-16CC: FF          rst  $38
-16CD: FF          rst  $38
-16CE: FF          rst  $38
-16CF: FF          rst  $38
+
+16C4: FF x 12
 
 DRAW_BONUS
 16D0: CD 10 03    call $0310
@@ -3454,9 +3263,9 @@ ADD_AMOUNT_BDC
 17BF: FF          rst  $38
 ;;;
 17C0: AF          xor  a
-17C1: 32 2D 80    ld   ($802D),a
-17C4: 3A 4C 81    ld   a,($814C)
-17C7: 32 50 81    ld   ($8150),a
+17C1: 32 2D 80    ld   ($DINO_COUNTER),a
+17C4: 3A 4C 81    ld   a,($DINO_X)
+17C7: 32 50 81    ld   ($DINO_X_MIN8),a
 17CA: C9          ret
 ;;;
 17CB: FF          rst  $38
@@ -3854,6 +3663,7 @@ BONUS_SKIP_SCREEN
 19D5: 00          nop
 19D6: 00          nop
 19D7: 00          nop
+
 19D8: 21 00 81    ld   hl,$8100
 19DB: 36 00       ld   (hl),$00
 19DD: 23          inc  hl
@@ -3862,19 +3672,14 @@ BONUS_SKIP_SCREEN
 19E1: 20 F8       jr   nz,$19DB
 19E3: CD A0 13    call $WAIT_VBLANK
 19E6: C9          ret
-19E7: FF          rst  $38
-19E8: FF          rst  $38
-19E9: FF          rst  $38
-19EA: FF          rst  $38
-19EB: FF          rst  $38
-19EC: FF          rst  $38
-19ED: FF          rst  $38
-19EE: FF          rst  $38
-19EF: FF          rst  $38
+
+19E7: FF x 9
+
+CHECK_FALL_OFF_BOTTOM_SCR
 19F0: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 19F3: 37          scf
 19F4: 3F          ccf
-19F5: C6 18       add  a,$18
+19F5: C6 18       add  a,$18    ; +24 (ground)
 19F7: D0          ret  nc
 19F8: CD C0 0C    call $0CC0
 19FB: AF          xor  a
@@ -4248,20 +4053,20 @@ BONUS_SKIP_SCREEN
 1C0F: FF          rst  $38
 1C10: 3A 40 81    ld   a,($PLAYER_X)
 1C13: C6 08       add  a,$08
-1C15: 32 4C 81    ld   ($814C),a
+1C15: 32 4C 81    ld   ($DINO_X),a
 1C18: C6 08       add  a,$08
-1C1A: 32 50 81    ld   ($8150),a
+1C1A: 32 50 81    ld   ($DINO_X_MIN8),a
 1C1D: 3A 43 81    ld   a,($PLAYER_Y)
-1C20: 32 4F 81    ld   ($814F),a
+1C20: 32 4F 81    ld   ($DINO_Y),a
 1C23: C6 10       add  a,$10
-1C25: 32 53 81    ld   ($8153),a
+1C25: 32 53 81    ld   ($DINO_Y_ADD16),a
 1C28: 3E AC       ld   a,$AC
-1C2A: 32 4D 81    ld   ($814D),a
+1C2A: 32 4D 81    ld   ($DINO_FRAME),a
 1C2D: 3E B0       ld   a,$B0
 1C2F: 32 51 81    ld   ($8151),a
 1C32: CD 00 1C    call $1C00
 1C35: 3E AD       ld   a,$AD
-1C37: 32 4D 81    ld   ($814D),a
+1C37: 32 4D 81    ld   ($DINO_FRAME),a
 1C3A: CD 00 1C    call $1C00
 1C3D: CD 33 0A    call $0A33
 1C40: C9          ret
@@ -4275,20 +4080,20 @@ BONUS_SKIP_SCREEN
 1C4F: FF          rst  $38
 1C50: 3A 40 81    ld   a,($PLAYER_X)
 1C53: D6 08       sub  $08
-1C55: 32 4C 81    ld   ($814C),a
+1C55: 32 4C 81    ld   ($DINO_X),a
 1C58: D6 08       sub  $08
-1C5A: 32 50 81    ld   ($8150),a
+1C5A: 32 50 81    ld   ($DINO_X_MIN8),a
 1C5D: 3A 43 81    ld   a,($PLAYER_Y)
-1C60: 32 4F 81    ld   ($814F),a
+1C60: 32 4F 81    ld   ($DINO_Y),a
 1C63: C6 10       add  a,$10
-1C65: 32 53 81    ld   ($8153),a
+1C65: 32 53 81    ld   ($DINO_Y_ADD16),a
 1C68: 3E 2C       ld   a,$2C
-1C6A: 32 4D 81    ld   ($814D),a
+1C6A: 32 4D 81    ld   ($DINO_FRAME),a
 1C6D: 3E 30       ld   a,$30
 1C6F: 32 51 81    ld   ($8151),a
 1C72: CD 00 1C    call $1C00
 1C75: 3E 2D       ld   a,$2D
-1C77: 32 4D 81    ld   ($814D),a
+1C77: 32 4D 81    ld   ($DINO_FRAME),a
 1C7A: CD 00 1C    call $1C00
 1C7D: CD 33 0A    call $0A33
 1C80: C9          ret
@@ -4306,7 +4111,7 @@ BONUS_SKIP_SCREEN
 1C8F: FF          rst  $38
 1C90: 3A 40 81    ld   a,($PLAYER_X)
 1C93: 47          ld   b,a
-1C94: 3A 4C 81    ld   a,($814C)
+1C94: 3A 4C 81    ld   a,($DINO_X)
 1C97: 37          scf
 1C98: 3F          ccf
 1C99: 90          sub  b
@@ -4315,19 +4120,11 @@ BONUS_SKIP_SCREEN
 1C9F: C9          ret
 1CA0: CD 50 1C    call $1C50
 1CA3: C9          ret
-1CA4: FF          rst  $38
-1CA5: FF          rst  $38
-1CA6: FF          rst  $38
-1CA7: FF          rst  $38
-1CA8: FF          rst  $38
-1CA9: FF          rst  $38
-1CAA: FF          rst  $38
-1CAB: FF          rst  $38
-1CAC: FF          rst  $38
-1CAD: FF          rst  $38
-1CAE: FF          rst  $38
-1CAF: FF          rst  $38
-1CB0: 3A 4C 81    ld   a,($814C)
+
+1CA4: FF x 12
+
+DINO_COLLISION
+1CB0: 3A 4C 81    ld   a,($DINO_X)
 1CB3: 47          ld   b,a
 1CB4: 3A 40 81    ld   a,($PLAYER_X)
 1CB7: 90          sub  b
@@ -4337,7 +4134,7 @@ BONUS_SKIP_SCREEN
 1CBC: 38 03       jr   c,$1CC1
 1CBE: C6 30       add  a,$30
 1CC0: D0          ret  nc
-1CC1: 3A 4F 81    ld   a,($814F)
+1CC1: 3A 4F 81    ld   a,($DINO_Y)
 1CC4: 47          ld   b,a
 1CC5: 3A 43 81    ld   a,($PLAYER_Y)
 1CC8: 90          sub  b
@@ -4349,6 +4146,7 @@ BONUS_SKIP_SCREEN
 1CD1: D0          ret  nc
 1CD2: CD 90 1C    call $1C90
 1CD5: C9          ret
+
 1CD6: FF          rst  $38
 1CD7: FF          rst  $38
 1CD8: CD D8 3B    call $3BD8
@@ -5509,60 +5307,50 @@ BONUS_SKIP_SCREEN
 228C: 3E 38       ld   a,$38
 228E: D3 01       out  ($01),a
 2290: C9          ret
-2291: FF          rst  $38
-2292: FF          rst  $38
-2293: FF          rst  $38
-2294: FF          rst  $38
-2295: FF          rst  $38
-2296: FF          rst  $38
-2297: FF          rst  $38
-2298: FF          rst  $38
-2299: FF          rst  $38
-229A: FF          rst  $38
-229B: FF          rst  $38
-229C: FF          rst  $38
-229D: FF          rst  $38
-229E: FF          rst  $38
-229F: FF          rst  $38
+
+2291: FF x 15
+
+UPDATE_DINO
 22A0: 7E          ld   a,(hl)
-22A1: 32 4C 81    ld   ($814C),a
+22A1: 32 4C 81    ld   ($DINO_X),a
 22A4: 23          inc  hl
 22A5: 7E          ld   a,(hl)
-22A6: 32 4F 81    ld   ($814F),a
+22A6: 32 4F 81    ld   ($DINO_Y),a
 22A9: 23          inc  hl
 22AA: 3E 12       ld   a,$12
 22AC: 32 4E 81    ld   ($814E),a
 22AF: 32 52 81    ld   ($8152),a
-22B2: 7E          ld   a,(hl)
-22B3: E6 FC       and  $FC
+22B2: 7E          ld   a,(hl)   ; param 3?
+22B3: E6 FC       and  $FC      ; 1111 1100
 22B5: 28 1D       jr   z,$22D4
-22B7: E6 F8       and  $F8
+22B7: E6 F8       and  $F8      ; 1111 1000
 22B9: 20 07       jr   nz,$22C2
-22BB: 3A 4C 81    ld   a,($814C)
+22BB: 3A 4C 81    ld   a,($DINO_X)
 22BE: D6 08       sub  $08
 22C0: 18 05       jr   $22C7
-22C2: 3A 4C 81    ld   a,($814C)
+22C2: 3A 4C 81    ld   a,($DINO_X)
 22C5: C6 08       add  a,$08
-22C7: 32 50 81    ld   ($8150),a
-22CA: 3A 4F 81    ld   a,($814F)
+22C7: 32 50 81    ld   ($DINO_X_MIN8),a
+22CA: 3A 4F 81    ld   a,($DINO_Y)
 22CD: C6 10       add  a,$10
-22CF: 32 53 81    ld   ($8153),a
+22CF: 32 53 81    ld   ($DINO_Y_ADD16),a
 22D2: 18 04       jr   $22D8
 22D4: AF          xor  a
-22D5: 32 50 81    ld   ($8150),a
+22D5: 32 50 81    ld   ($DINO_X_MIN8),a
 22D8: 7E          ld   a,(hl)
 22D9: CB 27       sla  a
-22DB: 01 00 24    ld   bc,$2400
+22DB: 01 00 24    ld   bc,$DINO_ANIM_LOOKUP
 22DE: 81          add  a,c
 22DF: 4F          ld   c,a
 22E0: 0A          ld   a,(bc)
-22E1: 32 4D 81    ld   ($814D),a
+22E1: 32 4D 81    ld   ($DINO_FRAME),a
 22E4: 03          inc  bc
 22E5: 0A          ld   a,(bc)
 22E6: 32 51 81    ld   ($8151),a
 22E9: CD 20 29    call $2920
 22EC: C3 E0 23    jp   $23E0
 22EF: FF          rst  $38
+
 22F0: 00          nop
 22F1: 00          nop
 22F2: 00          nop
@@ -5574,9 +5362,11 @@ BONUS_SKIP_SCREEN
 22F8: 00          nop
 22F9: 00          nop
 22FA: 00          nop
-22FB: 3A 2D 80    ld   a,($802D)
+
+DINO_PATHFIND
+22FB: 3A 2D 80    ld   a,($DINO_COUNTER)
 22FE: 3C          inc  a
-22FF: 32 2D 80    ld   ($802D),a
+22FF: 32 2D 80    ld   ($DINO_COUNTER),a
 2302: 5F          ld   e,a
 2303: 37          scf
 2304: 3F          ccf
@@ -5589,262 +5379,120 @@ BONUS_SKIP_SCREEN
 2311: 18 03       jr   $2316
 2313: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 2316: 3D          dec  a
-2317: 21 30 23    ld   hl,$2330
-231A: CB 27       sla  a
-231C: 85          add  a,l
+2317: 21 30 23    ld   hl,$DINO_PATH_LOOKUP
+231A: CB 27       sla  a  ; screen # x 2
+231C: 85          add  a,l ; dino_lookup + scr*2
 231D: 6F          ld   l,a
 231E: 4E          ld   c,(hl)
 231F: 23          inc  hl
 2320: 46          ld   b,(hl)
-2321: 7B          ld   a,e
+2321: 7B          ld   a,e      ; add dino counter
 2322: D6 0B       sub  $0B
 2324: CB 27       sla  a
 2326: CB 27       sla  a
 2328: 81          add  a,c
 2329: 6F          ld   l,a
-232A: 60          ld   h,b
-232B: CD A0 22    call $22A0
+232A: 60          ld   h,b      ; hl points to dino x/y
+232B: CD A0 22    call $UPDATE_DINO
 232E: C9          ret
-232F: FF          rst  $38
-2330: 78          ld   a,b
-2331: 23          inc  hl
-2332: 78          ld   a,b
-2333: 23          inc  hl
-2334: 00          nop
-2335: 26 78       ld   h,$78
-2337: 23          inc  hl
-2338: 80          add  a,b
-2339: 26 00       ld   h,$00
-233B: 27          daa
-233C: 70          ld   (hl),b
-233D: 27          daa
-233E: 78          ld   a,b
-233F: 23          inc  hl
-2340: 00          nop
-2341: 26 80       ld   h,$80
-2343: 26 00       ld   h,$00
-2345: 27          daa
-2346: 70          ld   (hl),b
-2347: 27          daa
-2348: 78          ld   a,b
-2349: 23          inc  hl
-234A: 00          nop
-234B: 26 78       ld   h,$78
-234D: 23          inc  hl
-234E: 00          nop
-234F: 28 70       jr   z,$23C1
-2351: 27          daa
-2352: 78          ld   a,b
-2353: 23          inc  hl
-2354: 00          nop
-2355: 28 70       jr   z,$23C7
-2357: 27          daa
-2358: 00          nop
-2359: 2A 00 27    ld   hl,($2700)
-235C: 70          ld   (hl),b
-235D: 27          daa
-235E: 00          nop
-235F: 2A 00 27    ld   hl,($2700)
-2362: 70          ld   (hl),b
-2363: 27          daa
-2364: 00          nop
-2365: 28 00       jr   z,$2367
-2367: 00          nop
-2368: 00          nop
-2369: 00          nop
-236A: 00          nop
-236B: 00          nop
-236C: 00          nop
-236D: 00          nop
-236E: 00          nop
-236F: 00          nop
-2370: FF          rst  $38
-2371: FF          rst  $38
-2372: FF          rst  $38
-2373: FF          rst  $38
-2374: FF          rst  $38
-2375: FF          rst  $38
-2376: FF          rst  $38
-2377: FF          rst  $38
-2378: 18 E0       jr   $235A
-237A: 00          nop
-237B: 00          nop
-237C: 1C          inc  e
-237D: E0          ret  po
-237E: 01 00 20    ld   bc,$2000
-2381: E0          ret  po
-2382: 02          ld   (bc),a
-2383: 00          nop
-2384: 28 E0       jr   z,$2366
-2386: 03          inc  bc
-2387: 00          nop
-2388: 30 E0       jr   nc,$236A
-238A: 02          ld   (bc),a
-238B: 00          nop
-238C: 38 E0       jr   c,$236E
-238E: 01 00 48    ld   bc,$4800
-2391: C8          ret  z
-2392: 00          nop
-2393: 00          nop
-2394: 50          ld   d,b
-2395: C8          ret  z
-2396: 01 00 58    ld   bc,$5800
-2399: C8          ret  z
-239A: 02          ld   (bc),a
-239B: 00          nop
-239C: 60          ld   h,b
-239D: C8          ret  z
-239E: 03          inc  bc
-239F: 00          nop
-23A0: 68          ld   l,b
-23A1: C8          ret  z
-23A2: 02          ld   (bc),a
-23A3: 00          nop
-23A4: 70          ld   (hl),b
-23A5: C8          ret  z
-23A6: 03          inc  bc
-23A7: 00          nop
-23A8: 80          add  a,b
-23A9: C8          ret  z
-23AA: 07          rlca
-23AB: 00          nop
-23AC: 88          adc  a,b
-23AD: C8          ret  z
-23AE: 05          dec  b
-23AF: 00          nop
-23B0: 98          sbc  a,b
-23B1: C8          ret  z
-23B2: 03          inc  bc
-23B3: 00          nop
-23B4: A0          and  b
-23B5: C8          ret  z
-23B6: 02          ld   (bc),a
-23B7: 00          nop
-23B8: A8          xor  b
-23B9: C8          ret  z
-23BA: 03          inc  bc
-23BB: 00          nop
-23BC: B0          or   b
-23BD: C8          ret  z
-23BE: 02          ld   (bc),a
-23BF: 00          nop
-23C0: B8          cp   b
-23C1: C8          ret  z
-23C2: 03          inc  bc
-23C3: 00          nop
-23C4: C0          ret  nz
-23C5: C8          ret  z
-23C6: 01 00 D0    ld   bc,$D000
-23C9: D0          ret  nc
-23CA: 07          rlca
-23CB: 00          nop
-23CC: D8          ret  c
-23CD: D0          ret  nc
-23CE: 05          dec  b
-23CF: 00          nop
-23D0: E0          ret  po
-23D1: D0          ret  nc
-23D2: 06 00       ld   b,$00
-23D4: E8          ret  pe
-23D5: D0          ret  nc
-23D6: 05          dec  b
-23D7: 00          nop
-23D8: F0          ret  p
-23D9: D0          ret  nc
-23DA: 04          inc  b
-23DB: 00          nop
-23DC: FF          rst  $38
-23DD: FF          rst  $38
-23DE: FF          rst  $38
-23DF: FF          rst  $38
-23E0: 3A 4C 81    ld   a,($814C)
+
+232F: FF
+
+    ;; location of path data for each screen
+DINO_PATH_LOOKUP
+2330: 78 23 ; DINO_PATH_1 (screen1)
+2332: 78 23
+2334: 00 26 ; DINO_PATH_2
+2336: 78 23
+2338: 80 26 ; DINO_PATH_3
+2340: 00 27 ; DINO_PATH_4
+233C: 70 27 ; DINO_PATH_5
+233E: 78 23
+2340: 00 26
+2342: 80 26
+2344: 00 27
+2346: 70 27
+2348: 78 23
+234A: 00 26
+234C: 78 23
+234E: 00 28 ; DINO_PATH_6
+2350: 70 27
+2352: 78 23
+2354: 00 28
+2356: 70 27
+2358: 00 2A ; DINO_PATH_7
+235A: 00 27
+235C: 70 27
+235E: 00 2A
+2360: 00 27
+2362: 70 27
+2364: 00 28 ; (screen 27)
+2366: 00 00 00 00 00 00 00 00 00 00
+
+2370: FF x 8
+
+DINO_PATH_1
+2378: 18 E0 00 00 ; x, y, ?, ?
+237C: 1C E0 01 00
+2380: 20 E0 02 00
+2384: 28 E0 03 00
+2388: 30 E0 02 00
+238C: 38 E0 01 00
+2390: 48 C8 00 00
+2394: 50 C8 01 00
+2398: 58 C8 02 00
+239C: 60 C8 03 00
+23A0: 68 C8 02 00
+23A4: 70 C8 03 00
+23A8: 80 C8 07 00
+23AC: 88 C8 05 00
+23B0: 98 C8 03 00
+23B4: A0 C8 02 00
+23B8: A8 C8 03 00
+23BC: B0 C8 02 00
+23C0: B8 C8 03 00
+23C4: C0 C8 01 00
+23C8: D0 D0 07 00
+23CC: D8 D0 05 00
+23D0: E0 D0 06 00
+23D4: E8 D0 05 00
+23D8: F0 D0 04 00
+23DC: FF FF FF FF
+
+    ;;
+23E0: 3A 4C 81    ld   a,($DINO_X)
 23E3: FE 18       cp   $18
 23E5: C0          ret  nz
 23E6: 3E 07       ld   a,$07
 23E8: 32 44 80    ld   ($8044),a
 23EB: C9          ret
-23EC: FF          rst  $38
-23ED: FF          rst  $38
-23EE: FF          rst  $38
-23EF: FF          rst  $38
-23F0: FF          rst  $38
-23F1: FF          rst  $38
-23F2: FF          rst  $38
-23F3: FF          rst  $38
-23F4: FF          rst  $38
-23F5: FF          rst  $38
-23F6: FF          rst  $38
-23F7: FF          rst  $38
-23F8: FF          rst  $38
-23F9: FF          rst  $38
-23FA: FF          rst  $38
-23FB: FF          rst  $38
-23FC: FF          rst  $38
-23FD: FF          rst  $38
-23FE: FF          rst  $38
-23FF: FF          rst  $38
-2400: 2F          cpl
-2401: 00          nop
-2402: 2E 00       ld   l,$00
-2404: 2D          dec  l
-2405: 00          nop
-2406: 2C          inc  l
-2407: 00          nop
-2408: 2D          dec  l
-2409: 30 2C       jr   nc,$2437
-240B: 31 2D 32    ld   sp,$322D
-240E: 2C          inc  l
-240F: 33          inc  sp
-2410: AD          xor  l
-2411: B0          or   b
-2412: AC          xor  h
-2413: B1          or   c
-2414: AD          xor  l
-2415: B2          or   d
-2416: AC          xor  h
-2417: B3          or   e
-2418: FF          rst  $38
-2419: FF          rst  $38
-241A: FF          rst  $38
-241B: FF          rst  $38
-241C: FF          rst  $38
-241D: FF          rst  $38
-241E: FF          rst  $38
-241F: FF          rst  $38
+
+23EC: FF x 20
+
+DINO_ANIM_LOOKUP
+2400: 2F 00 2E 00
+2404: 2D 00 2C 00
+2408: 2D 30 2C 31
+240C: 2D 32
+240E: 2C 33 AD B0
+2412: AC B1 AD B2
+2416: AC B3
+
+2418: FF x 7
+
 2420: 3A 00 A8    ld   a,($A800) ; PORT_IN1
 2423: 32 F1 83    ld   ($INPUT_BUTTONS),a
 2426: 3A 00 B0    ld   a,($B000)
 2429: 32 F2 83    ld   ($83F2),a
 242C: CD 40 36    call $3640
 242F: C9          ret
+
 2430: 06 00       ld   b,$00
 2432: 3A 00 B8    ld   a,($B800)
 2435: 05          dec  b
 2436: 20 FA       jr   nz,$2432
 2438: C9          ret
-2439: FF          rst  $38
-243A: FF          rst  $38
-243B: FF          rst  $38
-243C: FF          rst  $38
-243D: FF          rst  $38
-243E: FF          rst  $38
-243F: FF          rst  $38
-2440: FF          rst  $38
-2441: FF          rst  $38
-2442: FF          rst  $38
-2443: FF          rst  $38
-2444: FF          rst  $38
-2445: FF          rst  $38
-2446: FF          rst  $38
-2447: FF          rst  $38
-2448: FF          rst  $38
-2449: FF          rst  $38
-244A: FF          rst  $38
-244B: FF          rst  $38
-244C: FF          rst  $38
-244D: FF          rst  $38
-244E: FF          rst  $38
-244F: FF          rst  $38
+2439: FF x 23
 
 DRAW_SCORE
 2450: AF          xor  a
@@ -5961,33 +5609,16 @@ DRAW_SCORE
 2515: FF          rst  $38
 2516: FF          rst  $38
 2517: FF          rst  $38
-2518: 3A 2D 80    ld   a,($802D)
+
+TEST_THEN_DINO_COLLISION
+2518: 3A 2D 80    ld   a,($DINO_COUNTER)
 251B: E6 F8       and  $F8
 251D: C8          ret  z
-251E: CD B0 1C    call $1CB0
+251E: CD B0 1C    call $DINO_COLLISION
 2521: C9          ret
-2522: FF          rst  $38
-2523: FF          rst  $38
-2524: FF          rst  $38
-2525: FF          rst  $38
-2526: FF          rst  $38
-2527: FF          rst  $38
-2528: FF          rst  $38
-2529: FF          rst  $38
-252A: FF          rst  $38
-252B: FF          rst  $38
-252C: FF          rst  $38
-252D: FF          rst  $38
-252E: FF          rst  $38
-252F: FF          rst  $38
-2530: FF          rst  $38
-2531: FF          rst  $38
-2532: FF          rst  $38
-2533: FF          rst  $38
-2534: FF          rst  $38
-2535: FF          rst  $38
-2536: FF          rst  $38
-2537: FF          rst  $38
+
+2522: FF x 22
+
 2538: 11 16 00    ld   de,$0016
 253B: 0E 20       ld   c,$20
 253D: 21 10 90    ld   hl,$9010
@@ -6120,6 +5751,8 @@ DRAW_SCORE
 25FD: FF          rst  $38
 25FE: FF          rst  $38
 25FF: FF          rst  $38
+
+DINO_PATH_2
 2600: 18 E0       jr   $25E2
 2602: 00          nop
 2603: 00          nop
@@ -6217,18 +5850,9 @@ DRAW_SCORE
 2671: D0          ret  nc
 2672: 05          dec  b
 2673: 00          nop
-2674: FF          rst  $38
-2675: FF          rst  $38
-2676: FF          rst  $38
-2677: FF          rst  $38
-2678: FF          rst  $38
-2679: FF          rst  $38
-267A: FF          rst  $38
-267B: FF          rst  $38
-267C: FF          rst  $38
-267D: FF          rst  $38
-267E: FF          rst  $38
-267F: FF          rst  $38
+2674: FF x 12
+
+DINO_PATH_3
 2680: 18 E0       jr   $2662
 2682: 00          nop
 2683: 00          nop
@@ -6340,6 +5964,8 @@ DRAW_SCORE
 26FD: FF          rst  $38
 26FE: FF          rst  $38
 26FF: FF          rst  $38
+
+DINO_PATH_4
 2700: 18 38       jr   $273A
 2702: 00          nop
 2703: 00          nop
@@ -6421,22 +6047,9 @@ DRAW_SCORE
 275C: E0          ret  po
 275D: 28 04       jr   z,$2763
 275F: 00          nop
-2760: FF          rst  $38
-2761: FF          rst  $38
-2762: FF          rst  $38
-2763: FF          rst  $38
-2764: FF          rst  $38
-2765: FF          rst  $38
-2766: FF          rst  $38
-2767: FF          rst  $38
-2768: FF          rst  $38
-2769: FF          rst  $38
-276A: FF          rst  $38
-276B: FF          rst  $38
-276C: FF          rst  $38
-276D: FF          rst  $38
-276E: FF          rst  $38
-276F: FF          rst  $38
+2760: FF x 16
+
+DINO_PATH_5
 2770: 18 38       jr   $27AA
 2772: 00          nop
 2773: 00          nop
@@ -6553,6 +6166,8 @@ DRAW_SCORE
 27FE: C9          ret
 ;;;
 27FF: FF          rst  $38
+
+DINO_PATH_6
 2800: 18 E0       jr   $27E2
 2802: 00          nop
 2803: 00          nop
@@ -6754,23 +6369,23 @@ DRAW_SCORE
 28DD: FF          rst  $38
 28DE: FF          rst  $38
 28DF: FF          rst  $38
-28E0: 3A 12 83    ld   a,($8312)
+28E0: 3A 12 83    ld   a,($TICK_NUM)
 28E3: E6 03       and  $03
 28E5: C0          ret  nz
-28E6: 3A 4C 81    ld   a,($814C)
+28E6: 3A 4C 81    ld   a,($DINO_X)
 28E9: A7          and  a
 28EA: C8          ret  z
 28EB: 47          ld   b,a
 28EC: 3A 2E 80    ld   a,($802E)
 28EF: 80          add  a,b
-28F0: 32 4C 81    ld   ($814C),a
-28F3: 3A 50 81    ld   a,($8150)
+28F0: 32 4C 81    ld   ($DINO_X),a
+28F3: 3A 50 81    ld   a,($DINO_X_MIN8)
 28F6: A7          and  a
 28F7: C8          ret  z
 28F8: 47          ld   b,a
 28F9: 3A 2E 80    ld   a,($802E)
 28FC: 80          add  a,b
-28FD: 32 50 81    ld   ($8150),a
+28FD: 32 50 81    ld   ($DINO_X_MIN8),a
 2900: C9          ret
 2901: 21 00 02    ld   hl,$0200
 2904: CD E3 01    call $01E3
@@ -6787,7 +6402,7 @@ DRAW_SCORE
 2920: 23          inc  hl
 2921: 23          inc  hl
 2922: 46          ld   b,(hl)
-2923: 3A 4C 81    ld   a,($814C)
+2923: 3A 4C 81    ld   a,($DINO_X)
 2926: 37          scf
 2927: 3F          ccf
 2928: 90          sub  b
@@ -6931,7 +6546,7 @@ GOT_A_BONUS
 29FC: CD 9C 19    call $BONUS_SKIP_SCREEN
 29FF: C9          ret
 
-;;; ; looks like data? Can't see where it's read though
+DINO_PATH_7
 2A00: 18 E0       jr   $29E2
 2A02: 00          nop
 2A03: 00          nop
@@ -8449,7 +8064,7 @@ DRAW_BONUS_STATE
 32CD: FF          rst  $38
 32CE: FF          rst  $38
 32CF: FF          rst  $38
-32D0: 3A 12 83    ld   a,($8312)
+32D0: 3A 12 83    ld   a,($TICK_NUM)
 32D3: E6 03       and  $03
 32D5: C0          ret  nz
 32D6: 3A 3A 80    ld   a,($803A)
@@ -8739,7 +8354,7 @@ DRAW_BONUS_STATE
 3485: FF          rst  $38
 3486: FF          rst  $38
 3487: FF          rst  $38
-3488: 3A 12 83    ld   a,($8312)
+3488: 3A 12 83    ld   a,($TICK_NUM)
 348B: E6 03       and  $03
 348D: C0          ret  nz
 348E: 3A 3A 80    ld   a,($803A)
@@ -8794,7 +8409,7 @@ DRAW_BONUS_STATE
 34E5: FF          rst  $38
 34E6: FF          rst  $38
 34E7: FF          rst  $38
-34E8: 3A 12 83    ld   a,($8312)
+34E8: 3A 12 83    ld   a,($TICK_NUM)
 34EB: E6 03       and  $03
 34ED: C0          ret  nz
 34EE: 3A 3C 80    ld   a,($803C)
@@ -9654,7 +9269,7 @@ DRAW_BONUS_STATE
 3A69: 3D          dec  a
 3A6A: 3D          dec  a
 3A6B: 32 57 81    ld   ($8157),a
-3A6E: 3A 12 83    ld   a,($8312)
+3A6E: 3A 12 83    ld   a,($TICK_NUM)
 3A71: E6 03       and  $03
 3A73: C0          ret  nz
 3A74: 3A 55 81    ld   a,($8155)
@@ -9683,7 +9298,7 @@ DRAW_BONUS_STATE
 3AA1: 3D          dec  a
 3AA2: 3D          dec  a
 3AA3: 32 5B 81    ld   ($815B),a
-3AA6: 3A 12 83    ld   a,($8312)
+3AA6: 3A 12 83    ld   a,($TICK_NUM)
 3AA9: E6 03       and  $03
 3AAB: C0          ret  nz
 3AAC: 3A 59 81    ld   a,($8159)
@@ -9712,7 +9327,7 @@ DRAW_BONUS_STATE
 3AD9: 3D          dec  a
 3ADA: 3D          dec  a
 3ADB: 32 5F 81    ld   ($815F),a
-3ADE: 3A 12 83    ld   a,($8312)
+3ADE: 3A 12 83    ld   a,($TICK_NUM)
 3AE1: E6 03       and  $03
 3AE3: C0          ret  nz
 3AE4: 3A 5D 81    ld   a,($815D)
@@ -10089,7 +9704,7 @@ DRAW_BONUS_STATE
 3D26: 32 45 81    ld   ($8145),a
 3D29: 23          inc  hl
 3D2A: 7E          ld   a,(hl)
-3D2B: 32 49 81    ld   ($8149),a
+3D2B: 32 49 81    ld   ($BONGO_FRAME),a
 3D2E: 23          inc  hl
 3D2F: 7E          ld   a,(hl)
 3D30: 32 51 81    ld   ($8151),a
@@ -10133,7 +9748,7 @@ DO_CUTSCENE
 3D70: CD A0 3D    call $3DA0      ; draws (part?) of cutscene
 3D73: 16 80       ld   d,$80      ; 80 x animate cutscene
 3D75: AF          xor  a          ;
-3D76: 32 2D 80    ld   ($802D),a  ;
+3D76: 32 2D 80    ld   ($DINO_COUNTER),a  ;
 3D79: 21 00 3D    ld   hl,$3D00   ;
 3D7C: CD E0 3C    call $3CE0      ; draws gang <-
 3D7F: CD 20 3D    call $3D20      ;             |
@@ -10336,7 +9951,7 @@ DO_CUTSCENE
 END_CUTSCENE
 3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
 3EB2: 32 42 80    ld   ($8042),a
-3EB5: 21 50 81    ld   hl,$8150 ; set a bunch of bytes at 8150
+3EB5: 21 50 81    ld   hl,$DINO_X_MIN8 ; set a bunch of bytes at 8150
 3EB8: 36 18       ld   (hl),$18
 3EBA: 23          inc  hl
 3EBB: 36 2E       ld   (hl),$2E
@@ -12672,13 +12287,13 @@ PICKUP_TILE_COLLISION
 4CE9: FF          rst  $38
 
 ;;;
-4CEA: 3A 4C 81    ld   a,($814C)
+4CEA: 3A 4C 81    ld   a,($DINO_X)
 4CED: D6 84       sub  $84
 4CEF: 37          scf
 4CF0: 3F          ccf
 4CF1: D6 18       sub  $18
-4CF3: D0          ret  nc
-4CF4: 3A 4F 81    ld   a,($814F)
+4CF3: D0          ret  nc       ; not lined up with dino - return.
+4CF4: 3A 4F 81    ld   a,($DINO_Y)
 4CF7: CB 3F       srl  a
 4CF9: CB 3F       srl  a
 4CFB: CB 3F       srl  a
@@ -12688,10 +12303,11 @@ PICKUP_TILE_COLLISION
 4D01: 90          sub  b
 4D02: 37          scf
 4D03: 3F          ccf
-4D04: C3 B4 4D    jp   $4DB4
-4D07: FF          rst  $38
+4D04: C3 B4 4D    jp   $WAIT_FOR_CAGE_DOWN
 
-;;; something to do with cage fall
+4D07: FF
+
+DRAW_CAGE_TILES
 4D08: CD 60 4D    call $4D60
 4D0B: E5          push hl
 4D0C: 2B          dec  hl
@@ -12732,11 +12348,11 @@ PICKUP_TILE_COLLISION
 
 TRIGGER_CAGE_FALL
 4D40: CD 75 4E    call $4E75
-4D43: CD 08 4D    call $4D08
+4D43: CD 08 4D    call $DRAW_CAGE_TILES
 4D46: E5          push hl
 4D47: 21 A0 13    ld   hl,$WAIT_VBLANK
 4D4A: CD 81 5C    call $JMP_HL
-4D4D: 3A 12 83    ld   a,($8312)
+4D4D: 3A 12 83    ld   a,($TICK_NUM)
 4D50: E6 03       and  $03
 4D52: 20 F3       jr   nz,$4D47
 4D54: E1          pop  hl
@@ -12794,11 +12410,15 @@ CHECK_TOUCHING_CAGE
 
 4DB2: FF FF
 
+WAIT_FOR_CAGE_DOWN
 4DB4: D6 02       sub  $02
 4DB6: D0          ret  nc
-4DB7: C3 D0 4D    jp   $4DD0
+4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO
+
 4DBA: FF x 6
 
+    ;; really wait vblank?
+REALLY_VBLANK
 4DC0: 2E 40       ld   l,$40
 4DC2: E5          push hl
 4DC3: 21 A0 13    ld   hl,$WAIT_VBLANK
@@ -12807,12 +12427,14 @@ CHECK_TOUCHING_CAGE
 4DCA: 2D          dec  l
 4DCB: 20 F5       jr   nz,$4DC2
 4DCD: C9          ret
-4DCE: FF          rst  $38
-4DCF: FF          rst  $38
+
+4DCE: FF FF
+
+DONE_CAGED_DINO
 4DD0: AF          xor  a
-4DD1: 32 4C 81    ld   ($814C),a
-4DD4: 32 50 81    ld   ($8150),a
-4DD7: CD 08 4D    call $4D08
+4DD1: 32 4C 81    ld   ($DINO_X),a
+4DD4: 32 50 81    ld   ($DINO_X_MIN8),a
+4DD7: CD 08 4D    call $DRAW_CAGE_TILES
 4DDA: E5          push hl
 4DDB: 21 A0 13    ld   hl,$WAIT_VBLANK
 4DDE: CD 81 5C    call $JMP_HL
@@ -12822,29 +12444,31 @@ CHECK_TOUCHING_CAGE
 4DE5: BD          cp   l
 4DE6: 20 EF       jr   nz,$4DD7
 4DE8: 3E 91       ld   a,$91
-4DEA: 32 4C 81    ld   ($814C),a
+4DEA: 32 4C 81    ld   ($DINO_X),a
 4DED: 3E 38       ld   a,$38
-4DEF: 32 4D 81    ld   ($814D),a
+4DEF: 32 4D 81    ld   ($DINO_FRAME),a
 4DF2: 3E 12       ld   a,$12
 4DF4: 32 4E 81    ld   ($814E),a
 4DF7: 3E D7       ld   a,$D7
-4DF9: 32 4F 81    ld   ($814F),a
+4DF9: 32 4F 81    ld   ($DINO_Y),a
 4DFC: 3E 8A       ld   a,$8A
-4DFE: 32 50 81    ld   ($8150),a
+4DFE: 32 50 81    ld   ($DINO_X_MIN8),a
 4E01: 3E 39       ld   a,$39
 4E03: 32 51 81    ld   ($8151),a
 4E06: 3E 12       ld   a,$12
 4E08: 32 52 81    ld   ($8152),a
 4E0B: 3E E7       ld   a,$E7
-4E0D: 32 53 81    ld   ($8153),a
-4E10: CD C0 4D    call $4DC0
-4E13: CD E0 4E    call $4EE0
+4E0D: 32 53 81    ld   ($DINO_Y_ADD16),a
+4E10: CD C0 4D    call $REALLY_VBLANK
+4E13: CD E0 4E    call $SPEED_UP_FOR_NEXT_ROUND
 4E16: 21 48 3D    ld   hl,$DO_CUTSCENE
 4E19: CD 81 5C    call $JMP_HL
 4E1C: C9          ret
+
 4E1D: FF          rst  $38
 4E1E: FF          rst  $38
 4E1F: FF          rst  $38
+
 4E20: CD 80 4E    call $4E80
 4E23: CD 81 5C    call $JMP_HL
 4E26: CD A8 5A    call $5AA8
@@ -12956,22 +12580,24 @@ CHECK_TOUCHING_CAGE
 4EDD: FF          rst  $38
 4EDE: FF          rst  $38
 4EDF: FF          rst  $38
+
+SPEED_UP_FOR_NEXT_ROUND
 4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
 4EE3: A7          and  a
 4EE4: 20 05       jr   nz,$4EEB
-4EE6: 21 5B 80    ld   hl,$805B
+4EE6: 21 5B 80    ld   hl,$SPEED_DELAY_P1
 4EE9: 18 03       jr   $4EEE
-4EEB: 21 5C 80    ld   hl,$805C
+4EEB: 21 5C 80    ld   hl,$SPEED_DELAY_P2
 4EEE: 7E          ld   a,(hl)
-4EEF: FE 1F       cp   $1F
+4EEF: FE 1F       cp   $ROUND1_SPEED
 4EF1: 20 03       jr   nz,$4EF6
-4EF3: 36 10       ld   (hl),$10
+4EF3: 36 10       ld   (hl),$ROUND2_SPEED ; round 2 = $10
 4EF5: C9          ret
-4EF6: FE 10       cp   $10
+4EF6: FE 10       cp   $ROUND2_SPEED
 4EF8: 20 03       jr   nz,$4EFD
-4EFA: 36 0D       ld   (hl),$0D
+4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
 4EFC: C9          ret
-4EFD: C3 1C 50    jp   $501C
+4EFD: C3 1C 50    jp   $501C    ; round 4+ = get 2 faster each time!
 
 PICKUPS_LOOKUP
 4F00: 91 5A 8C 00 00 00 00 00 00 ; up to 3 pickups per screen
@@ -13034,7 +12660,7 @@ ANIMATE_PICKUPS
 501F: C9          ret
 
 ANIMATE_ALL_PICKUPS
-5020: 3A 12 83    ld   a,($8312)
+5020: 3A 12 83    ld   a,($TICK_NUM)
 5023: E6 03       and  $03
 5025: C0          ret  nz
 5026: 21 00 4F    ld   hl,$PICKUPS_LOOKUP
@@ -13521,7 +13147,7 @@ ANIMATE_ALL_PICKUPS
 5301: CD 28 53    call $5328
 5304: 1D          dec  e
 5305: 20 FA       jr   nz,$5301
-5307: 21 48 81    ld   hl,$8148
+5307: 21 48 81    ld   hl,$BONGO_X
 530A: 36 20       ld   (hl),$20
 530C: 23          inc  hl
 530D: 36 2D       ld   (hl),$2D
@@ -13607,10 +13233,10 @@ ANIMATE_ALL_PICKUPS
 539B: FE 2D       cp   $2D
 539D: 20 07       jr   nz,$53A6
 539F: 3E 2C       ld   a,$2C
-53A1: 32 49 81    ld   ($8149),a
+53A1: 32 49 81    ld   ($BONGO_FRAME),a
 53A4: 18 05       jr   $53AB
 53A6: 3E 2D       ld   a,$2D
-53A8: 32 49 81    ld   ($8149),a
+53A8: 32 49 81    ld   ($BONGO_FRAME),a
 53AB: C9          ret
 53AC: 1E 06       ld   e,$06
 53AE: CD B8 53    call $53B8
@@ -13692,7 +13318,7 @@ ANIMATE_ALL_PICKUPS
 542E: C9          ret
 542F: FF          rst  $38
 5430: 21 24 92    ld   hl,$9224
-5433: CD 08 4D    call $4D08
+5433: CD 08 4D    call $DRAW_CAGE_TILES
 5436: E5          push hl
 5437: CD C2 54    call $54C2
 543A: 00          nop
@@ -13716,7 +13342,7 @@ ANIMATE_ALL_PICKUPS
 5459: C8          ret  z
 545A: DD 34 00    inc  (ix+$00)
 545D: DD 34 04    inc  (ix+$04)
-5460: 3A 12 83    ld   a,($8312)
+5460: 3A 12 83    ld   a,($TICK_NUM)
 5463: E6 03       and  $03
 5465: 20 24       jr   nz,$548B
 5467: DD 7E 05    ld   a,(ix+$05)
@@ -13725,7 +13351,7 @@ ANIMATE_ALL_PICKUPS
 546D: 20 02       jr   nz,$5471
 546F: 3E 31       ld   a,$31
 5471: DD 77 05    ld   (ix+$05),a
-5474: 3A 12 83    ld   a,($8312)
+5474: 3A 12 83    ld   a,($TICK_NUM)
 5477: E6 0F       and  $0F
 5479: FE 05       cp   $05
 547B: 20 06       jr   nz,$5483
@@ -13757,14 +13383,14 @@ ANIMATE_ALL_PICKUPS
 54AB: 23          inc  hl
 54AC: 36 CF       ld   (hl),$CF
 54AE: 21 24 92    ld   hl,$9224
-54B1: CD 08 4D    call $4D08
+54B1: CD 08 4D    call $DRAW_CAGE_TILES
 54B4: CD 50 54    call $5450
 54B7: CD D8 54    call $54D8
 54BA: CD 30 54    call $5430
 54BD: CD D8 54    call $54D8
 54C0: C9          ret
 54C1: FF          rst  $38
-54C2: 3A 12 83    ld   a,($8312)
+54C2: 3A 12 83    ld   a,($TICK_NUM)
 54C5: E6 03       and  $03
 54C7: 20 06       jr   nz,$54CF
 54C9: 21 64 15    ld   hl,$1564
