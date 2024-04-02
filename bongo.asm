@@ -11266,11 +11266,14 @@ PICKUP_TILE_COLLISION
 473A: C9          ret
 ;;;
 
-473B: 21 00 5D    ld   hl,$5D00
+    ;; some kind of address lookup table
+;;;  format of dst is: byte, three lots of "addr lo, addr hi"
+;;;  some addr seems to point to another addr?
+473B: 21 00 5D    ld   hl,$TBL_2
 473E: C9          ret
-473F: 21 46 4C    ld   hl,$4C46
+473F: 21 46 4C    ld   hl,$TBL_4
 4742: C9          ret
-4743: 21 53 50    ld   hl,$5053
+4743: 21 53 50    ld   hl,$TBL_1
 4746: C9          ret
 4747: 21 BC 50    ld   hl,$50BC
 474A: C9          ret
@@ -11294,7 +11297,7 @@ PICKUP_TILE_COLLISION
 476E: C9          ret
 476F: 21 78 5F    ld   hl,$5F78
 4772: C9          ret
-4773: 21 40 4B    ld   hl,$4B40
+4773: 21 40 4B    ld   hl,$TBL_3
 4776: C9          ret
 4777: 21 00 00    ld   hl,$0000
 477A: C9          ret
@@ -11949,10 +11952,13 @@ PICKUP_TILE_COLLISION
 4B3D: 4B          ld   c,e
 4B3E: FF          rst  $38
 4B3F: FF          rst  $38
-4B40: 03          inc  bc
-4B41: 32 4B 36    ld   ($364B),a
-4B44: 4B          ld   c,e
-4B45: 36 4B       ld   (hl),$4B
+
+TBL_3
+4B40: 03
+4B41: 32 4B
+4B43: 36 4B
+4B45: 36 4B
+
 4B47: FF          rst  $38
 4B48: 00          nop
 4B49: 01 FF FF    ld   bc,$FFFF
@@ -12181,10 +12187,13 @@ PICKUP_TILE_COLLISION
 4C43: 0C          inc  c
 4C44: FF          rst  $38
 4C45: FF          rst  $38
-4C46: 03          inc  bc
-4C47: 36 4C       ld   (hl),$4C
-4C49: 3E 4C       ld   a,$4C
-4C4B: 30 4C       jr   nc,$4C99
+
+TBL_4
+4C46: 03
+4C47: 36 4C
+4C49: 3E 4C
+4C4B: 30 4C
+
 4C4D: FF          rst  $38
 4C4E: FF          rst  $38
 4C4F: FF          rst  $38
@@ -12685,13 +12694,12 @@ ANIMATE_ALL_PICKUPS
 
 5052: FF          rst  $38
 
-5053: 03          inc  bc
-5054: 84          add  a,h
-5055: 50          ld   d,b
-5056: 90          sub  b
-5057: 50          ld   d,b
-5058: 8C          adc  a,h
-5059: 50          ld   d,b
+TBL_1
+5053: 03
+5054: 84 50
+5056: 90 50
+5058: 8C 50
+
 505A: FF          rst  $38
 505B: FF          rst  $38
 505C: FF          rst  $38
@@ -12720,8 +12728,8 @@ ANIMATE_ALL_PICKUPS
 507F: 01 1F 03    ld   bc,$031F
 5082: FF          rst  $38
 5083: FF          rst  $38
-5084: 02          ld   (bc),a
-5085: 02          ld   (bc),a
+
+5084: 02 02
 5086: 0F          rrca
 5087: 10 60       djnz $50E9
 5089: 50          ld   d,b
@@ -12981,6 +12989,8 @@ ANIMATE_ALL_PICKUPS
 51FD: FF          rst  $38
 51FE: FF          rst  $38
 51FF: FF          rst  $38
+
+    ;;
 5200: DD E5       push ix
 5202: E1          pop  hl
 5203: 7D          ld   a,l
@@ -13016,6 +13026,7 @@ ANIMATE_ALL_PICKUPS
 523C: C9          ret
 523D: DD 7E 10    ld   a,(ix+$10)
 5240: C9          ret
+
 5241: FF          rst  $38
 5242: FF          rst  $38
 5243: FF          rst  $38
@@ -13500,6 +13511,8 @@ ANIMATE_ALL_PICKUPS
 556D: FF          rst  $38
 556E: FF          rst  $38
 556F: FF          rst  $38
+
+;;;
 5570: 3A 00 B8    ld   a,($B800)
 5573: 21 40 90    ld   hl,$9040
 5576: C1          pop  bc
@@ -14116,7 +14129,9 @@ ANIMATE_ALL_PICKUPS
 58FD: FF          rst  $38
 58FE: FF          rst  $38
 58FF: FF          rst  $38
+
 5900: CD 70 55    call $5570
+
 5903: 01 01 51    ld   bc,$5101
 5906: 52          ld   d,d
 5907: 53          ld   d,e
@@ -14858,13 +14873,13 @@ JMP_HL
 5CFD: FF          rst  $38
 5CFE: FF          rst  $38
 5CFF: FF          rst  $38
-5D00: 02          ld   (bc),a
-5D01: 08          ex   af,af'
-5D02: 5D          ld   e,l
-5D03: 14          inc  d
-5D04: 5D          ld   e,l
-5D05: 14          inc  d
-5D06: 5D          ld   e,l
+
+TBL_2
+5D00: 02
+5D01: 08 5D
+5D03: 14 5D
+5D05: 14 5D
+
 5D07: FF          rst  $38
 5D08: 01 08 0E    ld   bc,$0E08
 5D0B: 00          nop
