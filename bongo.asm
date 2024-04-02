@@ -2,6 +2,7 @@
 
     ;; PLAYER_NUM     $8004  ;
     ;; JUMP_BTN_DOWN  $8005  ; player is holding down the jump button
+    ;; SECOND_TIMER   $8006
     ;; P1_TIME        $8007  ; time player has played: never displayed!
     ;; P2_TIME        $8009  ; ...would have been speed running!
     ;; CONTROLS:      $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
@@ -797,14 +798,16 @@ COINAGE_ROUTINE
 05CD: FF          rst  $38
 05CE: FF          rst  $38
 05CF: FF          rst  $38
-    
+
+NORMALIZE_INPUT
 05D0: 3A 04 80    ld   a,($PLAYER_NUM)
 05D3: A7          and  a
 05D4: 28 17       jr   z,$05ED
-05D6: 3A 0C 80    ld   a,($800C)
+    ;; p2
+05D6: 3A 0C 80    ld   a,($BUTTONS_1)
 05D9: CB 7F       bit  7,a
 05DB: 28 10       jr   z,$05ED
-05DD: 3A 0C 80    ld   a,($800C)
+05DD: 3A 0C 80    ld   a,($BUTTONS_1)
 05E0: E6 3C       and  $3C      ; 0011 1100
 05E2: 47          ld   b,a
 05E3: 3A 0B 80    ld   a,($CONTROLS)
@@ -812,6 +815,7 @@ COINAGE_ROUTINE
 05E8: 80          add  a,b
 05E9: 32 0E 80    ld   ($CONTROLSN),a
 05EC: C9          ret
+    ;; p1
 05ED: 3A 0B 80    ld   a,($CONTROLS)
 05F0: E6 3C       and  $3C      ; 0011 1100
 05F2: 47          ld   b,a
@@ -1047,13 +1051,15 @@ PLAYER_PHYSICS
 0771: FF          rst  $38
 0772: FF          rst  $38
 0773: FF          rst  $38
-0774: 3A 16 83    ld   a,($8316)
+
+PHYSICS_SOMETHING
+0774: 3A 16 83    ld   a,($8316) ; timer?
 0777: E6 07       and  $07
 0779: C0          ret  nz
-077A: 3A 12 80    ld   a,($8012)
+077A: 3A 12 80    ld   a,($8012) ; ?
 077D: A7          and  a
 077E: C0          ret  nz
-077F: 3A 0F 80    ld   a,($JUMP_ACC)
+077F: 3A 0F 80    ld   a,($JUMP_ACC) ; return if not jumping
 0782: A7          and  a
 0783: C8          ret  z
 0784: 3E 01       ld   a,$01
@@ -1065,16 +1071,13 @@ PLAYER_PHYSICS
 0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
-079A: FF          rst  $38
-079B: FF          rst  $38
-079C: FF          rst  $38
-079D: FF          rst  $38
-079E: FF          rst  $38
-079F: FF          rst  $38
+
+079A: FF x 6
+
+;;; (only called when jumping right?)
 07A0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07A3: A7          and  a
 07A4: C0          ret  nz
-    ;; sets jump ac when holding rigght!
 07A5: 3A 0F 80    ld   a,($JUMP_ACC)
 07A8: A7          and  a
 07A9: C0          ret  nz
@@ -1088,7 +1091,10 @@ PLAYER_PHYSICS
 07B9: 3E 8D       ld   a,$8D
 07BB: C3 F4 07    jp   $07F4
 07BE: C9          ret
+
 07BF: FF          rst  $38
+
+;;;  is this one when jump left?
 07C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07C3: A7          and  a
 07C4: C0          ret  nz
@@ -1105,15 +1111,18 @@ PLAYER_PHYSICS
 07D9: 3E 0D       ld   a,$0D
 07DB: C3 F4 07    jp   $07F4
 07DE: C9          ret
+
 07DF: FF          rst  $38
-07E0: CB 5F       bit  3,a
+
+07E0: CB 5F       bit  3,a      ; left?
 07E2: 28 07       jr   z,$07EB
 07E4: 21 50 07    ld   hl,$0750
 07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
-07EB: 21 48 09    ld   hl,$0948
+07EB: 21 48 09    ld   hl,$0948 ; not left or right?
 07EE: CD D8 06    call $PLAYER_PHYSICS
 07F1: C9          ret
+
 07F2: FF          rst  $38
 07F3: FF          rst  $38
 07F4: 32 45 81    ld   ($8145),a
@@ -1294,12 +1303,8 @@ PLAYER_PHYSICS
 090E: 32 48 81    ld   ($8148),a
 0911: C9          ret
     
-0912: FF          rst  $38
-0913: FF          rst  $38
-0914: FF          rst  $38
-0915: FF          rst  $38
-0916: FF          rst  $38
-0917: FF          rst  $38
+0912: FF x 6
+
 0918: 29          add  hl,hl
 0919: 2A 2B 2A    ld   hl,($2A2B)
 091C: FF          rst  $38
@@ -1354,6 +1359,8 @@ PLAYER_PHYSICS
 0965: FF          rst  $38
 0966: FF          rst  $38
 0967: FF          rst  $38
+
+    ;;
 0968: 45          ld   b,l
 0969: AF          xor  a
 096A: 94          sub  h
@@ -1378,10 +1385,10 @@ PLAYER_PHYSICS
 ;;; ground check?
 GROUND_CHECK
 0988: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-098B: C6 10       add  a,$10
-098D: CB 3F       srl  a
-098F: CB 3F       srl  a
-0991: E6 FE       and  $FE
+098B: C6 10       add  a,$10    ; +  16   ; the ground
+098D: CB 3F       srl  a        ; /  2
+098F: CB 3F       srl  a        ; /  2
+0991: E6 FE       and  $FE      ; &  1111 1110
 0993: 21 00 81    ld   hl,$8100
 0996: 85          add  a,l
 0997: 6F          ld   l,a
@@ -1403,7 +1410,8 @@ GROUND_CHECK
 09B3: C9          ret
     
 09B4: FF x 12
-    
+
+ON_GROUND_KIND_OF_CHECK
 09C0: 3A 12 80    ld   a,($8012)
 09C3: A7          and  a
 09C4: C0          ret  nz
@@ -1412,7 +1420,7 @@ GROUND_CHECK
 09C9: 28 1B       jr   z,$09E6
 09CB: E6 0C       and  $0C
 09CD: C0          ret  nz
-09CE: CD 88 09    call $GROUND_CHECK ; maybe
+09CE: CD 88 09    call $GROUND_CHECK
 09D1: A7          and  a
 09D2: C8          ret  z
 09D3: AF          xor  a
@@ -1424,7 +1432,7 @@ GROUND_CHECK
 09E1: 3C          inc  a
 09E2: 32 45 81    ld   ($8145),a
 09E5: C9          ret
-09E6: CD 88 09    call $GROUND_CHECK ; maybe
+09E6: CD 88 09    call $GROUND_CHECK
 09E9: A7          and  a
 09EA: 20 0B       jr   nz,$09F7
 09EC: 3A 11 80    ld   a,($8011)
@@ -1473,6 +1481,9 @@ GROUND_CHECK
 0A3D: C9          ret
 0A3E: FF          rst  $38
 0A3F: FF          rst  $38
+
+;;;
+JUMP_UPWARDS
 0A40: 3A 11 80    ld   a,($8011)
 0A43: A7          and  a
 0A44: C8          ret  z
@@ -1482,11 +1493,11 @@ GROUND_CHECK
 0A4A: 20 04       jr   nz,$0A50
 0A4C: CD 33 0A    call $0A33
 0A4F: C9          ret
-0A50: 3A 43 81    ld   a,($PLAYER_Y)
+0A50: 3A 43 81    ld   a,($PLAYER_Y) ; move upwards
 0A53: 3C          inc  a
 0A54: 3C          inc  a
 0A55: 32 43 81    ld   ($PLAYER_Y),a
-0A58: C6 10       add  a,$10    ; 16px diff?
+0A58: C6 10       add  a,$10
 0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A5D: C9          ret
     
@@ -1732,6 +1743,9 @@ GROUND_CHECK
 0C5D: FF          rst  $38
 0C5E: FF          rst  $38
 0C5F: FF          rst  $38
+
+;;;
+JUMP_UPWARDS_2
 0C60: 3A 12 80    ld   a,($8012)
 0C63: A7          and  a
 0C64: C8          ret  z
@@ -1839,12 +1853,12 @@ GROUND_CHECK
 0D35: 3E 10       ld   a,$10
 0D37: 32 24 80    ld   ($8024),a
 0D3A: C9          ret
-0D3B: FF          rst  $38
-0D3C: FF          rst  $38
-0D3D: FF          rst  $38
-0D3E: FF          rst  $38
-0D3F: FF          rst  $38
-0D40: C9          ret
+
+0D3B: FF x 5
+
+    ;; Oooh, mystery function - commented out.
+REDACTED
+0D40: C9          ret           ; just rets.
 0D41: 3A 48 81    ld   a,($8148)
 0D44: 67          ld   h,a
 0D45: 32 4B 81    ld   ($814B),a
@@ -1859,14 +1873,10 @@ GROUND_CHECK
 0D54: AF          xor  a
 0D55: 32 24 80    ld   ($8024),a
 0D58: C9          ret
-0D59: FF          rst  $38
-0D5A: FF          rst  $38
-0D5B: FF          rst  $38
-0D5C: FF          rst  $38
-0D5D: FF          rst  $38
-0D5E: FF          rst  $38
-0D5F: FF          rst  $38
-0D60: CD 40 0D    call $0D40
+
+0D59: FF x 7
+
+0D60: CD 40 0D    call $REDACTED
 0D63: 3A 24 80    ld   a,($8024)
 0D66: A7          and  a
 0D67: C8          ret  z
@@ -1884,12 +1894,9 @@ GROUND_CHECK
 0D7D: 3C          inc  a
 0D7E: 32 4B 81    ld   ($814B),a
 0D81: C9          ret
-0D82: FF          rst  $38
-0D83: FF          rst  $38
-0D84: FF          rst  $38
-0D85: FF          rst  $38
-0D86: FF          rst  $38
-0D87: FF          rst  $38
+
+0D82: FF x 6
+
 0D88: 3A 12 83    ld   a,($8312)
 0D8B: E6 07       and  $07
 0D8D: C0          ret  nz
@@ -1906,18 +1913,8 @@ GROUND_CHECK
 0D9F: 7E          ld   a,(hl)
 0DA0: 32 49 81    ld   ($8149),a
 0DA3: C9          ret
-0DA4: FF          rst  $38
-0DA5: FF          rst  $38
-0DA6: FF          rst  $38
-0DA7: FF          rst  $38
-0DA8: FF          rst  $38
-0DA9: FF          rst  $38
-0DAA: FF          rst  $38
-0DAB: FF          rst  $38
-0DAC: FF          rst  $38
-0DAD: FF          rst  $38
-0DAE: FF          rst  $38
-0DAF: FF          rst  $38
+
+0DA4: FF x 12
 0DB0: 05          dec  b
 0DB1: 06 07       ld   b,$07
 0DB3: 08          ex   af,af'
@@ -2514,40 +2511,25 @@ EXTRA_LIFE
 115C: 00          nop
 115D: 00          nop
 115E: C9          ret
-115F: FF          rst  $38
-1160: FF          rst  $38
-1161: FF          rst  $38
-1162: FF          rst  $38
-1163: FF          rst  $38
-1164: FF          rst  $38
-1165: FF          rst  $38
-1166: FF          rst  $38
-1167: FF          rst  $38
-1168: FF          rst  $38
-1169: FF          rst  $38
-116A: FF          rst  $38
-116B: FF          rst  $38
-116C: FF          rst  $38
-116D: FF          rst  $38
-116E: FF          rst  $38
-116F: FF          rst  $38
+
+115F: FF x 17
     
 1170: CD 04 1A    call $1A04
-1173: CD D0 13    call $13D0
-1176: CD D0 05    call $05D0
+1173: CD D0 13    call $UPDATE_TIME_TIMER
+1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
-117C: CD 74 07    call $0774
-117F: CD 40 0A    call $0A40
-1182: CD 60 0C    call $0C60
-1185: CD C0 09    call $09C0
+117C: CD 74 07    call $PHYSICS_SOMETHING
+117F: CD 40 0A    call $JUMP_UPWARDS   ; checks 8011 ?
+1182: CD 60 0C    call $JUMP_UPWARDS_2 ; checks 8012 ?
+1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $0A80
 118B: CD B0 0B    call $0BB0
 118E: CD 00 12    call $1200
 1191: CD 90 12    call $1290
 1194: CD 50 17    call $1750
 1197: CD 88 08    call $0888
-119A: CD 60 0D    call $0D60
-119D: CD 40 0D    call $0D40
+119A: CD 60 0D    call $0D60    ; also calls $REDACTED
+119D: CD 40 0D    call $REDACTED
 11A0: CD 40 0E    call $0E40
 11A3: CD 70 0E    call $0E70
 11A6: CD F0 19    call $19F0
@@ -2864,13 +2846,14 @@ WAIT_VBLANK
 
 13C4: FF x 12
 
-13D0: 3A 06 80    ld   a,($8006)
+UPDATE_TIME_TIMER
+13D0: 3A 06 80    ld   a,($SECOND_TIMER)
 13D3: 3C          inc  a
-13D4: 32 06 80    ld   ($8006),a
+13D4: 32 06 80    ld   ($SECOND_TIMER),a
 13D7: FE 3C       cp   $3C
 13D9: C0          ret  nz
 13DA: AF          xor  a
-13DB: 32 06 80    ld   ($8006),a
+13DB: 32 06 80    ld   ($SECOND_TIMER),a
 13DE: CD F0 13    call $UPDATE_TIME
 13E1: CD 10 14    call $DRAW_TIME
 13E4: C9          ret
@@ -3897,7 +3880,10 @@ BONUS_SKIP_SCREEN
 19FC: 32 12 80    ld   ($8012),a
 19FF: CD 20 02    call $0220
 1A02: C9          ret
-1A03: FF          rst  $38
+
+1A03: FF
+
+;;;
 1A04: 3A 40 81    ld   a,($PLAYER_X)
 1A07: 37          scf
 1A08: 3F          ccf
@@ -3905,6 +3891,7 @@ BONUS_SKIP_SCREEN
 1A0B: D0          ret  nc
 1A0C: C3 48 1B    jp   $1B48
 1A0F: C9          ret
+
 1A10: 03          inc  bc
 1A11: 3F          ccf
 1A12: 00          nop
