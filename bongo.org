@@ -131,3 +131,31 @@ _separator
 
 -----------
 
+Well, I spent a bunch of time on the weekend reverse engineering bongo source code. (I reckon I'd be world champion now if I had have just played the game!) 
+https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm
+ 
+I'm going through and commenting the source, and replacing memory addresses with labels. Haven't found too much interesting stuff yet, but a couple of things:
+ 
+Pickup tile collision: has to be 4 pixels from the left of the player and 24px down to trigger collision. That's why it's so hard to pick up the bonus when it's on a ledge.
+ 
+Also, bonuses are capped at 40k for sure.
+ 
+Here's the pickup lookup table for each screen (up to 3 pickups per screen maximum): so, easy to modify for a level editor.
+ 
+And I found this funny thing: there was meant to be a timer that showed under the score - but it was removed by returning from the draw function. Damn it, we could have had speed-runner mode too! In my improved lua script, I removed the return instruction so now it draws the time:
+
+----
+
+I also figured out you get more points if you jump off a ledge before the end of a screen. Like, if you walk off the end of screen 1, you get 2090 points, but if you jump off the ledge you get 2210 points. I was always jumping just to show-boat, but turns out it's optimal strategy
+
+Yeah, I watched BAZZA (BARRA? BAGGA?)'s run - they jump EVERY screen end (but it's not necessary unless there's an ledge... pffft, amateur)
+---
+Mini-tip: in the "jump up the stairs" level - you know it's hard to get the crown (you have to carefully tap until you get it)? Now I just go to the next stair up, and then drop back down. Bit less stressfull, and even works when the blue meanie guy is there.
+
+I played about 4 times around - it looks like it's "impossible" on about the 4th time where there is the "1 bird left/2 birds right" level. You can't wait for the bird, because the dino is too quick. It might be possible to be frame-perfect and jump between the two birds... but damn, I couldn't do it.
+
+The only thing that seems to change is how long the dino takes to start
+
+It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
+
+Can jump from one-step-higher in second round

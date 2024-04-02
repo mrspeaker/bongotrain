@@ -9,6 +9,8 @@
     ;; BUTTONS_2:     $800D  ; ... more buttons?
     ;; CONTROLSN:     $800E  ; some kind of "normalized" controls
     ;; JUMP_ACC:      $800F
+    ;; P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
+    ;; P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
     ;; SCORE_TO_ADD   $801D  ; amount to add to the current score
     ;; SCREEN_NUM:    $8029
     ;; SCREEN_NUM_P2: $802A  ; Player 2 screen
@@ -63,26 +65,10 @@
 002C: DD 19       add  ix,de
 002E: ED 6F       rld  (hl)
 0030: DD          db   $dd
-0031: FF          rst  $38
-0032: FF          rst  $38
-0033: FF          rst  $38
-0034: FF          rst  $38
-0035: FF          rst  $38
-0036: FF          rst  $38
-0037: FF          rst  $38
+0031: FF x 7
 0038: 3A 00 B8    ld   a,($B800)
 003B: 18 FB       jr   $0038
-003D: FF          rst  $38
-003E: FF          rst  $38
-003F: FF          rst  $38
-0040: FF          rst  $38
-0041: FF          rst  $38
-0042: FF          rst  $38
-0043: FF          rst  $38
-0044: FF          rst  $38
-0045: FF          rst  $38
-0046: FF          rst  $38
-0047: FF          rst  $38
+003D: FF x 11
 
 0048: 3A 00 A0    ld   a,($A000) ; PORT IN0?
 004B: E6 83       and  $83
@@ -213,8 +199,10 @@
 0137: 3A 03 83    ld   a,($8303)
 013A: 32 35 80    ld   ($8035),a
 013D: C9          ret
+    
 013E: FF          rst  $38
 013F: FF          rst  $38
+    
 0140: CD 30 24    call $2430
 0143: 3A 03 83    ld   a,($8303)
 0146: 47          ld   b,a
@@ -234,43 +222,16 @@
 0160: 1C          inc  e
 0161: 11 29 15    ld   de,$1529
 0164: 22 FF C9    ld   ($C9FF),hl
-0167: FF          rst  $38
-0168: FF          rst  $38
-0169: FF          rst  $38
-016A: FF          rst  $38
-016B: FF          rst  $38
-016C: FF          rst  $38
-016D: FF          rst  $38
-016E: FF          rst  $38
-016F: FF          rst  $38
+0167: FF x 9
 0170: CD 20 00    call $0020
 0173: C9          ret
-0174: FF          rst  $38
-0175: FF          rst  $38
-0176: FF          rst  $38
-0177: FF          rst  $38
-0178: FF          rst  $38
-0179: FF          rst  $38
-017A: FF          rst  $38
-017B: FF          rst  $38
-017C: FF          rst  $38
-017D: FF          rst  $38
-017E: FF          rst  $38
-017F: FF          rst  $38
+0174: FF x 13
 0180: C5          push bc
 0181: 01 00 40    ld   bc,$4000
 0184: 09          add  hl,bc
 0185: C1          pop  bc
 0186: E9          jp   (hl)
-0187: FF          rst  $38
-0188: FF          rst  $38
-0189: FF          rst  $38
-018A: FF          rst  $38
-018B: FF          rst  $38
-018C: FF          rst  $38
-018D: FF          rst  $38
-018E: FF          rst  $38
-018F: FF          rst  $38
+0187: FF x 9
 
 DID_PLAYER_PRESS_START ; Did player start the game?
 0190: 3A 03 83    ld   a,($8303) ; check you have credits
@@ -389,13 +350,8 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 0279: 3E 03       ld   a,$03
 027B: 32 33 80    ld   ($LIVES_P2),a
 027E: C3 00 10    jp   $BIG_RESET
-0281: FF          rst  $38
-0282: FF          rst  $38
-0283: FF          rst  $38
-0284: FF          rst  $38
-0285: FF          rst  $38
-0286: FF          rst  $38
-0287: FF          rst  $38
+    
+0281: FF x 7
 
 COINAGE_ROUTINE
 0288: 3A 06 83    ld   a,($8306)
@@ -468,10 +424,12 @@ COINAGE_ROUTINE
 0307: AF          xor  a
 0308: 32 05 83    ld   ($8305),a
 030B: C9          ret
+    
 030C: FF          rst  $38
 030D: FF          rst  $38
 030E: FF          rst  $38
 030F: FF          rst  $38
+    
 0310: 3A 00 B8    ld   a,($B800)
 0313: 21 40 90    ld   hl,$9040
 0316: C1          pop  bc
@@ -504,16 +462,7 @@ COINAGE_ROUTINE
 0339: 1E E0       ld   e,$E0
 033B: 19          add  hl,de
 033C: 18 F0       jr   $032E
-033E: FF          rst  $38
-033F: FF          rst  $38
-0340: FF          rst  $38
-0341: FF          rst  $38
-0342: FF          rst  $38
-0343: FF          rst  $38
-0344: FF          rst  $38
-0345: FF          rst  $38
-0346: FF          rst  $38
-0347: FF          rst  $38
+033E: FF x 10
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
@@ -531,12 +480,9 @@ COINAGE_ROUTINE
 0362: 3E 01       ld   a,$01
 0364: 32 90 80    ld   ($8090),a
 0367: C3 83 05    jp   $0583
-036A: FF          rst  $38
-036B: FF          rst  $38
-036C: FF          rst  $38
-036D: FF          rst  $38
-036E: FF          rst  $38
-036F: FF          rst  $38
+    
+036A: FF x 6
+    
 0370: CD 70 14    call $1470
 0373: 21 20 15    ld   hl,$1520
 0376: CD E3 01    call $01E3
@@ -550,20 +496,12 @@ COINAGE_ROUTINE
 038C: 00          nop
 038D: 00          nop
 038E: C9          ret
+    
 038F: FF          rst  $38
+    
 0390: CD A0 13    call $WAIT_VBLANK
 0393: 18 FB       jr   $0390
-0395: FF          rst  $38
-0396: FF          rst  $38
-0397: FF          rst  $38
-0398: FF          rst  $38
-0399: FF          rst  $38
-039A: FF          rst  $38
-039B: FF          rst  $38
-039C: FF          rst  $38
-039D: FF          rst  $38
-039E: FF          rst  $38
-039F: FF          rst  $38
+0395: FF x 11
 03A0: CD 08 04    call $0408
 03A3: 3A 32 80    ld   a,($LIVES)
 03A6: A7          and  a
@@ -602,34 +540,31 @@ COINAGE_ROUTINE
 03E2: C8          ret  z
 03E3: 32 A2 91    ld   ($91A2),a
 03E6: C9          ret
+    
 03E7: FF          rst  $38
+    
 03E8: AF          xor  a
 03E9: 32 34 80    ld   ($IS_PLAYING),a
 03EC: 32 35 80    ld   ($8035),a
 03EF: C3 93 00    jp   $0093
-03F2: FF          rst  $38
-03F3: FF          rst  $38
-03F4: FF          rst  $38
-03F5: FF          rst  $38
-03F6: FF          rst  $38
-03F7: FF          rst  $38
+
+03F2: FF x 6
+    
 03F8: 0E E0       ld   c,$E0
 03FA: CD A0 13    call $WAIT_VBLANK
 03FD: 0C          inc  c
 03FE: 20 FA       jr   nz,$03FA
 0400: C9          ret
-0401: FF          rst  $38
-0402: FF          rst  $38
-0403: FF          rst  $38
-0404: FF          rst  $38
-0405: FF          rst  $38
-0406: FF          rst  $38
-0407: FF          rst  $38
+
+0401: FF x 7
+    
 0408: 3E 01       ld   a,$01
 040A: 32 05 81    ld   ($8105),a
 040D: C9          ret
+    
 040E: FF          rst  $38
 040F: FF          rst  $38
+    
 0410: 21 E8 16    ld   hl,$16E8
 0413: CD E3 01    call $01E3
 0416: CD E0 24    call $24E0
@@ -638,29 +573,16 @@ COINAGE_ROUTINE
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
-0426: FF          rst  $38
-0427: FF          rst  $38
-0428: FF          rst  $38
-0429: FF          rst  $38
-042A: FF          rst  $38
-042B: FF          rst  $38
-042C: FF          rst  $38
-042D: FF          rst  $38
-042E: FF          rst  $38
-042F: FF          rst  $38
+    
+0426: FF x 10
+    
 0430: CD 40 04    call $0440
 0433: CD 70 04    call $0470
 0436: C9          ret
-0437: FF          rst  $38
-0438: FF          rst  $38
-0439: FF          rst  $38
-043A: FF          rst  $38
-043B: FF          rst  $38
-043C: FF          rst  $38
-043D: FF          rst  $38
-043E: FF          rst  $38
-043F: FF          rst  $38
-0440: 3A 16 80    ld   a,($8016)
+
+0437: FF x 9
+    
+0440: 3A 16 80    ld   a,($P1_SCORE+2)
 0443: 4F          ld   c,a
 0444: 3A 02 83    ld   a,($8302)
 0447: 37          scf
@@ -668,7 +590,7 @@ COINAGE_ROUTINE
 0449: 99          sbc  a,c
 044A: DC E0 04    call c,$04E0
 044D: C0          ret  nz
-044E: 3A 15 80    ld   a,($8015)
+044E: 3A 15 80    ld   a,($P1_SCORE+1)
 0451: 4F          ld   c,a
 0452: 3A 01 83    ld   a,($8301)
 0455: 37          scf
@@ -676,7 +598,7 @@ COINAGE_ROUTINE
 0457: 99          sbc  a,c
 0458: DC E0 04    call c,$04E0
 045B: C0          ret  nz
-045C: 3A 14 80    ld   a,($8014)
+045C: 3A 14 80    ld   a,($P1_SCORE)
 045F: 4F          ld   c,a
 0460: 3A 00 83    ld   a,($8300)
 0463: 37          scf
@@ -684,13 +606,15 @@ COINAGE_ROUTINE
 0465: 99          sbc  a,c
 0466: DC E0 04    call c,$04E0
 0469: C9          ret
+    
 046A: FF          rst  $38
 046B: FF          rst  $38
 046C: FF          rst  $38
 046D: FF          rst  $38
 046E: FF          rst  $38
 046F: FF          rst  $38
-0470: 3A 19 80    ld   a,($8019)
+    
+0470: 3A 19 80    ld   a,($P2_SCORE+2)
 0473: 4F          ld   c,a
 0474: 3A 02 83    ld   a,($8302)
 0477: 37          scf
@@ -698,7 +622,7 @@ COINAGE_ROUTINE
 0479: 99          sbc  a,c
 047A: DC 00 05    call c,$0500
 047D: C0          ret  nz
-047E: 3A 18 80    ld   a,($8018)
+047E: 3A 18 80    ld   a,($P2_SCORE+1)
 0481: 4F          ld   c,a
 0482: 3A 01 83    ld   a,($8301)
 0485: 37          scf
@@ -706,7 +630,7 @@ COINAGE_ROUTINE
 0487: 99          sbc  a,c
 0488: DC 00 05    call c,$0500
 048B: C0          ret  nz
-048C: 3A 17 80    ld   a,($8017)
+048C: 3A 17 80    ld   a,($P2_SCORE)
 048F: 4F          ld   c,a
 0490: 3A 00 83    ld   a,($8300)
 0493: 37          scf
@@ -714,34 +638,16 @@ COINAGE_ROUTINE
 0495: 99          sbc  a,c
 0496: DC 00 05    call c,$0500
 0499: C9          ret
-049A: FF          rst  $38
-049B: FF          rst  $38
-049C: FF          rst  $38
-049D: FF          rst  $38
-049E: FF          rst  $38
-049F: FF          rst  $38
-04A0: FF          rst  $38
-04A1: FF          rst  $38
-04A2: FF          rst  $38
-04A3: FF          rst  $38
-04A4: FF          rst  $38
-04A5: FF          rst  $38
-04A6: FF          rst  $38
-04A7: FF          rst  $38
-04A8: FF          rst  $38
-04A9: FF          rst  $38
-04AA: FF          rst  $38
-04AB: FF          rst  $38
-04AC: FF          rst  $38
-04AD: FF          rst  $38
-04AE: FF          rst  $38
-04AF: FF          rst  $38
+049A: FF x 22
+    
 04B0: 0E 01       ld   c,$01
 04B2: CD A0 13    call $WAIT_VBLANK
 04B5: 0D          dec  c
 04B6: 20 FA       jr   nz,$04B2
 04B8: C9          ret
+    
 04B9: FF          rst  $38
+    
 04BA: CD E0 28    call $28E0
 04BD: 3A 04 80    ld   a,($PLAYER_NUM)
 04C0: A7          and  a
@@ -760,41 +666,36 @@ COINAGE_ROUTINE
 04D8: C0          ret  nz
 04D9: CD F0 22    call $22F0
 04DC: C9          ret
+    
 04DD: FF          rst  $38
 04DE: FF          rst  $38
 04DF: FF          rst  $38
-04E0: 3A 14 80    ld   a,($8014)
+    
+04E0: 3A 14 80    ld   a,($P1_SCORE)
 04E3: 32 00 83    ld   ($8300),a
-04E6: 3A 15 80    ld   a,($8015)
+04E6: 3A 15 80    ld   a,($P1_SCORE+1)
 04E9: 32 01 83    ld   ($8301),a
-04EC: 3A 16 80    ld   a,($8016)
+04EC: 3A 16 80    ld   a,($P1_SCORE+2)
 04EF: 32 02 83    ld   ($8302),a
 04F2: E1          pop  hl
 04F3: C9          ret
-04F4: FF          rst  $38
-04F5: FF          rst  $38
-04F6: FF          rst  $38
-04F7: FF          rst  $38
-04F8: FF          rst  $38
-04F9: FF          rst  $38
-04FA: FF          rst  $38
-04FB: FF          rst  $38
-04FC: FF          rst  $38
-04FD: FF          rst  $38
-04FE: FF          rst  $38
-04FF: FF          rst  $38
-0500: 3A 17 80    ld   a,($8017)
+    
+04F4: FF x 12
+    
+0500: 3A 17 80    ld   a,($P2_SCORE)
 0503: 32 00 83    ld   ($8300),a
-0506: 3A 18 80    ld   a,($8018)
+0506: 3A 18 80    ld   a,($P2_SCORE+1)
 0509: 32 01 83    ld   ($8301),a
-050C: 3A 19 80    ld   a,($8019)
+050C: 3A 19 80    ld   a,($P2_SCORE+2)
 050F: 32 02 83    ld   ($8302),a
 0512: E1          pop  hl
 0513: C9          ret
+    
 0514: FF          rst  $38
 0515: FF          rst  $38
 0516: FF          rst  $38
 0517: FF          rst  $38
+    
 0518: 21 38 80    ld   hl,$8038
 051B: 36 39       ld   (hl),$39
 051D: 23          inc  hl
@@ -847,29 +748,9 @@ COINAGE_ROUTINE
 0563: 36 30       ld   (hl),$30
 0565: CD 88 08    call $0888
 0568: C9          ret
-0569: FF          rst  $38
-056A: FF          rst  $38
-056B: FF          rst  $38
-056C: FF          rst  $38
-056D: FF          rst  $38
-056E: FF          rst  $38
-056F: FF          rst  $38
-0570: FF          rst  $38
-0571: FF          rst  $38
-0572: FF          rst  $38
-0573: FF          rst  $38
-0574: FF          rst  $38
-0575: FF          rst  $38
-0576: FF          rst  $38
-0577: FF          rst  $38
-0578: FF          rst  $38
-0579: FF          rst  $38
-057A: FF          rst  $38
-057B: FF          rst  $38
-057C: FF          rst  $38
-057D: FF          rst  $38
-057E: FF          rst  $38
-057F: FF          rst  $38
+    
+0569: FF x 23
+    
 0580: CD 48 03    call $0348
 0583: CD 80 30    call $3080
 0586: CD A0 13    call $WAIT_VBLANK
@@ -908,6 +789,7 @@ COINAGE_ROUTINE
 05C6: E1          pop  hl
 05C7: E1          pop  hl
 05C8: C9          ret
+    
 05C9: FF          rst  $38
 05CA: FF          rst  $38
 05CB: FF          rst  $38
@@ -915,6 +797,7 @@ COINAGE_ROUTINE
 05CD: FF          rst  $38
 05CE: FF          rst  $38
 05CF: FF          rst  $38
+    
 05D0: 3A 04 80    ld   a,($PLAYER_NUM)
 05D3: A7          and  a
 05D4: 28 17       jr   z,$05ED
@@ -938,15 +821,9 @@ COINAGE_ROUTINE
 05FA: 80          add  a,b
 05FB: 32 0E 80    ld   ($CONTROLSN),a
 05FE: C9          ret
-05FF: FF          rst  $38
-0600: FF          rst  $38
-0601: FF          rst  $38
-0602: FF          rst  $38
-0603: FF          rst  $38
-0604: FF          rst  $38
-0605: FF          rst  $38
-0606: FF          rst  $38
-0607: FF          rst  $38
+    
+05FF: FF x 9
+    
 0608: 0C          inc  c
 0609: 0E 10       ld   c,$10
 060B: 0E 0C       ld   c,$0C
@@ -982,16 +859,9 @@ COINAGE_ROUTINE
 063B: 00          nop
 063C: 00          nop
 063D: C9          ret
-063E: FF          rst  $38
-063F: FF          rst  $38
-0640: FF          rst  $38
-0641: FF          rst  $38
-0642: FF          rst  $38
-0643: FF          rst  $38
-0644: FF          rst  $38
-0645: FF          rst  $38
-0646: FF          rst  $38
-0647: FF          rst  $38
+    
+063E: FF x 10
+    
 0648: 8C          adc  a,h
 0649: 8E          adc  a,(hl)
 064A: 90          sub  b
@@ -1029,16 +899,10 @@ COINAGE_ROUTINE
 067B: 00          nop
 067C: 00          nop
 067D: C9          ret
-067E: FF          rst  $38
-067F: FF          rst  $38
-0680: FF          rst  $38
-0681: FF          rst  $38
-0682: FF          rst  $38
-0683: FF          rst  $38
-0684: FF          rst  $38
-0685: FF          rst  $38
-0686: FF          rst  $38
-0687: FF          rst  $38
+    
+067E: FF x 10
+
+PLAYER_INPUT
 0688: 3A 12 83    ld   a,($8312)
 068B: E6 03       and  $03
 068D: C0          ret  nz
@@ -1085,12 +949,14 @@ COINAGE_ROUTINE
 06D5: FF          rst  $38
 06D6: FF          rst  $38
 06D7: FF          rst  $38
+
+    ;; Physics: fall with gravity (maybe?)
+PLAYER_PHYSICS
 06D8: 00          nop
 06D9: 00          nop
 06DA: 00          nop
 06DB: 00          nop
-06DC: 00          nop
-    ;; Physics: fall with gravity
+06DC: 00          nop    
 06DD: 3A 0F 80    ld   a,($JUMP_ACC)
 06E0: 3D          dec  a
 06E1: 32 0F 80    ld   ($JUMP_ACC),a
@@ -1123,6 +989,7 @@ COINAGE_ROUTINE
 0718: 32 49 80    ld   ($8049),a
 071B: F1          pop  af
 071C: C9          ret
+    
 071D: FF          rst  $38
 071E: FF          rst  $38
 071F: FF          rst  $38
@@ -1195,7 +1062,7 @@ COINAGE_ROUTINE
 078C: CB 57       bit  2,a      ; right
 078E: 28 07       jr   z,$0797
 0790: 21 28 07    ld   hl,$0728
-0793: CD D8 06    call $06D8
+0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
 079A: FF          rst  $38
@@ -1211,7 +1078,7 @@ COINAGE_ROUTINE
 07A5: 3A 0F 80    ld   a,($JUMP_ACC)
 07A8: A7          and  a
 07A9: C0          ret  nz
-07AA: CD 88 09    call $0988
+07AA: CD 88 09    call $GROUND_CHECK 
 07AD: A7          and  a
 07AE: C8          ret  z
 07AF: 3E 07       ld   a,$07
@@ -1228,7 +1095,7 @@ COINAGE_ROUTINE
 07C5: 3A 0F 80    ld   a,($JUMP_ACC)
 07C8: A7          and  a
 07C9: C0          ret  nz
-07CA: CD 88 09    call $0988
+07CA: CD 88 09    call $GROUND_CHECK
 07CD: A7          and  a
 07CE: C8          ret  z
 07CF: 3E 07       ld   a,$07
@@ -1242,10 +1109,10 @@ COINAGE_ROUTINE
 07E0: CB 5F       bit  3,a
 07E2: 28 07       jr   z,$07EB
 07E4: 21 50 07    ld   hl,$0750
-07E7: CD D8 06    call $06D8
+07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
 07EB: 21 48 09    ld   hl,$0948
-07EE: CD D8 06    call $06D8
+07EE: CD D8 06    call $PLAYER_PHYSICS
 07F1: C9          ret
 07F2: FF          rst  $38
 07F3: FF          rst  $38
@@ -1383,23 +1250,17 @@ COINAGE_ROUTINE
 08B0: 36 DE       ld   (hl),$DE
 08B2: CD 20 18    call $1820
 08B5: C9          ret
-08B6: FF          rst  $38
-08B7: FF          rst  $38
-08B8: FF          rst  $38
-08B9: FF          rst  $38
-08BA: FF          rst  $38
-08BB: FF          rst  $38
-08BC: FF          rst  $38
-08BD: FF          rst  $38
-08BE: FF          rst  $38
-08BF: FF          rst  $38
+    
+08B6: FF x 10
+
+;; jump somethin'
 08C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 08C3: A7          and  a
 08C4: C0          ret  nz
 08C5: 3A 0F 80    ld   a,($JUMP_ACC)
 08C8: A7          and  a
 08C9: C0          ret  nz
-08CA: CD 88 09    call $0988
+08CA: CD 88 09    call $GROUND_CHECK
 08CD: A7          and  a
 08CE: C8          ret  z
 08CF: 3E 07       ld   a,$07
@@ -1407,18 +1268,9 @@ COINAGE_ROUTINE
 08D4: 3E 17       ld   a,$17
 08D6: 32 41 81    ld   ($8141),a
 08D9: C3 30 09    jp   $0930
-08DC: FF          rst  $38
-08DD: FF          rst  $38
-08DE: FF          rst  $38
-08DF: FF          rst  $38
-08E0: FF          rst  $38
-08E1: FF          rst  $38
-08E2: FF          rst  $38
-08E3: FF          rst  $38
-08E4: FF          rst  $38
-08E5: FF          rst  $38
-08E6: FF          rst  $38
-08E7: FF          rst  $38
+    
+08DC: FF x 12
+    
 08E8: 3A 12 83    ld   a,($8312)
 08EB: E6 07       and  $07
 08ED: 20 15       jr   nz,$0904
@@ -1441,6 +1293,7 @@ COINAGE_ROUTINE
 090D: 3C          inc  a
 090E: 32 48 81    ld   ($8148),a
 0911: C9          ret
+    
 0912: FF          rst  $38
 0913: FF          rst  $38
 0914: FF          rst  $38
@@ -1474,19 +1327,8 @@ COINAGE_ROUTINE
 0935: 3E 04       ld   a,$04
 0937: 32 43 80    ld   ($8043),a
 093A: C9          ret
-093B: FF          rst  $38
-093C: FF          rst  $38
-093D: FF          rst  $38
-093E: FF          rst  $38
-093F: FF          rst  $38
-0940: FF          rst  $38
-0941: FF          rst  $38
-0942: FF          rst  $38
-0943: FF          rst  $38
-0944: FF          rst  $38
-0945: FF          rst  $38
-0946: FF          rst  $38
-0947: FF          rst  $38
+    
+093B: FF x 13
 0948: 00          nop
 0949: 17          rla
 094A: 18 0C       jr   $0958
@@ -1530,14 +1372,11 @@ COINAGE_ROUTINE
 097D: 85          add  a,l
 097E: 6F          ld   l,a
 097F: C9          ret
-0980: FF          rst  $38
-0981: FF          rst  $38
-0982: FF          rst  $38
-0983: FF          rst  $38
-0984: FF          rst  $38
-0985: FF          rst  $38
-0986: FF          rst  $38
-0987: FF          rst  $38
+    
+0980: FF x 8
+
+;;; ground check?
+GROUND_CHECK
 0988: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 098B: C6 10       add  a,$10
 098D: CB 3F       srl  a
@@ -1562,18 +1401,9 @@ COINAGE_ROUTINE
 09B0: C9          ret
 09B1: 3E 01       ld   a,$01
 09B3: C9          ret
-09B4: FF          rst  $38
-09B5: FF          rst  $38
-09B6: FF          rst  $38
-09B7: FF          rst  $38
-09B8: FF          rst  $38
-09B9: FF          rst  $38
-09BA: FF          rst  $38
-09BB: FF          rst  $38
-09BC: FF          rst  $38
-09BD: FF          rst  $38
-09BE: FF          rst  $38
-09BF: FF          rst  $38
+    
+09B4: FF x 12
+    
 09C0: 3A 12 80    ld   a,($8012)
 09C3: A7          and  a
 09C4: C0          ret  nz
@@ -1582,7 +1412,7 @@ COINAGE_ROUTINE
 09C9: 28 1B       jr   z,$09E6
 09CB: E6 0C       and  $0C
 09CD: C0          ret  nz
-09CE: CD 88 09    call $0988
+09CE: CD 88 09    call $GROUND_CHECK ; maybe
 09D1: A7          and  a
 09D2: C8          ret  z
 09D3: AF          xor  a
@@ -1594,7 +1424,7 @@ COINAGE_ROUTINE
 09E1: 3C          inc  a
 09E2: 32 45 81    ld   ($8145),a
 09E5: C9          ret
-09E6: CD 88 09    call $0988
+09E6: CD 88 09    call $GROUND_CHECK ; maybe
 09E9: A7          and  a
 09EA: 20 0B       jr   nz,$09F7
 09EC: 3A 11 80    ld   a,($8011)
@@ -1607,15 +1437,9 @@ COINAGE_ROUTINE
 09F8: 32 11 80    ld   ($8011),a
 09FB: CD 68 0A    call $0A68
 09FE: C9          ret
-09FF: FF          rst  $38
-0A00: FF          rst  $38
-0A01: FF          rst  $38
-0A02: FF          rst  $38
-0A03: FF          rst  $38
-0A04: FF          rst  $38
-0A05: FF          rst  $38
-0A06: FF          rst  $38
-0A07: FF          rst  $38
+    
+09FF: FF x 9
+    
 0A08: 3A 12 83    ld   a,($8312)
 0A0B: E6 07       and  $07
 0A0D: 20 15       jr   nz,$0A24
@@ -1665,32 +1489,18 @@ COINAGE_ROUTINE
 0A58: C6 10       add  a,$10    ; 16px diff?
 0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A5D: C9          ret
-0A5E: FF          rst  $38
-0A5F: FF          rst  $38
-0A60: FF          rst  $38
-0A61: FF          rst  $38
-0A62: FF          rst  $38
-0A63: FF          rst  $38
-0A64: FF          rst  $38
-0A65: FF          rst  $38
-0A66: FF          rst  $38
-0A67: FF          rst  $38
+    
+0A5E: FF x 10
+    
 0A68: 3A 43 81    ld   a,($PLAYER_Y)
 0A6B: E6 F8       and  $F8
 0A6D: 32 43 81    ld   ($PLAYER_Y),a
 0A70: C6 10       add  a,$10
 0A72: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A75: C9          ret
-0A76: FF          rst  $38
-0A77: FF          rst  $38
-0A78: FF          rst  $38
-0A79: FF          rst  $38
-0A7A: FF          rst  $38
-0A7B: FF          rst  $38
-0A7C: FF          rst  $38
-0A7D: FF          rst  $38
-0A7E: FF          rst  $38
-0A7F: FF          rst  $38
+    
+0A76: FF x 10
+    
 0A80: 3A 12 80    ld   a,($8012)
 0A83: A7          and  a
 0A84: C0          ret  nz
@@ -1716,15 +1526,9 @@ COINAGE_ROUTINE
 0AAA: C0          ret  nz
 0AAB: CD B8 0A    call $0AB8
 0AAE: C9          ret
-0AAF: FF          rst  $38
-0AB0: FF          rst  $38
-0AB1: FF          rst  $38
-0AB2: FF          rst  $38
-0AB3: FF          rst  $38
-0AB4: FF          rst  $38
-0AB5: FF          rst  $38
-0AB6: FF          rst  $38
-0AB7: FF          rst  $38
+    
+0AAF: FF x 9
+    
 0AB8: 3A 11 80    ld   a,($8011)
 0ABB: A7          and  a
 0ABC: C0          ret  nz
@@ -1735,9 +1539,9 @@ COINAGE_ROUTINE
 0AC6: CD A0 13    call $WAIT_VBLANK
 0AC9: CD A0 13    call $WAIT_VBLANK
 0ACC: C9          ret
-0ACD: FF          rst  $38
-0ACE: FF          rst  $38
-0ACF: FF          rst  $38
+    
+0ACD: FF FF FF
+    
 0AD0: 3A 04 80    ld   a,($PLAYER_NUM)
 0AD3: A7          and  a
 0AD4: 20 05       jr   nz,$0ADB
@@ -1762,13 +1566,9 @@ COINAGE_ROUTINE
 0AF3: 20 F9       jr   nz,$0AEE
 0AF5: CD 98 18    call $1898
 0AF8: C9          ret
-0AF9: FF          rst  $38
-0AFA: FF          rst  $38
-0AFB: FF          rst  $38
-0AFC: FF          rst  $38
-0AFD: FF          rst  $38
-0AFE: FF          rst  $38
-0AFF: FF          rst  $38
+    
+0AF9: FF x 7
+    
 0B00: 38 0C       jr   c,$0B0E
 0B02: 38 0C       jr   c,$0B10
 0B04: 38 0C       jr   c,$0B12
@@ -1796,80 +1596,9 @@ COINAGE_ROUTINE
 0B30: 38 0C       jr   c,$0B3E
 0B32: 38 0C       jr   c,$0B40
 0B34: 10 0C       djnz $0B42
-0B36: 00          nop
-0B37: 00          nop
-0B38: 00          nop
-0B39: 00          nop
-0B3A: 00          nop
-0B3B: 00          nop
-0B3C: 00          nop
-0B3D: 00          nop
-0B3E: 00          nop
-0B3F: 00          nop
-0B40: 00          nop
-0B41: 00          nop
-0B42: 00          nop
-0B43: 00          nop
-0B44: 00          nop
-0B45: 00          nop
-0B46: 00          nop
-0B47: 00          nop
-0B48: 00          nop
-0B49: 00          nop
-0B4A: 00          nop
-0B4B: 00          nop
-0B4C: 00          nop
-0B4D: 00          nop
-0B4E: 00          nop
-0B4F: 00          nop
-0B50: 00          nop
-0B51: 00          nop
-0B52: 00          nop
-0B53: 00          nop
-0B54: 00          nop
-0B55: 00          nop
-0B56: 00          nop
-0B57: 00          nop
-0B58: 00          nop
-0B59: 00          nop
-0B5A: 00          nop
-0B5B: 00          nop
-0B5C: 00          nop
-0B5D: 00          nop
-0B5E: 00          nop
-0B5F: 00          nop
-0B60: 00          nop
-0B61: 00          nop
-0B62: 00          nop
-0B63: 00          nop
-0B64: 00          nop
-0B65: 00          nop
-0B66: 00          nop
-0B67: 00          nop
-0B68: 00          nop
-0B69: 00          nop
-0B6A: 00          nop
-0B6B: 00          nop
-0B6C: 00          nop
-0B6D: 00          nop
-0B6E: 00          nop
-0B6F: 00          nop
-0B70: 00          nop
-0B71: 00          nop
-0B72: 00          nop
-0B73: 00          nop
-0B74: 00          nop
-0B75: 00          nop
-0B76: 00          nop
-0B77: 00          nop
-0B78: 00          nop
-0B79: 00          nop
-0B7A: 00          nop
-0B7B: 00          nop
-0B7C: FF          rst  $38
-0B7D: FF          rst  $38
-0B7E: FF          rst  $38
-0B7F: FF          rst  $38
+0B36: 00 x 71
+0B7C: FF FF FF FF
+    
 0B80: DD 7E 01    ld   a,(ix+$01)
 0B83: DD 77 03    ld   (ix+$03),a
 0B86: DD CB 02 46 bit  0,(ix+$02)
@@ -1885,17 +1614,8 @@ COINAGE_ROUTINE
 0BA0: AF          xor  a
 0BA1: 32 2D 80    ld   ($802D),a
 0BA4: C9          ret
-0BA5: FF          rst  $38
-0BA6: FF          rst  $38
-0BA7: FF          rst  $38
-0BA8: FF          rst  $38
-0BA9: FF          rst  $38
-0BAA: FF          rst  $38
-0BAB: FF          rst  $38
-0BAC: FF          rst  $38
-0BAD: FF          rst  $38
-0BAE: FF          rst  $38
-0BAF: FF          rst  $38
+0BA5: FF x 11
+    
 0BB0: DD 21 80 81 ld   ix,$8180
 0BB4: FD 21 38 81 ld   iy,$8138
 0BB8: 16 09       ld   d,$09
@@ -1930,24 +1650,8 @@ COINAGE_ROUTINE
 0BFA: 15          dec  d
 0BFB: 20 BD       jr   nz,$0BBA
 0BFD: C9          ret
-0BFE: FF          rst  $38
-0BFF: FF          rst  $38
-0C00: FF          rst  $38
-0C01: FF          rst  $38
-0C02: FF          rst  $38
-0C03: FF          rst  $38
-0C04: FF          rst  $38
-0C05: FF          rst  $38
-0C06: FF          rst  $38
-0C07: FF          rst  $38
-0C08: FF          rst  $38
-0C09: FF          rst  $38
-0C0A: FF          rst  $38
-0C0B: FF          rst  $38
-0C0C: FF          rst  $38
-0C0D: FF          rst  $38
-0C0E: FF          rst  $38
-0C0F: FF          rst  $38
+    
+0BFE: FF x 18
 0C10: 00          nop
 0C11: 00          nop
 0C12: 00          nop
@@ -2057,13 +1761,9 @@ COINAGE_ROUTINE
 0C92: 32 12 80    ld   ($8012),a
 0C95: CD 20 02    call $0220
 0C98: C9          ret
-0C99: FF          rst  $38
-0C9A: FF          rst  $38
-0C9B: FF          rst  $38
-0C9C: FF          rst  $38
-0C9D: FF          rst  $38
-0C9E: FF          rst  $38
-0C9F: FF          rst  $38
+    
+0C99: FF x 7
+    
 0CA0: 1E 08       ld   e,$08
 0CA2: CD A0 13    call $WAIT_VBLANK
 0CA5: 1D          dec  e
@@ -2673,21 +2373,7 @@ BIG_RESET
 105D: 18 EC       jr   $104B
 105F: FF          rst  $38
 1060: F0          ret  p
-1061: FF          rst  $38
-1062: FF          rst  $38
-1063: FF          rst  $38
-1064: FF          rst  $38
-1065: FF          rst  $38
-1066: FF          rst  $38
-1067: FF          rst  $38
-1068: FF          rst  $38
-1069: FF          rst  $38
-106A: FF          rst  $38
-106B: FF          rst  $38
-106C: FF          rst  $38
-106D: FF          rst  $38
-106E: FF          rst  $38
-106F: FF          rst  $38
+1061: FF x 15
 
 ;;;  Extra life
 EXTRA_LIFE
@@ -2845,10 +2531,11 @@ EXTRA_LIFE
 116D: FF          rst  $38
 116E: FF          rst  $38
 116F: FF          rst  $38
+    
 1170: CD 04 1A    call $1A04
 1173: CD D0 13    call $13D0
 1176: CD D0 05    call $05D0
-1179: CD 88 06    call $0688
+1179: CD 88 06    call $PLAYER_INPUT
 117C: CD 74 07    call $0774
 117F: CD 40 0A    call $0A40
 1182: CD 60 0C    call $0C60
@@ -2870,13 +2557,9 @@ EXTRA_LIFE
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $01E3
 11B8: C9          ret
-11B9: FF          rst  $38
-11BA: FF          rst  $38
-11BB: FF          rst  $38
-11BC: FF          rst  $38
-11BD: FF          rst  $38
-11BE: FF          rst  $38
-11BF: FF          rst  $38
+    
+11B9: FF x 7
+    
 11C0: 3A 58 81    ld   a,($8158)
 11C3: FE 70       cp   $70
 11C5: 28 14       jr   z,$11DB
@@ -2943,21 +2626,9 @@ EXTRA_LIFE
 123A: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 123D: 32 02 80    ld   ($8002),a
 1240: C9          ret
-1241: FF          rst  $38
-1242: FF          rst  $38
-1243: FF          rst  $38
-1244: FF          rst  $38
-1245: FF          rst  $38
-1246: FF          rst  $38
-1247: FF          rst  $38
-1248: FF          rst  $38
-1249: FF          rst  $38
-124A: FF          rst  $38
-124B: FF          rst  $38
-124C: FF          rst  $38
-124D: FF          rst  $38
-124E: FF          rst  $38
-124F: FF          rst  $38
+    
+1241: FF x 15
+    
 1250: E5          push hl
 1251: 3A 40 81    ld   a,($PLAYER_X)
 1254: 96          sub  (hl)
@@ -6189,7 +5860,7 @@ BONUS_SKIP_SCREEN
 
 DRAW_SCORE
 2450: AF          xor  a
-2451: 21 14 80    ld   hl,$8014
+2451: 21 14 80    ld   hl,$P1_SCORE
 2454: ED 67       rrd  (hl)
 2456: 32 01 93    ld   ($9301),a
 2459: ED 67       rrd  (hl)
@@ -6208,7 +5879,7 @@ DRAW_SCORE
 2475: ED 67       rrd  (hl)
 2477: AF          xor  a
 2478: 32 E1 92    ld   ($92E1),a
-247B: 21 17 80    ld   hl,$8017
+247B: 21 17 80    ld   hl,$P2_SCORE
 247E: ED 67       rrd  (hl)
 2480: 32 81 90    ld   ($9081),a
 2483: ED 67       rrd  (hl)
@@ -7845,64 +7516,40 @@ DRAW_BONUS_STATE
 2CED: 00          nop
 2CEE: 00          nop
 2CEF: C9          ret
-2CF0: FF          rst  $38
-2CF1: FF          rst  $38
-2CF2: FF          rst  $38
-2CF3: FF          rst  $38
-2CF4: FF          rst  $38
-2CF5: FF          rst  $38
-2CF6: FF          rst  $38
-2CF7: FF          rst  $38
-2CF8: FF          rst  $38
-2CF9: FF          rst  $38
-2CFA: FF          rst  $38
-2CFB: FF          rst  $38
-2CFC: FF          rst  $38
-2CFD: FF          rst  $38
-2CFE: FF          rst  $38
-2CFF: FF          rst  $38
+2CF0: FF x 16
+    
+    ;; Score somthing
 2D00: 21 00 83    ld   hl,$8300
-2D03: 3A 14 80    ld   a,($8014)
+2D03: 3A 14 80    ld   a,($P1_SCORE)
 2D06: BE          cp   (hl)
 2D07: 20 14       jr   nz,$2D1D
 2D09: 23          inc  hl
-2D0A: 3A 15 80    ld   a,($8015)
+2D0A: 3A 15 80    ld   a,($P1_SCORE+1)
 2D0D: BE          cp   (hl)
 2D0E: 20 0D       jr   nz,$2D1D
 2D10: 23          inc  hl
-2D11: 3A 16 80    ld   a,($8016)
+2D11: 3A 16 80    ld   a,($P1_SCORE+2)
 2D14: BE          cp   (hl)
 2D15: 20 06       jr   nz,$2D1D
 2D17: CD 48 2D    call $2D48
 2D1A: C3 E8 03    jp   $03E8
 2D1D: 21 00 83    ld   hl,$8300
-2D20: 3A 17 80    ld   a,($8017)
+2D20: 3A 17 80    ld   a,($P2_SCORE)
 2D23: BE          cp   (hl)
 2D24: 20 F4       jr   nz,$2D1A
 2D26: 23          inc  hl
-2D27: 3A 18 80    ld   a,($8018)
+2D27: 3A 18 80    ld   a,($P2_SCORE+1)
 2D2A: BE          cp   (hl)
 2D2B: 20 ED       jr   nz,$2D1A
 2D2D: 23          inc  hl
-2D2E: 3A 19 80    ld   a,($8019)
+2D2E: 3A 19 80    ld   a,($P2_SCORE+2)
 2D31: BE          cp   (hl)
 2D32: 20 E6       jr   nz,$2D1A
 2D34: CD 58 2D    call $2D58
 2D37: C3 E8 03    jp   $03E8
-2D3A: FF          rst  $38
-2D3B: FF          rst  $38
-2D3C: FF          rst  $38
-2D3D: FF          rst  $38
-2D3E: FF          rst  $38
-2D3F: FF          rst  $38
-2D40: FF          rst  $38
-2D41: FF          rst  $38
-2D42: FF          rst  $38
-2D43: FF          rst  $38
-2D44: FF          rst  $38
-2D45: FF          rst  $38
-2D46: FF          rst  $38
-2D47: FF          rst  $38
+    
+2D3A: FF x 15
+    
 2D48: AF          xor  a
 2D49: 32 06 B0    ld   ($B006),a
 2D4C: 32 07 B0    ld   ($B007),a
@@ -7925,24 +7572,8 @@ DRAW_BONUS_STATE
 2D70: 3E 02       ld   a,$02
 2D72: CD 88 2D    call $2D88
 2D75: C9          ret
-2D76: FF          rst  $38
-2D77: FF          rst  $38
-2D78: FF          rst  $38
-2D79: FF          rst  $38
-2D7A: FF          rst  $38
-2D7B: FF          rst  $38
-2D7C: FF          rst  $38
-2D7D: FF          rst  $38
-2D7E: FF          rst  $38
-2D7F: FF          rst  $38
-2D80: FF          rst  $38
-2D81: FF          rst  $38
-2D82: FF          rst  $38
-2D83: FF          rst  $38
-2D84: FF          rst  $38
-2D85: FF          rst  $38
-2D86: FF          rst  $38
-2D87: FF          rst  $38
+    
+2D76: FF x 19
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
 2D8C: CD E3 01    call $01E3
