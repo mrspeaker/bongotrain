@@ -2,6 +2,8 @@
 
     ;; PLAYER_NUM     $8004  ;
     ;; JUMP_BTN_DOWN  $8005  ; player is holding down the jump button
+    ;; P1_TIME        $8007  ; time player has played: never displayed!
+    ;; P2_TIME        $8009  ; ...would have been speed running!
     ;; CONTROLS:      $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
     ;; BUTTONS_1:     $800C  ; P1/P2 buttons... and?
     ;; BUTTONS_2:     $800D  ; ... more buttons?
@@ -2688,6 +2690,7 @@ BIG_RESET
 106F: FF          rst  $38
 
 ;;;  Extra life
+EXTRA_LIFE
 1070: 3A 04 80    ld   a,($PLAYER_NUM)
 1073: A7          and  a
 1074: 20 04       jr   nz,$107A
@@ -2738,6 +2741,7 @@ BIG_RESET
 10C9: C9          ret
 
 10CA: FF x 23
+
 10E0: 3A 00 80    ld   a,($8000)
 10E3: 3C          inc  a
 10E4: FE 03       cp   $03
@@ -2749,8 +2753,8 @@ BIG_RESET
 10F0: CD 90 13    call $1390
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
-;;;  um, nothing gets here?
-10F7: CD 70 10    call $1070    ; extra life check?
+;;;  um, nothing calls 10f7?
+10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
 
 10FB: CD 18 25    call $2518
@@ -3150,6 +3154,8 @@ BIG_RESET
 138B: CD 08 04    call $0408
 138E: C9          ret
 138F: FF          rst  $38
+
+;;; hot dang...
 1390: D9          exx
 1391: E1          pop  hl
 1392: 06 00       ld   b,$00
@@ -3175,9 +3181,8 @@ WAIT_VBLANK
 13B3: 3A 00 B8    ld   a,($B800)
 13B6: C9          ret
 
-;;;
 13B7: FF
-;;;
+
 13B8: 21 48 81    ld   hl,$8148
 13BB: 36 00       ld   (hl),$00
 13BD: 23          inc  hl
@@ -3185,18 +3190,9 @@ WAIT_VBLANK
 13BF: FE 60       cp   $60
 13C1: 20 F8       jr   nz,$13BB
 13C3: C9          ret
-13C4: FF          rst  $38
-13C5: FF          rst  $38
-13C6: FF          rst  $38
-13C7: FF          rst  $38
-13C8: FF          rst  $38
-13C9: FF          rst  $38
-13CA: FF          rst  $38
-13CB: FF          rst  $38
-13CC: FF          rst  $38
-13CD: FF          rst  $38
-13CE: FF          rst  $38
-13CF: FF          rst  $38
+
+13C4: FF x 12
+
 13D0: 3A 06 80    ld   a,($8006)
 13D3: 3C          inc  a
 13D4: 32 06 80    ld   ($8006),a
@@ -3204,48 +3200,42 @@ WAIT_VBLANK
 13D9: C0          ret  nz
 13DA: AF          xor  a
 13DB: 32 06 80    ld   ($8006),a
-13DE: CD F0 13    call $13F0
-13E1: CD 10 14    call $1410
+13DE: CD F0 13    call $UPDATE_TIME
+13E1: CD 10 14    call $DRAW_TIME
 13E4: C9          ret
-13E5: FF          rst  $38
-13E6: FF          rst  $38
-13E7: FF          rst  $38
-13E8: FF          rst  $38
-13E9: FF          rst  $38
-13EA: FF          rst  $38
-13EB: FF          rst  $38
-13EC: FF          rst  $38
-13ED: FF          rst  $38
-13EE: FF          rst  $38
-13EF: FF          rst  $38
+
+13E5: FF x 11
+
+UPDATE_TIME
 13F0: 3A 04 80    ld   a,($PLAYER_NUM)
 13F3: CB 47       bit  0,a
-13F5: 21 07 80    ld   hl,$8007
+13F5: 21 07 80    ld   hl,$P1_TIME
 13F8: 28 02       jr   z,$13FC
 13FA: 23          inc  hl
 13FB: 23          inc  hl
 13FC: 7E          ld   a,(hl)
 13FD: 3C          inc  a
-13FE: 27          daa
+13FE: 27          daa           ; the A register is BCD corrected from flags
 13FF: 77          ld   (hl),a
-1400: FE 60       cp   $60
+1400: FE 60       cp   $60      ; minutes
 1402: C0          ret  nz
 1403: 36 00       ld   (hl),$00
 1405: 23          inc  hl
 1406: 7E          ld   a,(hl)
 1407: 3C          inc  a
 1408: 27          daa
-1409: 77          ld   (hl),a
+1409: 77          ld   (hl),a   ; store it
 140A: C9          ret
-140B: FF          rst  $38
-140C: FF          rst  $38
-140D: FF          rst  $38
-140E: FF          rst  $38
-140F: FF          rst  $38
+
+140B: FF x 5
+    ;; draws the player's time under score
+    ;; ret's immediately: must have been removed!
+DRAW_TIME
 1410: C9          ret
 1411: 3A 04 80    ld   a,($PLAYER_NUM)
 1414: CB 47       bit  0,a
 1416: 20 1E       jr   nz,$1436
+    ;; p1 version
 1418: AF          xor  a
 1419: 21 07 80    ld   hl,$8007
 141C: ED 67       rrd  (hl)
@@ -3260,6 +3250,7 @@ WAIT_VBLANK
 1430: 32 82 93    ld   ($9382),a
 1433: ED 67       rrd  (hl)
 1435: C9          ret
+    ;;  p2 version
 1436: AF          xor  a
 1437: 21 09 80    ld   hl,$8009
 143A: ED 67       rrd  (hl)
@@ -3274,18 +3265,9 @@ WAIT_VBLANK
 144E: 32 02 91    ld   ($9102),a
 1451: ED 67       rrd  (hl)
 1453: C9          ret
-1454: FF          rst  $38
-1455: FF          rst  $38
-1456: FF          rst  $38
-1457: FF          rst  $38
-1458: FF          rst  $38
-1459: FF          rst  $38
-145A: FF          rst  $38
-145B: FF          rst  $38
-145C: FF          rst  $38
-145D: FF          rst  $38
-145E: FF          rst  $38
-145F: FF          rst  $38
+
+1454: FF x 12
+
 1460: 21 00 80    ld   hl,$8000
 1463: 36 00       ld   (hl),$00
 1465: 2C          inc  l
@@ -3373,22 +3355,9 @@ INIT_GAME
 14E9: CD 88 3A    call $3A88
 14EC: CD C0 3A    call $3AC0
 14EF: C9          ret
-14F0: FF          rst  $38
-14F1: FF          rst  $38
-14F2: FF          rst  $38
-14F3: FF          rst  $38
-14F4: FF          rst  $38
-14F5: FF          rst  $38
-14F6: FF          rst  $38
-14F7: FF          rst  $38
-14F8: FF          rst  $38
-14F9: FF          rst  $38
-14FA: FF          rst  $38
-14FB: FF          rst  $38
-14FC: FF          rst  $38
-14FD: FF          rst  $38
-14FE: FF          rst  $38
-14FF: FF          rst  $38
+
+14F0: FF x 16
+
 1500: B0          or   b
 1501: 18 B0       jr   $14B3
 1503: 18 40       jr   $1545
@@ -9960,15 +9929,10 @@ DRAW_BONUS_STATE
 39A1: 3E 01       ld   a,$01
 39A3: 32 3B 80    ld   ($803B),a
 39A6: C9          ret
-39A7: FF          rst  $38
-39A8: FF          rst  $38
-39A9: FF          rst  $38
-39AA: FF          rst  $38
-39AB: FF          rst  $38
-39AC: FF          rst  $38
-39AD: FF          rst  $38
-39AE: FF          rst  $38
-39AF: FF          rst  $38
+
+39A7: FF x 9
+
+;;; ;
 39B0: 3A 07 80    ld   a,($8007)
 39B3: 32 36 80    ld   ($8036),a
 39B6: C9          ret
