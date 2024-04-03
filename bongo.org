@@ -159,3 +159,49 @@ The only thing that seems to change is how long the dino takes to start
 It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
 
 Can jump from one-step-higher in second round
+
+-----
+    ;; Oooh, mystery function - commented out.
+    ;; Think it was going to place Bongo on the
+    ;; bottom right for levels where player is
+    ;; up top.
+MOVE_BONGO_REDACTED
+0D40: C9          ret           ; just rets.
+0D41: 3A 48 81    ld   a,($BONGO_X)
+0D44: 67          ld   h,a
+0D45: 32 4B 81    ld   ($BONGO_Y),a
+0D48: C6 10       add  a,$10
+
+
+---
+UPDATE_FALLING_ROCKS
+1680: 3A 04 80    ld   a,($PLAYER_NUM)
+
+round 1 vs round 2+
+
+----
+HOw the speeds work:
+
+SPEED_UP_FOR_NEXT_ROUND
+4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
+4EE3: A7          and  a
+4EE4: 20 05       jr   nz,$4EEB
+4EE6: 21 5B 80    ld   hl,$SPEED_DELAY_P1
+4EE9: 18 03       jr   $4EEE
+4EEB: 21 5C 80    ld   hl,$SPEED_DELAY_P2
+4EEE: 7E          ld   a,(hl)
+4EEF: FE 1F       cp   $ROUND1_SPEED
+4EF1: 20 03       jr   nz,$4EF6
+4EF3: 36 10       ld   (hl),$ROUND2_SPEED ; round 2 = $10
+4EF5: C9          ret
+4EF6: FE 10       cp   $ROUND2_SPEED
+4EF8: 20 03       jr   nz,$4EFD
+4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
+4EFC: C9          ret
+4EFD: C3 1C 50    jp   $501C    ; round 4+ = get 2 faster each time!
+501C: 3D          dec  a
+501D: 3D          dec  a
+501E: 77          ld   (hl),a
+
+----------
+

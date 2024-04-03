@@ -31,9 +31,11 @@
     ;; IS_HIT_CAGE    $8051  ; did player trigger cage?
     ;; SPEED_DELAY_P1 $805b  : speed for dino/rocks, start=1f, 10, d, then dec 2...
     ;; SPEED_DELAY_P2 $805c  : ...until dead. Smaller delay = faster dino/rock fall
+    ;; DINO_TIMER     $805d  ; mayybe
 
     ;; BONUSES        $8060
     ;; BONUS_MULT     $8062  ; Bonus multiplier.
+
     ;; PLAYER_X:      $8140  ; might be multip purpose? other sprites too?
     ;; PLAYER_Y:      $8143
     ;; PLAYER_Y_LEGS: $8147
@@ -60,32 +62,34 @@
     ;; ENEMY_3_COL    $815E
     ;; ENEMY_3_Y      $815F
 
+    ;; CREDITS        $8303
+    ;;                $8305 ; ?? Coins? dunno
+
     ;; TICK_NUM       $8312  ; adds 1 every tick
     ;; INPUT_BUTTONS  $83F1  ; copied to 800C and 800D
     ;; INPUT_BUTTONS_2 $83F2 ?
 
-    ;; DID_PLAYER_PRESS_START: $0190
-    ;; BIG_RESET $1000
-    ;; DRAW_SCORE: $2450
-    ;; JMP_HL : $5C81
-
-    ;; SCREEN_RAM  ~ $9050
-    ;; WAIT_VBLANK $13A0
-
 ;;;  constants
 
-    ;; $SCREEN_WIDTH   $E0 ; 224
+    ;; SCREEN_WIDTH    $E0 ; 224
     ;; ROUND1_SPEED    $1f
     ;; ROUND2_SPEED    $10
     ;; ROUND3_SPEED    $0D
 
+    ;; TILE_BLANK      $10
+
+;;; hardware
+
+    ;; ???             $4000
+    ;; SCREEN_RAM      $9000
+    ;; ???             $9800
 
 0000: A2          and  d
 0001: 32 01 B0    ld   ($B001),a
 0004: 32 FF 80    ld   ($80FF),a
 0007: 3E FF       ld   a,$FF
 0009: 32 00 B8    ld   ($B800),a
-000C: C3 A0 14    jp   $INIT_GAME
+000C: C3 A0 14    jp   $CLEAR_SCREEN
 
 000F: 31 F0 83    ld   sp,$83F0
 0012: CD 00 3F    call $3F00
@@ -113,7 +117,7 @@
 0048: 3A 00 A0    ld   a,($A000) ; PORT IN0?
 004B: E6 83       and  $83
 004D: C8          ret  z
-004E: CD 70 14    call $1470
+004E: CD 70 14    call $CALL_RESET_ENTS
 0051: CD 10 03    call $0310
 0054: 09          add  hl,bc
 0055: 00          nop
@@ -150,14 +154,14 @@
 008D: CD 48 03    call $0348
 0090: CD 80 30    call $3080
 0093: CD A0 13    call $WAIT_VBLANK
-0096: 3A 03 83    ld   a,($8303)
+0096: 3A 03 83    ld   a,($CREDITS)
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
 009C: CD 70 03    call $0370
-009F: CD 70 14    call $1470
+009F: CD 70 14    call $CALL_RESET_ENTS
 00A2: 18 EF       jr   $0093
 00A4: CD A0 13    call $WAIT_VBLANK
-00A7: 3A 03 83    ld   a,($8303)
+00A7: 3A 03 83    ld   a,($CREDITS)
 00AA: FE 01       cp   $01
 00AC: 20 05       jr   nz,$00B3
 00AE: CD D0 00    call $00D0
@@ -170,7 +174,7 @@
 00BF: FF          rst  $38
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
-00C4: CD 50 15    call $1550
+00C4: CD 50 15    call $SET_DEFAULT_ENT_VALUES
 00C7: CD 60 29    call $2960
 00CA: CD D0 01    call $01D0
 00CD: D9          exx
@@ -180,7 +184,7 @@
 00D2: 32 90 80    ld   ($8090),a
 00D5: AF          xor  a
 00D6: 32 04 B0    ld   ($B004),a
-00D9: 3A 03 83    ld   a,($8303)
+00D9: 3A 03 83    ld   a,($CREDITS)
 00DC: 47          ld   b,a
 00DD: 3A 35 80    ld   a,($8035)
 00E0: B8          cp   b
@@ -229,14 +233,14 @@
 0124: 24          inc  h
 0125: 23          inc  hl
 0126: FF          rst  $38
-0127: 21 03 83    ld   hl,$8303
+0127: 21 03 83    ld   hl,$CREDITS
 012A: AF          xor  a
 012B: ED 6F       rld  (hl)
 012D: 32 99 91    ld   ($9199),a
 0130: ED 6F       rld  (hl)
 0132: 32 79 91    ld   ($9179),a
 0135: ED 6F       rld  (hl)
-0137: 3A 03 83    ld   a,($8303)
+0137: 3A 03 83    ld   a,($CREDITS)
 013A: 32 35 80    ld   ($8035),a
 013D: C9          ret
     
@@ -244,7 +248,7 @@
 013F: FF          rst  $38
     
 0140: CD 30 24    call $2430
-0143: 3A 03 83    ld   a,($8303)
+0143: 3A 03 83    ld   a,($CREDITS)
 0146: 47          ld   b,a
 0147: 3A 35 80    ld   a,($8035)
 014A: B8          cp   b
@@ -268,6 +272,8 @@
 0173: C9          ret
 0174: FF ...
 
+    ;; called a lot (via... CALL_HL_PLUS_4K)
+DO_CALL_HL_PLUS_4K
 0180: C5          push bc
 0181: 01 00 40    ld   bc,$4000
 0184: 09          add  hl,bc
@@ -275,9 +281,8 @@
 0186: E9          jp   (hl)
 0187: FF ...
 
-
 DID_PLAYER_PRESS_START ; Did player start the game?
-0190: 3A 03 83    ld   a,($8303) ; check you have credits
+0190: 3A 03 83    ld   a,($CREDITS) ; check you have credits
 0193: A7          and  a
 0194: C8          ret  z
 0195: 3A F1 83    ld   a,($INPUT_BUTTONS) ; P1 pressed?
@@ -286,12 +291,12 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 019C: CD 60 14    call $1460
 019F: 3E 01       ld   a,$01    ; start the game, 1 player
 01A1: 32 34 80    ld   ($IS_PLAYING),a
-01A4: 3A 03 83    ld   a,($8303) ; use a credit
+01A4: 3A 03 83    ld   a,($CREDITS) ; use a credit
 01A7: 3D          dec  a
 01A8: 27          daa
-01A9: 32 03 83    ld   ($8303),a
+01A9: 32 03 83    ld   ($CREDITS),a
 01AC: C9          ret
-01AD: 3A 03 83    ld   a,($8303)
+01AD: 3A 03 83    ld   a,($CREDITS)
 01B0: 3D          dec  a
 01B1: C8          ret  z
 01B2: 3A F1 83    ld   a,($INPUT_BUTTONS)
@@ -300,12 +305,12 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01B8: CD 60 14    call $1460
 01BB: 3E 02       ld   a,$02    ; start the game, 2 player
 01BD: 32 34 80    ld   ($IS_PLAYING),a
-01C0: 3A 03 83    ld   a,($8303)
+01C0: 3A 03 83    ld   a,($CREDITS)
 01C3: 3D          dec  a
 01C4: 27          daa
 01C5: 3D          dec  a
 01C6: 27          daa
-01C7: 32 03 83    ld   ($8303),a
+01C7: 32 03 83    ld   ($CREDITS),a
 01CA: C9          ret
 
 01CB: FF ...
@@ -320,7 +325,8 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01E2: C9          ret
 
     ;;
-01E3: C3 80 01    jp   $0180
+CALL_HL_PLUS_4K
+01E3: C3 80 01    jp   $DO_CALL_HL_PLUS_4K
 01E6: C9          ret
 ;;;
 
@@ -434,12 +440,12 @@ COINAGE_ROUTINE
 02D0: A7          and  a
 02D1: C8          ret  z
 02D2: 47          ld   b,a
-02D3: 3A 03 83    ld   a,($8303)
+02D3: 3A 03 83    ld   a,($CREDITS)
 02D6: 3C          inc  a
 02D7: 27          daa
 02D8: 05          dec  b
 02D9: 20 FB       jr   nz,$02D6
-02DB: 32 03 83    ld   ($8303),a
+02DB: 32 03 83    ld   ($CREDITS),a
 02DE: AF          xor  a
 02DF: 32 05 83    ld   ($8305),a
 02E2: C9          ret
@@ -449,7 +455,7 @@ COINAGE_ROUTINE
 02E8: FE 01       cp   $01
 02EA: C8          ret  z
 02EB: 47          ld   b,a
-02EC: 3A 03 83    ld   a,($8303)
+02EC: 3A 03 83    ld   a,($CREDITS)
 02EF: 3C          inc  a
 02F0: 27          daa
 02F1: 05          dec  b
@@ -459,11 +465,11 @@ COINAGE_ROUTINE
 02F7: 18 F6       jr   $02EF
 02F9: 3D          dec  a
 02FA: 27          daa
-02FB: 32 03 83    ld   ($8303),a
+02FB: 32 03 83    ld   ($CREDITS),a
 02FE: 3E 01       ld   a,$01
 0300: 32 05 83    ld   ($8305),a
 0303: C9          ret
-0304: 32 03 83    ld   ($8303),a
+0304: 32 03 83    ld   ($CREDITS),a
 0307: AF          xor  a
 0308: 32 05 83    ld   ($8305),a
 030B: C9          ret
@@ -510,7 +516,7 @@ COINAGE_ROUTINE
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
-034B: CD 70 14    call $1470
+034B: CD 70 14    call $CALL_RESET_ENTS
 034E: 21 00 80    ld   hl,$8000
 0351: 36 00       ld   (hl),$00
 0353: 2C          inc  l
@@ -527,15 +533,15 @@ COINAGE_ROUTINE
     
 036A: FF ...
 
-0370: CD 70 14    call $1470
+0370: CD 70 14    call $CALL_RESET_ENTS
 0373: 21 20 15    ld   hl,$1520
-0376: CD E3 01    call $01E3
+0376: CD E3 01    call $CALL_HL_PLUS_4K
 0379: 21 20 0E    ld   hl,$0E20
-037C: CD E3 01    call $01E3
-037F: 21 C0 17    ld   hl,$17C0
-0382: CD E3 01    call $01E3
+037C: CD E3 01    call $CALL_HL_PLUS_4K
+037F: 21 C0 17    ld   hl,$RESET_DINO
+0382: CD E3 01    call $CALL_HL_PLUS_4K
 0385: 21 A0 15    ld   hl,$15A0
-0388: CD E3 01    call $01E3
+0388: CD E3 01    call $CALL_HL_PLUS_4K
 038B: 00          nop
 038C: 00          nop
 038D: 00          nop
@@ -611,10 +617,10 @@ COINAGE_ROUTINE
 040F: FF          rst  $38
     
 0410: 21 E8 16    ld   hl,$16E8
-0413: CD E3 01    call $01E3
+0413: CD E3 01    call $CALL_HL_PLUS_4K
 0416: CD E0 24    call $24E0
 0419: CD 30 04    call $0430
-041C: CD 70 14    call $1470
+041C: CD 70 14    call $CALL_RESET_ENTS
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
@@ -692,7 +698,8 @@ COINAGE_ROUTINE
 04B8: C9          ret
     
 04B9: FF          rst  $38
-    
+
+CHECK_DINO_TIMER                ;maybe
 04BA: CD E0 28    call $28E0
 04BD: 3A 04 80    ld   a,($PLAYER_NUM)
 04C0: A7          and  a
@@ -701,15 +708,15 @@ COINAGE_ROUTINE
 04C6: 18 03       jr   $04CB
 04C8: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
 04CB: 47          ld   b,a
-04CC: 3A 5D 80    ld   a,($805D)
+04CC: 3A 5D 80    ld   a,($DINO_TIMER) ; Is this the dino-timer?
 04CF: 3C          inc  a
 04D0: B8          cp   b
 04D1: 20 01       jr   nz,$04D4
 04D3: AF          xor  a
-04D4: 32 5D 80    ld   ($805D),a
+04D4: 32 5D 80    ld   ($DINO_TIMER),a
 04D7: A7          and  a
 04D8: C0          ret  nz
-04D9: CD F0 22    call $22F0
+04D9: CD F0 22    call $DINO_PATHFIND_NOPSLIDE
 04DC: C9          ret
     
 04DD: FF          rst  $38
@@ -802,11 +809,11 @@ COINAGE_ROUTINE
 0589: 3A 34 80    ld   a,($IS_PLAYING)
 058C: A7          and  a
 058D: 20 1C       jr   nz,$05AB
-058F: 3A 03 83    ld   a,($8303)
+058F: 3A 03 83    ld   a,($CREDITS)
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $0370
-0598: CD 70 14    call $1470
+0598: CD 70 14    call $CALL_RESET_ENTS
 059B: 18 E9       jr   $0586
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
@@ -816,15 +823,9 @@ COINAGE_ROUTINE
 05A9: 18 DB       jr   $0586
 05AB: C2 E7 01    jp   nz,$01E7
 05AE: 18 D6       jr   $0586
-05B0: FF          rst  $38
-05B1: FF          rst  $38
-05B2: FF          rst  $38
-05B3: FF          rst  $38
-05B4: FF          rst  $38
-05B5: FF          rst  $38
-05B6: FF          rst  $38
-05B7: FF          rst  $38
-05B8: 3A 03 83    ld   a,($8303)
+05B0: FF ...
+
+05B8: 3A 03 83    ld   a,($CREDITS)
 05BB: A7          and  a
 05BC: 20 04       jr   nz,$05C2
 05BE: CD A0 13    call $WAIT_VBLANK
@@ -835,13 +836,7 @@ COINAGE_ROUTINE
 05C7: E1          pop  hl
 05C8: C9          ret
     
-05C9: FF          rst  $38
-05CA: FF          rst  $38
-05CB: FF          rst  $38
-05CC: FF          rst  $38
-05CD: FF          rst  $38
-05CE: FF          rst  $38
-05CF: FF          rst  $38
+05C9: FF ...
 
 NORMALIZE_INPUT
 05D0: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -1237,6 +1232,7 @@ PHYSICS_SOMETHING
 0881: C9          ret
 0882: FF ...
 
+CLEAR_JUMP_BUTTON
 0888: 3A 0E 80    ld   a,($CONTROLSN)
 088B: CB 6F       bit  5,a      ; jump
 088D: C0          ret  nz
@@ -1869,6 +1865,7 @@ MOVE_BONGO_REDACTED
 
 0D59: FF ...
 
+MOVE_BONGO
 0D60: CD 40 0D    call $MOVE_BONGO_REDACTED
 0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D66: A7          and  a
@@ -2154,7 +2151,7 @@ BIG_RESET
 101B: 3E 20       ld   a,$20
 101D: 32 30 80    ld   ($PLAYER_PREV_X),a
 1020: CD 80 1B    call $1B80
-1023: CD 70 14    call $1470
+1023: CD 70 14    call $CALL_RESET_ENTS
 1026: 21 E0 0F    ld   hl,$0FE0
 1029: CD 40 08    call $0840
 102C: 00          nop
@@ -2339,24 +2336,23 @@ MAIN_LOOP
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $0A80
 118B: CD B0 0B    call $0BB0
-118E: CD 00 12    call $1200
-1191: CD 90 12    call $1290
-1194: CD 50 17    call $1750
-1197: CD 88 08    call $0888
-119A: CD 60 0D    call $0D60    ; also calls $REDACTED
+118E: CD 00 12    call $PLAYER_POS_???
+1191: CD 90 12    call $LEGS_REDACTED ; another redacted! What's this?
+1194: CD 50 17    call $CHECK_DONE_SCREEN
+1197: CD 88 08    call $CLEAR_JUMP_BUTTON
+119A: CD 60 0D    call $MOVE_BONGO    ; also calls $MOVE_BONGO_REDACTED
 119D: CD 40 0D    call $MOVE_BONGO_REDACTED
 11A0: CD 40 0E    call $0E40
 11A3: CD 70 0E    call $BONGO_ANIMATE
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
-11A9: CD BA 04    call $04BA
+11A9: CD BA 04    call $CHECK_DINO_TIMER
 11AC: CD 50 2B    call $2B50
 11AF: CD A8 3B    call $3BA8
 11B2: 21 20 00    ld   hl,$0020
-11B5: CD E3 01    call $01E3
+11B5: CD E3 01    call $CALL_HL_PLUS_4K
 11B8: C9          ret
     
 11B9: FF ...
-
 
 11C0: 3A 58 81    ld   a,($ENEMY_2_X)
 11C3: FE 70       cp   $70
@@ -2387,9 +2383,10 @@ MAIN_LOOP
 11F7: 20 03       jr   nz,$11FC
 11F9: CD 88 39    call $3988
 11FC: C9          ret
-11FD: FF          rst  $38
-11FE: FF          rst  $38
-11FF: FF          rst  $38
+11FD: FF ...
+
+    ;; Ooh, what's this checking?
+PLAYER_POS_???
 1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1203: 47          ld   b,a
 1204: 3A 02 80    ld   a,($8002)
@@ -2458,20 +2455,10 @@ MAIN_LOOP
 127D: CD B8 0A    call $0AB8
 1280: E1          pop  hl
 1281: C9          ret
-1282: FF          rst  $38
-1283: FF          rst  $38
-1284: FF          rst  $38
-1285: FF          rst  $38
-1286: FF          rst  $38
-1287: FF          rst  $38
-1288: FF          rst  $38
-1289: FF          rst  $38
-128A: FF          rst  $38
-128B: FF          rst  $38
-128C: FF          rst  $38
-128D: FF          rst  $38
-128E: FF          rst  $38
-128F: FF          rst  $38
+1282: FF ...
+
+    ;; ANOTHER commented out one!
+LEGS_REDACTED
 1290: C9          ret
 1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1294: C6 04       add  a,$04
@@ -2528,7 +2515,7 @@ MAIN_LOOP
 12F1: 22 1E 80    ld   ($801E),hl
 12F4: CD 10 35    call $3510
 12F7: 21 50 0C    ld   hl,$0C50
-12FA: CD E3 01    call $01E3
+12FA: CD E3 01    call $CALL_HL_PLUS_4K
 12FD: C3 10 3F    jp   $3F10
 1300: 1E 04       ld   e,$04
 1302: E5          push hl
@@ -2603,7 +2590,7 @@ MAIN_LOOP
 138E: C9          ret
 138F: FF          rst  $38
 
-;;; hot dang...
+;;; hot dang... what's this? Called a lot. Interrupt something?
 1390: D9          exx
 1391: E1          pop  hl
 1392: 06 00       ld   b,$00
@@ -2731,7 +2718,11 @@ DRAW_TIME
 146C: 20 F5       jr   nz,$1463
 146E: C9          ret
 146F: FF          rst  $38
-1470: CD 90 14    call $1490
+
+    ;; lotsa calls here
+CALL_RESET_ENTS
+1470: CD 90 14    call $RESET_ENTITIES
+
 1473: 00          nop
 1474: 00          nop
 1475: 00          nop
@@ -2746,9 +2737,9 @@ DRAW_TIME
 147E: 00          nop
 147F: 00          nop
 
-INIT_GAME
-1480: 21 00 90    ld   hl,$9000
-1483: 36 10       ld   (hl),$10
+CLEAR_SCREEN
+1480: 21 00 90    ld   hl,$SCREEN_RAM
+1483: 36 10       ld   (hl),$TILE_BLANK
 1485: 2C          inc  l
 1486: 20 FB       jr   nz,$1483
 1488: 24          inc  h
@@ -2756,18 +2747,21 @@ INIT_GAME
 148A: FE 98       cp   $98
 148C: 20 F5       jr   nz,$1483
 148E: C9          ret
-148F: FF          rst  $38
+
+148F: FF
+
+    ;; Lotsa calls here (via $1470)
+RESET_ENTITIES                 ; sets 128 locations to 0
 1490: 21 00 81    ld   hl,$8100
 1493: 36 00       ld   (hl),$00
 1495: 23          inc  hl
 1496: 7D          ld   a,l
-1497: FE 80       cp   $80
+1497: FE 80       cp   $80      ; 128
 1499: 20 F8       jr   nz,$1493
 149B: C9          ret
-149C: FF          rst  $38
-149D: FF          rst  $38
-149E: FF          rst  $38
-149F: FF          rst  $38
+
+149C: FF ...
+
 14A0: 21 00 80    ld   hl,$8000
 14A3: 36 00       ld   (hl),$00
 14A5: 23          inc  hl
@@ -2778,7 +2772,7 @@ INIT_GAME
 14AE: FF          rst  $38
 14AF: FF          rst  $38
 14B0: 21 E8 06    ld   hl,$06E8
-14B3: CD E3 01    call $01E3
+14B3: CD E3 01    call $CALL_HL_PLUS_4K
 14B6: CD C8 3B    call $3BC8
 14B9: 3E 20       ld   a,$20
 14BB: 32 30 80    ld   ($PLAYER_PREV_X),a
@@ -2852,21 +2846,23 @@ INIT_GAME
 153B: 00          nop
 153C: FF ...
 
+SET_DEFAULT_ENT_VALUES          ;hmm, or no - copy to 9800? why?
 1550: E5          push hl
 1551: C5          push bc
 1552: D5          push de
 1553: 21 00 81    ld   hl,$8100
 1556: 11 00 98    ld   de,$9800
 1559: 01 80 00    ld   bc,$0080
-155C: ED B0       ldir
+155C: ED B0       ldir ; LD (DE),(HL) repeated: copies a chunk of mem
 155E: D1          pop  de
 155F: C1          pop  bc
 1560: E1          pop  hl
 1561: C9          ret
-1562: FF          rst  $38
-1563: FF          rst  $38
+
+1562: FF FF
 1564: 00          nop
 1565: 00          nop
+
 1566: 3A 08 93    ld   a,($9308)
 1569: FE 10       cp   $10
 156B: 28 10       jr   z,$157D
@@ -2911,13 +2907,13 @@ INIT_GAME
 15C3: FF          rst  $38
 15C4: D5          push de
 15C5: 21 A8 1B    ld   hl,$1BA8
-15C8: CD E3 01    call $01E3
+15C8: CD E3 01    call $CALL_HL_PLUS_4K
 15CB: D1          pop  de
 15CC: C9          ret
 15CD: FF          rst  $38
 15CE: FF          rst  $38
 15CF: FF          rst  $38
-15D0: CD 70 14    call $1470
+15D0: CD 70 14    call $CALL_RESET_ENTS
 15D3: CD 88 0F    call $0F88
 15D6: CD 60 16    call $1660
 15D9: 3E 8C       ld   a,$8C
@@ -2976,10 +2972,10 @@ INIT_GAME
 163D: CD 60 16    call $1660
 1640: CD 60 16    call $1660
 1643: 21 94 14    ld   hl,$1494
-1646: CD E3 01    call $01E3
+1646: CD E3 01    call $CALL_HL_PLUS_4K
 1649: C9          ret
 164A: FF          rst  $38
-164B: CD 70 14    call $1470
+164B: CD 70 14    call $CALL_RESET_ENTS
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $0840
 1654: 00          nop
@@ -3122,8 +3118,10 @@ ADD_SCORE
 1734: AF          xor  a
 1735: 32 1D 80    ld   ($SCORE_TO_ADD),a
 1738: C9          ret
-;;; ;
+
 1739: FF ...
+
+CHECK_DONE_SCREEN
 1750: 37          scf
 1751: 3F          ccf
 1752: 3A 43 81    ld   a,($PLAYER_Y)
@@ -3138,6 +3136,8 @@ ADD_SCORE
 1763: D8          ret  c
 1764: CD 78 17    call $TRANSITION_TO_NEXT_SCREEN    ; jump to next csreen
 1767: C9          ret
+
+;;;
 1768: E5          push hl
 1769: 3E 03       ld   a,$03
 176B: 85          add  a,l
@@ -3149,7 +3149,8 @@ ADD_SCORE
 1773: 20 FA       jr   nz,$176F
 1775: E1          pop  hl
 1776: C9          ret
-1777: FF          rst  $38
+
+1777: FF
 
 TRANSITION_TO_NEXT_SCREEN
 1778: CD C0 17    call $17C0
@@ -3201,20 +3202,18 @@ ADD_AMOUNT_BDC
 17B8: 32 0F 80    ld   ($JUMP_ACC),a
 17BB: 32 05 80    ld   ($JUMP_BTN_DOWN),a
 17BE: C9          ret
-;;;
-17BF: FF          rst  $38
-;;;
+
+17BF: FF
+
+RESET_DINO
 17C0: AF          xor  a
 17C1: 32 2D 80    ld   ($DINO_COUNTER),a
 17C4: 3A 4C 81    ld   a,($DINO_X)
 17C7: 32 50 81    ld   ($DINO_X_MIN8),a
 17CA: C9          ret
-;;;
-17CB: FF          rst  $38
-17CC: FF          rst  $38
-17CD: FF          rst  $38
-17CE: FF          rst  $38
-17CF: FF          rst  $38
+
+17CB: FF ...
+
 17D0: CD 10 03    call $0310
 17D3: 0A          ld   a,(bc)
 17D4: 00          nop
@@ -3561,17 +3560,18 @@ BONUS_SKIP_SCREEN
 19B7: 32 42 81    ld   ($8142),a
 19BA: 32 46 81    ld   ($8146),a
 19BD: C3 78 17    jp   $TRANSITION_TO_NEXT_SCREEN
-19C0: 21 00 90    ld   hl,$9000
+    ;; Clear screen to blanks
+19C0: 21 00 90    ld   hl,$SCREEN_RAM
 19C3: 23          inc  hl
 19C4: 23          inc  hl
 19C5: 23          inc  hl
-19C6: 16 1D       ld   d,$1D
-19C8: 36 10       ld   (hl),$10
+19C6: 16 1D       ld   d,$1D    ; 29
+19C8: 36 10       ld   (hl),$TILE_BLANK
 19CA: 23          inc  hl
 19CB: 15          dec  d
 19CC: 20 FA       jr   nz,$19C8
 19CE: 7C          ld   a,h
-19CF: FE 94       cp   $94
+19CF: FE 94       cp   $94      ; 148
 19D1: 20 F0       jr   nz,$19C3
 19D3: 00          nop
 19D4: 00          nop
@@ -3878,7 +3878,8 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B8D: 3C          inc  a
 1B8E: 32 22 80    ld   ($8022),a
 1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $1470
+1B94: CD 70 14    call $CALL_RESET_ENTS
+
 1B97: 00          nop
 1B98: 00          nop
 1B99: CD A0 03    call $03A0
@@ -4916,7 +4917,7 @@ DINO_COLLISION
 2126: FF          rst  $38
 2127: FF          rst  $38
 2128: CD A0 13    call $WAIT_VBLANK
-212B: 3A 03 83    ld   a,($8303)
+212B: 3A 03 83    ld   a,($CREDITS)
 212E: A7          and  a
 212F: C8          ret  z
 2130: CD 90 14    call $1490
@@ -5258,6 +5259,7 @@ UPDATE_DINO
 22EC: C3 E0 23    jp   $23E0
 22EF: FF          rst  $38
 
+DINO_PATHFIND_NOPSLIDE
 22F0: 00          nop
 22F1: 00          nop
 22F2: 00          nop
@@ -5497,7 +5499,6 @@ DRAW_SCORE
 250B: C9          ret
 250C: FF ...
 
-
 TEST_THEN_DINO_COLLISION
 2518: 3A 2D 80    ld   a,($DINO_COUNTER)
 251B: E6 F8       and  $F8
@@ -5506,7 +5507,6 @@ TEST_THEN_DINO_COLLISION
 2521: C9          ret
 
 2522: FF ...
-
 
 2538: 11 16 00    ld   de,$0016
 253B: 0E 20       ld   c,$20
@@ -5523,14 +5523,14 @@ TEST_THEN_DINO_COLLISION
 254D: FF          rst  $38
 254E: FF          rst  $38
 254F: FF          rst  $38
-2550: CD 70 14    call $1470
+2550: CD 70 14    call $CALL_RESET_ENTS
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$9040
 2559: 1E 79       ld   e,$79
 255B: CD 88 25    call $2588
 255E: 21 A0 93    ld   hl,$93A0
 2561: CD 88 25    call $2588
-2564: 21 00 90    ld   hl,$9000
+2564: 21 00 90    ld   hl,$SCREEN_RAM
 2567: CD 98 25    call $2598
 256A: 21 1F 90    ld   hl,$901F
 256D: CD 98 25    call $2598
@@ -5660,7 +5660,7 @@ DINO_PATH_2                     ;DATA lookup table x/y/?/?
 263B: 00          nop
 263C: 88          adc  a,b
 263D: B0          or   b
-263E: 01 00 90    ld   bc,$9000
+263E: 01 00 90    ld   bc,$SCREEN_RAM
 2641: B0          or   b
 2642: 07          rlca
 2643: 00          nop
@@ -6211,13 +6211,15 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 28FC: 80          add  a,b
 28FD: 32 50 81    ld   ($DINO_X_MIN8),a
 2900: C9          ret
+
+    ;;
 2901: 21 00 02    ld   hl,$0200
-2904: CD E3 01    call $01E3
+2904: CD E3 01    call $CALL_HL_PLUS_4K
 2907: CD 10 11    call $1110
 290A: 21 20 02    ld   hl,$0220
-290D: CD E3 01    call $01E3
+290D: CD E3 01    call $CALL_HL_PLUS_4K
 2910: 21 40 02    ld   hl,$0240
-2913: CD E3 01    call $01E3
+2913: CD E3 01    call $CALL_HL_PLUS_4K
 2916: CD 10 11    call $1110
 2919: 21 40 08    ld   hl,$0840
 291C: 18 22       jr   $2940
@@ -6239,7 +6241,7 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 
 2935: FF ...
 
-2940: CD E3 01    call $01E3
+2940: CD E3 01    call $CALL_HL_PLUS_4K
 2943: CD 10 11    call $1110
 2946: C9          ret
 
@@ -6561,21 +6563,21 @@ DRAW_BONUS_STATE
 2B3F: C9          ret
 2B40: FF ...
 
-
 2B50: 3A 04 80    ld   a,($PLAYER_NUM)
 2B53: A7          and  a
 2B54: 20 05       jr   nz,$2B5B
 2B56: 3A 29 80    ld   a,($SCREEN_NUM)
 2B59: 18 03       jr   $2B5E
 2B5B: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-2B5E: 3D          dec  a
-2B5F: CB 27       sla  a
-2B61: CB 27       sla  a
+2B5E: 3D          dec  a        ; scr#-1
+2B5F: CB 27       sla  a        ; * 2
+2B61: CB 27       sla  a        ; * 2
 2B63: CD 90 13    call $1390
 2B66: 00          nop
 2B67: 00          nop
 2B68: 00          nop
 2B69: C9          ret
+
 2B6A: CD 48 2C    call $2C48
 2B6D: C9          ret
 2B6E: 00          nop
@@ -6853,11 +6855,11 @@ DRAW_BONUS_STATE
 
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
-2D8C: CD E3 01    call $01E3
+2D8C: CD E3 01    call $CALL_HL_PLUS_4K
 2D8F: 3E 09       ld   a,$09
 2D91: 32 42 80    ld   ($8042),a
 2D94: 00          nop
-2D95: CD 70 14    call $1470
+2D95: CD 70 14    call $CALL_RESET_ENTS
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $0840
@@ -7145,14 +7147,15 @@ DRAW_BONUS_STATE
 2FCD: C0          ret  nz
 2FCE: 21 4E 93    ld   hl,$934E
 2FD1: C9          ret
-2FD2: FF          rst  $38
-2FD3: FF          rst  $38
-2FD4: FF          rst  $38
+2FD2: FF ...
+
 2FD5: CD 38 30    call $3038
 2FD8: CD E0 24    call $24E0
-2FDB: CD 70 14    call $1470
+2FDB: CD 70 14    call $CALL_RESET_ENTS
 2FDE: C9          ret
+
 2FDF: FF          rst  $38
+
 2FE0: 21 07 83    ld   hl,$8307
 2FE3: 3A 77 92    ld   a,($9277)
 2FE6: 77          ld   (hl),a
@@ -7516,7 +7519,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3266: 3A 39 80    ld   a,($8039)
 3269: A7          and  a
 326A: C8          ret  z
-326B: 3A 58 81    ld   a,($ENEMY_2_X)
+326B: 3A 58 81    ld   a,($ENEMY_2_X) ; move left
 326E: 3D          dec  a
 326F: 3D          dec  a
 3270: 3D          dec  a
@@ -7582,7 +7585,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 330C: C9          ret
 330D: FF ...
 
-3318: 3A 57 81    ld   a,($ENEMY_1_Y)
+    ;; blue-meanie up?
+3318: 3A 57 81    ld   a,($ENEMY_1_Y) ; move up?
 331B: 3D          dec  a
 331C: 3D          dec  a
 331D: 32 57 81    ld   ($ENEMY_1_Y),a
@@ -7599,7 +7603,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3335: C9          ret
 3336: FF ...
 
-3340: 3A 57 81    ld   a,($ENEMY_1_Y)
+    ;; blue-meanie down?
+3340: 3A 57 81    ld   a,($ENEMY_1_Y) ; move down?
 3343: 3C          inc  a
 3344: 3C          inc  a
 3345: 32 57 81    ld   ($ENEMY_1_Y),a
@@ -7912,7 +7917,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3616: 3A 41 80    ld   a,($8041)
 3619: A7          and  a
 361A: C8          ret  z
-361B: 3A 5C 81    ld   a,($ENEMY_3_X)
+361B: 3A 5C 81    ld   a,($ENEMY_3_X) ; move right
 361E: 3C          inc  a
 361F: 3C          inc  a
 3620: 3C          inc  a
@@ -8789,7 +8794,7 @@ DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($8042),a
 3D4D: 32 65 80    ld   ($8065),a
-3D50: CD 70 14    call $1470
+3D50: CD 70 14    call $CALL_RESET_ENTS
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $0840
 3D59: 00          nop
@@ -9003,7 +9008,7 @@ END_CUTSCENE
 
 3F00: CD 60 14    call $1460
 3F03: 21 90 0E    ld   hl,$0E90
-3F06: CD E3 01    call $01E3
+3F06: CD E3 01    call $CALL_HL_PLUS_4K
 3F09: C9          ret
 
 3F0A: FF ...
@@ -9430,7 +9435,7 @@ HIT_BONUS_PRE
 41E1: FF          rst  $38
 41E2: FF          rst  $38
 41E3: 3A 00 41    ld   a,($4100)
-41E6: 01 E3 01    ld   bc,$01E3
+41E6: 01 E3 01    ld   bc,$CALL_HL_PLUS_4K
 41E9: C5          push bc
 41EA: E5          push hl
 41EB: C9          ret
@@ -10324,7 +10329,7 @@ PICKUP_TILE_COLLISION
 48B8: CD A8 5A    call $5AA8
 48BB: CD A8 5A    call $5AA8
 48BE: CD A8 5A    call $5AA8
-48C1: 21 70 14    ld   hl,$1470
+48C1: 21 70 14    ld   hl,$CALL_RESET_ENTS
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $5AA8
 48CA: C9          ret
@@ -12200,7 +12205,7 @@ TBL_1
 559C: 18 F0       jr   $558E
 559E: FF          rst  $38
 559F: FF          rst  $38
-55A0: 21 70 14    ld   hl,$1470
+55A0: 21 70 14    ld   hl,$CALL_RESET_ENTS
 55A3: CD 81 5C    call $JMP_HL
 55A6: CD D0 56    call $56D0
 55A9: 00          nop
@@ -13205,7 +13210,7 @@ TBL_1
 5AEB: C9          ret
 5AEC: FF ...
 
-5AF0: 21 70 14    ld   hl,$1470
+5AF0: 21 70 14    ld   hl,$CALL_RESET_ENTS
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$0F88
 5AF9: CD 81 5C    call $JMP_HL
