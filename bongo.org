@@ -205,3 +205,17 @@ SPEED_UP_FOR_NEXT_ROUND
 
 ----------
 
+cool to see them tinkering with game design stuff
+
+    ;; ANOTHER commented out one!
+    ;; This stops a player jumping up through a platform
+    ;; from underneath it. Probably more realistic, but
+    ;; smart move on the devs part to remove it it - it sucks!
+PREVENT_CLOUD_JUMP_REDACTED
+1290: C9          ret
+1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
+
+----
+
+
+mini "bug" 8011 "falling timer' continues over to next screen - but you're on the ground, so next frame it resets. But, I reckon if you could time your fall so you got out of the screen when teh timer was 1, you'd die on the first frame of the next screen...

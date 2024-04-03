@@ -6,14 +6,42 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
 
+disable_dino = true   -- no pesky dino... but now you can't catch him
+fast_death = true     -- restart super fast after death
+
+-- Removed features I found in the code
+show_timers = true -- speed run timers! Don't know why they removed them
+prevent_cloud_jump = false -- makes jumping from underneath really crap!
+alt_bongo_place = true -- I think was supposed to put guy on the ground for highwire levels
+---------------------
+
 mem = manager.machine.devices[":maincpu"].spaces["program"]
 
---enable's hidden speed-run timers!
-mem:write_direct_u8(0x1410, 0x0); -- nop out ret
+if fast_death == true then
+   -- return early from DO_DEATH_SEQUENCE
+   mem:write_direct_u8(0x0CC0, 0xC9); -- return early
+   mem:write_direct_u8(0x0CC1, 0x00); -- nop out orignal
+end
 
---mem:write_direct_u8(0x0d40, 0x0); -- nop out ret
---mem:write_direct_u8(0x1CD1, 0xC9); -- dino collision
+if alt_bongo_place == true then
+   --Bongo on ground for high-wire levels (I think)
+   mem:write_direct_u8(0x0d40, 0x0); -- nop out ret
+end
 
+if show_timers == true then
+   --enable's hidden speed-run timers!
+   mem:write_direct_u8(0x1410, 0x0); -- nop out ret
+end
+
+if prevent_cloud_jump == true then
+   -- PREVENT_CLOUD_JUMP_REDACTED
+   mem:write_direct_u8(0x1290, 0x0); -- nop out ret
+end
+
+if disable_dino == true then
+   --mem:write_direct_u8(0x1CD1, 0xC9); -- dino collision
+   mem:write_direct_u8(0x22FE, 0xC9); -- ret from timer start check
+end
 
 started = false
 loop_len = #loop_screens

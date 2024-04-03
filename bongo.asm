@@ -36,18 +36,33 @@
     ;; BONUSES        $8060
     ;; BONUS_MULT     $8062  ; Bonus multiplier.
 
-    ;; PLAYER_X:      $8140  ; might be multip purpose? other sprites too?
-    ;; PLAYER_Y:      $8143
-    ;; PLAYER_Y_LEGS: $8147
-    ;; BONGO_X        $8148  ; troll x pos?
-    ;; BONGO_FRAME    $8149  ; anim frame
-    ;; BONGO_COL      $814A  ; troll color
-    ;; BONGO_Y        $814B  ; troll y pos
+    ;; ???            $8010  ; whats tis?
+    ;; FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
+    ;; PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
+    ;; ???            $801B  ; unused? Set once, never read
+
+;;; ======== SPRITES ========
+;;; all have the form: X, FRAME, COL, Y.
+    ;; PLAYER_X       $8140
+    ;; PLAYER_FRAME   $8141
+    ;; PLAYER_COL     $8142
+    ;; PLAYER_Y       $8143
+    ;; PLAYER_X_LEGS  $8144
+    ;; PLAYER_FRAME_LEGS $8145
+    ;; PLAYER_COL_LEGS   $8146
+    ;; PLAYER_Y_LEGS  $8147
+    ;; BONGO_X        $8148
+    ;; BONGO_FRAME    $8149
+    ;; BONGO_COL      $814A
+    ;; BONGO_Y        $814B
     ;; DINO_X         $814C
     ;; DINO_FRAME     $814D
+    ;; DINO_COL       $814E
     ;; DINO_Y         $814F
-    ;; DINO_X_MIN8    $8150  ; seems like x - 8
-    ;; DINO_Y_ADD16   $8153  ; seems like y + 10
+    ;; DINO_X_LEGS    $8150
+    ;; DINO_FRAME_LEGS $8151
+    ;; DINO_COL_LEGS  $8152
+    ;; DINO_Y_LEGS    $8153
 
     ;; ENEMY_1_X      $8154
     ;; ENEMY_1_FRAME  $8155
@@ -61,6 +76,7 @@
     ;; ENEMY_3_FRAME  $815D
     ;; ENEMY_3_COL    $815E
     ;; ENEMY_3_Y      $815F
+;;; ============================
 
     ;; CREDITS        $8303
     ;;                $8305 ; ?? Coins? dunno
@@ -699,7 +715,8 @@ COINAGE_ROUTINE
     
 04B9: FF          rst  $38
 
-CHECK_DINO_TIMER                ;maybe
+;; count up timer - every SPEED_DELAY ticks
+CHECK_DINO_TIMER
 04BA: CD E0 28    call $28E0
 04BD: 3A 04 80    ld   a,($PLAYER_NUM)
 04C0: A7          and  a
@@ -708,9 +725,9 @@ CHECK_DINO_TIMER                ;maybe
 04C6: 18 03       jr   $04CB
 04C8: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
 04CB: 47          ld   b,a
-04CC: 3A 5D 80    ld   a,($DINO_TIMER) ; Is this the dino-timer?
+04CC: 3A 5D 80    ld   a,($DINO_TIMER)
 04CF: 3C          inc  a
-04D0: B8          cp   b
+04D0: B8          cp   b        ; have done SPEED_DELAY ticks?
 04D1: 20 01       jr   nz,$04D4
 04D3: AF          xor  a
 04D4: 32 5D 80    ld   ($DINO_TIMER),a
@@ -889,15 +906,15 @@ NORMALIZE_INPUT
 0624: 85          add  a,l
 0625: 6F          ld   l,a
 0626: 7E          ld   a,(hl)
-0627: 32 41 81    ld   ($8141),a
+0627: 32 41 81    ld   ($PLAYER_FRAME),a
 062A: 3C          inc  a
-062B: 32 45 81    ld   ($8145),a
+062B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 062E: 3A 40 81    ld   a,($PLAYER_X)
 0631: 3C          inc  a
 0632: 3C          inc  a
 0633: 3C          inc  a
 0634: 32 40 81    ld   ($PLAYER_X),a
-0637: 32 44 81    ld   ($8144),a
+0637: 32 44 81    ld   ($PLAYER_X_LEGS),a
 063A: 00          nop
 063B: 00          nop
 063C: 00          nop
@@ -929,15 +946,15 @@ NORMALIZE_INPUT
 0664: 85          add  a,l
 0665: 6F          ld   l,a
 0666: 7E          ld   a,(hl)
-0667: 32 41 81    ld   ($8141),a
+0667: 32 41 81    ld   ($PLAYER_FRAME),a
 066A: 3C          inc  a
-066B: 32 45 81    ld   ($8145),a
+066B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 066E: 3A 40 81    ld   a,($PLAYER_X)
 0671: 3D          dec  a
 0672: 3D          dec  a
 0673: 3D          dec  a
 0674: 32 40 81    ld   ($PLAYER_X),a
-0677: 32 44 81    ld   ($8144),a
+0677: 32 44 81    ld   ($PLAYER_X_LEGS),a
 067A: 00          nop
 067B: 00          nop
 067C: 00          nop
@@ -949,9 +966,9 @@ PLAYER_INPUT
 0688: 3A 12 83    ld   a,($TICK_NUM)
 068B: E6 03       and  $03
 068D: C0          ret  nz
-068E: 3A 12 80    ld   a,($8012)
+068E: 3A 12 80    ld   a,($PLAYER_DIED)
 0691: A7          and  a
-0692: C0          ret  nz
+0692: C0          ret  nz       ; dead, get out
 0693: 3A 0F 80    ld   a,($JUMP_ACC)
 0696: A7          and  a
 0697: C0          ret  nz
@@ -1062,9 +1079,9 @@ PHYSICS_SOMETHING
 0774: 3A 16 83    ld   a,($8316) ; timer?
 0777: E6 07       and  $07
 0779: C0          ret  nz
-077A: 3A 12 80    ld   a,($8012) ; ?
+077A: 3A 12 80    ld   a,($PLAYER_DIED)
 077D: A7          and  a
-077E: C0          ret  nz
+077E: C0          ret  nz       ; dead, get out
 077F: 3A 0F 80    ld   a,($JUMP_ACC) ; return if not jumping
 0782: A7          and  a
 0783: C8          ret  z
@@ -1093,7 +1110,7 @@ PHYSICS_SOMETHING
 07AF: 3E 07       ld   a,$07
 07B1: 32 0F 80    ld   ($JUMP_ACC),a
 07B4: 3E 8C       ld   a,$8C
-07B6: 32 41 81    ld   ($8141),a
+07B6: 32 41 81    ld   ($PLAYER_FRAME),a
 07B9: 3E 8D       ld   a,$8D
 07BB: C3 F4 07    jp   $07F4
 07BE: C9          ret
@@ -1113,7 +1130,7 @@ PHYSICS_SOMETHING
 07CF: 3E 07       ld   a,$07
 07D1: 32 0F 80    ld   ($JUMP_ACC),a
 07D4: 3E 0C       ld   a,$0C
-07D6: 32 41 81    ld   ($8141),a
+07D6: 32 41 81    ld   ($PLAYER_FRAME),a
 07D9: 3E 0D       ld   a,$0D
 07DB: C3 F4 07    jp   $07F4
 07DE: C9          ret
@@ -1131,7 +1148,7 @@ PHYSICS_SOMETHING
 
 07F2: FF          rst  $38
 07F3: FF          rst  $38
-07F4: 32 45 81    ld   ($8145),a
+07F4: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 07F7: 3E 04       ld   a,$04
 07F9: 32 43 80    ld   ($8043),a
 07FC: C9          ret
@@ -1275,7 +1292,7 @@ CLEAR_JUMP_BUTTON
 08CF: 3E 07       ld   a,$07
 08D1: 32 0F 80    ld   ($JUMP_ACC),a
 08D4: 3E 17       ld   a,$17
-08D6: 32 41 81    ld   ($8141),a
+08D6: 32 41 81    ld   ($PLAYER_FRAME),a
 08D9: C3 30 09    jp   $0930
     
 08DC: FF ...
@@ -1311,7 +1328,7 @@ BONGO_LOOKUP3
 0928: FF FF FF FF FF FF FF FF
 
 0930: 3E 18       ld   a,$18
-0932: 32 45 81    ld   ($8145),a
+0932: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 0935: 3E 04       ld   a,$04
 0937: 32 43 80    ld   ($8043),a
 093A: C9          ret
@@ -1376,7 +1393,7 @@ GROUND_CHECK
 0993: 21 00 81    ld   hl,$8100
 0996: 85          add  a,l
 0997: 6F          ld   l,a
-0998: 3A 44 81    ld   a,($8144)
+0998: 3A 44 81    ld   a,($PLAYER_X_LEGS)
 099B: 96          sub  (hl)
 099C: C6 08       add  a,$08
 099E: 67          ld   h,a
@@ -1396,9 +1413,9 @@ GROUND_CHECK
 09B4: FF ...
 
 ON_GROUND_KIND_OF_CHECK
-09C0: 3A 12 80    ld   a,($8012)
+09C0: 3A 12 80    ld   a,($PLAYER_DIED)
 09C3: A7          and  a
-09C4: C0          ret  nz
+09C4: C0          ret  nz       ; dead, get out
 09C5: 3A 0F 80    ld   a,($JUMP_ACC)
 09C8: A7          and  a
 09C9: 28 1B       jr   z,$09E6
@@ -1409,24 +1426,24 @@ ON_GROUND_KIND_OF_CHECK
 09D2: C8          ret  z
 09D3: AF          xor  a
 09D4: 32 0F 80    ld   ($JUMP_ACC),a
-09D7: 3A 41 81    ld   a,($8141)
+09D7: 3A 41 81    ld   a,($PLAYER_FRAME)
 09DA: E6 80       and  $80
 09DC: C6 0C       add  a,$0C
-09DE: 32 41 81    ld   ($8141),a
+09DE: 32 41 81    ld   ($PLAYER_FRAME),a
 09E1: 3C          inc  a
-09E2: 32 45 81    ld   ($8145),a
+09E2: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 09E5: C9          ret
 09E6: CD 88 09    call $GROUND_CHECK
 09E9: A7          and  a
 09EA: 20 0B       jr   nz,$09F7
-09EC: 3A 11 80    ld   a,($8011)
+09EC: 3A 11 80    ld   a,($FALLING_TIMER)
 09EF: A7          and  a
 09F0: C0          ret  nz
 09F1: 3E 10       ld   a,$10
-09F3: 32 11 80    ld   ($8011),a
+09F3: 32 11 80    ld   ($FALLING_TIMER),a
 09F6: C9          ret
-09F7: AF          xor  a
-09F8: 32 11 80    ld   ($8011),a
+09F7: AF          xor  a        ; reset
+09F8: 32 11 80    ld   ($FALLING_TIMER),a
 09FB: CD 68 0A    call $0A68
 09FE: C9          ret
     
@@ -1455,30 +1472,30 @@ ON_GROUND_KIND_OF_CHECK
 0A2E: 32 48 81    ld   ($BONGO_X),a
 0A31: C9          ret
 0A32: FF          rst  $38
-0A33: 00          nop
+
+KILL_PLAYER
+0A33: 00          nop  ; weee, nopslide
 0A34: 00          nop
 0A35: 00          nop
 0A36: 00          nop
 0A37: 00          nop
-
 0A38: 3E 01       ld   a,$01
-0A3A: 32 12 80    ld   ($8012),a
+0A3A: 32 12 80    ld   ($PLAYER_DIED),a
 0A3D: C9          ret
 
 0A3E: FF FF
 
-;;;
-JUMP_UPWARDS
-0A40: 3A 11 80    ld   a,($8011)
+JUMP_UPWARD_CHECK_BIG_FALL
+0A40: 3A 11 80    ld   a,($FALLING_TIMER) ; did we fall too far?
 0A43: A7          and  a
 0A44: C8          ret  z
 0A45: 3D          dec  a
-0A46: 32 11 80    ld   ($8011),a
+0A46: 32 11 80    ld   ($FALLING_TIMER),a
 0A49: A7          and  a
 0A4A: 20 04       jr   nz,$0A50
-0A4C: CD 33 0A    call $0A33
+0A4C: CD 33 0A    call $KILL_PLAYER ; yep.
 0A4F: C9          ret
-0A50: 3A 43 81    ld   a,($PLAYER_Y) ; move upwards
+0A50: 3A 43 81    ld   a,($PLAYER_Y) ; Nope... move upwards
 0A53: 3C          inc  a
 0A54: 3C          inc  a
 0A55: 32 43 81    ld   ($PLAYER_Y),a
@@ -1497,9 +1514,10 @@ JUMP_UPWARDS
     
 0A76: FF ...
 
-0A80: 3A 12 80    ld   a,($8012)
+;;;
+0A80: 3A 12 80    ld   a,($PLAYER_DIED)
 0A83: A7          and  a
-0A84: C0          ret  nz
+0A84: C0          ret  nz       ; player dead, get outta here
 0A85: 3A 43 81    ld   a,($PLAYER_Y)
 0A88: C6 01       add  a,$01
 0A8A: CB 3F       srl  a
@@ -1520,18 +1538,19 @@ JUMP_UPWARDS
 0AA6: E6 C0       and  $C0
 0AA8: FE C0       cp   $C0
 0AAA: C0          ret  nz
-0AAB: CD B8 0A    call $0AB8
+0AAB: CD B8 0A    call $FALL_UNDER_A_LEDGE
 0AAE: C9          ret
     
 0AAF: FF ...
 
-0AB8: 3A 11 80    ld   a,($8011)
+FALL_UNDER_A_LEDGE
+0AB8: 3A 11 80    ld   a,($FALLING_TIMER)
 0ABB: A7          and  a
-0ABC: C0          ret  nz
+0ABC: C0          ret  nz       ; falling? Get outta here
 0ABD: AF          xor  a
-0ABE: 32 0F 80    ld   ($JUMP_ACC),a
+0ABE: 32 0F 80    ld   ($JUMP_ACC),a ; clear jump acc
 0AC1: 3E 08       ld   a,$08
-0AC3: 32 11 80    ld   ($8011),a
+0AC3: 32 11 80    ld   ($FALLING_TIMER),a ; set low fall
 0AC6: CD A0 13    call $WAIT_VBLANK
 0AC9: CD A0 13    call $WAIT_VBLANK
 0ACC: C9          ret
@@ -1730,11 +1749,10 @@ JUMP_UPWARDS
 0C5E: FF          rst  $38
 0C5F: FF          rst  $38
 
-;;;
-JUMP_UPWARDS_2
-0C60: 3A 12 80    ld   a,($8012)
+CHECK_IF_PLAYER_DIED
+0C60: 3A 12 80    ld   a,($PLAYER_DIED)
 0C63: A7          and  a
-0C64: C8          ret  z
+0C64: C8          ret  z        ; player still alive... leave.
 0C65: CD A0 13    call $WAIT_VBLANK
 0C68: 3A 43 81    ld   a,($PLAYER_Y)
 0C6B: 3C          inc  a
@@ -1756,9 +1774,9 @@ JUMP_UPWARDS_2
 0C89: 7E          ld   a,(hl)
 0C8A: FE 10       cp   $10
 0C8C: 28 D7       jr   z,$0C65
-0C8E: CD C0 0C    call $0CC0
+0C8E: CD C0 0C    call $DO_DEATH_SEQUENCE
 0C91: AF          xor  a
-0C92: 32 12 80    ld   ($8012),a
+0C92: 32 12 80    ld   ($PLAYER_DIED),a ; clear died
 0C95: CD 20 02    call $0220
 0C98: C9          ret
     
@@ -1784,6 +1802,8 @@ JUMP_UPWARDS_2
 0CBC: 20 F4       jr   nz,$0CB2
 0CBE: C9          ret
 0CBF: FF          rst  $38
+
+DO_DEATH_SEQUENCE
 0CC0: 3E 02       ld   a,$02
 0CC2: 32 42 80    ld   ($8042),a
 0CC5: 32 65 80    ld   ($8065),a
@@ -1791,9 +1811,9 @@ JUMP_UPWARDS_2
 0CCB: CD 14 0D    call $0D14
 0CCE: CD A0 0C    call $0CA0
 0CD1: 3E 26       ld   a,$26
-0CD3: 32 41 81    ld   ($8141),a
+0CD3: 32 41 81    ld   ($PLAYER_FRAME),a
 0CD6: 3E 27       ld   a,$27
-0CD8: 32 45 81    ld   ($8145),a
+0CD8: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 0CDB: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 0CDE: 32 43 81    ld   ($PLAYER_Y),a
 0CE1: 3A 40 81    ld   a,($PLAYER_X)
@@ -1819,6 +1839,8 @@ JUMP_UPWARDS_2
 0D13: 15          dec  d
 0D14: 20 F2       jr   nz,$0D08
 0D16: C9          ret
+
+    ;;
 0D17: 16 08       ld   d,$08
 0D19: 3A 43 81    ld   a,($PLAYER_Y)
 0D1C: 3C          inc  a
@@ -2143,8 +2165,8 @@ BIG_RESET
 1005: AF          xor  a
 1006: 32 0E 80    ld   ($CONTROLSN),a
 1009: 32 0F 80    ld   ($JUMP_ACC),a
-100C: 32 12 80    ld   ($8012),a
-100F: 32 11 80    ld   ($8011),a
+100C: 32 12 80    ld   ($PLAYER_DIED),a
+100F: 32 11 80    ld   ($FALLING_TIMER),a
 1012: 32 51 80    ld   ($IS_HIT_CAGE),a
 1015: 32 60 80    ld   ($BONUSES),a
 1018: 32 62 80    ld   ($BONUS_MULT),a
@@ -2331,13 +2353,13 @@ MAIN_LOOP
 1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
 117C: CD 74 07    call $PHYSICS_SOMETHING
-117F: CD 40 0A    call $JUMP_UPWARDS   ; checks 8011 ?
-1182: CD 60 0C    call $JUMP_UPWARDS_2 ; checks 8012 ?
+117F: CD 40 0A    call $JUMP_UPWARD_CHECK_BIG_FALL
+1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $0A80
 118B: CD B0 0B    call $0BB0
 118E: CD 00 12    call $PLAYER_POS_???
-1191: CD 90 12    call $LEGS_REDACTED ; another redacted! What's this?
+1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
 1194: CD 50 17    call $CHECK_DONE_SCREEN
 1197: CD 88 08    call $CLEAR_JUMP_BUTTON
 119A: CD 60 0D    call $MOVE_BONGO    ; also calls $MOVE_BONGO_REDACTED
@@ -2347,7 +2369,7 @@ MAIN_LOOP
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $CHECK_DINO_TIMER
 11AC: CD 50 2B    call $2B50
-11AF: CD A8 3B    call $3BA8
+11AF: CD A8 3B    call $PLAYER_ENTITIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $CALL_HL_PLUS_4K
 11B8: C9          ret
@@ -2408,7 +2430,7 @@ PLAYER_POS_???
 121E: 3A 40 81    ld   a,($PLAYER_X)
 1221: 81          add  a,c
 1222: 32 40 81    ld   ($PLAYER_X),a
-1225: 32 44 81    ld   ($8144),a
+1225: 32 44 81    ld   ($PLAYER_X_LEGS),a
 1228: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 122B: C6 08       add  a,$08
 122D: CB 3F       srl  a
@@ -2424,7 +2446,8 @@ PLAYER_POS_???
     
 1241: FF ...
 
-
+;;; only called from PREVENT_CLOUD_JUMP_REDACTED
+PREVENT_CLOUD_JUMP_REDACTED_2
 1250: E5          push hl
 1251: 3A 40 81    ld   a,($PLAYER_X)
 1254: 96          sub  (hl)
@@ -2452,13 +2475,16 @@ PLAYER_POS_???
 1277: E6 C0       and  $C0
 1279: FE C0       cp   $C0
 127B: 20 03       jr   nz,$1280
-127D: CD B8 0A    call $0AB8
+127D: CD B8 0A    call $FALL_UNDER_A_LEDGE
 1280: E1          pop  hl
 1281: C9          ret
 1282: FF ...
 
     ;; ANOTHER commented out one!
-LEGS_REDACTED
+    ;; This stops a player jumping up through a platform
+    ;; from underneath it. Probably more realistic, but
+    ;; good decision on the devs part to remove it it: it sucks!
+PREVENT_CLOUD_JUMP_REDACTED
 1290: C9          ret
 1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1294: C6 04       add  a,$04
@@ -2468,7 +2494,7 @@ LEGS_REDACTED
 129C: 6F          ld   l,a
 129D: 26 81       ld   h,$81
 129F: 16 04       ld   d,$04
-12A1: CD 50 12    call $1250
+12A1: CD 50 12    call $PREVENT_CLOUD_JUMP_REDACTED_2
 12A4: 2B          dec  hl
 12A5: 2B          dec  hl
 12A6: 15          dec  d
@@ -3209,7 +3235,7 @@ RESET_DINO
 17C0: AF          xor  a
 17C1: 32 2D 80    ld   ($DINO_COUNTER),a
 17C4: 3A 4C 81    ld   a,($DINO_X)
-17C7: 32 50 81    ld   ($DINO_X_MIN8),a
+17C7: 32 50 81    ld   ($DINO_X_LEGS),a
 17CA: C9          ret
 
 17CB: FF ...
@@ -3256,12 +3282,12 @@ RESET_DINO
 1803: FF ...
 
 1808: 3E 0C       ld   a,$0C
-180A: 32 41 81    ld   ($8141),a
+180A: 32 41 81    ld   ($PLAYER_FRAME),a
 180D: 3C          inc  a
-180E: 32 45 81    ld   ($8145),a
+180E: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 1811: 3E 11       ld   a,$11
-1813: 32 42 81    ld   ($8142),a
-1816: 32 46 81    ld   ($8146),a
+1813: 32 42 81    ld   ($PLAYER_COL),a
+1816: 32 46 81    ld   ($PLAYER_COL_LEGS),a
 1819: C9          ret
 181A: FF ...
 
@@ -3278,7 +3304,7 @@ RESET_DINO
 1835: 6F          ld   l,a
 1836: 7E          ld   a,(hl)
 1837: 32 40 81    ld   ($PLAYER_X),a
-183A: 32 44 81    ld   ($8144),a
+183A: 32 44 81    ld   ($PLAYER_X_LEGS),a
 183D: 23          inc  hl
 183E: 7E          ld   a,(hl)
 183F: 32 43 81    ld   ($PLAYER_Y),a
@@ -3548,17 +3574,17 @@ RESET_DINO
 BONUS_SKIP_SCREEN
 199C: 3E F0       ld   a,$F0
 199E: 32 40 81    ld   ($PLAYER_X),a
-19A1: 32 44 81    ld   ($8144),a
+19A1: 32 44 81    ld   ($PLAYER_X_LEGS),a
 19A4: 3E 26       ld   a,$26
 19A6: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 19A9: 3E 16       ld   a,$16
 19AB: 32 43 81    ld   ($PLAYER_Y),a
 19AE: 3E 17       ld   a,$17
-19B0: 32 41 81    ld   ($8141),a
-19B3: 32 45 81    ld   ($8145),a
+19B0: 32 41 81    ld   ($PLAYER_FRAME),a
+19B3: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 19B6: AF          xor  a
-19B7: 32 42 81    ld   ($8142),a
-19BA: 32 46 81    ld   ($8146),a
+19B7: 32 42 81    ld   ($PLAYER_COL),a
+19BA: 32 46 81    ld   ($PLAYER_COL_LEGS),a
 19BD: C3 78 17    jp   $TRANSITION_TO_NEXT_SCREEN
     ;; Clear screen to blanks
 19C0: 21 00 90    ld   hl,$SCREEN_RAM
@@ -3597,9 +3623,9 @@ CHECK_FALL_OFF_BOTTOM_SCR
 19F4: 3F          ccf
 19F5: C6 18       add  a,$18    ; +24 (ground)
 19F7: D0          ret  nc
-19F8: CD C0 0C    call $0CC0
+19F8: CD C0 0C    call $DO_DEATH_SEQUENCE
 19FB: AF          xor  a
-19FC: 32 12 80    ld   ($8012),a
+19FC: 32 12 80    ld   ($PLAYER_DIED),a
 19FF: CD 20 02    call $0220
 1A02: C9          ret
 
@@ -3845,7 +3871,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B45: FF          rst  $38
 1B46: FF          rst  $38
 1B47: FF          rst  $38
-1B48: CD C0 0C    call $0CC0
+1B48: CD C0 0C    call $DO_DEATH_SEQUENCE
 1B4B: CD 20 02    call $0220
 1B4E: C9          ret
 1B4F: FF          rst  $38
@@ -3962,20 +3988,20 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C13: C6 08       add  a,$08
 1C15: 32 4C 81    ld   ($DINO_X),a
 1C18: C6 08       add  a,$08
-1C1A: 32 50 81    ld   ($DINO_X_MIN8),a
+1C1A: 32 50 81    ld   ($DINO_X_LEGS),a
 1C1D: 3A 43 81    ld   a,($PLAYER_Y)
 1C20: 32 4F 81    ld   ($DINO_Y),a
 1C23: C6 10       add  a,$10
-1C25: 32 53 81    ld   ($DINO_Y_ADD16),a
+1C25: 32 53 81    ld   ($DINO_Y_LEGS),a
 1C28: 3E AC       ld   a,$AC
 1C2A: 32 4D 81    ld   ($DINO_FRAME),a
 1C2D: 3E B0       ld   a,$B0
-1C2F: 32 51 81    ld   ($8151),a
+1C2F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
 1C32: CD 00 1C    call $1C00
 1C35: 3E AD       ld   a,$AD
 1C37: 32 4D 81    ld   ($DINO_FRAME),a
 1C3A: CD 00 1C    call $1C00
-1C3D: CD 33 0A    call $0A33
+1C3D: CD 33 0A    call $KILL_PLAYER
 1C40: C9          ret
 
     ;;
@@ -3992,20 +4018,20 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C53: D6 08       sub  $08
 1C55: 32 4C 81    ld   ($DINO_X),a
 1C58: D6 08       sub  $08
-1C5A: 32 50 81    ld   ($DINO_X_MIN8),a
+1C5A: 32 50 81    ld   ($DINO_X_LEGS),a
 1C5D: 3A 43 81    ld   a,($PLAYER_Y)
 1C60: 32 4F 81    ld   ($DINO_Y),a
 1C63: C6 10       add  a,$10
-1C65: 32 53 81    ld   ($DINO_Y_ADD16),a
+1C65: 32 53 81    ld   ($DINO_Y_LEGS),a
 1C68: 3E 2C       ld   a,$2C
 1C6A: 32 4D 81    ld   ($DINO_FRAME),a
 1C6D: 3E 30       ld   a,$30
-1C6F: 32 51 81    ld   ($8151),a
+1C6F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
 1C72: CD 00 1C    call $1C00
 1C75: 3E 2D       ld   a,$2D
 1C77: 32 4D 81    ld   ($DINO_FRAME),a
 1C7A: CD 00 1C    call $1C00
-1C7D: CD 33 0A    call $0A33
+1C7D: CD 33 0A    call $KILL_PLAYER
 1C80: C9          ret
 
 1C81: E9          jp   (hl)
@@ -5226,8 +5252,8 @@ UPDATE_DINO
 22A6: 32 4F 81    ld   ($DINO_Y),a
 22A9: 23          inc  hl
 22AA: 3E 12       ld   a,$12
-22AC: 32 4E 81    ld   ($814E),a
-22AF: 32 52 81    ld   ($8152),a
+22AC: 32 4E 81    ld   ($DINO_COL),a
+22AF: 32 52 81    ld   ($DINO_COL_LEGS),a
 22B2: 7E          ld   a,(hl)   ; param 3?
 22B3: E6 FC       and  $FC      ; 1111 1100
 22B5: 28 1D       jr   z,$22D4
@@ -5238,13 +5264,13 @@ UPDATE_DINO
 22C0: 18 05       jr   $22C7
 22C2: 3A 4C 81    ld   a,($DINO_X)
 22C5: C6 08       add  a,$08
-22C7: 32 50 81    ld   ($DINO_X_MIN8),a
+22C7: 32 50 81    ld   ($DINO_X_LEGS),a
 22CA: 3A 4F 81    ld   a,($DINO_Y)
 22CD: C6 10       add  a,$10
-22CF: 32 53 81    ld   ($DINO_Y_ADD16),a
+22CF: 32 53 81    ld   ($DINO_Y_LEGS),a
 22D2: 18 04       jr   $22D8
 22D4: AF          xor  a
-22D5: 32 50 81    ld   ($DINO_X_MIN8),a
+22D5: 32 50 81    ld   ($DINO_X_LEGS),a
 22D8: 7E          ld   a,(hl)
 22D9: CB 27       sla  a
 22DB: 01 00 24    ld   bc,$DINO_ANIM_LOOKUP
@@ -5254,7 +5280,7 @@ UPDATE_DINO
 22E1: 32 4D 81    ld   ($DINO_FRAME),a
 22E4: 03          inc  bc
 22E5: 0A          ld   a,(bc)
-22E6: 32 51 81    ld   ($8151),a
+22E6: 32 51 81    ld   ($DINO_FRAME_LEGS),a
 22E9: CD 20 29    call $2920
 22EC: C3 E0 23    jp   $23E0
 22EF: FF          rst  $38
@@ -5272,6 +5298,8 @@ DINO_PATHFIND_NOPSLIDE
 22F9: 00          nop
 22FA: 00          nop
 
+    ;; Check if it's time to start the dino,
+    ;; if started - follow path.
 DINO_PATHFIND
 22FB: 3A 2D 80    ld   a,($DINO_COUNTER)
 22FE: 3C          inc  a
@@ -5279,9 +5307,9 @@ DINO_PATHFIND
 2302: 5F          ld   e,a
 2303: 37          scf
 2304: 3F          ccf
-2305: D6 0B       sub  $0B
+2305: D6 0B       sub  $0B      ; 11 ticks till dino time
 2307: D8          ret  c
-2308: 3A 04 80    ld   a,($PLAYER_NUM)
+2308: 3A 04 80    ld   a,($PLAYER_NUM) ; start dino!
 230B: A7          and  a
 230C: 20 05       jr   nz,$2313
 230E: 3A 29 80    ld   a,($SCREEN_NUM)
@@ -6203,13 +6231,13 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 28EC: 3A 2E 80    ld   a,($802E)
 28EF: 80          add  a,b
 28F0: 32 4C 81    ld   ($DINO_X),a
-28F3: 3A 50 81    ld   a,($DINO_X_MIN8)
+28F3: 3A 50 81    ld   a,($DINO_X_LEGS)
 28F6: A7          and  a
 28F7: C8          ret  z
 28F8: 47          ld   b,a
 28F9: 3A 2E 80    ld   a,($802E)
 28FC: 80          add  a,b
-28FD: 32 50 81    ld   ($DINO_X_MIN8),a
+28FD: 32 50 81    ld   ($DINO_X_LEGS),a
 2900: C9          ret
 
     ;;
@@ -6563,6 +6591,7 @@ DRAW_BONUS_STATE
 2B3F: C9          ret
 2B40: FF ...
 
+;;;
 2B50: 3A 04 80    ld   a,($PLAYER_NUM)
 2B53: A7          and  a
 2B54: 20 05       jr   nz,$2B5B
@@ -8520,33 +8549,36 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3B7D: C8          ret  z
 3B7E: E1          pop  hl
 3B7F: C9          ret
+
+PLAYER_ENTITY_COLLISION
 3B80: FD 7E 00    ld   a,(iy+$00)
 3B83: DD 96 00    sub  (ix+$00)
 3B86: 37          scf
 3B87: 3F          ccf
-3B88: D6 0C       sub  $0C
+3B88: D6 0C       sub  $0C      ; -12px
 3B8A: 38 03       jr   c,$3B8F
-3B8C: C6 18       add  a,$18
-3B8E: D0          ret  nc
-3B8F: DD 7E 03    ld   a,(ix+$03)
+3B8C: C6 18       add  a,$18    ; +24px
+3B8E: D0          ret  nc       ; Nope, no X hit
+3B8F: DD 7E 03    ld   a,(ix+$03) ; YPOS = XPOS_addr + 3
 3B92: FD 96 03    sub  (iy+$03)
 3B95: 37          scf
 3B96: 3F          ccf
-3B97: D6 0A       sub  $0A
+3B97: D6 0A       sub  $0A      ; -10px
 3B99: 38 03       jr   c,$3B9E
-3B9B: C6 21       add  a,$21
-3B9D: D0          ret  nc
-3B9E: CD 33 0A    call $0A33
+3B9B: C6 21       add  a,$21    ; +33px
+3B9D: D0          ret  nc       ; Nope, no Y hit
+3B9E: CD 33 0A    call $KILL_PLAYER    ; YEP, hit.
 3BA1: C9          ret
 3BA2: FF ...
 
+PLAYER_ENTITIES_COLLISION
 3BA8: FD 21 54 81 ld   iy,$ENEMY_1_X
 3BAC: DD 21 40 81 ld   ix,$PLAYER_X
-3BB0: CD 80 3B    call $3B80
+3BB0: CD 80 3B    call $PLAYER_ENTITY_COLLISION
 3BB3: FD 21 58 81 ld   iy,$ENEMY_2_X
-3BB7: CD 80 3B    call $3B80
+3BB7: CD 80 3B    call $PLAYER_ENTITY_COLLISION
 3BBA: FD 21 5C 81 ld   iy,$ENEMY_3_X
-3BBE: CD 80 3B    call $3B80
+3BBE: CD 80 3B    call $PLAYER_ENTITY_COLLISION
 3BC1: C9          ret
 3BC2: FF ...
 
@@ -8770,16 +8802,16 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3D1C: 3A 3B 05    ld   a,($053B)
 3D1F: 00          nop
 3D20: 7E          ld   a,(hl)
-3D21: 32 41 81    ld   ($8141),a
+3D21: 32 41 81    ld   ($PLAYER_FRAME),a
 3D24: 23          inc  hl
 3D25: 7E          ld   a,(hl)
-3D26: 32 45 81    ld   ($8145),a
+3D26: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 3D29: 23          inc  hl
 3D2A: 7E          ld   a,(hl)
 3D2B: 32 49 81    ld   ($BONGO_FRAME),a
 3D2E: 23          inc  hl
 3D2F: 7E          ld   a,(hl)
-3D30: 32 51 81    ld   ($8151),a
+3D30: 32 51 81    ld   ($DINO_FRAME_LEGS),a
 3D33: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3D36: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3D39: 23          inc  hl
@@ -8919,9 +8951,9 @@ DO_CUTSCENE
 3E1E: FC FF C9    call m,$C9FF
 3E21: FF          rst  $38
 3E22: 3E 0C       ld   a,$0C
-3E24: 32 41 81    ld   ($8141),a
+3E24: 32 41 81    ld   ($PLAYER_FRAME),a
 3E27: 3E 0D       ld   a,$0D
-3E29: 32 45 81    ld   ($8145),a
+3E29: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 3E2C: 3E 29       ld   a,$29
 3E2E: 32 29 81    ld   ($8129),a
 3E31: 1E 70       ld   e,$70
@@ -8971,7 +9003,7 @@ DO_CUTSCENE
 END_CUTSCENE
 3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
 3EB2: 32 42 80    ld   ($8042),a
-3EB5: 21 50 81    ld   hl,$DINO_X_MIN8 ; set a bunch of bytes at 8150
+3EB5: 21 50 81    ld   hl,$DINO_X_LEGS ; set a bunch of bytes at 8150
 3EB8: 36 18       ld   (hl),$18
 3EBA: 23          inc  hl
 3EBB: 36 2E       ld   (hl),$2E
@@ -11127,7 +11159,7 @@ REALLY_VBLANK
 DONE_CAGED_DINO
 4DD0: AF          xor  a
 4DD1: 32 4C 81    ld   ($DINO_X),a
-4DD4: 32 50 81    ld   ($DINO_X_MIN8),a
+4DD4: 32 50 81    ld   ($DINO_X_LEGS),a
 4DD7: CD 08 4D    call $DRAW_CAGE_TILES
 4DDA: E5          push hl
 4DDB: 21 A0 13    ld   hl,$WAIT_VBLANK
@@ -11142,17 +11174,17 @@ DONE_CAGED_DINO
 4DED: 3E 38       ld   a,$38
 4DEF: 32 4D 81    ld   ($DINO_FRAME),a
 4DF2: 3E 12       ld   a,$12
-4DF4: 32 4E 81    ld   ($814E),a
+4DF4: 32 4E 81    ld   ($DINO_COL),a
 4DF7: 3E D7       ld   a,$D7
 4DF9: 32 4F 81    ld   ($DINO_Y),a
 4DFC: 3E 8A       ld   a,$8A
-4DFE: 32 50 81    ld   ($DINO_X_MIN8),a
+4DFE: 32 50 81    ld   ($DINO_X_LEGS),a
 4E01: 3E 39       ld   a,$39
-4E03: 32 51 81    ld   ($8151),a
+4E03: 32 51 81    ld   ($DINO_FRAME_LEGS),a
 4E06: 3E 12       ld   a,$12
-4E08: 32 52 81    ld   ($8152),a
+4E08: 32 52 81    ld   ($DINO_COL_LEGS),a
 4E0B: 3E E7       ld   a,$E7
-4E0D: 32 53 81    ld   ($DINO_Y_ADD16),a
+4E0D: 32 53 81    ld   ($DINO_Y_LEGS),a
 4E10: CD C0 4D    call $REALLY_VBLANK
 4E13: CD E0 4E    call $SPEED_UP_FOR_NEXT_ROUND
 4E16: 21 48 3D    ld   hl,$DO_CUTSCENE
@@ -11990,9 +12022,9 @@ TBL_1
 5441: BD          cp   l
 5442: 20 EF       jr   nz,$5433
 5444: 3E 38       ld   a,$38
-5446: 32 41 81    ld   ($8141),a
+5446: 32 41 81    ld   ($PLAYER_FRAME),a
 5449: 3C          inc  a
-544A: 32 45 81    ld   ($8145),a
+544A: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 544D: C9          ret
 544E: FF          rst  $38
 544F: FF          rst  $38
