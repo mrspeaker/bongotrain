@@ -1,4 +1,5 @@
-
+    ;; Bongo by JetSoft
+    ;; picked apart by Mr Speaker
 
     ;; PLAYER_NUM     $8004  ;
     ;; JUMP_BTN_DOWN  $8005  ; player is holding down the jump button
@@ -46,6 +47,19 @@
     ;; DINO_X_MIN8    $8150  ; seems like x - 8
     ;; DINO_Y_ADD16   $8153  ; seems like y + 10
 
+    ;; ENEMY_1_X      $8154
+    ;; ENEMY_1_FRAME  $8155
+    ;; ENEMY_1_COL    $8156
+    ;; ENEMY_1_Y      $8157
+    ;; ENEMY_2_X      $8158
+    ;; ENEMY_2_FRAME  $8159
+    ;; ENEMY_2_COL    $815A
+    ;; ENEMY_2_Y      $815B
+    ;; ENEMY_3_X      $815C
+    ;; ENEMY_3_FRAME  $815D
+    ;; ENEMY_3_COL    $815E
+    ;; ENEMY_3_Y      $815F
+
     ;; TICK_NUM       $8312  ; adds 1 every tick
     ;; INPUT_BUTTONS  $83F1  ; copied to 800C and 800D
     ;; INPUT_BUTTONS_2 $83F2 ?
@@ -90,10 +104,11 @@
 002C: DD 19       add  ix,de
 002E: ED 6F       rld  (hl)
 0030: DD          db   $dd
-0031: FF x 7
+0031: FF ...
+
 0038: 3A 00 B8    ld   a,($B800)
 003B: 18 FB       jr   $0038
-003D: FF x 11
+003D: FF ...
 
 0048: 3A 00 A0    ld   a,($A000) ; PORT IN0?
 004B: E6 83       and  $83
@@ -247,16 +262,19 @@
 0160: 1C          inc  e
 0161: 11 29 15    ld   de,$1529
 0164: 22 FF C9    ld   ($C9FF),hl
-0167: FF x 9
+0167: FF ...
+
 0170: CD 20 00    call $0020
 0173: C9          ret
-0174: FF x 13
+0174: FF ...
+
 0180: C5          push bc
 0181: 01 00 40    ld   bc,$4000
 0184: 09          add  hl,bc
 0185: C1          pop  bc
 0186: E9          jp   (hl)
-0187: FF x 9
+0187: FF ...
+
 
 DID_PLAYER_PRESS_START ; Did player start the game?
 0190: 3A 03 83    ld   a,($8303) ; check you have credits
@@ -290,7 +308,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01C7: 32 03 83    ld   ($8303),a
 01CA: C9          ret
 
-01CB: FF x 6
+01CB: FF ...
 
 ;;;
 01D0: 3A 00 A0    ld   a,($A000) ; IO IN0
@@ -376,7 +394,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 027B: 32 33 80    ld   ($LIVES_P2),a
 027E: C3 00 10    jp   $BIG_RESET
     
-0281: FF x 7
+0281: FF ...
 
 COINAGE_ROUTINE
 0288: 3A 06 83    ld   a,($8306)
@@ -487,7 +505,8 @@ COINAGE_ROUTINE
 0339: 1E E0       ld   e,$E0
 033B: 19          add  hl,de
 033C: 18 F0       jr   $032E
-033E: FF x 10
+033E: FF ...
+
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
@@ -506,8 +525,8 @@ COINAGE_ROUTINE
 0364: 32 90 80    ld   ($8090),a
 0367: C3 83 05    jp   $0583
     
-036A: FF x 6
-    
+036A: FF ...
+
 0370: CD 70 14    call $1470
 0373: 21 20 15    ld   hl,$1520
 0376: CD E3 01    call $01E3
@@ -526,7 +545,8 @@ COINAGE_ROUTINE
     
 0390: CD A0 13    call $WAIT_VBLANK
 0393: 18 FB       jr   $0390
-0395: FF x 11
+0395: FF ...
+
 03A0: CD 08 04    call $0408
 03A3: 3A 32 80    ld   a,($LIVES)
 03A6: A7          and  a
@@ -573,16 +593,16 @@ COINAGE_ROUTINE
 03EC: 32 35 80    ld   ($8035),a
 03EF: C3 93 00    jp   $0093
 
-03F2: FF x 6
-    
+03F2: FF ...
+
 03F8: 0E E0       ld   c,$E0
 03FA: CD A0 13    call $WAIT_VBLANK
 03FD: 0C          inc  c
 03FE: 20 FA       jr   nz,$03FA
 0400: C9          ret
 
-0401: FF x 7
-    
+0401: FF ...
+
 0408: 3E 01       ld   a,$01
 040A: 32 05 81    ld   ($8105),a
 040D: C9          ret
@@ -599,14 +619,14 @@ COINAGE_ROUTINE
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
     
-0426: FF x 10
-    
+0426: FF ...
+
 0430: CD 40 04    call $0440
 0433: CD 70 04    call $0470
 0436: C9          ret
 
-0437: FF x 9
-    
+0437: FF ...
+
 0440: 3A 16 80    ld   a,($P1_SCORE+2)
 0443: 4F          ld   c,a
 0444: 3A 02 83    ld   a,($8302)
@@ -663,8 +683,8 @@ COINAGE_ROUTINE
 0495: 99          sbc  a,c
 0496: DC 00 05    call c,$0500
 0499: C9          ret
-049A: FF x 22
-    
+049A: FF ...
+
 04B0: 0E 01       ld   c,$01
 04B2: CD A0 13    call $WAIT_VBLANK
 04B5: 0D          dec  c
@@ -705,8 +725,8 @@ COINAGE_ROUTINE
 04F2: E1          pop  hl
 04F3: C9          ret
     
-04F4: FF x 12
-    
+04F4: FF ...
+
 0500: 3A 17 80    ld   a,($P2_SCORE)
 0503: 32 00 83    ld   ($8300),a
 0506: 3A 18 80    ld   a,($P2_SCORE+1)
@@ -774,8 +794,8 @@ COINAGE_ROUTINE
 0565: CD 88 08    call $0888
 0568: C9          ret
     
-0569: FF x 23
-    
+0569: FF ...
+
 0580: CD 48 03    call $0348
 0583: CD 80 30    call $3080
 0586: CD A0 13    call $WAIT_VBLANK
@@ -850,8 +870,8 @@ NORMALIZE_INPUT
 05FB: 32 0E 80    ld   ($CONTROLSN),a
 05FE: C9          ret
     
-05FF: FF x 9
-    
+05FF: FF ...
+
 0608: 0C          inc  c
 0609: 0E 10       ld   c,$10
 060B: 0E 0C       ld   c,$0C
@@ -888,8 +908,8 @@ NORMALIZE_INPUT
 063C: 00          nop
 063D: C9          ret
     
-063E: FF x 10
-    
+063E: FF ...
+
 0648: 8C          adc  a,h
 0649: 8E          adc  a,(hl)
 064A: 90          sub  b
@@ -928,7 +948,7 @@ NORMALIZE_INPUT
 067C: 00          nop
 067D: C9          ret
     
-067E: FF x 10
+067E: FF ...
 
 PLAYER_INPUT
 0688: 3A 12 83    ld   a,($TICK_NUM)
@@ -1063,7 +1083,7 @@ PHYSICS_SOMETHING
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
 
-079A: FF x 6
+079A: FF ...
 
 ;;; (only called when jumping right?)
 07A0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
@@ -1215,23 +1235,16 @@ PHYSICS_SOMETHING
 087E: 18 EB       jr   $086B
 0880: D9          exx
 0881: C9          ret
-0882: FF          rst  $38
-0883: FF          rst  $38
-0884: FF          rst  $38
-0885: FF          rst  $38
-0886: FF          rst  $38
-0887: FF          rst  $38
+0882: FF ...
+
 0888: 3A 0E 80    ld   a,($CONTROLSN)
 088B: CB 6F       bit  5,a      ; jump
 088D: C0          ret  nz
 088E: AF          xor  a
 088F: 32 05 80    ld   (JUMP_BTN_DOWN),a
 0892: C9          ret
-0893: FF          rst  $38
-0894: FF          rst  $38
-0895: FF          rst  $38
-0896: FF          rst  $38
-0897: FF          rst  $38
+0893: FF ...
+
 0898: 21 40 81    ld   hl,$PLAYER_X
 089B: 36 10       ld   (hl),$10
 089D: 23          inc  hl
@@ -1251,7 +1264,7 @@ PHYSICS_SOMETHING
 08B2: CD 20 18    call $1820
 08B5: C9          ret
     
-08B6: FF x 10
+08B6: FF ...
 
 ;; jump somethin'
 08C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
@@ -1269,8 +1282,8 @@ PHYSICS_SOMETHING
 08D6: 32 41 81    ld   ($8141),a
 08D9: C3 30 09    jp   $0930
     
-08DC: FF x 12
-    
+08DC: FF ...
+
 08E8: 3A 12 83    ld   a,($TICK_NUM)
 08EB: E6 07       and  $07
 08ED: 20 15       jr   nz,$0904
@@ -1294,7 +1307,7 @@ PHYSICS_SOMETHING
 090E: 32 48 81    ld   ($BONGO_X),a
 0911: C9          ret
     
-0912: FF x 6
+0912: FF ...
 
 BONGO_LOOKUP3
 0918: 29 2A 2B 2A FF FF FF FF
@@ -1307,7 +1320,8 @@ BONGO_LOOKUP3
 0937: 32 43 80    ld   ($8043),a
 093A: C9          ret
     
-093B: FF x 13
+093B: FF ...
+
 0948: 00          nop
 0949: 17          rla
 094A: 18 0C       jr   $0958
@@ -1354,7 +1368,7 @@ BONGO_LOOKUP3
 097E: 6F          ld   l,a
 097F: C9          ret
     
-0980: FF x 8
+0980: FF ...
 
 ;;; ground check?
 GROUND_CHECK
@@ -1383,7 +1397,7 @@ GROUND_CHECK
 09B1: 3E 01       ld   a,$01
 09B3: C9          ret
     
-09B4: FF x 12
+09B4: FF ...
 
 ON_GROUND_KIND_OF_CHECK
 09C0: 3A 12 80    ld   a,($8012)
@@ -1420,8 +1434,8 @@ ON_GROUND_KIND_OF_CHECK
 09FB: CD 68 0A    call $0A68
 09FE: C9          ret
     
-09FF: FF x 9
-    
+09FF: FF ...
+
 0A08: 3A 12 83    ld   a,($TICK_NUM)
 0A0B: E6 07       and  $07
 0A0D: 20 15       jr   nz,$0A24
@@ -1476,8 +1490,8 @@ JUMP_UPWARDS
 0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A5D: C9          ret
     
-0A5E: FF x 10
-    
+0A5E: FF ...
+
 0A68: 3A 43 81    ld   a,($PLAYER_Y)
 0A6B: E6 F8       and  $F8
 0A6D: 32 43 81    ld   ($PLAYER_Y),a
@@ -1485,8 +1499,8 @@ JUMP_UPWARDS
 0A72: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A75: C9          ret
     
-0A76: FF x 10
-    
+0A76: FF ...
+
 0A80: 3A 12 80    ld   a,($8012)
 0A83: A7          and  a
 0A84: C0          ret  nz
@@ -1513,8 +1527,8 @@ JUMP_UPWARDS
 0AAB: CD B8 0A    call $0AB8
 0AAE: C9          ret
     
-0AAF: FF x 9
-    
+0AAF: FF ...
+
 0AB8: 3A 11 80    ld   a,($8011)
 0ABB: A7          and  a
 0ABC: C0          ret  nz
@@ -1553,8 +1567,8 @@ JUMP_UPWARDS
 0AF5: CD 98 18    call $1898
 0AF8: C9          ret
     
-0AF9: FF x 7
-    
+0AF9: FF ...
+
 0B00: 38 0C       jr   c,$0B0E
 0B02: 38 0C       jr   c,$0B10
 0B04: 38 0C       jr   c,$0B12
@@ -1600,8 +1614,8 @@ JUMP_UPWARDS
 0BA0: AF          xor  a
 0BA1: 32 2D 80    ld   ($DINO_COUNTER),a
 0BA4: C9          ret
-0BA5: FF x 11
-    
+0BA5: FF ...
+
 0BB0: DD 21 80 81 ld   ix,$8180
 0BB4: FD 21 38 81 ld   iy,$8138
 0BB8: 16 09       ld   d,$09
@@ -1637,7 +1651,8 @@ JUMP_UPWARDS
 0BFB: 20 BD       jr   nz,$0BBA
 0BFD: C9          ret
     
-0BFE: FF x 18
+0BFE: FF ...
+
 0C10: 00          nop
 0C11: 00          nop
 0C12: 00          nop
@@ -1751,8 +1766,8 @@ JUMP_UPWARDS_2
 0C95: CD 20 02    call $0220
 0C98: C9          ret
     
-0C99: FF x 7
-    
+0C99: FF ...
+
 0CA0: 1E 08       ld   e,$08
 0CA2: CD A0 13    call $WAIT_VBLANK
 0CA5: 1D          dec  e
@@ -1791,20 +1806,20 @@ JUMP_UPWARDS_2
 0CE9: CD A0 0C    call $0CA0
 0CEC: 3A 40 81    ld   a,($PLAYER_X)
 0CEF: C6 08       add  a,$08
-0CF1: 32 5C 81    ld   ($815C),a
+0CF1: 32 5C 81    ld   ($ENEMY_3_X),a
 0CF4: 3E 28       ld   a,$28
-0CF6: 32 5D 81    ld   ($815D),a
+0CF6: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 0CF9: 3E 11       ld   a,$11
-0CFB: 32 5E 81    ld   ($815E),a
+0CFB: 32 5E 81    ld   ($ENEMY_3_COL),a
 0CFE: 3A 43 81    ld   a,($PLAYER_Y)
 0D01: D6 10       sub  $10
-0D03: 32 5F 81    ld   ($815F),a
+0D03: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D06: 16 28       ld   d,$28
 0D08: CD B0 0C    call $0CB0
-0D0B: 3A 5F 81    ld   a,($815F)
+0D0B: 3A 5F 81    ld   a,($ENEMY_3_Y)
 0D0E: 3D          dec  a
 0D0F: 3D          dec  a
-0D10: 32 5F 81    ld   ($815F),a
+0D10: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D13: 15          dec  d
 0D14: 20 F2       jr   nz,$0D08
 0D16: C9          ret
@@ -1829,7 +1844,7 @@ JUMP_UPWARDS_2
 0D37: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
 0D3A: C9          ret
 
-0D3B: FF x 5
+0D3B: FF ...
 
     ;; Oooh, mystery function - commented out.
     ;; Think it was going to place Bongo on the
@@ -1852,7 +1867,7 @@ MOVE_BONGO_REDACTED
 0D55: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
 0D58: C9          ret
 
-0D59: FF x 7
+0D59: FF ...
 
 0D60: CD 40 0D    call $MOVE_BONGO_REDACTED
 0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
@@ -1873,7 +1888,7 @@ MOVE_BONGO_REDACTED
 0D7E: 32 4B 81    ld   ($BONGO_Y),a
 0D81: C9          ret
 
-0D82: FF x 6
+0D82: FF ...
 
 0D88: 3A 12 83    ld   a,($TICK_NUM)
 0D8B: E6 07       and  $07
@@ -1892,7 +1907,7 @@ MOVE_BONGO_REDACTED
 0DA0: 32 49 81    ld   ($BONGO_X),a
 0DA3: C9          ret
 
-0DA4: FF x 12
+0DA4: FF ...
 
 0DB0: 05 06 07 08 FF FF FF FF
 
@@ -1923,7 +1938,7 @@ DRAW_BONGO
 0DE8: 32 49 81    ld   ($BONGO_FRAME),a
 0DEB: C9          ret
 
-0DEC: FF x 20
+0DEC: FF ...
 
 BONGO_LOOKUP2
 0E00: E0 38 E0 38 E0 38 E0 38
@@ -1952,7 +1967,7 @@ BONGO_LOOKUP2
 0E5E: CD 30 0D    call $0D30
 0E61: C9          ret
 
-0E62: FF x 14
+0E62: FF ...
 
 BONGO_ANIMATE
 0E70: 3A 12 83    ld   a,($TICK_NUM)
@@ -1989,7 +2004,7 @@ BONGO_ANIMATE
 0EA5: 32 25 80    ld   ($BONGO_DIR_FLAG),a
 0EA8: C9          ret
 
-0EA9: FF x 23
+0EA9: FF ...
 
     ;; what's this data for?
 BONGO_LOOKUP
@@ -2002,7 +2017,7 @@ BONGO_LOOKUP
 0EF0: 68 0F 08 0F 08 0F 00 00
 0EF8: 00 00 00 00 00 00 00 00
 
-0F00: FF x 8
+0F00: FF ...
 
     ;; this looks like bongo anim data
     ;; 4 = jump | 2 = left | 1 = right
@@ -2012,7 +2027,7 @@ BONGO_ANIM_DATA
 0F18: 00 04 02 02 02 02 05 06
 0F20: 01 01 01 01 00 00 00 00
 
-0F28: FF x 8
+0F28: FF ...
 
     ;;
 0F30: 3A 48 81    ld   a,($BONGO_X)
@@ -2041,7 +2056,7 @@ BONGO_ANIM_DATA
 0F58: 32 25 80    ld   ($BONGO_DIR_FLAG),a
 0F5B: E1          pop  hl
 0F5C: C9          ret
-0F5D: FF x 11
+0F5D: FF ...
 
 0F68: 00          nop
 0F69: 00          nop
@@ -2099,28 +2114,9 @@ BONGO_ANIM_DATA
 0FC1: E6 E6       and  $E6
 0FC3: FF          rst  $38
 0FC4: C3 D6 1B    jp   $1BD6
-0FC7: FF          rst  $38
-0FC8: FF          rst  $38
-0FC9: FF          rst  $38
-0FCA: FF          rst  $38
-0FCB: FF          rst  $38
-0FCC: FF          rst  $38
-0FCD: FF          rst  $38
-0FCE: FF          rst  $38
-0FCF: FF          rst  $38
-0FD0: FF          rst  $38
+0FC7: FF ...
 0FD1: 0F          rrca
-0FD2: FF          rst  $38
-0FD3: FF          rst  $38
-0FD4: FF          rst  $38
-0FD5: FF          rst  $38
-0FD6: FF          rst  $38
-0FD7: FF          rst  $38
-0FD8: FF          rst  $38
-0FD9: FF          rst  $38
-0FDA: FF          rst  $38
-0FDB: FF          rst  $38
-0FDC: FF          rst  $38
+0FD2: FF ...
 0FDD: 0F          rrca
 0FDE: FF          rst  $38
 0FDF: FF          rst  $38
@@ -2182,7 +2178,7 @@ BIG_RESET
 105D: 18 EC       jr   $104B
 105F: FF          rst  $38
 1060: F0          ret  p
-1061: FF x 15
+1061: FF ...
 
 ;;;  Extra life
 EXTRA_LIFE
@@ -2214,7 +2210,7 @@ EXTRA_LIFE
 109E: 32 44 80    ld   ($8044),a
 10A1: C9          ret
 
-10A2: FF x 6
+10A2: FF ...
 
     ;; P2 extra life
 10A8: 3A 71 80    ld   a,($8071)
@@ -2235,7 +2231,7 @@ EXTRA_LIFE
 10C6: 32 44 80    ld   ($8044),a
 10C9: C9          ret
 
-10CA: FF x 23
+10CA: FF ...
 
     ;;
 10E0: 3A 00 80    ld   a,($8000)
@@ -2330,7 +2326,7 @@ FALLING_ROCKS
 115D: 00          nop
 115E: C9          ret
 
-115F: FF x 17
+115F: FF ...
 
 MAIN_LOOP
 1170: CD 04 1A    call $1A04
@@ -2359,9 +2355,10 @@ MAIN_LOOP
 11B5: CD E3 01    call $01E3
 11B8: C9          ret
     
-11B9: FF x 7
-    
-11C0: 3A 58 81    ld   a,($8158)
+11B9: FF ...
+
+
+11C0: 3A 58 81    ld   a,($ENEMY_2_X)
 11C3: FE 70       cp   $70
 11C5: 28 14       jr   z,$11DB
 11C7: FE 71       cp   $71
@@ -2375,7 +2372,7 @@ MAIN_LOOP
 11D7: FE 00       cp   $00
 11D9: 20 03       jr   nz,$11DE
 11DB: CD 60 39    call $3960
-11DE: 3A 5C 81    ld   a,($815C)
+11DE: 3A 5C 81    ld   a,($ENEMY_3_X)
 11E1: FE 60       cp   $60
 11E3: 28 14       jr   z,$11F9
 11E5: FE 61       cp   $61
@@ -2428,8 +2425,9 @@ MAIN_LOOP
 123D: 32 02 80    ld   ($8002),a
 1240: C9          ret
     
-1241: FF x 15
-    
+1241: FF ...
+
+
 1250: E5          push hl
 1251: 3A 40 81    ld   a,($PLAYER_X)
 1254: 96          sub  (hl)
@@ -2489,20 +2487,8 @@ MAIN_LOOP
 12A6: 15          dec  d
 12A7: 20 F8       jr   nz,$12A1
 12A9: C9          ret
-12AA: FF          rst  $38
-12AB: FF          rst  $38
-12AC: FF          rst  $38
-12AD: FF          rst  $38
-12AE: FF          rst  $38
-12AF: FF          rst  $38
-12B0: FF          rst  $38
-12B1: FF          rst  $38
-12B2: FF          rst  $38
-12B3: FF          rst  $38
-12B4: FF          rst  $38
-12B5: FF          rst  $38
-12B6: FF          rst  $38
-12B7: FF          rst  $38
+12AA: FF ...
+
 12B8: CD 10 03    call $0310
 12BB: 03          inc  bc
 12BC: 00          nop
@@ -2562,18 +2548,8 @@ MAIN_LOOP
 1318: 20 E9       jr   nz,$1303
 131A: E1          pop  hl
 131B: C9          ret
-131C: FF          rst  $38
-131D: FF          rst  $38
-131E: FF          rst  $38
-131F: FF          rst  $38
-1320: FF          rst  $38
-1321: FF          rst  $38
-1322: FF          rst  $38
-1323: FF          rst  $38
-1324: FF          rst  $38
-1325: FF          rst  $38
-1326: FF          rst  $38
-1327: FF          rst  $38
+131C: FF ...
+
 1328: CD 68 17    call $1768
 132B: DD 7E 00    ld   a,(ix+$00)
 132E: E5          push hl
@@ -2637,7 +2613,8 @@ MAIN_LOOP
 1397: D9          exx
 1398: C9          ret
 
-1399: FF x 7
+1399: FF ...
+
 
 ;;; Looks important. VBLANK?!
 WAIT_VBLANK
@@ -2663,7 +2640,8 @@ WAIT_VBLANK
 13C1: 20 F8       jr   nz,$13BB
 13C3: C9          ret
 
-13C4: FF x 12
+13C4: FF ...
+
 
 UPDATE_TIME_TIMER
 13D0: 3A 06 80    ld   a,($SECOND_TIMER)
@@ -2677,7 +2655,8 @@ UPDATE_TIME_TIMER
 13E1: CD 10 14    call $DRAW_TIME
 13E4: C9          ret
 
-13E5: FF x 11
+13E5: FF ...
+
 
 UPDATE_TIME
 13F0: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -2700,7 +2679,8 @@ UPDATE_TIME
 1409: 77          ld   (hl),a   ; store it
 140A: C9          ret
 
-140B: FF x 5
+140B: FF ...
+
     ;; draws the player's time under score
     ;; ret's immediately: must have been removed!
 DRAW_TIME
@@ -2739,7 +2719,7 @@ DRAW_TIME
 1451: ED 67       rrd  (hl)
 1453: C9          ret
 
-1454: FF x 12
+1454: FF ...
 
 1460: 21 00 80    ld   hl,$8000
 1463: 36 00       ld   (hl),$00
@@ -2829,7 +2809,8 @@ INIT_GAME
 14EC: CD C0 3A    call $3AC0
 14EF: C9          ret
 
-14F0: FF x 16
+14F0: FF ...
+
 
 1500: B0          or   b
 1501: 18 B0       jr   $14B3
@@ -2869,26 +2850,8 @@ INIT_GAME
 1539: 00          nop
 153A: 00          nop
 153B: 00          nop
-153C: FF          rst  $38
-153D: FF          rst  $38
-153E: FF          rst  $38
-153F: FF          rst  $38
-1540: FF          rst  $38
-1541: FF          rst  $38
-1542: FF          rst  $38
-1543: FF          rst  $38
-1544: FF          rst  $38
-1545: FF          rst  $38
-1546: FF          rst  $38
-1547: FF          rst  $38
-1548: FF          rst  $38
-1549: FF          rst  $38
-154A: FF          rst  $38
-154B: FF          rst  $38
-154C: FF          rst  $38
-154D: FF          rst  $38
-154E: FF          rst  $38
-154F: FF          rst  $38
+153C: FF ...
+
 1550: E5          push hl
 1551: C5          push bc
 1552: D5          push de
@@ -3088,7 +3051,8 @@ UPDATE_FALLING_ROCKS
 16C0: 32 16 83    ld   ($8316),a
 16C3: C9          ret
 
-16C4: FF x 12
+16C4: FF ...
+
 
 DRAW_BONUS
 16D0: CD 10 03    call $0310
@@ -3159,29 +3123,7 @@ ADD_SCORE
 1735: 32 1D 80    ld   ($SCORE_TO_ADD),a
 1738: C9          ret
 ;;; ;
-1739: FF          rst  $38
-173A: FF          rst  $38
-173B: FF          rst  $38
-173C: FF          rst  $38
-173D: FF          rst  $38
-173E: FF          rst  $38
-173F: FF          rst  $38
-1740: FF          rst  $38
-1741: FF          rst  $38
-1742: FF          rst  $38
-1743: FF          rst  $38
-1744: FF          rst  $38
-1745: FF          rst  $38
-1746: FF          rst  $38
-1747: FF          rst  $38
-1748: FF          rst  $38
-1749: FF          rst  $38
-174A: FF          rst  $38
-174B: FF          rst  $38
-174C: FF          rst  $38
-174D: FF          rst  $38
-174E: FF          rst  $38
-174F: FF          rst  $38
+1739: FF ...
 1750: 37          scf
 1751: 3F          ccf
 1752: 3A 43 81    ld   a,($PLAYER_Y)
@@ -3312,11 +3254,8 @@ ADD_AMOUNT_BDC
 1800: BC          cp   h
 1801: FF          rst  $38
 1802: C9          ret
-1803: FF          rst  $38
-1804: FF          rst  $38
-1805: FF          rst  $38
-1806: FF          rst  $38
-1807: FF          rst  $38
+1803: FF ...
+
 1808: 3E 0C       ld   a,$0C
 180A: 32 41 81    ld   ($8141),a
 180D: 3C          inc  a
@@ -3325,12 +3264,8 @@ ADD_AMOUNT_BDC
 1813: 32 42 81    ld   ($8142),a
 1816: 32 46 81    ld   ($8146),a
 1819: C9          ret
-181A: FF          rst  $38
-181B: FF          rst  $38
-181C: FF          rst  $38
-181D: FF          rst  $38
-181E: FF          rst  $38
-181F: FF          rst  $38
+181A: FF ...
+
 1820: 3A 04 80    ld   a,($PLAYER_NUM)
 1823: A7          and  a
 1824: 20 05       jr   nz,$182B
@@ -3352,11 +3287,8 @@ ADD_AMOUNT_BDC
 1844: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 1847: CD 08 18    call $1808
 184A: C9          ret
-184B: FF          rst  $38
-184C: FF          rst  $38
-184D: FF          rst  $38
-184E: FF          rst  $38
-184F: FF          rst  $38
+184B: FF ...
+
 1850: 20 D0       jr   nz,$1822
 1852: 20 D0       jr   nz,$1824
 1854: 20 D0       jr   nz,$1826
@@ -3394,14 +3326,7 @@ ADD_AMOUNT_BDC
 188D: 00          nop
 188E: 00          nop
 188F: 00          nop
-1890: FF          rst  $38
-1891: FF          rst  $38
-1892: FF          rst  $38
-1893: FF          rst  $38
-1894: FF          rst  $38
-1895: FF          rst  $38
-1896: FF          rst  $38
-1897: FF          rst  $38
+1890: FF ...
 1898: 21 00 81    ld   hl,$8100
 189B: 36 00       ld   (hl),$00
 189D: 23          inc  hl
@@ -3410,17 +3335,7 @@ ADD_AMOUNT_BDC
 18A0: FE 40       cp   $40
 18A2: 20 F7       jr   nz,$189B
 18A4: C9          ret
-18A5: FF          rst  $38
-18A6: FF          rst  $38
-18A7: FF          rst  $38
-18A8: FF          rst  $38
-18A9: FF          rst  $38
-18AA: FF          rst  $38
-18AB: FF          rst  $38
-18AC: FF          rst  $38
-18AD: FF          rst  $38
-18AE: FF          rst  $38
-18AF: FF          rst  $38
+18A5: FF ...
 18B0: 03          inc  bc
 18B1: 41          ld   b,c
 18B2: 00          nop
@@ -3673,7 +3588,8 @@ BONUS_SKIP_SCREEN
 19E3: CD A0 13    call $WAIT_VBLANK
 19E6: C9          ret
 
-19E7: FF x 9
+19E7: FF ...
+
 
 CHECK_FALL_OFF_BOTTOM_SCR
 19F0: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
@@ -3950,7 +3866,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B6D: CD B0 2C    call $2CB0
 1B70: C3 00 10    jp   $BIG_RESET
 
-1B73: FF x 13
+1B73: FF ...
 
 1B80: 3A 31 80    ld   a,($8031)
 1B83: A7          and  a
@@ -4037,7 +3953,8 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C06: 20 FA       jr   nz,$1C02
 1C08: C9          ret
 
-1C09: FF x 7
+1C09: FF ...
+
 
     ;;
 1C10: 3A 40 81    ld   a,($PLAYER_X)
@@ -4097,7 +4014,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1C88: E5          push hl
 1C89: C9          ret
 
-1C8A: FF x 6
+1C8A: FF ...
 
 1C90: 3A 40 81    ld   a,($PLAYER_X)
 1C93: 47          ld   b,a
@@ -4111,7 +4028,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1CA0: CD 50 1C    call $1C50
 1CA3: C9          ret
 
-1CA4: FF x 12
+1CA4: FF ...
 
 DINO_COLLISION
 1CB0: 3A 4C 81    ld   a,($DINO_X)
@@ -4136,7 +4053,6 @@ DINO_COLLISION
 1CD1: D0          ret  nc
 1CD2: CD 90 1C    call $1C90
 1CD5: C9          ret
-
 
 1CD6: FF          rst  $38
 1CD7: FF          rst  $38
@@ -5299,7 +5215,7 @@ DINO_COLLISION
 228E: D3 01       out  ($01),a
 2290: C9          ret
 
-2291: FF x 15
+2291: FF ...
 
 UPDATE_DINO
 22A0: 7E          ld   a,(hl)
@@ -5420,10 +5336,11 @@ DINO_PATH_LOOKUP
 2364: 00 28 ; (screen 27)
 2366: 00 00 00 00 00 00 00 00 00 00
 
-2370: FF x 8
+2370: FF ...
 
-DINO_PATH_1
-2378: 18 E0 00 00 ; x, y, ?, ?
+
+DINO_PATH_1             ; Nodes for dino to follow
+2378: 18 E0 00 00       ; x, y, ?, ?
 237C: 1C E0 01 00
 2380: 20 E0 02 00
 2384: 28 E0 03 00
@@ -5458,7 +5375,7 @@ DINO_PATH_1
 23E8: 32 44 80    ld   ($8044),a
 23EB: C9          ret
 
-23EC: FF x 20
+23EC: FF ...
 
 DINO_ANIM_LOOKUP
 2400: 2F 00 2E 00
@@ -5469,7 +5386,7 @@ DINO_ANIM_LOOKUP
 2412: AC B1 AD B2
 2416: AC B3
 
-2418: FF x 7
+2418: FF ...
 
 2420: 3A 00 A8    ld   a,($A800) ; PORT_IN1
 2423: 32 F1 83    ld   ($INPUT_BUTTONS),a
@@ -5483,7 +5400,7 @@ DINO_ANIM_LOOKUP
 2435: 05          dec  b
 2436: 20 FA       jr   nz,$2432
 2438: C9          ret
-2439: FF x 23
+2439: FF ...
 
 DRAW_SCORE
 2450: AF          xor  a
@@ -5546,20 +5463,10 @@ DRAW_SCORE
 24CC: 32 A1 91    ld   ($91A1),a
 24CF: CD 38 30    call $3038
 24D2: C9          ret
-;;;
-24D3: FF          rst  $38
-24D4: FF          rst  $38
-24D5: FF          rst  $38
-24D6: FF          rst  $38
-24D7: FF          rst  $38
-24D8: FF          rst  $38
-24D9: FF          rst  $38
-24DA: FF          rst  $38
-24DB: FF          rst  $38
-24DC: FF          rst  $38
-24DD: FF          rst  $38
-24DE: FF          rst  $38
-24DF: FF          rst  $38
+
+24D3: FF ...
+
+
 24E0: 26 60       ld   h,$60
 24E2: CD A0 13    call $WAIT_VBLANK
 24E5: 24          inc  h
@@ -5588,18 +5495,8 @@ DRAW_SCORE
 2507: FE E1       cp   $E1
 2509: 20 F8       jr   nz,$2503
 250B: C9          ret
-250C: FF          rst  $38
-250D: FF          rst  $38
-250E: FF          rst  $38
-250F: FF          rst  $38
-2510: FF          rst  $38
-2511: FF          rst  $38
-2512: FF          rst  $38
-2513: FF          rst  $38
-2514: FF          rst  $38
-2515: FF          rst  $38
-2516: FF          rst  $38
-2517: FF          rst  $38
+250C: FF ...
+
 
 TEST_THEN_DINO_COLLISION
 2518: 3A 2D 80    ld   a,($DINO_COUNTER)
@@ -5608,7 +5505,8 @@ TEST_THEN_DINO_COLLISION
 251E: CD B0 1C    call $DINO_COLLISION
 2521: C9          ret
 
-2522: FF x 22
+2522: FF ...
+
 
 2538: 11 16 00    ld   de,$0016
 253B: 0E 20       ld   c,$20
@@ -5652,14 +5550,8 @@ TEST_THEN_DINO_COLLISION
 258B: E6 1F       and  $1F
 258D: C8          ret  z
 258E: 18 F8       jr   $2588
-2590: FF          rst  $38
-2591: FF          rst  $38
-2592: FF          rst  $38
-2593: FF          rst  $38
-2594: FF          rst  $38
-2595: FF          rst  $38
-2596: FF          rst  $38
-2597: FF          rst  $38
+2590: FF ...
+
 2598: 73          ld   (hl),e
 2599: 01 20 00    ld   bc,$0020
 259C: 09          add  hl,bc
@@ -5681,15 +5573,8 @@ TEST_THEN_DINO_COLLISION
 25B2: 20 F7       jr   nz,$25AB
 25B4: ED 42       sbc  hl,bc
 25B6: C9          ret
-25B7: FF          rst  $38
-25B8: FF          rst  $38
-25B9: FF          rst  $38
-25BA: FF          rst  $38
-25BB: FF          rst  $38
-25BC: FF          rst  $38
-25BD: FF          rst  $38
-25BE: FF          rst  $38
-25BF: FF          rst  $38
+25B7: FF ...
+
 25C0: CD A0 13    call $WAIT_VBLANK
 25C3: 73          ld   (hl),e
 25C4: 23          inc  hl
@@ -5712,15 +5597,9 @@ TEST_THEN_DINO_COLLISION
 25DB: 20 F3       jr   nz,$25D0
 25DD: 09          add  hl,bc
 25DE: C9          ret
-25DF: FF          rst  $38
-25E0: FF          rst  $38
-25E1: FF          rst  $38
-25E2: FF          rst  $38
-25E3: FF          rst  $38
-25E4: FF          rst  $38
-25E5: FF          rst  $38
-25E6: FF          rst  $38
-25E7: FF          rst  $38
+25DF: FF ...
+
+
 25E8: CD A0 13    call $WAIT_VBLANK
 25EB: 73          ld   (hl),e
 25EC: 2B          dec  hl
@@ -5729,21 +5608,10 @@ TEST_THEN_DINO_COLLISION
 25EF: 20 FA       jr   nz,$25EB
 25F1: 23          inc  hl
 25F2: C9          ret
-25F3: FF          rst  $38
-25F4: FF          rst  $38
-25F5: FF          rst  $38
-25F6: FF          rst  $38
-25F7: FF          rst  $38
-25F8: FF          rst  $38
-25F9: FF          rst  $38
-25FA: FF          rst  $38
-25FB: FF          rst  $38
-25FC: FF          rst  $38
-25FD: FF          rst  $38
-25FE: FF          rst  $38
-25FF: FF          rst  $38
+25F3: FF ...
 
-DINO_PATH_2
+
+DINO_PATH_2                     ;DATA lookup table x/y/?/?
 2600: 18 E0       jr   $25E2
 2602: 00          nop
 2603: 00          nop
@@ -5841,9 +5709,10 @@ DINO_PATH_2
 2671: D0          ret  nc
 2672: 05          dec  b
 2673: 00          nop
-2674: FF x 12
+2674: FF ...
 
-DINO_PATH_3
+
+DINO_PATH_3 ;DATA lookup table x/y/?/?
 2680: 18 E0       jr   $2662
 2682: 00          nop
 2683: 00          nop
@@ -5935,28 +5804,10 @@ DINO_PATH_3
 26E8: E8          ret  pe
 26E9: 28 06       jr   z,$26F1
 26EB: 00          nop
-26EC: FF          rst  $38
-26ED: FF          rst  $38
-26EE: FF          rst  $38
-26EF: FF          rst  $38
-26F0: FF          rst  $38
-26F1: FF          rst  $38
-26F2: FF          rst  $38
-26F3: FF          rst  $38
-26F4: FF          rst  $38
-26F5: FF          rst  $38
-26F6: FF          rst  $38
-26F7: FF          rst  $38
-26F8: FF          rst  $38
-26F9: FF          rst  $38
-26FA: FF          rst  $38
-26FB: FF          rst  $38
-26FC: FF          rst  $38
-26FD: FF          rst  $38
-26FE: FF          rst  $38
-26FF: FF          rst  $38
+26EC: FF ...
 
-DINO_PATH_4
+
+DINO_PATH_4 ;DATA lookup table x/y/?/?
 2700: 18 38       jr   $273A
 2702: 00          nop
 2703: 00          nop
@@ -6038,9 +5889,10 @@ DINO_PATH_4
 275C: E0          ret  po
 275D: 28 04       jr   z,$2763
 275F: 00          nop
-2760: FF x 16
+2760: FF ...
 
-DINO_PATH_5
+
+DINO_PATH_5 ;DATA lookup table x/y/?/?
 2770: 18 38       jr   $27AA
 2772: 00          nop
 2773: 00          nop
@@ -6131,14 +5983,8 @@ DINO_PATH_5
 27D5: D0          ret  nc
 27D6: 05          dec  b
 27D7: 00          nop
-27D8: FF          rst  $38
-27D9: FF          rst  $38
-27DA: FF          rst  $38
-27DB: FF          rst  $38
-27DC: FF          rst  $38
-27DD: FF          rst  $38
-27DE: FF          rst  $38
-27DF: FF          rst  $38
+27D8: FF ...
+
 ;;;
 27E0: 3A 43 81    ld   a,($PLAYER_Y)
 27E3: 37          scf
@@ -6158,7 +6004,7 @@ DINO_PATH_5
 ;;;
 27FF: FF          rst  $38
 
-DINO_PATH_6
+DINO_PATH_6 ;DATA lookup table x/y/?/?
 2800: 18 E0       jr   $27E2
 2802: 00          nop
 2803: 00          nop
@@ -6344,22 +6190,9 @@ DINO_PATH_6
 28CC: E0          ret  po
 28CD: 28 05       jr   z,$28D4
 28CF: 00          nop
-28D0: FF          rst  $38
-28D1: FF          rst  $38
-28D2: FF          rst  $38
-28D3: FF          rst  $38
-28D4: FF          rst  $38
-28D5: FF          rst  $38
-28D6: FF          rst  $38
-28D7: FF          rst  $38
-28D8: FF          rst  $38
-28D9: FF          rst  $38
-28DA: FF          rst  $38
-28DB: FF          rst  $38
-28DC: FF          rst  $38
-28DD: FF          rst  $38
-28DE: FF          rst  $38
-28DF: FF          rst  $38
+28D0: FF ...
+
+    ;;
 28E0: 3A 12 83    ld   a,($TICK_NUM)
 28E3: E6 03       and  $03
 28E5: C0          ret  nz
@@ -6403,73 +6236,21 @@ DINO_PATH_6
 292F: 3E 01       ld   a,$01
 2931: 32 2E 80    ld   ($802E),a
 2934: C9          ret
-2935: FF          rst  $38
-2936: FF          rst  $38
-2937: FF          rst  $38
-2938: FF          rst  $38
-2939: FF          rst  $38
-293A: FF          rst  $38
-293B: FF          rst  $38
-293C: FF          rst  $38
-293D: FF          rst  $38
-293E: FF          rst  $38
-293F: FF          rst  $38
+
+2935: FF ...
+
 2940: CD E3 01    call $01E3
 2943: CD 10 11    call $1110
 2946: C9          ret
-2947: FF          rst  $38
-2948: FF          rst  $38
-2949: FF          rst  $38
-294A: FF          rst  $38
-294B: FF          rst  $38
-294C: FF          rst  $38
-294D: FF          rst  $38
-294E: FF          rst  $38
-294F: FF          rst  $38
-2950: FF          rst  $38
-2951: FF          rst  $38
-2952: FF          rst  $38
-2953: FF          rst  $38
-2954: FF          rst  $38
-2955: FF          rst  $38
-2956: FF          rst  $38
-2957: FF          rst  $38
-2958: FF          rst  $38
-2959: FF          rst  $38
-295A: FF          rst  $38
-295B: FF          rst  $38
-295C: FF          rst  $38
-295D: FF          rst  $38
-295E: FF          rst  $38
-295F: FF          rst  $38
+
+2947: FF ...
+
 2960: DD E5       push ix
 2962: CD 01 29    call $2901
 2965: DD E1       pop  ix
 2967: C9          ret
-2968: FF          rst  $38
-2969: FF          rst  $38
-296A: FF          rst  $38
-296B: FF          rst  $38
-296C: FF          rst  $38
-296D: FF          rst  $38
-296E: FF          rst  $38
-296F: FF          rst  $38
-2970: FF          rst  $38
-2971: FF          rst  $38
-2972: FF          rst  $38
-2973: FF          rst  $38
-2974: FF          rst  $38
-2975: FF          rst  $38
-2976: FF          rst  $38
-2977: FF          rst  $38
-2978: FF          rst  $38
-2979: FF          rst  $38
-297A: FF          rst  $38
-297B: FF          rst  $38
-297C: FF          rst  $38
-297D: FF          rst  $38
-297E: FF          rst  $38
-297F: FF          rst  $38
+
+2968: FF ...
 
 GOT_A_BONUS
 2980: 3A 60 80    ld   a,($BONUSES)
@@ -6537,7 +6318,7 @@ GOT_A_BONUS
 29FC: CD 9C 19    call $BONUS_SKIP_SCREEN
 29FF: C9          ret
 
-DINO_PATH_7
+DINO_PATH_7 ;DATA lookup table x/y/?/?
 2A00: 18 E0       jr   $29E2
 2A02: 00          nop
 2A03: 00          nop
@@ -6743,34 +6524,8 @@ DRAW_BONUS_STATE
 2AE2: 20 FA       jr   nz,$2ADE
 2AE4: C9          ret
 
-;;;
-2AE5: FF          rst  $38
-2AE6: FF          rst  $38
-2AE7: FF          rst  $38
-2AE8: FF          rst  $38
-2AE9: FF          rst  $38
-2AEA: FF          rst  $38
-2AEB: FF          rst  $38
-2AEC: FF          rst  $38
-2AED: FF          rst  $38
-2AEE: FF          rst  $38
-2AEF: FF          rst  $38
-2AF0: FF          rst  $38
-2AF1: FF          rst  $38
-2AF2: FF          rst  $38
-2AF3: FF          rst  $38
-2AF4: FF          rst  $38
-2AF5: FF          rst  $38
-2AF6: FF          rst  $38
-2AF7: FF          rst  $38
-2AF8: FF          rst  $38
-2AF9: FF          rst  $38
-2AFA: FF          rst  $38
-2AFB: FF          rst  $38
-2AFC: FF          rst  $38
-2AFD: FF          rst  $38
-2AFE: FF          rst  $38
-2AFF: FF          rst  $38
+2AE5: FF ...
+
 2B00: 3A 93 80    ld   a,($8093)
 2B03: 47          ld   b,a
 2B04: AF          xor  a
@@ -6783,17 +6538,8 @@ DRAW_BONUS_STATE
 2B10: AF          xor  a
 2B11: 32 94 80    ld   ($8094),a
 2B14: C9          ret
-2B15: FF          rst  $38
-2B16: FF          rst  $38
-2B17: FF          rst  $38
-2B18: FF          rst  $38
-2B19: FF          rst  $38
-2B1A: FF          rst  $38
-2B1B: FF          rst  $38
-2B1C: FF          rst  $38
-2B1D: FF          rst  $38
-2B1E: FF          rst  $38
-2B1F: FF          rst  $38
+2B15: FF ...
+
 2B20: 47          ld   b,a
 2B21: E6 F0       and  $F0
 2B23: 20 03       jr   nz,$2B28
@@ -6813,22 +6559,9 @@ DRAW_BONUS_STATE
 2B3C: E6 0F       and  $0F
 2B3E: 81          add  a,c
 2B3F: C9          ret
-2B40: FF          rst  $38
-2B41: FF          rst  $38
-2B42: FF          rst  $38
-2B43: FF          rst  $38
-2B44: FF          rst  $38
-2B45: FF          rst  $38
-2B46: FF          rst  $38
-2B47: FF          rst  $38
-2B48: FF          rst  $38
-2B49: FF          rst  $38
-2B4A: FF          rst  $38
-2B4B: FF          rst  $38
-2B4C: FF          rst  $38
-2B4D: FF          rst  $38
-2B4E: FF          rst  $38
-2B4F: FF          rst  $38
+2B40: FF ...
+
+
 2B50: 3A 04 80    ld   a,($PLAYER_NUM)
 2B53: A7          and  a
 2B54: 20 05       jr   nz,$2B5B
@@ -6927,53 +6660,29 @@ DRAW_BONUS_STATE
 2BE3: 00          nop
 2BE4: 00          nop
 2BE5: C9          ret
-2BE6: FF          rst  $38
-2BE7: FF          rst  $38
-2BE8: FF          rst  $38
-2BE9: FF          rst  $38
-2BEA: FF          rst  $38
-2BEB: FF          rst  $38
-2BEC: FF          rst  $38
-2BED: FF          rst  $38
-2BEE: FF          rst  $38
-2BEF: FF          rst  $38
+
+2BE6: FF ...
+
 2BF0: CD D0 32    call $32D0
 2BF3: CD F0 32    call $32F0
 2BF6: C9          ret
-2BF7: FF          rst  $38
-2BF8: FF          rst  $38
-2BF9: FF          rst  $38
-2BFA: FF          rst  $38
-2BFB: FF          rst  $38
-2BFC: FF          rst  $38
-2BFD: FF          rst  $38
-2BFE: FF          rst  $38
-2BFF: FF          rst  $38
+
+2BF7: FF ...
+
 2C00: 3E B0       ld   a,$B0
-2C02: 32 54 81    ld   ($8154),a
+2C02: 32 54 81    ld   ($ENEMY_1_X),a
 2C05: 3E 40       ld   a,$40
-2C07: 32 57 81    ld   ($8157),a
+2C07: 32 57 81    ld   ($ENEMY_1_Y),a
 2C0A: 3E 1D       ld   a,$1D
-2C0C: 32 55 81    ld   ($8155),a
+2C0C: 32 55 81    ld   ($ENEMY_1_FRAME),a
 2C0F: 3E 15       ld   a,$15
-2C11: 32 56 81    ld   ($8156),a
+2C11: 32 56 81    ld   ($ENEMY_1_COL),a
 2C14: 3E 01       ld   a,$01
 2C16: 32 37 80    ld   ($8037),a
 2C19: C9          ret
-2C1A: FF          rst  $38
-2C1B: FF          rst  $38
-2C1C: FF          rst  $38
-2C1D: FF          rst  $38
-2C1E: FF          rst  $38
-2C1F: FF          rst  $38
-2C20: FF          rst  $38
-2C21: FF          rst  $38
-2C22: FF          rst  $38
-2C23: FF          rst  $38
-2C24: FF          rst  $38
-2C25: FF          rst  $38
-2C26: FF          rst  $38
-2C27: FF          rst  $38
+
+2C1A: FF ...
+
 2C28: 3A 16 83    ld   a,($8316)
 2C2B: E6 07       and  $07
 2C2D: C0          ret  nz
@@ -6987,42 +6696,23 @@ DRAW_BONUS_STATE
 2C3B: C0          ret  nz
 2C3C: CD 00 2C    call $2C00
 2C3F: C9          ret
-2C40: FF          rst  $38
-2C41: FF          rst  $38
-2C42: FF          rst  $38
-2C43: FF          rst  $38
-2C44: FF          rst  $38
-2C45: FF          rst  $38
-2C46: FF          rst  $38
-2C47: FF          rst  $38
+
+2C40: FF ...
+
 2C48: CD 28 2C    call $2C28
 2C4B: CD 40 31    call $3140
 2C4E: C9          ret
-2C4F: FF          rst  $38
-2C50: FF          rst  $38
-2C51: FF          rst  $38
-2C52: FF          rst  $38
-2C53: FF          rst  $38
-2C54: FF          rst  $38
-2C55: FF          rst  $38
-2C56: FF          rst  $38
-2C57: FF          rst  $38
+
+2C4F: FF ...
+
 2C58: CD 28 2C    call $2C28
 2C5B: CD 40 31    call $3140
 2C5E: CD 38 32    call $3238
 2C61: CD 60 32    call $3260
 2C64: C9          ret
-2C65: FF          rst  $38
-2C66: FF          rst  $38
-2C67: FF          rst  $38
-2C68: FF          rst  $38
-2C69: FF          rst  $38
-2C6A: FF          rst  $38
-2C6B: FF          rst  $38
-2C6C: FF          rst  $38
-2C6D: FF          rst  $38
-2C6E: FF          rst  $38
-2C6F: FF          rst  $38
+
+2C65: FF ...
+
 2C70: 3A F1 83    ld   a,($INPUT_BUTTONS)
 2C73: 47          ld   b,a
 2C74: 3A 84 91    ld   a,($9184)
@@ -7037,16 +6727,9 @@ DRAW_BONUS_STATE
 2C88: CB 68       bit  5,b
 2C8A: C4 D8 2E    call nz,$2ED8
 2C8D: C9          ret
-2C8E: FF          rst  $38
-2C8F: FF          rst  $38
-2C90: FF          rst  $38
-2C91: FF          rst  $38
-2C92: FF          rst  $38
-2C93: FF          rst  $38
-2C94: FF          rst  $38
-2C95: FF          rst  $38
-2C96: FF          rst  $38
-2C97: FF          rst  $38
+
+2C8E: FF ...
+
 2C98: CD 28 2C    call $2C28
 2C9B: CD 40 31    call $3140
 2C9E: CD 38 32    call $3238
@@ -7054,11 +6737,9 @@ DRAW_BONUS_STATE
 2CA4: CD 70 35    call $3570
 2CA7: CD 90 35    call $3590
 2CAA: C9          ret
-2CAB: FF          rst  $38
-2CAC: FF          rst  $38
-2CAD: FF          rst  $38
-2CAE: FF          rst  $38
-2CAF: FF          rst  $38
+
+2CAB: FF ...
+
 2CB0: 3A 04 80    ld   a,($PLAYER_NUM)
 2CB3: A7          and  a
 2CB4: 20 05       jr   nz,$2CBB
@@ -7110,7 +6791,8 @@ DRAW_BONUS_STATE
 2CED: 00          nop
 2CEE: 00          nop
 2CEF: C9          ret
-2CF0: FF x 16
+
+2CF0: FF ...
     
     ;; Score somthing
 2D00: 21 00 83    ld   hl,$8300
@@ -7142,8 +6824,8 @@ DRAW_BONUS_STATE
 2D34: CD 58 2D    call $2D58
 2D37: C3 E8 03    jp   $03E8
     
-2D3A: FF x 15
-    
+2D3A: FF ...
+
 2D48: AF          xor  a
 2D49: 32 06 B0    ld   ($B006),a
 2D4C: 32 07 B0    ld   ($B007),a
@@ -7167,7 +6849,8 @@ DRAW_BONUS_STATE
 2D72: CD 88 2D    call $2D88
 2D75: C9          ret
     
-2D76: FF x 19
+2D76: FF ...
+
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
 2D8C: CD E3 01    call $01E3
@@ -7341,17 +7024,8 @@ DRAW_BONUS_STATE
 2EC8: E1          pop  hl
 2EC9: CD 10 2F    call $2F10
 2ECC: C9          ret
-2ECD: FF          rst  $38
-2ECE: FF          rst  $38
-2ECF: FF          rst  $38
-2ED0: FF          rst  $38
-2ED1: FF          rst  $38
-2ED2: FF          rst  $38
-2ED3: FF          rst  $38
-2ED4: FF          rst  $38
-2ED5: FF          rst  $38
-2ED6: FF          rst  $38
-2ED7: FF          rst  $38
+2ECD: FF ...
+
 2ED8: 3E 10       ld   a,$10
 2EDA: 32 93 80    ld   ($8093),a
 2EDD: 3E 90       ld   a,$90
@@ -7374,34 +7048,18 @@ DRAW_BONUS_STATE
 2EFA: 11 E0 FF    ld   de,$FFE0
 2EFD: FD 19       add  iy,de
 2EFF: C9          ret
-2F00: FF          rst  $38
-2F01: FF          rst  $38
-2F02: FF          rst  $38
-2F03: FF          rst  $38
-2F04: FF          rst  $38
-2F05: FF          rst  $38
-2F06: FF          rst  $38
-2F07: FF          rst  $38
-2F08: FF          rst  $38
-2F09: FF          rst  $38
-2F0A: FF          rst  $38
-2F0B: FF          rst  $38
-2F0C: FF          rst  $38
-2F0D: FF          rst  $38
-2F0E: FF          rst  $38
-2F0F: FF          rst  $38
+
+2F00: FF ...
+
 2F10: AF          xor  a
 2F11: 32 86 80    ld   ($8086),a
 2F14: E1          pop  hl
 2F15: E1          pop  hl
 2F16: CD E0 2F    call $2FE0
 2F19: C9          ret
-2F1A: FF          rst  $38
-2F1B: FF          rst  $38
-2F1C: FF          rst  $38
-2F1D: FF          rst  $38
-2F1E: FF          rst  $38
-2F1F: FF          rst  $38
+
+2F1A: FF ...
+
 2F20: 11 20 00    ld   de,$0020
 2F23: FD 19       add  iy,de
 2F25: FD 36 00 2B ld   (iy+$00),$2B
@@ -7422,17 +7080,9 @@ DRAW_BONUS_STATE
 2F41: FD 19       add  iy,de
 2F43: E1          pop  hl
 2F44: C9          ret
-2F45: FF          rst  $38
-2F46: FF          rst  $38
-2F47: FF          rst  $38
-2F48: FF          rst  $38
-2F49: FF          rst  $38
-2F4A: FF          rst  $38
-2F4B: FF          rst  $38
-2F4C: FF          rst  $38
-2F4D: FF          rst  $38
-2F4E: FF          rst  $38
-2F4F: FF          rst  $38
+
+2F45: FF ...
+
 2F50: 36 10       ld   (hl),$10
 2F52: 11 40 00    ld   de,$0040
 2F55: 19          add  hl,de
@@ -7454,26 +7104,9 @@ DRAW_BONUS_STATE
 2F6F: C0          ret  nz
 2F70: 21 92 90    ld   hl,$9092
 2F73: C9          ret
-2F74: FF          rst  $38
-2F75: FF          rst  $38
-2F76: FF          rst  $38
-2F77: FF          rst  $38
-2F78: FF          rst  $38
-2F79: FF          rst  $38
-2F7A: FF          rst  $38
-2F7B: FF          rst  $38
-2F7C: FF          rst  $38
-2F7D: FF          rst  $38
-2F7E: FF          rst  $38
-2F7F: FF          rst  $38
-2F80: FF          rst  $38
-2F81: FF          rst  $38
-2F82: FF          rst  $38
-2F83: FF          rst  $38
-2F84: FF          rst  $38
-2F85: FF          rst  $38
-2F86: FF          rst  $38
-2F87: FF          rst  $38
+
+2F74: FF ...
+
 2F88: E5          push hl
 2F89: 21 07 83    ld   hl,$8307
 2F8C: 36 10       ld   (hl),$10
@@ -7487,20 +7120,8 @@ DRAW_BONUS_STATE
 2F97: FF          rst  $38
 2F98: FF          rst  $38
 2F99: 1F          rra
-2F9A: FF          rst  $38
-2F9B: FF          rst  $38
-2F9C: FF          rst  $38
-2F9D: FF          rst  $38
-2F9E: FF          rst  $38
-2F9F: FF          rst  $38
-2FA0: FF          rst  $38
-2FA1: FF          rst  $38
-2FA2: FF          rst  $38
-2FA3: FF          rst  $38
-2FA4: FF          rst  $38
-2FA5: FF          rst  $38
-2FA6: FF          rst  $38
-2FA7: FF          rst  $38
+2F9A: FF ...
+
 2FA8: 3E 10       ld   a,$10
 2FAA: 32 93 80    ld   ($8093),a
 2FAD: 36 10       ld   (hl),$10
@@ -7573,21 +7194,9 @@ DRAW_BONUS_STATE
 3025: 0D          dec  c
 3026: 20 FA       jr   nz,$3022
 3028: C9          ret
-3029: FF          rst  $38
-302A: FF          rst  $38
-302B: FF          rst  $38
-302C: FF          rst  $38
-302D: FF          rst  $38
-302E: FF          rst  $38
-302F: FF          rst  $38
-3030: FF          rst  $38
-3031: FF          rst  $38
-3032: FF          rst  $38
-3033: FF          rst  $38
-3034: FF          rst  $38
-3035: FF          rst  $38
-3036: FF          rst  $38
-3037: FF          rst  $38
+
+3029: FF ...
+
 3038: 3A 07 83    ld   a,($8307)
 303B: 32 80 92    ld   ($9280),a
 303E: 3A 08 83    ld   a,($8308)
@@ -7609,17 +7218,9 @@ DRAW_BONUS_STATE
 306E: 3A 10 83    ld   a,($8310)
 3071: 32 60 91    ld   ($9160),a
 3074: C9          ret
-3075: FF          rst  $38
-3076: FF          rst  $38
-3077: FF          rst  $38
-3078: FF          rst  $38
-3079: FF          rst  $38
-307A: FF          rst  $38
-307B: FF          rst  $38
-307C: FF          rst  $38
-307D: FF          rst  $38
-307E: FF          rst  $38
-307F: FF          rst  $38
+
+3075: FF ...
+
 3080: 21 07 83    ld   hl,$8307
 3083: 36 18       ld   (hl),$18
 3085: 23          inc  hl
@@ -7648,25 +7249,9 @@ DRAW_BONUS_STATE
 30A9: 36 00       ld   (hl),$00
 30AB: 23          inc  hl
 30AC: C9          ret
-30AD: FF          rst  $38
-30AE: FF          rst  $38
-30AF: FF          rst  $38
-30B0: FF          rst  $38
-30B1: FF          rst  $38
-30B2: FF          rst  $38
-30B3: FF          rst  $38
-30B4: FF          rst  $38
-30B5: FF          rst  $38
-30B6: FF          rst  $38
-30B7: FF          rst  $38
-30B8: FF          rst  $38
-30B9: FF          rst  $38
-30BA: FF          rst  $38
-30BB: FF          rst  $38
-30BC: FF          rst  $38
-30BD: FF          rst  $38
-30BE: FF          rst  $38
-30BF: FF          rst  $38
+
+30AD: FF ...
+
 30C0: 0E 00       ld   c,$00
 30C2: 21 10 83    ld   hl,$8310
 30C5: 7E          ld   a,(hl)
@@ -7687,13 +7272,9 @@ DRAW_BONUS_STATE
 30DB: 0D          dec  c
 30DC: CD E8 30    call $30E8
 30DF: 18 F7       jr   $30D8
-30E1: FF          rst  $38
-30E2: FF          rst  $38
-30E3: FF          rst  $38
-30E4: FF          rst  $38
-30E5: FF          rst  $38
-30E6: FF          rst  $38
-30E7: FF          rst  $38
+
+30E1: FF ...
+
 30E8: 16 0A       ld   d,$0A
 30EA: DD 21 0F 83 ld   ix,$830F
 30EE: DD 7E 00    ld   a,(ix+$00)
@@ -7704,15 +7285,9 @@ DRAW_BONUS_STATE
 30F9: 3E 10       ld   a,$10
 30FB: 32 07 83    ld   ($8307),a
 30FE: C9          ret
-30FF: FF          rst  $38
-3100: FF          rst  $38
-3101: FF          rst  $38
-3102: FF          rst  $38
-3103: FF          rst  $38
-3104: FF          rst  $38
-3105: FF          rst  $38
-3106: FF          rst  $38
-3107: FF          rst  $38
+
+30FF: FF ...
+
 3108: E5          push hl
 3109: C5          push bc
 310A: FD E5       push iy
@@ -7755,48 +7330,27 @@ DRAW_BONUS_STATE
 314A: AF          xor  a
 314B: 32 37 80    ld   ($8037),a
 
-314E: 21 80 31    ld   hl,$3180
+314E: 21 80 31    ld   hl,$ENEMY_LOOKUP
 3151: CB 27       sla  a
 3153: 85          add  a,l
 3154: 6F          ld   l,a
 3155: 7E          ld   a,(hl)
-3156: 32 55 81    ld   ($8155),a
+3156: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3159: 23          inc  hl
 315A: 7E          ld   a,(hl)
-315B: 32 57 81    ld   ($8157),a
+315B: 32 57 81    ld   ($ENEMY_1_Y),a
 315E: C9          ret
 
-315F: FF          rst  $38
-3160: FF          rst  $38
-3161: FF          rst  $38
-3162: FF          rst  $38
-3163: FF          rst  $38
-3164: FF          rst  $38
-3165: FF          rst  $38
-3166: FF          rst  $38
-3167: FF          rst  $38
+315F: FF ...
+
 3168: CD 28 2C    call $2C28
 316B: CD 40 31    call $3140
 316E: C9          ret
-316F: FF          rst  $38
-3170: FF          rst  $38
-3171: FF          rst  $38
-3172: FF          rst  $38
-3173: FF          rst  $38
-3174: FF          rst  $38
-3175: FF          rst  $38
-3176: FF          rst  $38
-3177: FF          rst  $38
-3178: FF          rst  $38
-3179: FF          rst  $38
-317A: FF          rst  $38
-317B: FF          rst  $38
-317C: FF          rst  $38
-317D: FF          rst  $38
-317E: FF          rst  $38
-317F: FF          rst  $38
-3180: 00          nop
-3181: 00          nop
+
+316F: FF ...
+
+ENEMY_LOOKUP                     ; (maybe... or all ents?)
+3180: 00 00
 3182: 1D          dec  e
 3183: 52          ld   d,d
 3184: 1D          dec  e
@@ -7927,32 +7481,21 @@ DRAW_BONUS_STATE
 320D: FF          rst  $38
 320E: FF          rst  $38
 320F: FF          rst  $38
+
 3210: 3E F0       ld   a,$F0
-3212: 32 58 81    ld   ($8158),a
+3212: 32 58 81    ld   ($ENEMY_2_X),a
 3215: 3E C4       ld   a,$C4
-3217: 32 5B 81    ld   ($815B),a
+3217: 32 5B 81    ld   ($ENEMY_2_Y),a
 321A: 3E 23       ld   a,$23
-321C: 32 59 81    ld   ($8159),a
+321C: 32 59 81    ld   ($ENEMY_2_FRAME),a
 321F: 3E 16       ld   a,$16
-3221: 32 5A 81    ld   ($815A),a
+3221: 32 5A 81    ld   ($ENEMY_2_COL),a
 3224: 3E 01       ld   a,$01
 3226: 32 39 80    ld   ($8039),a
 3229: C9          ret
-322A: FF          rst  $38
-322B: FF          rst  $38
-322C: FF          rst  $38
-322D: FF          rst  $38
-322E: FF          rst  $38
-322F: FF          rst  $38
-3230: FF          rst  $38
-3231: FF          rst  $38
-3232: FF          rst  $38
-3233: FF          rst  $38
-3234: FF          rst  $38
-3235: FF          rst  $38
-3236: FF          rst  $38
-3237: FF          rst  $38
-3238: 3A 58 81    ld   a,($8158)
+322A: FF ...
+
+3238: 3A 58 81    ld   a,($ENEMY_2_X)
 323B: A7          and  a
 323C: 28 0F       jr   z,$324D
 323E: FE 01       cp   $01
@@ -7965,96 +7508,46 @@ DRAW_BONUS_STATE
 324C: C0          ret  nz
 324D: CD 10 32    call $3210
 3250: C9          ret
-3251: FF          rst  $38
-3252: FF          rst  $38
-3253: FF          rst  $38
-3254: FF          rst  $38
-3255: FF          rst  $38
-3256: FF          rst  $38
-3257: FF          rst  $38
-3258: FF          rst  $38
-3259: FF          rst  $38
-325A: FF          rst  $38
-325B: FF          rst  $38
-325C: FF          rst  $38
-325D: FF          rst  $38
-325E: FF          rst  $38
-325F: FF          rst  $38
+3251: FF ...
+
 3260: 3A 15 83    ld   a,($8315)
 3263: E6 01       and  $01
 3265: C8          ret  z
 3266: 3A 39 80    ld   a,($8039)
 3269: A7          and  a
 326A: C8          ret  z
-326B: 3A 58 81    ld   a,($8158)
+326B: 3A 58 81    ld   a,($ENEMY_2_X)
 326E: 3D          dec  a
 326F: 3D          dec  a
 3270: 3D          dec  a
-3271: 32 58 81    ld   ($8158),a
+3271: 32 58 81    ld   ($ENEMY_2_X),a
 3274: 3A 15 83    ld   a,($8315)
 3277: E6 02       and  $02
 3279: C0          ret  nz
-327A: 3A 59 81    ld   a,($8159)
+327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
 327D: FE 23       cp   $23
 327F: 20 06       jr   nz,$3287
 3281: 3E 24       ld   a,$24
-3283: 32 59 81    ld   ($8159),a
+3283: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3286: C9          ret
 3287: 3E 23       ld   a,$23
-3289: 32 59 81    ld   ($8159),a
+3289: 32 59 81    ld   ($ENEMY_2_FRAME),a
 328C: C9          ret
-328D: FF          rst  $38
-328E: FF          rst  $38
-328F: FF          rst  $38
-3290: FF          rst  $38
-3291: FF          rst  $38
-3292: FF          rst  $38
-3293: FF          rst  $38
-3294: FF          rst  $38
-3295: FF          rst  $38
-3296: FF          rst  $38
-3297: FF          rst  $38
-3298: FF          rst  $38
-3299: FF          rst  $38
-329A: FF          rst  $38
-329B: FF          rst  $38
-329C: FF          rst  $38
-329D: FF          rst  $38
-329E: FF          rst  $38
-329F: FF          rst  $38
-32A0: FF          rst  $38
-32A1: FF          rst  $38
-32A2: FF          rst  $38
-32A3: FF          rst  $38
-32A4: FF          rst  $38
-32A5: FF          rst  $38
-32A6: FF          rst  $38
-32A7: FF          rst  $38
-32A8: FF          rst  $38
-32A9: FF          rst  $38
-32AA: FF          rst  $38
-32AB: FF          rst  $38
-32AC: FF          rst  $38
-32AD: FF          rst  $38
-32AE: FF          rst  $38
-32AF: FF          rst  $38
+328D: FF ...
+
 32B0: 3E A0       ld   a,$A0
-32B2: 32 54 81    ld   ($8154),a
+32B2: 32 54 81    ld   ($ENEMY_1_X),a
 32B5: 3E D0       ld   a,$D0
-32B7: 32 57 81    ld   ($8157),a
+32B7: 32 57 81    ld   ($ENEMY_1_Y),a
 32BA: 3E 17       ld   a,$17
-32BC: 32 56 81    ld   ($8156),a
+32BC: 32 56 81    ld   ($ENEMY_1_COL),a
 32BF: 3E 34       ld   a,$34
-32C1: 32 55 81    ld   ($8155),a
+32C1: 32 55 81    ld   ($ENEMY_1_FRAME),a
 32C4: 3E 01       ld   a,$01
 32C6: 32 3B 80    ld   ($803B),a
 32C9: C9          ret
-32CA: FF          rst  $38
-32CB: FF          rst  $38
-32CC: FF          rst  $38
-32CD: FF          rst  $38
-32CE: FF          rst  $38
-32CF: FF          rst  $38
+32CA: FF ...
+
 32D0: 3A 12 83    ld   a,($TICK_NUM)
 32D3: E6 03       and  $03
 32D5: C0          ret  nz
@@ -8068,14 +7561,8 @@ DRAW_BONUS_STATE
 32E3: C0          ret  nz
 32E4: CD B0 32    call $32B0
 32E7: C9          ret
-32E8: FF          rst  $38
-32E9: FF          rst  $38
-32EA: FF          rst  $38
-32EB: FF          rst  $38
-32EC: FF          rst  $38
-32ED: FF          rst  $38
-32EE: FF          rst  $38
-32EF: FF          rst  $38
+32E8: FF ...
+
 32F0: 3A 3B 80    ld   a,($803B)
 32F3: A7          and  a
 32F4: C8          ret  z
@@ -8093,77 +7580,48 @@ DRAW_BONUS_STATE
 3308: C9          ret
 3309: CD 40 33    call $3340
 330C: C9          ret
-330D: FF          rst  $38
-330E: FF          rst  $38
-330F: FF          rst  $38
-3310: FF          rst  $38
-3311: FF          rst  $38
-3312: FF          rst  $38
-3313: FF          rst  $38
-3314: FF          rst  $38
-3315: FF          rst  $38
-3316: FF          rst  $38
-3317: FF          rst  $38
-3318: 3A 57 81    ld   a,($8157)
+330D: FF ...
+
+3318: 3A 57 81    ld   a,($ENEMY_1_Y)
 331B: 3D          dec  a
 331C: 3D          dec  a
-331D: 32 57 81    ld   ($8157),a
+331D: 32 57 81    ld   ($ENEMY_1_Y),a
 3320: E6 03       and  $03
 3322: C0          ret  nz
-3323: 3A 55 81    ld   a,($8155)
+3323: 3A 55 81    ld   a,($ENEMY_1_FRAME)
 3326: FE 34       cp   $34
 3328: 28 06       jr   z,$3330
 332A: 3E 34       ld   a,$34
-332C: 32 55 81    ld   ($8155),a
+332C: 32 55 81    ld   ($ENEMY_1_FRAME),a
 332F: C9          ret
 3330: 3E 35       ld   a,$35
-3332: 32 55 81    ld   ($8155),a
+3332: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3335: C9          ret
-3336: FF          rst  $38
-3337: FF          rst  $38
-3338: FF          rst  $38
-3339: FF          rst  $38
-333A: FF          rst  $38
-333B: FF          rst  $38
-333C: FF          rst  $38
-333D: FF          rst  $38
-333E: FF          rst  $38
-333F: FF          rst  $38
-3340: 3A 57 81    ld   a,($8157)
+3336: FF ...
+
+3340: 3A 57 81    ld   a,($ENEMY_1_Y)
 3343: 3C          inc  a
 3344: 3C          inc  a
-3345: 32 57 81    ld   ($8157),a
+3345: 32 57 81    ld   ($ENEMY_1_Y),a
 3348: 3E 34       ld   a,$34
-334A: 32 55 81    ld   ($8155),a
+334A: 32 55 81    ld   ($ENEMY_1_FRAME),a
 334D: C9          ret
-334E: FF          rst  $38
-334F: FF          rst  $38
-3350: FF          rst  $38
-3351: FF          rst  $38
-3352: FF          rst  $38
-3353: FF          rst  $38
-3354: FF          rst  $38
-3355: FF          rst  $38
-3356: FF          rst  $38
-3357: FF          rst  $38
+334E: FF ...
+
 3358: 3E F0       ld   a,$F0
-335A: 32 58 81    ld   ($8158),a
+335A: 32 58 81    ld   ($ENEMY_2_X),a
 335D: 3E 40       ld   a,$40
-335F: 32 5B 81    ld   ($815B),a
+335F: 32 5B 81    ld   ($ENEMY_2_Y),a
 3362: 3E 23       ld   a,$23
-3364: 32 59 81    ld   ($8159),a
+3364: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3367: 3E 16       ld   a,$16
-3369: 32 5A 81    ld   ($815A),a
+3369: 32 5A 81    ld   ($ENEMY_2_COL),a
 336C: 3E 01       ld   a,$01
 336E: 32 39 80    ld   ($8039),a
 3371: C9          ret
-3372: FF          rst  $38
-3373: FF          rst  $38
-3374: FF          rst  $38
-3375: FF          rst  $38
-3376: FF          rst  $38
-3377: FF          rst  $38
-3378: 3A 58 81    ld   a,($8158)
+3372: FF ...
+
+3378: 3A 58 81    ld   a,($ENEMY_2_X)
 337B: A7          and  a
 337C: 28 0F       jr   z,$338D
 337E: FE 01       cp   $01
@@ -8176,37 +7634,18 @@ DRAW_BONUS_STATE
 338C: C0          ret  nz
 338D: CD 58 33    call $3358
 3390: C9          ret
-3391: FF          rst  $38
-3392: FF          rst  $38
-3393: FF          rst  $38
-3394: FF          rst  $38
-3395: FF          rst  $38
-3396: FF          rst  $38
-3397: FF          rst  $38
+3391: FF ...
+
 3398: CD 78 33    call $3378
 339B: CD 60 32    call $3260
 339E: C9          ret
-339F: FF          rst  $38
-33A0: FF          rst  $38
-33A1: FF          rst  $38
-33A2: FF          rst  $38
-33A3: FF          rst  $38
-33A4: FF          rst  $38
-33A5: FF          rst  $38
-33A6: FF          rst  $38
-33A7: FF          rst  $38
+339F: FF ...
+
 33A8: CD D0 32    call $32D0
 33AB: CD F0 32    call $32F0
 33AE: C9          ret
-33AF: FF          rst  $38
-33B0: FF          rst  $38
-33B1: FF          rst  $38
-33B2: FF          rst  $38
-33B3: FF          rst  $38
-33B4: FF          rst  $38
-33B5: FF          rst  $38
-33B6: FF          rst  $38
-33B7: FF          rst  $38
+33AF: FF ...
+
 33B8: 3A 3B 80    ld   a,($803B)
 33BB: A7          and  a
 33BC: C8          ret  z
@@ -8224,54 +7663,32 @@ DRAW_BONUS_STATE
 33D0: C9          ret
 33D1: CD 00 34    call $3400
 33D4: C9          ret
-33D5: FF          rst  $38
-33D6: FF          rst  $38
-33D7: FF          rst  $38
-33D8: 3A 57 81    ld   a,($8157)
+33D5: FF ...
+
+33D8: 3A 57 81    ld   a,($ENEMY_1_Y)
 33DB: 3D          dec  a
 33DC: 3D          dec  a
-33DD: 32 57 81    ld   ($8157),a
+33DD: 32 57 81    ld   ($ENEMY_1_Y),a
 33E0: E6 03       and  $03
 33E2: C0          ret  nz
-33E3: 3A 55 81    ld   a,($8155)
+33E3: 3A 55 81    ld   a,($ENEMY_1_FRAME)
 33E6: FE 34       cp   $34
 33E8: 20 06       jr   nz,$33F0
 33EA: 3E 35       ld   a,$35
-33EC: 32 55 81    ld   ($8155),a
+33EC: 32 55 81    ld   ($ENEMY_1_FRAME),a
 33EF: C9          ret
 33F0: 3E 34       ld   a,$34
-33F2: 32 55 81    ld   ($8155),a
+33F2: 32 55 81    ld   ($ENEMY_1_FRAME),a
 33F5: C9          ret
-33F6: FF          rst  $38
-33F7: FF          rst  $38
-33F8: FF          rst  $38
-33F9: FF          rst  $38
-33FA: FF          rst  $38
-33FB: FF          rst  $38
-33FC: FF          rst  $38
-33FD: FF          rst  $38
-33FE: FF          rst  $38
-33FF: FF          rst  $38
-3400: 3A 57 81    ld   a,($8157)
+33F6: FF ...
+
+3400: 3A 57 81    ld   a,($ENEMY_1_Y)
 3403: 3C          inc  a
 3404: 3C          inc  a
-3405: 32 57 81    ld   ($8157),a
+3405: 32 57 81    ld   ($ENEMY_1_Y),a
 3408: C9          ret
-3409: FF          rst  $38
-340A: FF          rst  $38
-340B: FF          rst  $38
-340C: FF          rst  $38
-340D: FF          rst  $38
-340E: FF          rst  $38
-340F: FF          rst  $38
-3410: FF          rst  $38
-3411: FF          rst  $38
-3412: FF          rst  $38
-3413: FF          rst  $38
-3414: FF          rst  $38
-3415: FF          rst  $38
-3416: FF          rst  $38
-3417: FF          rst  $38
+3409: FF ...
+
 3418: 3A 3D 80    ld   a,($803D)
 341B: A7          and  a
 341C: C8          ret  z
@@ -8289,62 +7706,40 @@ DRAW_BONUS_STATE
 3430: C9          ret
 3431: CD 58 34    call $3458
 3434: C9          ret
-3435: FF          rst  $38
-3436: FF          rst  $38
-3437: FF          rst  $38
-3438: 3A 5B 81    ld   a,($815B)
+3435: FF ...
+
+3438: 3A 5B 81    ld   a,($ENEMY_2_Y)
 343B: 3D          dec  a
 343C: 3D          dec  a
-343D: 32 5B 81    ld   ($815B),a
+343D: 32 5B 81    ld   ($ENEMY_2_Y),a
 3440: E6 03       and  $03
 3442: C0          ret  nz
-3443: 3A 59 81    ld   a,($8159)
+3443: 3A 59 81    ld   a,($ENEMY_2_FRAME)
 3446: FE 34       cp   $34
 3448: 20 06       jr   nz,$3450
 344A: 3E 35       ld   a,$35
-344C: 32 59 81    ld   ($8159),a
+344C: 32 59 81    ld   ($ENEMY_2_FRAME),a
 344F: C9          ret
 3450: 3E 34       ld   a,$34
-3452: 32 59 81    ld   ($8159),a
+3452: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3455: C9          ret
-3456: FF          rst  $38
-3457: FF          rst  $38
-3458: 3A 5B 81    ld   a,($815B)
+
+3456: FF FF
+
+3458: 3A 5B 81    ld   a,($ENEMY_2_Y)
 345B: 3C          inc  a
 345C: 3C          inc  a
-345D: 32 5B 81    ld   ($815B),a
+345D: 32 5B 81    ld   ($ENEMY_2_Y),a
 3460: C9          ret
-3461: FF          rst  $38
-3462: FF          rst  $38
-3463: FF          rst  $38
-3464: FF          rst  $38
-3465: FF          rst  $38
-3466: FF          rst  $38
-3467: FF          rst  $38
-3468: FF          rst  $38
-3469: FF          rst  $38
-346A: FF          rst  $38
-346B: FF          rst  $38
-346C: FF          rst  $38
-346D: FF          rst  $38
-346E: FF          rst  $38
-346F: FF          rst  $38
+3461: FF ...
+
 3470: CD B8 33    call $33B8
 3473: CD 18 34    call $3418
 3476: CD 88 34    call $3488
 3479: CD E8 34    call $34E8
 347C: C9          ret
-347D: FF          rst  $38
-347E: FF          rst  $38
-347F: FF          rst  $38
-3480: FF          rst  $38
-3481: FF          rst  $38
-3482: FF          rst  $38
-3483: FF          rst  $38
-3484: FF          rst  $38
-3485: FF          rst  $38
-3486: FF          rst  $38
-3487: FF          rst  $38
+347D: FF ...
+
 3488: 3A 12 83    ld   a,($TICK_NUM)
 348B: E6 03       and  $03
 348D: C0          ret  nz
@@ -8358,48 +7753,34 @@ DRAW_BONUS_STATE
 349B: C0          ret  nz
 349C: CD A8 34    call $34A8
 349F: C9          ret
-34A0: FF          rst  $38
-34A1: FF          rst  $38
-34A2: FF          rst  $38
-34A3: FF          rst  $38
-34A4: FF          rst  $38
-34A5: FF          rst  $38
-34A6: FF          rst  $38
-34A7: FF          rst  $38
+34A0: FF ...
+
 34A8: 3E 34       ld   a,$34
-34AA: 32 55 81    ld   ($8155),a
+34AA: 32 55 81    ld   ($ENEMY_1_FRAME),a
 34AD: 3E A4       ld   a,$A4
-34AF: 32 54 81    ld   ($8154),a
+34AF: 32 54 81    ld   ($ENEMY_1_X),a
 34B2: 3E AC       ld   a,$AC
-34B4: 32 57 81    ld   ($8157),a
+34B4: 32 57 81    ld   ($ENEMY_1_Y),a
 34B7: 3E 17       ld   a,$17
-34B9: 32 56 81    ld   ($8156),a
+34B9: 32 56 81    ld   ($ENEMY_1_COL),a
 34BC: 3E 01       ld   a,$01
 34BE: 32 3B 80    ld   ($803B),a
 34C1: C9          ret
-34C2: FF          rst  $38
-34C3: FF          rst  $38
-34C4: FF          rst  $38
-34C5: FF          rst  $38
-34C6: FF          rst  $38
-34C7: FF          rst  $38
+34C2: FF ...
+
 34C8: 3E 80       ld   a,$80
-34CA: 32 58 81    ld   ($8158),a
+34CA: 32 58 81    ld   ($ENEMY_2_X),a
 34CD: 3E 7C       ld   a,$7C
-34CF: 32 5B 81    ld   ($815B),a
+34CF: 32 5B 81    ld   ($ENEMY_2_Y),a
 34D2: 3E 34       ld   a,$34
-34D4: 32 59 81    ld   ($8159),a
+34D4: 32 59 81    ld   ($ENEMY_2_FRAME),a
 34D7: 3E 17       ld   a,$17
-34D9: 32 5A 81    ld   ($815A),a
+34D9: 32 5A 81    ld   ($ENEMY_2_COL),a
 34DC: 3E 01       ld   a,$01
 34DE: 32 3D 80    ld   ($803D),a
 34E1: C9          ret
-34E2: FF          rst  $38
-34E3: FF          rst  $38
-34E4: FF          rst  $38
-34E5: FF          rst  $38
-34E6: FF          rst  $38
-34E7: FF          rst  $38
+34E2: FF ...
+
 34E8: 3A 12 83    ld   a,($TICK_NUM)
 34EB: E6 03       and  $03
 34ED: C0          ret  nz
@@ -8413,22 +7794,8 @@ DRAW_BONUS_STATE
 34FB: C0          ret  nz
 34FC: CD C8 34    call $34C8
 34FF: C9          ret
-3500: FF          rst  $38
-3501: FF          rst  $38
-3502: FF          rst  $38
-3503: FF          rst  $38
-3504: FF          rst  $38
-3505: FF          rst  $38
-3506: FF          rst  $38
-3507: FF          rst  $38
-3508: FF          rst  $38
-3509: FF          rst  $38
-350A: FF          rst  $38
-350B: FF          rst  $38
-350C: FF          rst  $38
-350D: FF          rst  $38
-350E: FF          rst  $38
-350F: FF          rst  $38
+3500: FF ...
+
     ;;  reset a bunch of thing to 255
 3510: 3E FF       ld   a,$FF
 3512: 32 36 80    ld   ($8036),a
@@ -8453,28 +7820,21 @@ DRAW_BONUS_STATE
 3544: CD 70 35    call $3570
 3547: CD 90 35    call $3590
 354A: C9          ret
-354B: FF          rst  $38
-354C: FF          rst  $38
-354D: FF          rst  $38
-354E: FF          rst  $38
-354F: FF          rst  $38
+354B: FF ...
+
 3550: 3E 60       ld   a,$60
-3552: 32 5C 81    ld   ($815C),a
+3552: 32 5C 81    ld   ($ENEMY_3_X),a
 3555: 3E 1D       ld   a,$1D
-3557: 32 5D 81    ld   ($815D),a
+3557: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 355A: 3E 15       ld   a,$15
-355C: 32 5E 81    ld   ($815E),a
+355C: 32 5E 81    ld   ($ENEMY_3_COL),a
 355F: 3E 40       ld   a,$40
-3561: 32 5F 81    ld   ($815F),a
+3561: 32 5F 81    ld   ($ENEMY_3_Y),a
 3564: 3E 01       ld   a,$01
 3566: 32 3F 80    ld   ($803F),a
 3569: C9          ret
-356A: FF          rst  $38
-356B: FF          rst  $38
-356C: FF          rst  $38
-356D: FF          rst  $38
-356E: FF          rst  $38
-356F: FF          rst  $38
+356A: FF ..
+
 3570: 3A 16 83    ld   a,($8316)
 3573: E6 07       and  $07
 3575: C0          ret  nz
@@ -8488,14 +7848,9 @@ DRAW_BONUS_STATE
 3583: C0          ret  nz
 3584: CD 50 35    call $3550
 3587: C9          ret
-3588: FF          rst  $38
-3589: FF          rst  $38
-358A: FF          rst  $38
-358B: FF          rst  $38
-358C: FF          rst  $38
-358D: FF          rst  $38
-358E: FF          rst  $38
-358F: FF          rst  $38
+
+3588: FF ...
+
 3590: 3A 3F 80    ld   a,($803F)
 3593: A7          and  a
 3594: C8          ret  z
@@ -8504,59 +7859,39 @@ DRAW_BONUS_STATE
 3598: 20 01       jr   nz,$359B
 359A: AF          xor  a
 359B: 32 3F 80    ld   ($803F),a
-359E: 21 80 31    ld   hl,$3180
+359E: 21 80 31    ld   hl,$ENEMY_LOOKUP
 35A1: CB 27       sla  a
 35A3: 85          add  a,l
 35A4: 6F          ld   l,a
 35A5: 7E          ld   a,(hl)
-35A6: 32 5D 81    ld   ($815D),a
+35A6: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 35A9: 23          inc  hl
 35AA: 7E          ld   a,(hl)
-35AB: 32 5F 81    ld   ($815F),a
+35AB: 32 5F 81    ld   ($ENEMY_3_Y),a
 35AE: C9          ret
-35AF: FF          rst  $38
-35B0: FF          rst  $38
-35B1: FF          rst  $38
-35B2: FF          rst  $38
-35B3: FF          rst  $38
-35B4: FF          rst  $38
-35B5: FF          rst  $38
-35B6: FF          rst  $38
-35B7: FF          rst  $38
+35AF: FF ...
+
 35B8: CD 70 35    call $3570
 35BB: CD 90 35    call $3590
 35BE: CD 28 2C    call $2C28
 35C1: CD 40 31    call $3140
 35C4: C9          ret
-35C5: FF          rst  $38
-35C6: FF          rst  $38
-35C7: FF          rst  $38
-35C8: FF          rst  $38
-35C9: FF          rst  $38
-35CA: FF          rst  $38
-35CB: FF          rst  $38
-35CC: FF          rst  $38
-35CD: FF          rst  $38
-35CE: FF          rst  $38
-35CF: FF          rst  $38
+35C5: FF ...
+
 35D0: 3E 10       ld   a,$10
-35D2: 32 5C 81    ld   ($815C),a
+35D2: 32 5C 81    ld   ($ENEMY_3_X),a
 35D5: 3E A3       ld   a,$A3
-35D7: 32 5D 81    ld   ($815D),a
+35D7: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 35DA: 3E 16       ld   a,$16
-35DC: 32 5E 81    ld   ($815E),a
+35DC: 32 5E 81    ld   ($ENEMY_3_COL),a
 35DF: 3E BC       ld   a,$BC
-35E1: 32 5F 81    ld   ($815F),a
+35E1: 32 5F 81    ld   ($ENEMY_3_Y),a
 35E4: 3E 01       ld   a,$01
 35E6: 32 41 80    ld   ($8041),a
 35E9: C9          ret
-35EA: FF          rst  $38
-35EB: FF          rst  $38
-35EC: FF          rst  $38
-35ED: FF          rst  $38
-35EE: FF          rst  $38
-35EF: FF          rst  $38
-35F0: 3A 5C 81    ld   a,($815C)
+35EA: FF ...
+
+35F0: 3A 5C 81    ld   a,($ENEMY_3_X)
 35F3: A7          and  a
 35F4: 28 0F       jr   z,$3605
 35F6: FE 01       cp   $01
@@ -8569,39 +7904,33 @@ DRAW_BONUS_STATE
 3604: C0          ret  nz
 3605: CD D0 35    call $35D0
 3608: C9          ret
-3609: FF          rst  $38
-360A: FF          rst  $38
-360B: FF          rst  $38
-360C: FF          rst  $38
-360D: FF          rst  $38
-360E: FF          rst  $38
-360F: FF          rst  $38
+3609: FF ...
+
 3610: 3A 15 83    ld   a,($8315)
 3613: E6 01       and  $01
 3615: C8          ret  z
 3616: 3A 41 80    ld   a,($8041)
 3619: A7          and  a
 361A: C8          ret  z
-361B: 3A 5C 81    ld   a,($815C)
+361B: 3A 5C 81    ld   a,($ENEMY_3_X)
 361E: 3C          inc  a
 361F: 3C          inc  a
 3620: 3C          inc  a
-3621: 32 5C 81    ld   ($815C),a
+3621: 32 5C 81    ld   ($ENEMY_3_X),a
 3624: 3A 15 83    ld   a,($8315)
 3627: E6 02       and  $02
 3629: C0          ret  nz
-362A: 3A 5D 81    ld   a,($815D)
+362A: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
 362D: FE A3       cp   $A3
 362F: 20 06       jr   nz,$3637
 3631: 3E A4       ld   a,$A4
-3633: 32 5D 81    ld   ($815D),a
+3633: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3636: C9          ret
 3637: 3E A3       ld   a,$A3
-3639: 32 5D 81    ld   ($815D),a
+3639: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 363C: C9          ret
-363D: FF          rst  $38
-363E: FF          rst  $38
-363F: FF          rst  $38
+363D: FF ...
+
 3640: C5          push bc
 3641: 3A F1 83    ld   a,($INPUT_BUTTONS)
 3644: E6 3F       and  $3F      ; 0011 1111
@@ -8620,17 +7949,8 @@ DRAW_BONUS_STATE
 365E: CD 38 32    call $3238
 3661: CD 60 32    call $3260
 3664: C9          ret
-3665: FF          rst  $38
-3666: FF          rst  $38
-3667: FF          rst  $38
-3668: FF          rst  $38
-3669: FF          rst  $38
-366A: FF          rst  $38
-366B: FF          rst  $38
-366C: FF          rst  $38
-366D: FF          rst  $38
-366E: FF          rst  $38
-366F: FF          rst  $38
+3665: FF ...
+
 3670: CD B8 33    call $33B8
 3673: CD 18 34    call $3418
 3676: CD 88 34    call $3488
@@ -8638,29 +7958,22 @@ DRAW_BONUS_STATE
 367C: CD A8 36    call $36A8
 367F: CD 10 36    call $3610
 3682: C9          ret
-3683: FF          rst  $38
-3684: FF          rst  $38
-3685: FF          rst  $38
-3686: FF          rst  $38
-3687: FF          rst  $38
+3683: FF ...
+
 3688: 3E 10       ld   a,$10
-368A: 32 5C 81    ld   ($815C),a
+368A: 32 5C 81    ld   ($ENEMY_3_X),a
 368D: 3E A3       ld   a,$A3
-368F: 32 5D 81    ld   ($815D),a
+368F: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3692: 3E 16       ld   a,$16
-3694: 32 5E 81    ld   ($815E),a
+3694: 32 5E 81    ld   ($ENEMY_3_COL),a
 3697: 3E 98       ld   a,$98
-3699: 32 5F 81    ld   ($815F),a
+3699: 32 5F 81    ld   ($ENEMY_3_Y),a
 369C: 3E 01       ld   a,$01
 369E: 32 41 80    ld   ($8041),a
 36A1: C9          ret
-36A2: FF          rst  $38
-36A3: FF          rst  $38
-36A4: FF          rst  $38
-36A5: FF          rst  $38
-36A6: FF          rst  $38
-36A7: FF          rst  $38
-36A8: 3A 5C 81    ld   a,($815C)
+36A2: FF ...
+
+36A8: 3A 5C 81    ld   a,($ENEMY_3_X)
 36AB: A7          and  a
 36AC: 28 0F       jr   z,$36BD
 36AE: FE 01       cp   $01
@@ -8673,21 +7986,8 @@ DRAW_BONUS_STATE
 36BC: C0          ret  nz
 36BD: CD 88 36    call $3688
 36C0: C9          ret
-36C1: FF          rst  $38
-36C2: FF          rst  $38
-36C3: FF          rst  $38
-36C4: FF          rst  $38
-36C5: FF          rst  $38
-36C6: FF          rst  $38
-36C7: FF          rst  $38
-36C8: FF          rst  $38
-36C9: FF          rst  $38
-36CA: FF          rst  $38
-36CB: FF          rst  $38
-36CC: FF          rst  $38
-36CD: FF          rst  $38
-36CE: FF          rst  $38
-36CF: FF          rst  $38
+36C1: FF ...
+
 36D0: CD F0 35    call $35F0
 36D3: CD 10 36    call $3610
 36D6: CD 38 32    call $3238
@@ -8695,37 +7995,22 @@ DRAW_BONUS_STATE
 36DC: CD 28 2C    call $2C28
 36DF: CD 40 31    call $3140
 36E2: C9          ret
-36E3: FF          rst  $38
-36E4: FF          rst  $38
-36E5: FF          rst  $38
-36E6: FF          rst  $38
-36E7: FF          rst  $38
+36E3: FF ...
+
 36E8: 3E F0       ld   a,$F0
-36EA: 32 5C 81    ld   ($815C),a
+36EA: 32 5C 81    ld   ($ENEMY_3_X),a
 36ED: 3E 22       ld   a,$22
-36EF: 32 5D 81    ld   ($815D),a
+36EF: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 36F2: 3E 17       ld   a,$17
-36F4: 32 5E 81    ld   ($815E),a
+36F4: 32 5E 81    ld   ($ENEMY_3_COL),a
 36F7: 3E 94       ld   a,$94
-36F9: 32 5F 81    ld   ($815F),a
+36F9: 32 5F 81    ld   ($ENEMY_3_Y),a
 36FC: 3E 01       ld   a,$01
 36FE: 32 41 80    ld   ($8041),a
 3701: C9          ret
-3702: FF          rst  $38
-3703: FF          rst  $38
-3704: FF          rst  $38
-3705: FF          rst  $38
-3706: FF          rst  $38
-3707: FF          rst  $38
-3708: FF          rst  $38
-3709: FF          rst  $38
-370A: FF          rst  $38
-370B: FF          rst  $38
-370C: FF          rst  $38
-370D: FF          rst  $38
-370E: FF          rst  $38
-370F: FF          rst  $38
-3710: 3A 5C 81    ld   a,($815C)
+3702: FF ...
+
+3710: 3A 5C 81    ld   a,($ENEMY_3_X)
 3713: A7          and  a
 3714: 28 0F       jr   z,$3725
 3716: FE 01       cp   $01
@@ -8738,86 +8023,43 @@ DRAW_BONUS_STATE
 3724: C0          ret  nz
 3725: CD E8 36    call $36E8
 3728: C9          ret
-3729: FF          rst  $38
-372A: FF          rst  $38
-372B: FF          rst  $38
-372C: FF          rst  $38
-372D: FF          rst  $38
-372E: FF          rst  $38
-372F: FF          rst  $38
+3729: FF ...
+
 3730: 3A 15 83    ld   a,($8315)
 3733: E6 01       and  $01
 3735: C8          ret  z
 3736: 3A 41 80    ld   a,($8041)
 3739: A7          and  a
 373A: C8          ret  z
-373B: 3A 5C 81    ld   a,($815C)
+373B: 3A 5C 81    ld   a,($ENEMY_3_X)
 373E: 3D          dec  a
 373F: 3D          dec  a
 3740: 3D          dec  a
-3741: 32 5C 81    ld   ($815C),a
+3741: 32 5C 81    ld   ($ENEMY_3_X),a
 3744: C9          ret
-3745: FF          rst  $38
-3746: FF          rst  $38
-3747: FF          rst  $38
-3748: FF          rst  $38
-3749: FF          rst  $38
-374A: FF          rst  $38
-374B: FF          rst  $38
-374C: FF          rst  $38
-374D: FF          rst  $38
-374E: FF          rst  $38
-374F: FF          rst  $38
-3750: FF          rst  $38
-3751: FF          rst  $38
-3752: FF          rst  $38
-3753: FF          rst  $38
-3754: FF          rst  $38
-3755: FF          rst  $38
-3756: FF          rst  $38
-3757: FF          rst  $38
-3758: FF          rst  $38
-3759: FF          rst  $38
-375A: FF          rst  $38
-375B: FF          rst  $38
-375C: FF          rst  $38
-375D: FF          rst  $38
-375E: FF          rst  $38
-375F: FF          rst  $38
+3745: FF ...
+
 3760: CD 10 37    call $3710
 3763: CD 30 37    call $3730
 3766: CD 98 37    call $3798
 3769: CD B8 37    call $37B8
 376C: C9          ret
-376D: FF          rst  $38
-376E: FF          rst  $38
-376F: FF          rst  $38
-3770: FF          rst  $38
-3771: FF          rst  $38
-3772: FF          rst  $38
-3773: FF          rst  $38
-3774: FF          rst  $38
-3775: FF          rst  $38
-3776: FF          rst  $38
-3777: FF          rst  $38
+376D: FF ...
+
 3778: 3E F0       ld   a,$F0
-377A: 32 58 81    ld   ($8158),a
+377A: 32 58 81    ld   ($ENEMY_2_X),a
 377D: 3E 22       ld   a,$22
-377F: 32 59 81    ld   ($8159),a
+377F: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3782: 3E 17       ld   a,$17
-3784: 32 5A 81    ld   ($815A),a
+3784: 32 5A 81    ld   ($ENEMY_2_COL),a
 3787: 3E 50       ld   a,$50
-3789: 32 5B 81    ld   ($815B),a
+3789: 32 5B 81    ld   ($ENEMY_2_Y),a
 378C: 3E 01       ld   a,$01
 378E: 32 39 80    ld   ($8039),a
 3791: C9          ret
-3792: FF          rst  $38
-3793: FF          rst  $38
-3794: FF          rst  $38
-3795: FF          rst  $38
-3796: FF          rst  $38
-3797: FF          rst  $38
-3798: 3A 58 81    ld   a,($8158)
+3792: FF ...
+
+3798: 3A 58 81    ld   a,($ENEMY_2_X)
 379B: A7          and  a
 379C: 28 0F       jr   z,$37AD
 379E: FE 01       cp   $01
@@ -8830,52 +8072,24 @@ DRAW_BONUS_STATE
 37AC: C0          ret  nz
 37AD: CD 78 37    call $3778
 37B0: C9          ret
-37B1: FF          rst  $38
-37B2: FF          rst  $38
-37B3: FF          rst  $38
-37B4: FF          rst  $38
-37B5: FF          rst  $38
-37B6: FF          rst  $38
-37B7: FF          rst  $38
+37B1: FF ...
+
 37B8: 3A 15 83    ld   a,($8315)
 37BB: E6 01       and  $01
 37BD: C8          ret  z
 37BE: 3A 39 80    ld   a,($8039)
 37C1: A7          and  a
 37C2: C8          ret  z
-37C3: 3A 58 81    ld   a,($8158)
+37C3: 3A 58 81    ld   a,($ENEMY_2_X)
 37C6: 3D          dec  a
 37C7: 3D          dec  a
 37C8: 3D          dec  a
 37C9: 3D          dec  a
-37CA: 32 58 81    ld   ($8158),a
+37CA: 32 58 81    ld   ($ENEMY_2_X),a
 37CD: C9          ret
-37CE: FF          rst  $38
-37CF: FF          rst  $38
-37D0: FF          rst  $38
-37D1: FF          rst  $38
-37D2: FF          rst  $38
-37D3: FF          rst  $38
-37D4: FF          rst  $38
-37D5: FF          rst  $38
-37D6: FF          rst  $38
-37D7: FF          rst  $38
-37D8: FF          rst  $38
-37D9: FF          rst  $38
-37DA: FF          rst  $38
-37DB: FF          rst  $38
-37DC: FF          rst  $38
-37DD: FF          rst  $38
-37DE: FF          rst  $38
-37DF: FF          rst  $38
-37E0: FF          rst  $38
-37E1: FF          rst  $38
-37E2: FF          rst  $38
-37E3: FF          rst  $38
-37E4: FF          rst  $38
-37E5: FF          rst  $38
-37E6: FF          rst  $38
-37E7: FF          rst  $38
+
+37CE: FF ...
+
 37E8: CD 10 37    call $3710
 37EB: CD 30 37    call $3730
 37EE: CD 98 37    call $3798
@@ -8883,53 +8097,32 @@ DRAW_BONUS_STATE
 37F4: CD B8 33    call $33B8
 37F7: CD 88 34    call $3488
 37FA: C9          ret
-37FB: FF          rst  $38
-37FC: FF          rst  $38
-37FD: FF          rst  $38
-37FE: FF          rst  $38
-37FF: FF          rst  $38
-3800: FF          rst  $38
-3801: FF          rst  $38
-3802: FF          rst  $38
-3803: FF          rst  $38
-3804: FF          rst  $38
-3805: FF          rst  $38
-3806: FF          rst  $38
-3807: FF          rst  $38
+
+37FB: FF ...
+
 3808: CD 78 33    call $3378
 380B: CD 60 32    call $3260
 380E: CD 40 38    call $3840
 3811: CD 10 36    call $3610
 3814: C9          ret
-3815: FF          rst  $38
-3816: FF          rst  $38
-3817: FF          rst  $38
-3818: FF          rst  $38
-3819: FF          rst  $38
-381A: FF          rst  $38
-381B: FF          rst  $38
-381C: FF          rst  $38
-381D: FF          rst  $38
-381E: FF          rst  $38
-381F: FF          rst  $38
+
+3815: FF ...
+
 3820: 3E 10       ld   a,$10
-3822: 32 5C 81    ld   ($815C),a
+3822: 32 5C 81    ld   ($ENEMY_3_X),a
 3825: 3E 23       ld   a,$23
-3827: 32 5D 81    ld   ($815D),a
+3827: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 382A: 3E 16       ld   a,$16
-382C: 32 5E 81    ld   ($815E),a
+382C: 32 5E 81    ld   ($ENEMY_3_COL),a
 382F: 3E 60       ld   a,$60
-3831: 32 5F 81    ld   ($815F),a
+3831: 32 5F 81    ld   ($ENEMY_3_Y),a
 3834: 3E 01       ld   a,$01
 3836: 32 41 80    ld   ($8041),a
 3839: C9          ret
-383A: FF          rst  $38
-383B: FF          rst  $38
-383C: FF          rst  $38
-383D: FF          rst  $38
-383E: FF          rst  $38
-383F: FF          rst  $38
-3840: 3A 5C 81    ld   a,($815C)
+
+383A: FF ...
+
+3840: 3A 5C 81    ld   a,($ENEMY_3_X)
 3843: A7          and  a
 3844: 28 0F       jr   z,$3855
 3846: FE 01       cp   $01
@@ -8942,21 +8135,8 @@ DRAW_BONUS_STATE
 3854: C0          ret  nz
 3855: CD 20 38    call $3820
 3858: C9          ret
-3859: FF          rst  $38
-385A: FF          rst  $38
-385B: FF          rst  $38
-385C: FF          rst  $38
-385D: FF          rst  $38
-385E: FF          rst  $38
-385F: FF          rst  $38
-3860: FF          rst  $38
-3861: FF          rst  $38
-3862: FF          rst  $38
-3863: FF          rst  $38
-3864: FF          rst  $38
-3865: FF          rst  $38
-3866: FF          rst  $38
-3867: FF          rst  $38
+3859: FF ...
+
 3868: CD 88 34    call $3488
 386B: CD B8 33    call $33B8
 386E: CD A8 36    call $36A8
@@ -8964,19 +8144,9 @@ DRAW_BONUS_STATE
 3874: CD 38 32    call $3238
 3877: CD 60 32    call $3260
 387A: C9          ret
-387B: FF          rst  $38
-387C: FF          rst  $38
-387D: FF          rst  $38
-387E: FF          rst  $38
-387F: FF          rst  $38
-3880: FF          rst  $38
-3881: FF          rst  $38
-3882: FF          rst  $38
-3883: FF          rst  $38
-3884: FF          rst  $38
-3885: FF          rst  $38
-3886: FF          rst  $38
-3887: FF          rst  $38
+
+387B: FF ...
+
 3888: CD 78 33    call $3378
 388B: CD 60 32    call $3260
 388E: CD 40 38    call $3840
@@ -8984,50 +8154,29 @@ DRAW_BONUS_STATE
 3894: CD C0 38    call $38C0
 3897: CD D0 38    call $38D0
 389A: C9          ret
-389B: FF          rst  $38
-389C: FF          rst  $38
-389D: FF          rst  $38
-389E: FF          rst  $38
-389F: FF          rst  $38
+
+389B: FF ...
+
 38A0: 3E 60       ld   a,$60
-38A2: 32 57 81    ld   ($8157),a
+38A2: 32 57 81    ld   ($ENEMY_1_Y),a
 38A5: 3E A3       ld   a,$A3
-38A7: 32 55 81    ld   ($8155),a
+38A7: 32 55 81    ld   ($ENEMY_1_FRAME),a
 38AA: 3E 16       ld   a,$16
-38AC: 32 56 81    ld   ($8156),a
+38AC: 32 56 81    ld   ($ENEMY_1_COL),a
 38AF: 3E 01       ld   a,$01
 38B1: 32 3B 80    ld   ($803B),a
 38B4: C9          ret
-38B5: FF          rst  $38
-38B6: FF          rst  $38
-38B7: FF          rst  $38
-38B8: FF          rst  $38
-38B9: FF          rst  $38
-38BA: FF          rst  $38
-38BB: FF          rst  $38
-38BC: FF          rst  $38
-38BD: FF          rst  $38
-38BE: FF          rst  $38
-38BF: FF          rst  $38
+38B5: FF ...
+
 38C0: CD A0 38    call $38A0
 38C3: C9          ret
-38C4: FF          rst  $38
-38C5: FF          rst  $38
-38C6: FF          rst  $38
-38C7: FF          rst  $38
-38C8: FF          rst  $38
-38C9: FF          rst  $38
-38CA: FF          rst  $38
-38CB: FF          rst  $38
-38CC: FF          rst  $38
-38CD: FF          rst  $38
-38CE: FF          rst  $38
-38CF: FF          rst  $38
-38D0: 3A 5C 81    ld   a,($815C)
+38C4: FF ...
+
+38D0: 3A 5C 81    ld   a,($ENEMY_3_X)
 38D3: D6 50       sub  $50
-38D5: 32 54 81    ld   ($8154),a
-38D8: 3A 5D 81    ld   a,($815D)
-38DB: 32 55 81    ld   ($8155),a
+38D5: 32 54 81    ld   ($ENEMY_1_X),a
+38D8: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
+38DB: 32 55 81    ld   ($ENEMY_1_FRAME),a
 38DE: C9          ret
 38DF: FF          rst  $38
 38E0: CD 10 03    call $0310
@@ -9069,100 +8218,65 @@ DRAW_BONUS_STATE
 3918: CD B8 39    call $39B8
 391B: CD E8 39    call $39E8
 391E: C9          ret
-391F: FF          rst  $38
-3920: FF          rst  $38
-3921: FF          rst  $38
-3922: FF          rst  $38
-3923: FF          rst  $38
-3924: FF          rst  $38
-3925: FF          rst  $38
-3926: FF          rst  $38
-3927: FF          rst  $38
-3928: FF          rst  $38
-3929: FF          rst  $38
-392A: FF          rst  $38
-392B: FF          rst  $38
-392C: FF          rst  $38
-392D: FF          rst  $38
-392E: FF          rst  $38
-392F: FF          rst  $38
-3930: FF          rst  $38
-3931: FF          rst  $38
-3932: FF          rst  $38
-3933: FF          rst  $38
-3934: FF          rst  $38
-3935: FF          rst  $38
-3936: FF          rst  $38
-3937: FF          rst  $38
-3938: 3A 54 81    ld   a,($8154)
+
+391F: FF ...
+
+3938: 3A 54 81    ld   a,($ENEMY_1_X)
 393B: A7          and  a
 393C: C0          ret  nz
 393D: 3E F0       ld   a,$F0
-393F: 32 54 81    ld   ($8154),a
+393F: 32 54 81    ld   ($ENEMY_1_X),a
 3942: 3E 22       ld   a,$22
-3944: 32 55 81    ld   ($8155),a
+3944: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3947: 3E 17       ld   a,$17
-3949: 32 56 81    ld   ($8156),a
+3949: 32 56 81    ld   ($ENEMY_1_COL),a
 394C: 3E C8       ld   a,$C8
-394E: 32 57 81    ld   ($8157),a
+394E: 32 57 81    ld   ($ENEMY_1_Y),a
 3951: 3E 01       ld   a,$01
 3953: 32 37 80    ld   ($8037),a
 3956: C9          ret
-3957: FF          rst  $38
-3958: FF          rst  $38
-3959: FF          rst  $38
-395A: FF          rst  $38
-395B: FF          rst  $38
-395C: FF          rst  $38
-395D: FF          rst  $38
-395E: FF          rst  $38
-395F: FF          rst  $38
-3960: 3A 58 81    ld   a,($8158)
+
+3957: FF ...
+
+3960: 3A 58 81    ld   a,($ENEMY_2_X)
 3963: A7          and  a
 3964: C0          ret  nz
 3965: 3E F0       ld   a,$F0
-3967: 32 58 81    ld   ($8158),a
+3967: 32 58 81    ld   ($ENEMY_2_X),a
 396A: 3E 22       ld   a,$22
-396C: 32 59 81    ld   ($8159),a
+396C: 32 59 81    ld   ($ENEMY_2_FRAME),a
 396F: 3E 17       ld   a,$17
-3971: 32 5A 81    ld   ($815A),a
+3971: 32 5A 81    ld   ($ENEMY_2_COL),a
 3974: 3E 98       ld   a,$98
-3976: 32 5B 81    ld   ($815B),a
+3976: 32 5B 81    ld   ($ENEMY_2_Y),a
 3979: 3E 01       ld   a,$01
 397B: 32 39 80    ld   ($8039),a
 397E: C9          ret
-397F: FF          rst  $38
-3980: FF          rst  $38
-3981: FF          rst  $38
-3982: FF          rst  $38
-3983: FF          rst  $38
-3984: FF          rst  $38
-3985: FF          rst  $38
-3986: FF          rst  $38
-3987: FF          rst  $38
-3988: 3A 5C 81    ld   a,($815C)
+397F: FF ...
+
+3988: 3A 5C 81    ld   a,($ENEMY_3_X)
 398B: A7          and  a
 398C: C0          ret  nz
 398D: 3E F0       ld   a,$F0
-398F: 32 5C 81    ld   ($815C),a
+398F: 32 5C 81    ld   ($ENEMY_3_X),a
 3992: 3E 22       ld   a,$22
-3994: 32 5D 81    ld   ($815D),a
+3994: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3997: 3E 17       ld   a,$17
-3999: 32 5E 81    ld   ($815E),a
+3999: 32 5E 81    ld   ($ENEMY_3_COL),a
 399C: 3E 68       ld   a,$68
-399E: 32 5F 81    ld   ($815F),a
+399E: 32 5F 81    ld   ($ENEMY_3_Y),a
 39A1: 3E 01       ld   a,$01
 39A3: 32 3B 80    ld   ($803B),a
 39A6: C9          ret
 
-39A7: FF x 9
+39A7: FF ...
 
 ;;; ;
 39B0: 3A 07 80    ld   a,($8007)
 39B3: 32 36 80    ld   ($8036),a
 39B6: C9          ret
 39B7: FF          rst  $38
-39B8: 3A 54 81    ld   a,($8154)
+39B8: 3A 54 81    ld   a,($ENEMY_1_X)
 39BB: FE 80       cp   $80
 39BD: 28 14       jr   z,$39D3
 39BF: FE 81       cp   $81
@@ -9177,21 +8291,8 @@ DRAW_BONUS_STATE
 39D1: 20 03       jr   nz,$39D6
 39D3: CD 38 39    call $3938
 39D6: C3 C0 11    jp   $11C0
-39D9: FF          rst  $38
-39DA: FF          rst  $38
-39DB: FF          rst  $38
-39DC: FF          rst  $38
-39DD: FF          rst  $38
-39DE: FF          rst  $38
-39DF: FF          rst  $38
-39E0: FF          rst  $38
-39E1: FF          rst  $38
-39E2: FF          rst  $38
-39E3: FF          rst  $38
-39E4: FF          rst  $38
-39E5: FF          rst  $38
-39E6: FF          rst  $38
-39E7: FF          rst  $38
+39D9: FF ...
+
 39E8: 3A 15 83    ld   a,($8315)
 39EB: E6 07       and  $07
 39ED: C0          ret  nz
@@ -9203,12 +8304,12 @@ DRAW_BONUS_STATE
 39F7: 20 09       jr   nz,$3A02
 39F9: AF          xor  a
 39FA: 32 37 80    ld   ($8037),a
-39FD: 32 54 81    ld   ($8154),a
+39FD: 32 54 81    ld   ($ENEMY_1_X),a
 3A00: 18 0B       jr   $3A0D
 3A02: 32 37 80    ld   ($8037),a
-3A05: 3A 54 81    ld   a,($8154)
+3A05: 3A 54 81    ld   a,($ENEMY_1_X)
 3A08: D6 02       sub  $02
-3A0A: 32 54 81    ld   ($8154),a
+3A0A: 32 54 81    ld   ($ENEMY_1_X),a
 3A0D: 3A 39 80    ld   a,($8039)
 3A10: A7          and  a
 3A11: 28 19       jr   z,$3A2C
@@ -9217,12 +8318,12 @@ DRAW_BONUS_STATE
 3A16: 20 09       jr   nz,$3A21
 3A18: AF          xor  a
 3A19: 32 39 80    ld   ($8039),a
-3A1C: 32 58 81    ld   ($8158),a
+3A1C: 32 58 81    ld   ($ENEMY_2_X),a
 3A1F: 18 0B       jr   $3A2C
 3A21: 32 39 80    ld   ($8039),a
-3A24: 3A 58 81    ld   a,($8158)
+3A24: 3A 58 81    ld   a,($ENEMY_2_X)
 3A27: D6 03       sub  $03
-3A29: 32 58 81    ld   ($8158),a
+3A29: 32 58 81    ld   ($ENEMY_2_X),a
 3A2C: 3A 3B 80    ld   a,($803B)
 3A2F: A7          and  a
 3A30: C8          ret  z
@@ -9231,12 +8332,12 @@ DRAW_BONUS_STATE
 3A34: 20 08       jr   nz,$3A3E
 3A36: AF          xor  a
 3A37: 32 3B 80    ld   ($803B),a
-3A3A: 32 5C 81    ld   ($815C),a
+3A3A: 32 5C 81    ld   ($ENEMY_3_X),a
 3A3D: C9          ret
 3A3E: 32 3B 80    ld   ($803B),a
-3A41: 3A 5C 81    ld   a,($815C)
+3A41: 3A 5C 81    ld   a,($ENEMY_3_X)
 3A44: D6 04       sub  $04
-3A46: 32 5C 81    ld   ($815C),a
+3A46: 32 5C 81    ld   ($ENEMY_3_X),a
 3A49: C9          ret
 3A4A: FF          rst  $38
 3A4B: FF          rst  $38
@@ -9251,26 +8352,26 @@ DRAW_BONUS_STATE
 3A56: FE 3A       cp   $3A
 3A58: 20 08       jr   nz,$3A62
 3A5A: AF          xor  a
-3A5B: 32 54 81    ld   ($8154),a
+3A5B: 32 54 81    ld   ($ENEMY_1_X),a
 3A5E: 32 37 80    ld   ($8037),a
 3A61: C9          ret
 3A62: 32 37 80    ld   ($8037),a
-3A65: 3A 57 81    ld   a,($8157)
+3A65: 3A 57 81    ld   a,($ENEMY_1_Y)
 3A68: 3D          dec  a
 3A69: 3D          dec  a
 3A6A: 3D          dec  a
-3A6B: 32 57 81    ld   ($8157),a
+3A6B: 32 57 81    ld   ($ENEMY_1_Y),a
 3A6E: 3A 12 83    ld   a,($TICK_NUM)
 3A71: E6 03       and  $03
 3A73: C0          ret  nz
-3A74: 3A 55 81    ld   a,($8155)
+3A74: 3A 55 81    ld   a,($ENEMY_1_FRAME)
 3A77: FE 36       cp   $36
 3A79: 20 06       jr   nz,$3A81
 3A7B: 3E 37       ld   a,$37
-3A7D: 32 55 81    ld   ($8155),a
+3A7D: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3A80: C9          ret
 3A81: 3E 36       ld   a,$36
-3A83: 32 55 81    ld   ($8155),a
+3A83: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3A86: C9          ret
 3A87: FF          rst  $38
 3A88: 3A 39 80    ld   a,($8039)
@@ -9280,26 +8381,26 @@ DRAW_BONUS_STATE
 3A8E: FE 3A       cp   $3A
 3A90: 20 08       jr   nz,$3A9A
 3A92: AF          xor  a
-3A93: 32 58 81    ld   ($8158),a
+3A93: 32 58 81    ld   ($ENEMY_2_X),a
 3A96: 32 39 80    ld   ($8039),a
 3A99: C9          ret
 3A9A: 32 39 80    ld   ($8039),a
-3A9D: 3A 5B 81    ld   a,($815B)
+3A9D: 3A 5B 81    ld   a,($ENEMY_2_Y)
 3AA0: 3D          dec  a
 3AA1: 3D          dec  a
 3AA2: 3D          dec  a
-3AA3: 32 5B 81    ld   ($815B),a
+3AA3: 32 5B 81    ld   ($ENEMY_2_Y),a
 3AA6: 3A 12 83    ld   a,($TICK_NUM)
 3AA9: E6 03       and  $03
 3AAB: C0          ret  nz
-3AAC: 3A 59 81    ld   a,($8159)
+3AAC: 3A 59 81    ld   a,($ENEMY_2_FRAME)
 3AAF: FE 36       cp   $36
 3AB1: 20 06       jr   nz,$3AB9
 3AB3: 3E 37       ld   a,$37
-3AB5: 32 59 81    ld   ($8159),a
+3AB5: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3AB8: C9          ret
 3AB9: 3E 36       ld   a,$36
-3ABB: 32 59 81    ld   ($8159),a
+3ABB: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3ABE: C9          ret
 3ABF: FF          rst  $38
 3AC0: 3A 3B 80    ld   a,($803B)
@@ -9309,29 +8410,29 @@ DRAW_BONUS_STATE
 3AC6: FE 3A       cp   $3A
 3AC8: 20 08       jr   nz,$3AD2
 3ACA: AF          xor  a
-3ACB: 32 5C 81    ld   ($815C),a
+3ACB: 32 5C 81    ld   ($ENEMY_3_X),a
 3ACE: 32 3B 80    ld   ($803B),a
 3AD1: C9          ret
 3AD2: 32 3B 80    ld   ($803B),a
-3AD5: 3A 5F 81    ld   a,($815F)
+3AD5: 3A 5F 81    ld   a,($ENEMY_3_Y)
 3AD8: 3D          dec  a
 3AD9: 3D          dec  a
 3ADA: 3D          dec  a
-3ADB: 32 5F 81    ld   ($815F),a
+3ADB: 32 5F 81    ld   ($ENEMY_3_Y),a
 3ADE: 3A 12 83    ld   a,($TICK_NUM)
 3AE1: E6 03       and  $03
 3AE3: C0          ret  nz
-3AE4: 3A 5D 81    ld   a,($815D)
+3AE4: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
 3AE7: FE 36       cp   $36
 3AE9: 20 06       jr   nz,$3AF1
 3AEB: 3E 37       ld   a,$37
-3AED: 32 5D 81    ld   ($815D),a
+3AED: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3AF0: C9          ret
 3AF1: 3E 36       ld   a,$36
-3AF3: 32 5D 81    ld   ($815D),a
+3AF3: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3AF6: C9          ret
 3AF7: FF          rst  $38
-3AF8: 21 54 81    ld   hl,$8154
+3AF8: 21 54 81    ld   hl,$ENEMY_1_X
 3AFB: 36 98       ld   (hl),$98
 3AFD: 23          inc  hl
 3AFE: 36 36       ld   (hl),$36
@@ -9346,7 +8447,7 @@ DRAW_BONUS_STATE
 3B0D: FF          rst  $38
 3B0E: FF          rst  $38
 3B0F: FF          rst  $38
-3B10: 21 58 81    ld   hl,$8158
+3B10: 21 58 81    ld   hl,$ENEMY_2_X
 3B13: 36 90       ld   (hl),$90
 3B15: 23          inc  hl
 3B16: 36 36       ld   (hl),$36
@@ -9361,7 +8462,7 @@ DRAW_BONUS_STATE
 3B25: FF          rst  $38
 3B26: FF          rst  $38
 3B27: FF          rst  $38
-3B28: 21 5C 81    ld   hl,$815C
+3B28: 21 5C 81    ld   hl,$ENEMY_3_X
 3B2B: 36 90       ld   (hl),$90
 3B2D: 23          inc  hl
 3B2E: 36 36       ld   (hl),$36
@@ -9432,26 +8533,18 @@ DRAW_BONUS_STATE
 3B9D: D0          ret  nc
 3B9E: CD 33 0A    call $0A33
 3BA1: C9          ret
-3BA2: FF          rst  $38
-3BA3: FF          rst  $38
-3BA4: FF          rst  $38
-3BA5: FF          rst  $38
-3BA6: FF          rst  $38
-3BA7: FF          rst  $38
-3BA8: FD 21 54 81 ld   iy,$8154
+3BA2: FF ...
+
+3BA8: FD 21 54 81 ld   iy,$ENEMY_1_X
 3BAC: DD 21 40 81 ld   ix,$PLAYER_X
 3BB0: CD 80 3B    call $3B80
-3BB3: FD 21 58 81 ld   iy,$8158
+3BB3: FD 21 58 81 ld   iy,$ENEMY_2_X
 3BB7: CD 80 3B    call $3B80
-3BBA: FD 21 5C 81 ld   iy,$815C
+3BBA: FD 21 5C 81 ld   iy,$ENEMY_3_X
 3BBE: CD 80 3B    call $3B80
 3BC1: C9          ret
-3BC2: FF          rst  $38
-3BC3: FF          rst  $38
-3BC4: FF          rst  $38
-3BC5: FF          rst  $38
-3BC6: FF          rst  $38
-3BC7: FF          rst  $38
+3BC2: FF ...
+
 3BC8: 21 08 81    ld   hl,$8108
 3BCB: 3A 06 81    ld   a,($8106)
 3BCE: 77          ld   (hl),a
@@ -9649,25 +8742,8 @@ DRAW_BONUS_STATE
 3CEA: 20 F6       jr   nz,$3CE2
 3CEC: C9          ret
 
-3CED: FF          rst  $38
-3CEE: FF          rst  $38
-3CEF: FF          rst  $38
-3CF0: FF          rst  $38
-3CF1: FF          rst  $38
-3CF2: FF          rst  $38
-3CF3: FF          rst  $38
-3CF4: FF          rst  $38
-3CF5: FF          rst  $38
-3CF6: FF          rst  $38
-3CF7: FF          rst  $38
-3CF8: FF          rst  $38
-3CF9: FF          rst  $38
-3CFA: FF          rst  $38
-3CFB: FF          rst  $38
-3CFC: FF          rst  $38
-3CFD: FF          rst  $38
-3CFE: FF          rst  $38
-3CFF: FF          rst  $38
+3CED: FF ...
+
 3D00: 3C          inc  a
 3D01: 3D          dec  a
 3D02: 06 01       ld   b,$01
@@ -9699,22 +8775,15 @@ DRAW_BONUS_STATE
 3D2E: 23          inc  hl
 3D2F: 7E          ld   a,(hl)
 3D30: 32 51 81    ld   ($8151),a
-3D33: 32 55 81    ld   ($8155),a
-3D36: 32 59 81    ld   ($8159),a
+3D33: 32 55 81    ld   ($ENEMY_1_FRAME),a
+3D36: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3D39: 23          inc  hl
 3D3A: 7D          ld   a,l
 3D3B: E6 1F       and  $1F
 3D3D: 6F          ld   l,a
 3D3E: C9          ret
-3D3F: FF          rst  $38
-3D40: FF          rst  $38
-3D41: FF          rst  $38
-3D42: FF          rst  $38
-3D43: FF          rst  $38
-3D44: FF          rst  $38
-3D45: FF          rst  $38
-3D46: FF          rst  $38
-3D47: FF          rst  $38
+3D3F: FF ...
+
 ;;; Cut sceen
 DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
@@ -9862,17 +8931,8 @@ DO_CUTSCENE
 ;;;  end of end of level screen
 3E42: 20 EF       jr   nz,$3E33
 3E44: C9          ret
-3E45: FF          rst  $38
-3E46: FF          rst  $38
-3E47: FF          rst  $38
-3E48: FF          rst  $38
-3E49: FF          rst  $38
-3E4A: FF          rst  $38
-3E4B: FF          rst  $38
-3E4C: FF          rst  $38
-3E4D: FF          rst  $38
-3E4E: FF          rst  $38
-3E4F: FF          rst  $38
+3E45: FF ...
+
 3E50: 1E 01       ld   e,$01
 3E52: D5          push de
 3E53: DD E5       push ix
@@ -9900,44 +8960,8 @@ DO_CUTSCENE
 3E86: 15          dec  d
 3E87: 20 F1       jr   nz,$3E7A
 3E89: C9          ret
-3E8A: FF          rst  $38
-3E8B: FF          rst  $38
-3E8C: FF          rst  $38
-3E8D: FF          rst  $38
-3E8E: FF          rst  $38
-3E8F: FF          rst  $38
-3E90: FF          rst  $38
-3E91: FF          rst  $38
-3E92: FF          rst  $38
-3E93: FF          rst  $38
-3E94: FF          rst  $38
-3E95: FF          rst  $38
-3E96: FF          rst  $38
-3E97: FF          rst  $38
-3E98: FF          rst  $38
-3E99: FF          rst  $38
-3E9A: FF          rst  $38
-3E9B: FF          rst  $38
-3E9C: FF          rst  $38
-3E9D: FF          rst  $38
-3E9E: FF          rst  $38
-3E9F: FF          rst  $38
-3EA0: FF          rst  $38
-3EA1: FF          rst  $38
-3EA2: FF          rst  $38
-3EA3: FF          rst  $38
-3EA4: FF          rst  $38
-3EA5: FF          rst  $38
-3EA6: FF          rst  $38
-3EA7: FF          rst  $38
-3EA8: FF          rst  $38
-3EA9: FF          rst  $38
-3EAA: FF          rst  $38
-3EAB: FF          rst  $38
-3EAC: FF          rst  $38
-3EAD: FF          rst  $38
-3EAE: FF          rst  $38
-3EAF: FF          rst  $38
+
+3E8A: FF ...
 
 END_CUTSCENE
 3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
@@ -9950,7 +8974,7 @@ END_CUTSCENE
 3EBE: 36 12       ld   (hl),$12
 3EC0: 23          inc  hl
 3EC1: 36 70       ld   (hl),$70
-3EC3: 21 5C 81    ld   hl,$815C ; and 815c
+3EC3: 21 5C 81    ld   hl,$ENEMY_3_X ; and 815c
 3EC6: 36 11       ld   (hl),$11
 3EC8: 23          inc  hl
 3EC9: 36 30       ld   (hl),$30
@@ -9966,43 +8990,25 @@ END_CUTSCENE
 3EDE: CD 22 3E    call $3E22    ; run to the right
 3EE1: C9          ret
 
-3EE2: FF          rst  $38
-3EE3: FF          rst  $38
-3EE4: FF          rst  $38
-3EE5: FF          rst  $38
-3EE6: FF          rst  $38
-3EE7: FF          rst  $38
-3EE8: FF          rst  $38
-3EE9: FF          rst  $38
-3EEA: FF          rst  $38
-3EEB: FF          rst  $38
-3EEC: FF          rst  $38
-3EED: FF          rst  $38
-3EEE: FF          rst  $38
-3EEF: FF          rst  $38
+3EE2: FF ...
+
 3EF0: 7B          ld   a,e
 3EF1: E6 03       and  $03
 3EF3: C0          ret  nz
 3EF4: CD 18 06    call $0618
 3EF7: C9          ret
-3EF8: FF          rst  $38
-3EF9: FF          rst  $38
-3EFA: FF          rst  $38
-3EFB: FF          rst  $38
-3EFC: FF          rst  $38
-3EFD: FF          rst  $38
-3EFE: FF          rst  $38
-3EFF: FF          rst  $38
+
+3EF8: FF ...
+
+
 3F00: CD 60 14    call $1460
 3F03: 21 90 0E    ld   hl,$0E90
 3F06: CD E3 01    call $01E3
 3F09: C9          ret
-3F0A: FF          rst  $38
-3F0B: FF          rst  $38
-3F0C: FF          rst  $38
-3F0D: FF          rst  $38
-3F0E: FF          rst  $38
-3F0F: FF          rst  $38
+
+3F0A: FF ...
+
+
 3F10: CD 10 03    call $0310
 3F13: 1F          rra
 3F14: 00          nop
@@ -10121,16 +9127,14 @@ END_CUTSCENE
 3FC7: 10 10       djnz $3FD9
 3FC9: FF          rst  $38
 3FCA: C9          ret
-3FCB: FF          rst  $38
-3FCC: FF          rst  $38
-3FCD: FF          rst  $38
-3FCE: FF          rst  $38
-3FCF: FF          rst  $38
+3FCB: FF ...
+
 3FD0: 00          nop
 3FD1: 00          nop
 3FD2: 00          nop
 3FD3: 00          nop
 3FD4: 00          nop
+
 3FD5: CD D0 17    call $17D0
 3FD8: CD EC 24    call $24EC
 3FDB: CD E0 38    call $38E0
@@ -10144,12 +9148,9 @@ END_CUTSCENE
 3FF3: CD E0 38    call $38E0
 3FF6: CD EC 24    call $24EC
 3FF9: C9          ret
-3FFA: FF          rst  $38
-3FFB: FF          rst  $38
-3FFC: FF          rst  $38
-3FFD: FF          rst  $38
-3FFE: FF          rst  $38
-3FFF: FF          rst  $38
+
+3FFA: FF ...
+
 4000: AF          xor  a
 4001: 32 01 B0    ld   ($B001),a
 4004: 3A 40 40    ld   a,($4040)
@@ -10326,8 +9327,9 @@ HIT_BONUS
 4122: D3 01       out  ($01),a
 4124: 00          nop
 4125: C9          ret
-4126: FF          rst  $38
-4127: FF          rst  $38
+
+4126: FF FF
+
 4128: 3E 8C       ld   a,$8C
 412A: 32 17 92    ld   ($9217),a
 412D: 3E 8D       ld   a,$8D
@@ -10335,14 +9337,9 @@ HIT_BONUS
 4132: 3E 8F       ld   a,$8F
 4134: 32 2B 92    ld   ($922B),a
 4137: C9          ret
-4138: FF          rst  $38
-4139: FF          rst  $38
-413A: FF          rst  $38
-413B: FF          rst  $38
-413C: FF          rst  $38
-413D: FF          rst  $38
-413E: FF          rst  $38
-413F: FF          rst  $38
+
+4138: FF ...
+
 4140: DD 7E 00    ld   a,(ix+$00)
 4143: A7          and  a
 4144: C8          ret  z
@@ -10372,13 +9369,8 @@ HIT_BONUS
 4173: 3E 8E       ld   a,$8E
 4175: 32 AB 92    ld   ($92AB),a
 4178: C9          ret
-4179: FF          rst  $38
-417A: FF          rst  $38
-417B: FF          rst  $38
-417C: FF          rst  $38
-417D: FF          rst  $38
-417E: FF          rst  $38
-417F: FF          rst  $38
+
+4179: FF ...
 
 4180: DD 7E 00    ld   a,(ix+$00)
 4183: A7          and  a
@@ -10541,13 +9533,9 @@ PICKUP_TILE_COLLISION
 42A2: 32 CB 90    ld   ($90CB),a
 42A5: CD 02 36    call $3602
 42A8: C9          ret
-42A9: FF          rst  $38
-42AA: FF          rst  $38
-42AB: FF          rst  $38
-42AC: FF          rst  $38
-42AD: FF          rst  $38
-42AE: FF          rst  $38
-42AF: FF          rst  $38
+
+42A9: FF ...
+
 42B0: DD 7E 00    ld   a,(ix+$00)
 42B3: A7          and  a
 42B4: C8          ret  z
@@ -10592,11 +9580,8 @@ PICKUP_TILE_COLLISION
 42F8: 00          nop
 42F9: 77          ld   (hl),a
 42FA: C9          ret
-42FB: FF          rst  $38
-42FC: FF          rst  $38
-42FD: FF          rst  $38
-42FE: FF          rst  $38
-42FF: FF          rst  $38
+42FB: FF ...
+
 4300: F0          ret  p
 4301: 70          ld   (hl),b
 4302: B0          or   b
@@ -10616,11 +9601,8 @@ PICKUP_TILE_COLLISION
 4315: 3E 9E       ld   a,$9E
 4317: 32 7A 92    ld   ($927A),a
 431A: C9          ret
-431B: FF          rst  $38
-431C: FF          rst  $38
-431D: FF          rst  $38
-431E: FF          rst  $38
-431F: FF          rst  $38
+431B: FF ...
+
 4320: DD 6E 07    ld   l,(ix+$07)
 4323: DD 66 08    ld   h,(ix+$08)
 4326: 7E          ld   a,(hl)
@@ -10646,16 +9628,9 @@ PICKUP_TILE_COLLISION
 4350: 3E 01       ld   a,$01
 4352: FD 77 04    ld   (iy+$04),a
 4355: C9          ret
-4356: FF          rst  $38
-4357: FF          rst  $38
-4358: FF          rst  $38
-4359: FF          rst  $38
-435A: FF          rst  $38
-435B: FF          rst  $38
-435C: FF          rst  $38
-435D: FF          rst  $38
-435E: FF          rst  $38
-435F: FF          rst  $38
+
+4356: FF ...
+
 4360: DD 6E 09    ld   l,(ix+$09)
 4363: DD 66 0A    ld   h,(ix+$0a)
 4366: 7E          ld   a,(hl)
@@ -10711,16 +9686,9 @@ PICKUP_TILE_COLLISION
 43D0: 3E 01       ld   a,$01
 43D2: FD 77 04    ld   (iy+$04),a
 43D5: C9          ret
-43D6: FF          rst  $38
-43D7: FF          rst  $38
-43D8: FF          rst  $38
-43D9: FF          rst  $38
-43DA: FF          rst  $38
-43DB: FF          rst  $38
-43DC: FF          rst  $38
-43DD: FF          rst  $38
-43DE: FF          rst  $38
-43DF: FF          rst  $38
+
+43D6: FF ...
+
 43E0: 3E 9F       ld   a,$9F
 43E2: 32 EE 92    ld   ($92EE),a
 43E5: 3E 9E       ld   a,$9E
@@ -10734,10 +9702,8 @@ PICKUP_TILE_COLLISION
 43F6: 3E 9F       ld   a,$9F
 43F8: 32 2B 92    ld   ($922B),a
 43FB: C9          ret
-43FC: FF          rst  $38
-43FD: FF          rst  $38
-43FE: FF          rst  $38
-43FF: FF          rst  $38
+43FC: FF ...
+
 4400: 03          inc  bc
 4401: 24          inc  h
 4402: 03          inc  bc
@@ -10895,25 +9861,8 @@ PICKUP_TILE_COLLISION
 44E9: 32 8A 91    ld   ($918A),a
 44EC: C9          ret
 
-44ED: FF          rst  $38
-44EE: FF          rst  $38
-44EF: FF          rst  $38
-44F0: FF          rst  $38
-44F1: FF          rst  $38
-44F2: FF          rst  $38
-44F3: FF          rst  $38
-44F4: FF          rst  $38
-44F5: FF          rst  $38
-44F6: FF          rst  $38
-44F7: FF          rst  $38
-44F8: FF          rst  $38
-44F9: FF          rst  $38
-44FA: FF          rst  $38
-44FB: FF          rst  $38
-44FC: FF          rst  $38
-44FD: FF          rst  $38
-44FE: FF          rst  $38
-44FF: FF          rst  $38
+44ED: FF ...
+
 4500: DD 7E 12    ld   a,(ix+$12)
 4503: A7          and  a
 4504: 28 05       jr   z,$450B
@@ -11038,24 +9987,9 @@ PICKUP_TILE_COLLISION
 45E8: 3E 8D       ld   a,$8D
 45EA: 32 5A 91    ld   ($915A),a
 45ED: C9          ret
-45EE: FF          rst  $38
-45EF: FF          rst  $38
-45F0: FF          rst  $38
-45F1: FF          rst  $38
-45F2: FF          rst  $38
-45F3: FF          rst  $38
-45F4: FF          rst  $38
-45F5: FF          rst  $38
-45F6: FF          rst  $38
-45F7: FF          rst  $38
-45F8: FF          rst  $38
-45F9: FF          rst  $38
-45FA: FF          rst  $38
-45FB: FF          rst  $38
-45FC: FF          rst  $38
-45FD: FF          rst  $38
-45FE: FF          rst  $38
-45FF: FF          rst  $38
+
+45EE: FF ...
+
 4600: DD 7E 14    ld   a,(ix+$14)
 4603: A7          and  a
 4604: 28 05       jr   z,$460B
@@ -11109,31 +10043,9 @@ PICKUP_TILE_COLLISION
 4660: DD 77 0C    ld   (ix+$0c),a
 4663: CD A0 43    call $43A0
 4666: C9          ret
-4667: FF          rst  $38
-4668: FF          rst  $38
-4669: FF          rst  $38
-466A: FF          rst  $38
-466B: FF          rst  $38
-466C: FF          rst  $38
-466D: FF          rst  $38
-466E: FF          rst  $38
-466F: FF          rst  $38
-4670: FF          rst  $38
-4671: FF          rst  $38
-4672: FF          rst  $38
-4673: FF          rst  $38
-4674: FF          rst  $38
-4675: FF          rst  $38
-4676: FF          rst  $38
-4677: FF          rst  $38
-4678: FF          rst  $38
-4679: FF          rst  $38
-467A: FF          rst  $38
-467B: FF          rst  $38
-467C: FF          rst  $38
-467D: FF          rst  $38
-467E: FF          rst  $38
-467F: FF          rst  $38
+4667: FF ...
+
+
 4680: DD 21 B8 82 ld   ix,$82B8
 4684: DD 7E 0D    ld   a,(ix+$0d)
 4687: A7          and  a
@@ -11150,46 +10062,29 @@ PICKUP_TILE_COLLISION
 469D: CD 00 46    call $4600
 46A0: C9          ret
 46A1: C9          ret
-46A2: FF          rst  $38
-46A3: FF          rst  $38
-46A4: FF          rst  $38
-46A5: FF          rst  $38
-46A6: FF          rst  $38
-46A7: FF          rst  $38
-46A8: FF          rst  $38
-46A9: FF          rst  $38
-46AA: FF          rst  $38
-46AB: FF          rst  $38
-46AC: FF          rst  $38
-46AD: FF          rst  $38
-46AE: FF          rst  $38
-46AF: FF          rst  $38
+
+46A2: FF ...
+
+
 46B0: E1          pop  hl
 46B1: 06 00       ld   b,$00
 46B3: 4F          ld   c,a
 46B4: 09          add  hl,bc
 46B5: E5          push hl
 46B6: C9          ret
-46B7: FF          rst  $38
-46B8: FF          rst  $38
-46B9: FF          rst  $38
-46BA: FF          rst  $38
-46BB: FF          rst  $38
-46BC: FF          rst  $38
-46BD: FF          rst  $38
-46BE: FF          rst  $38
-46BF: FF          rst  $38
+
+46B7: FF ...
+
+
 46C0: 21 B8 82    ld   hl,$82B8
 46C3: 06 18       ld   b,$18
 46C5: 36 00       ld   (hl),$00
 46C7: 23          inc  hl
 46C8: 10 FB       djnz $46C5
 46CA: C9          ret
-46CB: FF          rst  $38
-46CC: FF          rst  $38
-46CD: FF          rst  $38
-46CE: FF          rst  $38
-46CF: FF          rst  $38
+
+46CB: FF ...
+
 46D0: CD C0 46    call $46C0
 46D3: 3A 42 80    ld   a,($8042)
 46D6: CD 30 47    call $4730
@@ -11222,39 +10117,13 @@ PICKUP_TILE_COLLISION
 4708: 32 42 80    ld   ($8042),a
 470B: 32 65 80    ld   ($8065),a
 470E: C9          ret
-470F: FF          rst  $38
-4710: FF          rst  $38
-4711: FF          rst  $38
-4712: FF          rst  $38
-4713: FF          rst  $38
-4714: FF          rst  $38
-4715: FF          rst  $38
-4716: FF          rst  $38
-4717: FF          rst  $38
-4718: FF          rst  $38
-4719: FF          rst  $38
-471A: FF          rst  $38
-471B: FF          rst  $38
-471C: FF          rst  $38
-471D: FF          rst  $38
-471E: FF          rst  $38
-471F: FF          rst  $38
+470F: FF ...
+
+
 4720: 76          halt
 4721: 0D          dec  c
-4722: FF          rst  $38
-4723: FF          rst  $38
-4724: FF          rst  $38
-4725: FF          rst  $38
-4726: FF          rst  $38
-4727: FF          rst  $38
-4728: FF          rst  $38
-4729: FF          rst  $38
-472A: FF          rst  $38
-472B: FF          rst  $38
-472C: FF          rst  $38
-472D: FF          rst  $38
-472E: FF          rst  $38
-472F: FF          rst  $38
+4722: FF ...
+
 
 ;;;
 4730: CB 27       sla  a
@@ -11394,33 +10263,8 @@ PICKUP_TILE_COLLISION
 4820: C8          ret  z
 4821: CD A0 43    call $43A0
 4824: C9          ret
-4825: FF          rst  $38
-4826: FF          rst  $38
-4827: FF          rst  $38
-4828: FF          rst  $38
-4829: FF          rst  $38
-482A: FF          rst  $38
-482B: FF          rst  $38
-482C: FF          rst  $38
-482D: FF          rst  $38
-482E: FF          rst  $38
-482F: FF          rst  $38
-4830: FF          rst  $38
-4831: FF          rst  $38
-4832: FF          rst  $38
-4833: FF          rst  $38
-4834: FF          rst  $38
-4835: FF          rst  $38
-4836: FF          rst  $38
-4837: FF          rst  $38
-4838: FF          rst  $38
-4839: FF          rst  $38
-483A: FF          rst  $38
-483B: FF          rst  $38
-483C: FF          rst  $38
-483D: FF          rst  $38
-483E: FF          rst  $38
-483F: FF          rst  $38
+4825: FF ...
+
 4840: 3A 42 80    ld   a,($8042)
 4843: A7          and  a
 4844: 20 05       jr   nz,$484B
@@ -11440,11 +10284,8 @@ PICKUP_TILE_COLLISION
 4865: 18 03       jr   $486A
 4867: CD 9C 48    call $489C
 486A: C9          ret
-486B: FF          rst  $38
-486C: FF          rst  $38
-486D: FF          rst  $38
-486E: FF          rst  $38
-486F: FF          rst  $38
+486B: FF ...
+
 4870: 21 E8 82    ld   hl,$82E8
 4873: 06 18       ld   b,$18
 4875: 36 00       ld   (hl),$00
@@ -11487,27 +10328,8 @@ PICKUP_TILE_COLLISION
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $5AA8
 48CA: C9          ret
-48CB: FF          rst  $38
-48CC: FF          rst  $38
-48CD: FF          rst  $38
-48CE: FF          rst  $38
-48CF: FF          rst  $38
-48D0: FF          rst  $38
-48D1: FF          rst  $38
-48D2: FF          rst  $38
-48D3: FF          rst  $38
-48D4: FF          rst  $38
-48D5: FF          rst  $38
-48D6: FF          rst  $38
-48D7: FF          rst  $38
-48D8: FF          rst  $38
-48D9: FF          rst  $38
-48DA: FF          rst  $38
-48DB: FF          rst  $38
-48DC: FF          rst  $38
-48DD: FF          rst  $38
-48DE: FF          rst  $38
-48DF: FF          rst  $38
+48CB: FF ...
+
 48E0: DD 21 D0 82 ld   ix,$82D0
 48E4: DD 7E 0D    ld   a,(ix+$0d)
 48E7: A7          and  a
@@ -11535,26 +10357,16 @@ PICKUP_TILE_COLLISION
 4906: E5          push hl
 4907: D9          exx
 4908: C9          ret
-;;;
+4909: FF ...
 
-4909: FF          rst  $38
-490A: FF          rst  $38
-490B: FF          rst  $38
-490C: FF          rst  $38
-490D: FF          rst  $38
-490E: FF          rst  $38
-490F: FF          rst  $38
 4910: 21 D0 82    ld   hl,$82D0
 4913: 06 18       ld   b,$18
 4915: 36 00       ld   (hl),$00
 4917: 23          inc  hl
 4918: 10 FB       djnz $4915
 491A: C9          ret
-491B: FF          rst  $38
-491C: FF          rst  $38
-491D: FF          rst  $38
-491E: FF          rst  $38
-491F: FF          rst  $38
+491B: FF ...
+
 4920: CD 10 49    call $4910
 4923: 3A 43 80    ld   a,($8043)
 4926: CD 30 47    call $4730
@@ -11563,17 +10375,8 @@ PICKUP_TILE_COLLISION
 4930: AF          xor  a
 4931: 32 43 80    ld   ($8043),a
 4934: C9          ret
-4935: FF          rst  $38
-4936: FF          rst  $38
-4937: FF          rst  $38
-4938: FF          rst  $38
-4939: FF          rst  $38
-493A: FF          rst  $38
-493B: FF          rst  $38
-493C: FF          rst  $38
-493D: FF          rst  $38
-493E: FF          rst  $38
-493F: FF          rst  $38
+4935: FF ...
+
 4940: 00          nop
 4941: 00          nop
 4942: 0E 00       ld   c,$00
@@ -11984,122 +10787,8 @@ TBL_3
 4B68: 36 A0       ld   (hl),$A0
 4B6A: 23          inc  hl
 4B6B: C9          ret
-4B6C: FF          rst  $38
-4B6D: FF          rst  $38
-4B6E: FF          rst  $38
-4B6F: FF          rst  $38
-4B70: FF          rst  $38
-4B71: FF          rst  $38
-4B72: FF          rst  $38
-4B73: FF          rst  $38
-4B74: FF          rst  $38
-4B75: FF          rst  $38
-4B76: FF          rst  $38
-4B77: FF          rst  $38
-4B78: FF          rst  $38
-4B79: FF          rst  $38
-4B7A: FF          rst  $38
-4B7B: FF          rst  $38
-4B7C: FF          rst  $38
-4B7D: FF          rst  $38
-4B7E: FF          rst  $38
-4B7F: FF          rst  $38
-4B80: FF          rst  $38
-4B81: FF          rst  $38
-4B82: FF          rst  $38
-4B83: FF          rst  $38
-4B84: FF          rst  $38
-4B85: FF          rst  $38
-4B86: FF          rst  $38
-4B87: FF          rst  $38
-4B88: FF          rst  $38
-4B89: FF          rst  $38
-4B8A: FF          rst  $38
-4B8B: FF          rst  $38
-4B8C: FF          rst  $38
-4B8D: FF          rst  $38
-4B8E: FF          rst  $38
-4B8F: FF          rst  $38
-4B90: FF          rst  $38
-4B91: FF          rst  $38
-4B92: FF          rst  $38
-4B93: FF          rst  $38
-4B94: FF          rst  $38
-4B95: FF          rst  $38
-4B96: FF          rst  $38
-4B97: FF          rst  $38
-4B98: FF          rst  $38
-4B99: FF          rst  $38
-4B9A: FF          rst  $38
-4B9B: FF          rst  $38
-4B9C: FF          rst  $38
-4B9D: FF          rst  $38
-4B9E: FF          rst  $38
-4B9F: FF          rst  $38
-4BA0: FF          rst  $38
-4BA1: FF          rst  $38
-4BA2: FF          rst  $38
-4BA3: FF          rst  $38
-4BA4: FF          rst  $38
-4BA5: FF          rst  $38
-4BA6: FF          rst  $38
-4BA7: FF          rst  $38
-4BA8: FF          rst  $38
-4BA9: FF          rst  $38
-4BAA: FF          rst  $38
-4BAB: FF          rst  $38
-4BAC: FF          rst  $38
-4BAD: FF          rst  $38
-4BAE: FF          rst  $38
-4BAF: FF          rst  $38
-4BB0: FF          rst  $38
-4BB1: FF          rst  $38
-4BB2: FF          rst  $38
-4BB3: FF          rst  $38
-4BB4: FF          rst  $38
-4BB5: FF          rst  $38
-4BB6: FF          rst  $38
-4BB7: FF          rst  $38
-4BB8: FF          rst  $38
-4BB9: FF          rst  $38
-4BBA: FF          rst  $38
-4BBB: FF          rst  $38
-4BBC: FF          rst  $38
-4BBD: FF          rst  $38
-4BBE: FF          rst  $38
-4BBF: FF          rst  $38
-4BC0: FF          rst  $38
-4BC1: FF          rst  $38
-4BC2: FF          rst  $38
-4BC3: FF          rst  $38
-4BC4: FF          rst  $38
-4BC5: FF          rst  $38
-4BC6: FF          rst  $38
-4BC7: FF          rst  $38
-4BC8: FF          rst  $38
-4BC9: FF          rst  $38
-4BCA: FF          rst  $38
-4BCB: FF          rst  $38
-4BCC: FF          rst  $38
-4BCD: FF          rst  $38
-4BCE: FF          rst  $38
-4BCF: FF          rst  $38
-4BD0: FF          rst  $38
-4BD1: FF          rst  $38
-4BD2: FF          rst  $38
-4BD3: FF          rst  $38
-4BD4: FF          rst  $38
-4BD5: FF          rst  $38
-4BD6: FF          rst  $38
-4BD7: FF          rst  $38
-4BD8: FF          rst  $38
-4BD9: FF          rst  $38
-4BDA: FF          rst  $38
-4BDB: FF          rst  $38
-4BDC: FF          rst  $38
-4BDD: FF          rst  $38
-4BDE: FF          rst  $38
-4BDF: FF          rst  $38
+4B6C: FF ...
+
 4BE0: 0E 04       ld   c,$04
 4BE2: 0E 02       ld   c,$02
 4BE4: 0C          inc  c
@@ -12415,7 +11104,7 @@ WAIT_FOR_CAGE_DOWN
 4DB6: D0          ret  nc
 4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO
 
-4DBA: FF x 6
+4DBA: FF ...
 
     ;; really wait vblank?
 REALLY_VBLANK
@@ -12630,8 +11319,7 @@ PICKUPS_LOOKUP
 4FF3: 00 00 00 00 00 00 00 00 00
 4FFC: 00 00
 
-4FFE: FF          rst  $38
-4FFF: FF          rst  $38
+4FFE: FF FF
 
 ANIMATE_PICKUPS
 5000: 46          ld   b,(hl)
@@ -13027,21 +11715,8 @@ TBL_1
 523D: DD 7E 10    ld   a,(ix+$10)
 5240: C9          ret
 
-5241: FF          rst  $38
-5242: FF          rst  $38
-5243: FF          rst  $38
-5244: FF          rst  $38
-5245: FF          rst  $38
-5246: FF          rst  $38
-5247: FF          rst  $38
-5248: FF          rst  $38
-5249: FF          rst  $38
-524A: FF          rst  $38
-524B: FF          rst  $38
-524C: FF          rst  $38
-524D: FF          rst  $38
-524E: FF          rst  $38
-524F: FF          rst  $38
+5241: FF ...
+
 5250: DD E5       push ix
 5252: E1          pop  hl
 5253: 7D          ld   a,l
@@ -13077,21 +11752,8 @@ TBL_1
 528C: C9          ret
 528D: DD 7E 10    ld   a,(ix+$10)
 5290: C9          ret
-5291: FF          rst  $38
-5292: FF          rst  $38
-5293: FF          rst  $38
-5294: FF          rst  $38
-5295: FF          rst  $38
-5296: FF          rst  $38
-5297: FF          rst  $38
-5298: FF          rst  $38
-5299: FF          rst  $38
-529A: FF          rst  $38
-529B: FF          rst  $38
-529C: FF          rst  $38
-529D: FF          rst  $38
-529E: FF          rst  $38
-529F: FF          rst  $38
+5291: FF ...
+
 52A0: DD E5       push ix
 52A2: E1          pop  hl
 52A3: 7D          ld   a,l
@@ -13206,17 +11868,8 @@ TBL_1
 536F: 20 B9       jr   nz,$532A
 5371: CD D4 4E    call $4ED4
 5374: C9          ret
-5375: FF          rst  $38
-5376: FF          rst  $38
-5377: FF          rst  $38
-5378: FF          rst  $38
-5379: FF          rst  $38
-537A: FF          rst  $38
-537B: FF          rst  $38
-537C: FF          rst  $38
-537D: FF          rst  $38
-537E: FF          rst  $38
-537F: FF          rst  $38
+5375: FF ...
+
 5380: 8D          adc  a,l
 5381: 8C          adc  a,h
 5382: FC F4 8F    call m,$8FF4
@@ -14550,10 +13203,8 @@ TBL_1
 5AE6: 3E 04       ld   a,$04
 5AE8: CD D8 5A    call $5AD8
 5AEB: C9          ret
-5AEC: FF          rst  $38
-5AED: FF          rst  $38
-5AEE: FF          rst  $38
-5AEF: FF          rst  $38
+5AEC: FF ...
+
 5AF0: 21 70 14    ld   hl,$1470
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$0F88
@@ -14664,17 +13315,8 @@ TBL_1
 5B96: CD A8 5A    call $5AA8
 5B99: CD C8 5B    call $5BC8
 5B9C: C9          ret
-5B9D: FF          rst  $38
-5B9E: FF          rst  $38
-5B9F: FF          rst  $38
-5BA0: FF          rst  $38
-5BA1: FF          rst  $38
-5BA2: FF          rst  $38
-5BA3: FF          rst  $38
-5BA4: FF          rst  $38
-5BA5: FF          rst  $38
-5BA6: FF          rst  $38
-5BA7: FF          rst  $38
+5B9D: FF ...
+
 5BA8: 3A 64 80    ld   a,($8064)
 5BAB: 3C          inc  a
 5BAC: FE 03       cp   $03

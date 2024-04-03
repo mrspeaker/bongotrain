@@ -80,3 +80,8 @@ tap3 = mem:install_write_tap(0x800c, 0x800c, "writes", function(offset, data)
      end
    end
 end)
+
+
+--tap4 = mem:install_write_tap(0x815d, 0x815d, "writes", function(offset, data)
+--                                return 0xA4
+--end)
