@@ -97,7 +97,11 @@
 ;;; hardware
 
     ;; ???             $4000
-    ;; SCREEN_RAM      $9000
+    ;; SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
+    ;; SCREEN_RAM      $9000 ;
+    ;; START_OF_TILES  $9040 ; top right tile...
+    ;; XOFF_COL_RAM    $9800 ; xoffset and color data per tile row
+    ;; SPRITES         $9840
     ;; ???             $9800
 
 0000: A2          and  d
@@ -133,7 +137,7 @@
 0048: 3A 00 A0    ld   a,($A000) ; PORT IN0?
 004B: E6 83       and  $83
 004D: C8          ret  z
-004E: CD 70 14    call $CALL_RESET_ENTS
+004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 0051: CD 10 03    call $0310
 0054: 09          add  hl,bc
 0055: 00          nop
@@ -174,7 +178,7 @@
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
 009C: CD 70 03    call $0370
-009F: CD 70 14    call $CALL_RESET_ENTS
+009F: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 00A2: 18 EF       jr   $0093
 00A4: CD A0 13    call $WAIT_VBLANK
 00A7: 3A 03 83    ld   a,($CREDITS)
@@ -190,7 +194,7 @@
 00BF: FF          rst  $38
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
-00C4: CD 50 15    call $SET_DEFAULT_ENT_VALUES
+00C4: CD 50 15    call $COPY_XOFFS_COL_SPRITES_TO_SCREEN
 00C7: CD 60 29    call $2960
 00CA: CD D0 01    call $01D0
 00CD: D9          exx
@@ -529,10 +533,11 @@ COINAGE_ROUTINE
 033C: 18 F0       jr   $032E
 033E: FF ...
 
+    ;;
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
-034B: CD 70 14    call $CALL_RESET_ENTS
+034B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 034E: 21 00 80    ld   hl,$8000
 0351: 36 00       ld   (hl),$00
 0353: 2C          inc  l
@@ -636,7 +641,7 @@ COINAGE_ROUTINE
 0413: CD E3 01    call $CALL_HL_PLUS_4K
 0416: CD E0 24    call $24E0
 0419: CD 30 04    call $0430
-041C: CD 70 14    call $CALL_RESET_ENTS
+041C: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
@@ -830,7 +835,7 @@ CHECK_DINO_TIMER
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $0370
-0598: CD 70 14    call $CALL_RESET_ENTS
+0598: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 059B: 18 E9       jr   $0586
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
@@ -1390,7 +1395,7 @@ GROUND_CHECK
 098D: CB 3F       srl  a        ; /  2
 098F: CB 3F       srl  a        ; /  2
 0991: E6 FE       and  $FE      ; &  1111 1110
-0993: 21 00 81    ld   hl,$8100
+0993: 21 00 81    ld   hl,$SCREEN_XOFF_COLL
 0996: 85          add  a,l
 0997: 6F          ld   l,a
 0998: 3A 44 81    ld   a,($PLAYER_X_LEGS)
@@ -1523,7 +1528,7 @@ JUMP_UPWARD_CHECK_BIG_FALL
 0A8A: CB 3F       srl  a
 0A8C: CB 3F       srl  a
 0A8E: E6 FE       and  $FE
-0A90: 21 00 81    ld   hl,$8100
+0A90: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 0A93: 85          add  a,l
 0A94: 6F          ld   l,a
 0A95: 3A 40 81    ld   a,($PLAYER_X)
@@ -2173,7 +2178,7 @@ BIG_RESET
 101B: 3E 20       ld   a,$20
 101D: 32 30 80    ld   ($PLAYER_PREV_X),a
 1020: CD 80 1B    call $1B80
-1023: CD 70 14    call $CALL_RESET_ENTS
+1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 1026: 21 E0 0F    ld   hl,$0FE0
 1029: CD 40 08    call $0840
 102C: 00          nop
@@ -2746,8 +2751,8 @@ DRAW_TIME
 146F: FF          rst  $38
 
     ;; lotsa calls here
-CALL_RESET_ENTS
-1470: CD 90 14    call $RESET_ENTITIES
+CALL_RESET_SCREEN_META_AND_SPRITES
+1470: CD 90 14    call $RESET_SCREEN_META_AND_SPRITES
 
 1473: 00          nop
 1474: 00          nop
@@ -2777,8 +2782,8 @@ CLEAR_SCREEN
 148F: FF
 
     ;; Lotsa calls here (via $1470)
-RESET_ENTITIES                 ; sets 128 locations to 0
-1490: 21 00 81    ld   hl,$8100
+RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
+1490: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 1493: 36 00       ld   (hl),$00
 1495: 23          inc  hl
 1496: 7D          ld   a,l
@@ -2872,12 +2877,12 @@ RESET_ENTITIES                 ; sets 128 locations to 0
 153B: 00          nop
 153C: FF ...
 
-SET_DEFAULT_ENT_VALUES          ;hmm, or no - copy to 9800? why?
+COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1550: E5          push hl
 1551: C5          push bc
 1552: D5          push de
-1553: 21 00 81    ld   hl,$8100
-1556: 11 00 98    ld   de,$9800
+1553: 21 00 81    ld   hl,$SCREEN_XOFF_COL
+1556: 11 00 98    ld   de,$XOFF_COL_RAM
 1559: 01 80 00    ld   bc,$0080
 155C: ED B0       ldir ; LD (DE),(HL) repeated: copies a chunk of mem
 155E: D1          pop  de
@@ -2939,7 +2944,7 @@ SET_DEFAULT_ENT_VALUES          ;hmm, or no - copy to 9800? why?
 15CD: FF          rst  $38
 15CE: FF          rst  $38
 15CF: FF          rst  $38
-15D0: CD 70 14    call $CALL_RESET_ENTS
+15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 15D3: CD 88 0F    call $0F88
 15D6: CD 60 16    call $1660
 15D9: 3E 8C       ld   a,$8C
@@ -3001,7 +3006,7 @@ SET_DEFAULT_ENT_VALUES          ;hmm, or no - copy to 9800? why?
 1646: CD E3 01    call $CALL_HL_PLUS_4K
 1649: C9          ret
 164A: FF          rst  $38
-164B: CD 70 14    call $CALL_RESET_ENTS
+164B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $0840
 1654: 00          nop
@@ -3904,7 +3909,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B8D: 3C          inc  a
 1B8E: 32 22 80    ld   ($8022),a
 1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $CALL_RESET_ENTS
+1B94: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 
 1B97: 00          nop
 1B98: 00          nop
@@ -5551,7 +5556,7 @@ TEST_THEN_DINO_COLLISION
 254D: FF          rst  $38
 254E: FF          rst  $38
 254F: FF          rst  $38
-2550: CD 70 14    call $CALL_RESET_ENTS
+2550: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$9040
 2559: 1E 79       ld   e,$79
@@ -6888,7 +6893,7 @@ DRAW_BONUS_STATE
 2D8F: 3E 09       ld   a,$09
 2D91: 32 42 80    ld   ($8042),a
 2D94: 00          nop
-2D95: CD 70 14    call $CALL_RESET_ENTS
+2D95: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $0840
@@ -7180,7 +7185,7 @@ DRAW_BONUS_STATE
 
 2FD5: CD 38 30    call $3038
 2FD8: CD E0 24    call $24E0
-2FDB: CD 70 14    call $CALL_RESET_ENTS
+2FDB: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
@@ -8826,7 +8831,7 @@ DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($8042),a
 3D4D: 32 65 80    ld   ($8065),a
-3D50: CD 70 14    call $CALL_RESET_ENTS
+3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $0840
 3D59: 00          nop
@@ -10361,7 +10366,7 @@ PICKUP_TILE_COLLISION
 48B8: CD A8 5A    call $5AA8
 48BB: CD A8 5A    call $5AA8
 48BE: CD A8 5A    call $5AA8
-48C1: 21 70 14    ld   hl,$CALL_RESET_ENTS
+48C1: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $5AA8
 48CA: C9          ret
@@ -12237,7 +12242,7 @@ TBL_1
 559C: 18 F0       jr   $558E
 559E: FF          rst  $38
 559F: FF          rst  $38
-55A0: 21 70 14    ld   hl,$CALL_RESET_ENTS
+55A0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
 55A6: CD D0 56    call $56D0
 55A9: 00          nop
@@ -13242,7 +13247,7 @@ TBL_1
 5AEB: C9          ret
 5AEC: FF ...
 
-5AF0: 21 70 14    ld   hl,$CALL_RESET_ENTS
+5AF0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$0F88
 5AF9: CD 81 5C    call $JMP_HL
