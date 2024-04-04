@@ -5383,34 +5383,22 @@ DINO_PATH_LOOKUP
 
 2370: FF ...
 
-
-DINO_PATH_1             ; Nodes for dino to follow
-2378: 18 E0 00 00       ; x, y, ?, ?
-237C: 1C E0 01 00
-2380: 20 E0 02 00
-2384: 28 E0 03 00
-2388: 30 E0 02 00
-238C: 38 E0 01 00
-2390: 48 C8 00 00
-2394: 50 C8 01 00
-2398: 58 C8 02 00
-239C: 60 C8 03 00
-23A0: 68 C8 02 00
-23A4: 70 C8 03 00
-23A8: 80 C8 07 00
-23AC: 88 C8 05 00
-23B0: 98 C8 03 00
-23B4: A0 C8 02 00
-23B8: A8 C8 03 00
-23BC: B0 C8 02 00
-23C0: B8 C8 03 00
-23C4: C0 C8 01 00
-23C8: D0 D0 07 00
-23CC: D8 D0 05 00
-23D0: E0 D0 06 00
-23D4: E8 D0 05 00
-23D8: F0 D0 04 00
-23DC: FF FF FF FF
+    ;; Nodes for dino to follow: 25 nodes,
+    ;; four bytes per node: [ x, y, ?, ? ]
+DINO_PATH_1
+2378: 18 E0 00 00 1C E0 01 00
+2380: 20 E0 02 00 28 E0 03 00
+2388: 30 E0 02 00 38 E0 01 00
+2390: 48 C8 00 00 50 C8 01 00
+2398: 58 C8 02 00 60 C8 03 00
+23A0: 68 C8 02 00 70 C8 03 00
+23A8: 80 C8 07 00 88 C8 05 00
+23B0: 98 C8 03 00 A0 C8 02 00
+23B8: A8 C8 03 00 B0 C8 02 00
+23C0: B8 C8 03 00 C0 C8 01 00
+23C8: D0 D0 07 00 D8 D0 05 00
+23D0: E0 D0 06 00 E8 D0 05 00
+23D8: F0 D0 04 00 FF FF FF FF
 
     ;;
 23E0: 3A 4C 81    ld   a,($DINO_X)
@@ -5654,288 +5642,68 @@ TEST_THEN_DINO_COLLISION
 25F3: FF ...
 
 
-DINO_PATH_2                     ;DATA lookup table x/y/?/?
-2600: 18 E0       jr   $25E2
-2602: 00          nop
-2603: 00          nop
-2604: 1C          inc  e
-2605: E0          ret  po
-2606: 01 00 20    ld   bc,$2000
-2609: E0          ret  po
-260A: 02          ld   (bc),a
-260B: 00          nop
-260C: 28 E0       jr   z,$25EE
-260E: 03          inc  bc
-260F: 00          nop
-2610: 30 E0       jr   nc,$25F2
-2612: 02          ld   (bc),a
-2613: 00          nop
-2614: 38 E0       jr   c,$25F6
-2616: 01 00 40    ld   bc,$INT_HANDLER
-2619: D8          ret  c
-261A: 02          ld   (bc),a
-261B: 00          nop
-261C: 48          ld   c,b
-261D: D0          ret  nc
-261E: 04          inc  b
-261F: 00          nop
-2620: 50          ld   d,b
-2621: C8          ret  z
-2622: 00          nop
-2623: 00          nop
-2624: 58          ld   e,b
-2625: C8          ret  z
-2626: 01 00 60    ld   bc,$6000
-2629: C8          ret  z
-262A: 02          ld   (bc),a
-262B: 00          nop
-262C: 68          ld   l,b
-262D: CC 03 00    call z,$0003
-2630: 70          ld   (hl),b
-2631: CC 02 00    call z,$0002
-2634: 70          ld   (hl),b
-2635: C0          ret  nz
-2636: 04          inc  b
-2637: 00          nop
-2638: 80          add  a,b
-2639: B0          or   b
-263A: 00          nop
-263B: 00          nop
-263C: 88          adc  a,b
-263D: B0          or   b
-263E: 01 00 90    ld   bc,$SCREEN_RAM
-2641: B0          or   b
-2642: 07          rlca
-2643: 00          nop
-2644: 98          sbc  a,b
-2645: B8          cp   b
-2646: 04          inc  b
-2647: 00          nop
-2648: A0          and  b
-2649: C0          ret  nz
-264A: 05          dec  b
-264B: 00          nop
-264C: A8          xor  b
-264D: B8          cp   b
-264E: 06 00       ld   b,$00
-2650: B0          or   b
-2651: B8          cp   b
-2652: 05          dec  b
-2653: 00          nop
-2654: B8          cp   b
-2655: B8          cp   b
-2656: 04          inc  b
-2657: 00          nop
-2658: C0          ret  nz
-2659: C8          ret  z
-265A: 07          rlca
-265B: 00          nop
-265C: C8          ret  z
-265D: C8          ret  z
-265E: 05          dec  b
-265F: 00          nop
-2660: D0          ret  nc
-2661: D0          ret  nc
-2662: 06 00       ld   b,$00
-2664: D8          ret  c
-2665: D0          ret  nc
-2666: 04          inc  b
-2667: 00          nop
-2668: E0          ret  po
-2669: D0          ret  nc
-266A: 05          dec  b
-266B: 00          nop
-266C: E8          ret  pe
-266D: D0          ret  nc
-266E: 06 00       ld   b,$00
-2670: F0          ret  p
-2671: D0          ret  nc
-2672: 05          dec  b
-2673: 00          nop
+    ;; Nodes for dino to follow: 31 nodes,
+    ;; four bytes per node: [ x, y, ?, ? ]
+DINO_PATH_2
+2600: 18 E0 00 00 1C E0 01 00
+2608: 20 E0 02 00 28 E0 03 00
+2610: 30 E0 02 00 38 E0 01 00
+2618: 40 D8 02 00 48 D0 04 00
+2620: 50 C8 00 00 58 C8 01 00
+2628: 60 C8 02 00 68 CC 03 00
+2630: 70 CC 02 00 70 C0 04 00
+2638: 80 B0 00 00 88 B0 01 00
+2640: 90 B0 07 00 98 B8 04 00
+2648: A0 C0 05 00 A8 B8 06 00
+2650: B0 B8 05 00 B8 B8 04 00
+2658: C0 C8 07 00 C8 C8 05 00
+2660: D0 D0 06 00 D8 D0 04 00
+2668: E0 D0 05 00 E8 D0 06 00
+2670: F0 D0 05 00
+
 2674: FF ...
 
+    ;; Nodes for dino to follow: 27 nodes,
+    ;; four bytes per node: [ x, y, ?, ? ]
+DINO_PATH_3
+2680: 18 E0 00 00 20 E0 01 00
+2688: 28 E0 02 00 30 D0 04 00
+2690: 38 C0 05 00 48 B8 06 00
+2698: 50 B8 04 00 58 A8 05 00
+26A0: 58 A0 06 00 60 A0 04 00
+26A8: 68 90 05 00 70 88 06 00
+26B0: 78 88 04 00 80 78 05 00
+26B8: 88 70 06 00 90 70 04 00
+26C0: 98 60 05 00 A0 58 06 00
+26C8: A8 58 04 00 B0 48 05 00
+26D0: B8 40 06 00 C0 40 04 00
+26D8: C8 30 05 00 D0 28 06 00
+26E0: D8 28 04 00 E0 28 05 00
+26E8: E8 28 06 00
 
-DINO_PATH_3 ;DATA lookup table x/y/?/?
-2680: 18 E0       jr   $2662
-2682: 00          nop
-2683: 00          nop
-2684: 20 E0       jr   nz,$2666
-2686: 01 00 28    ld   bc,$2800
-2689: E0          ret  po
-268A: 02          ld   (bc),a
-268B: 00          nop
-268C: 30 D0       jr   nc,$265E
-268E: 04          inc  b
-268F: 00          nop
-2690: 38 C0       jr   c,$2652
-2692: 05          dec  b
-2693: 00          nop
-2694: 48          ld   c,b
-2695: B8          cp   b
-2696: 06 00       ld   b,$00
-2698: 50          ld   d,b
-2699: B8          cp   b
-269A: 04          inc  b
-269B: 00          nop
-269C: 58          ld   e,b
-269D: A8          xor  b
-269E: 05          dec  b
-269F: 00          nop
-26A0: 58          ld   e,b
-26A1: A0          and  b
-26A2: 06 00       ld   b,$00
-26A4: 60          ld   h,b
-26A5: A0          and  b
-26A6: 04          inc  b
-26A7: 00          nop
-26A8: 68          ld   l,b
-26A9: 90          sub  b
-26AA: 05          dec  b
-26AB: 00          nop
-26AC: 70          ld   (hl),b
-26AD: 88          adc  a,b
-26AE: 06 00       ld   b,$00
-26B0: 78          ld   a,b
-26B1: 88          adc  a,b
-26B2: 04          inc  b
-26B3: 00          nop
-26B4: 80          add  a,b
-26B5: 78          ld   a,b
-26B6: 05          dec  b
-26B7: 00          nop
-26B8: 88          adc  a,b
-26B9: 70          ld   (hl),b
-26BA: 06 00       ld   b,$00
-26BC: 90          sub  b
-26BD: 70          ld   (hl),b
-26BE: 04          inc  b
-26BF: 00          nop
-26C0: 98          sbc  a,b
-26C1: 60          ld   h,b
-26C2: 05          dec  b
-26C3: 00          nop
-26C4: A0          and  b
-26C5: 58          ld   e,b
-26C6: 06 00       ld   b,$00
-26C8: A8          xor  b
-26C9: 58          ld   e,b
-26CA: 04          inc  b
-26CB: 00          nop
-26CC: B0          or   b
-26CD: 48          ld   c,b
-26CE: 05          dec  b
-26CF: 00          nop
-26D0: B8          cp   b
-26D1: 40          ld   b,b
-26D2: 06 00       ld   b,$00
-26D4: C0          ret  nz
-26D5: 40          ld   b,b
-26D6: 04          inc  b
-26D7: 00          nop
-26D8: C8          ret  z
-26D9: 30 05       jr   nc,$26E0
-26DB: 00          nop
-26DC: D0          ret  nc
-26DD: 28 06       jr   z,$26E5
-26DF: 00          nop
-26E0: D8          ret  c
-26E1: 28 04       jr   z,$26E7
-26E3: 00          nop
-26E4: E0          ret  po
-26E5: 28 05       jr   z,$26EC
-26E7: 00          nop
-26E8: E8          ret  pe
-26E9: 28 06       jr   z,$26F1
-26EB: 00          nop
 26EC: FF ...
 
+    ;; Nodes for dino to follow: 24 nodes,
+    ;; four bytes per node: [ x, y, ?, ? ]
+DINO_PATH_4
+2700: 18 38 00 00 20 38 01 00
+2708: 28 38 02 00 30 38 03 00
+2710: 38 38 07 00 40 40 04 00
+2718: 48 40 05 00 50 40 06 00
+2720: 58 40 04 00 68 58 05 00
+27xx: 70 58 06 00 78 58 04 00
+27xx: 80 58 05 00 88 58 06 00
+27xx: 90 58 04 00 98 58 05 00
+27xx: A0 58 06 00 A8 58 04 00
+27xx: B8 40 05 00 C0 40 06 00
+27xx: C8 40 04 00 D0 30 05 00
+27xx: D8 48 06 00 E0 28 04 00
 
-DINO_PATH_4 ;DATA lookup table x/y/?/?
-2700: 18 38       jr   $273A
-2702: 00          nop
-2703: 00          nop
-2704: 20 38       jr   nz,$273E
-2706: 01 00 28    ld   bc,$2800
-2709: 38 02       jr   c,$270D
-270B: 00          nop
-270C: 30 38       jr   nc,$2746
-270E: 03          inc  bc
-270F: 00          nop
-2710: 38 38       jr   c,$274A
-2712: 07          rlca
-2713: 00          nop
-2714: 40          ld   b,b
-2715: 40          ld   b,b
-2716: 04          inc  b
-2717: 00          nop
-2718: 48          ld   c,b
-2719: 40          ld   b,b
-271A: 05          dec  b
-271B: 00          nop
-271C: 50          ld   d,b
-271D: 40          ld   b,b
-271E: 06 00       ld   b,$00
-2720: 58          ld   e,b
-2721: 40          ld   b,b
-2722: 04          inc  b
-2723: 00          nop
-2724: 68          ld   l,b
-2725: 58          ld   e,b
-2726: 05          dec  b
-2727: 00          nop
-2728: 70          ld   (hl),b
-2729: 58          ld   e,b
-272A: 06 00       ld   b,$00
-272C: 78          ld   a,b
-272D: 58          ld   e,b
-272E: 04          inc  b
-272F: 00          nop
-2730: 80          add  a,b
-2731: 58          ld   e,b
-2732: 05          dec  b
-2733: 00          nop
-2734: 88          adc  a,b
-2735: 58          ld   e,b
-2736: 06 00       ld   b,$00
-2738: 90          sub  b
-2739: 58          ld   e,b
-273A: 04          inc  b
-273B: 00          nop
-273C: 98          sbc  a,b
-273D: 58          ld   e,b
-273E: 05          dec  b
-273F: 00          nop
-2740: A0          and  b
-2741: 58          ld   e,b
-2742: 06 00       ld   b,$00
-2744: A8          xor  b
-2745: 58          ld   e,b
-2746: 04          inc  b
-2747: 00          nop
-2748: B8          cp   b
-2749: 40          ld   b,b
-274A: 05          dec  b
-274B: 00          nop
-274C: C0          ret  nz
-274D: 40          ld   b,b
-274E: 06 00       ld   b,$00
-2750: C8          ret  z
-2751: 40          ld   b,b
-2752: 04          inc  b
-2753: 00          nop
-2754: D0          ret  nc
-2755: 30 05       jr   nc,$275C
-2757: 00          nop
-2758: D8          ret  c
-2759: 48          ld   c,b
-275A: 06 00       ld   b,$00
-275C: E0          ret  po
-275D: 28 04       jr   z,$2763
-275F: 00          nop
 2760: FF ...
 
-
-DINO_PATH_5 ;DATA lookup table x/y/?/?
+    ;; Nodes for dino to follow: 24 nodes,
+    ;; four bytes per node: [ x, y, ?, ? ]
+DINO_PATH_5
 2770: 18 38       jr   $27AA
 2772: 00          nop
 2773: 00          nop
@@ -6048,11 +5816,8 @@ DINO_PATH_5 ;DATA lookup table x/y/?/?
 27FF: FF          rst  $38
 
 DINO_PATH_6 ;DATA lookup table x/y/?/?
-2800: 18 E0       jr   $27E2
-2802: 00          nop
-2803: 00          nop
-2804: 20 E0       jr   nz,$27E6
-2806: 01 00 28    ld   bc,$2800
+2800: 18 E0 00 00 20 E0 01 00
+2808: 28    ld   bc,$2800
 2809: E0          ret  po
 280A: 02          ld   (bc),a
 280B: 00          nop
