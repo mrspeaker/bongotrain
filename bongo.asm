@@ -5691,109 +5691,33 @@ DINO_PATH_4
 2710: 38 38 07 00 40 40 04 00
 2718: 48 40 05 00 50 40 06 00
 2720: 58 40 04 00 68 58 05 00
-27xx: 70 58 06 00 78 58 04 00
-27xx: 80 58 05 00 88 58 06 00
-27xx: 90 58 04 00 98 58 05 00
-27xx: A0 58 06 00 A8 58 04 00
-27xx: B8 40 05 00 C0 40 06 00
-27xx: C8 40 04 00 D0 30 05 00
-27xx: D8 48 06 00 E0 28 04 00
+2728: 70 58 06 00 78 58 04 00
+2730: 80 58 05 00 88 58 06 00
+2738: 90 58 04 00 98 58 05 00
+2740: A0 58 06 00 A8 58 04 00
+2748: B8 40 05 00 C0 40 06 00
+2750: C8 40 04 00 D0 30 05 00
+2758: D8 48 06 00 E0 28 04 00
 
 2760: FF ...
 
     ;; Nodes for dino to follow: 24 nodes,
     ;; four bytes per node: [ x, y, ?, ? ]
 DINO_PATH_5
-2770: 18 38       jr   $27AA
-2772: 00          nop
-2773: 00          nop
-2774: 20 38       jr   nz,$27AE
-2776: 01 00 28    ld   bc,$2800
-2779: 38 02       jr   c,$277D
-277B: 00          nop
-277C: 30 38       jr   nc,$27B6
-277E: 03          inc  bc
-277F: 00          nop
-2780: 38 38       jr   c,$27BA
-2782: 02          ld   (bc),a
-2783: 00          nop
-2784: 40          ld   b,b
-2785: 38 07       jr   c,$278E
-2787: 00          nop
-2788: 48          ld   c,b
-2789: 40          ld   b,b
-278A: 04          inc  b
-278B: 00          nop
-278C: 50          ld   d,b
-278D: 40          ld   b,b
-278E: 05          dec  b
-278F: 00          nop
-2790: 58          ld   e,b
-2791: 40          ld   b,b
-2792: 06 00       ld   b,$00
-2794: 60          ld   h,b
-2795: 58          ld   e,b
-2796: 04          inc  b
-2797: 00          nop
-2798: 68          ld   l,b
-2799: 58          ld   e,b
-279A: 05          dec  b
-279B: 00          nop
-279C: 70          ld   (hl),b
-279D: 58          ld   e,b
-279E: 06 00       ld   b,$00
-27A0: 78          ld   a,b
-27A1: 70          ld   (hl),b
-27A2: 04          inc  b
-27A3: 00          nop
-27A4: 80          add  a,b
-27A5: 70          ld   (hl),b
-27A6: 05          dec  b
-27A7: 00          nop
-27A8: 88          adc  a,b
-27A9: 70          ld   (hl),b
-27AA: 06 00       ld   b,$00
-27AC: 90          sub  b
-27AD: 88          adc  a,b
-27AE: 04          inc  b
-27AF: 00          nop
-27B0: 98          sbc  a,b
-27B1: 88          adc  a,b
-27B2: 05          dec  b
-27B3: 00          nop
-27B4: A0          and  b
-27B5: 88          adc  a,b
-27B6: 06 00       ld   b,$00
-27B8: A8          xor  b
-27B9: A0          and  b
-27BA: 04          inc  b
-27BB: 00          nop
-27BC: B0          or   b
-27BD: A0          and  b
-27BE: 05          dec  b
-27BF: 00          nop
-27C0: B8          cp   b
-27C1: A0          and  b
-27C2: 06 00       ld   b,$00
-27C4: C0          ret  nz
-27C5: B8          cp   b
-27C6: 04          inc  b
-27C7: 00          nop
-27C8: C8          ret  z
-27C9: B8          cp   b
-27CA: 05          dec  b
-27CB: 00          nop
-27CC: D0          ret  nc
-27CD: B8          cp   b
-27CE: 06 00       ld   b,$00
-27D0: D8          ret  c
-27D1: D0          ret  nc
-27D2: 04          inc  b
-27D3: 00          nop
-27D4: E0          ret  po
-27D5: D0          ret  nc
-27D6: 05          dec  b
-27D7: 00          nop
+2770: 18 38 00 00 20 38 01 00
+2778: 28 38 02 00 30 38 03 00
+2780: 38 38 02 00 40 38 07 00
+2788: 48 40 04 00 50 40 05 00
+2790: 58 40 06 00 60 58 04 00
+2798: 68 58 05 00 70 58 06 00
+27A0: 78 70 04 00 80 70 05 00
+27A8: 88 70 06 00 90 88 04 00
+27B0: 98 88 05 00 A0 88 06 00
+27B8: A8 A0 04 00 B0 A0 05 00
+27C0: B8 A0 06 00 C0 B8 04 00
+27C8: C8 B8 05 00 D0 B8 06 00
+27D0: D8 D0 04 00 E0 D0 05 00
+
 27D8: FF ...
 
 ;;;
@@ -5817,187 +5741,32 @@ DINO_PATH_5
 
 DINO_PATH_6 ;DATA lookup table x/y/?/?
 2800: 18 E0 00 00 20 E0 01 00
-2808: 28    ld   bc,$2800
-2809: E0          ret  po
-280A: 02          ld   (bc),a
-280B: 00          nop
-280C: 30 D0       jr   nc,$27DE
-280E: 04          inc  b
-280F: 00          nop
-2810: 38 D0       jr   c,$27E2
-2812: 05          dec  b
-2813: 00          nop
-2814: 40          ld   b,b
-2815: B8          cp   b
-2816: 05          dec  b
-2817: 00          nop
-2818: 48          ld   c,b
-2819: B8          cp   b
-281A: 06 00       ld   b,$00
-281C: 50          ld   d,b
-281D: B8          cp   b
-281E: 04          inc  b
-281F: 00          nop
-2820: 58          ld   e,b
-2821: B8          cp   b
-2822: 05          dec  b
-2823: 00          nop
-2824: 60          ld   h,b
-2825: B8          cp   b
-2826: 06 00       ld   b,$00
-2828: 68          ld   l,b
-2829: B8          cp   b
-282A: 04          inc  b
-282B: 00          nop
-282C: 68          ld   l,b
-282D: A0          and  b
-282E: 05          dec  b
-282F: 00          nop
-2830: 70          ld   (hl),b
-2831: A0          and  b
-2832: 06 00       ld   b,$00
-2834: 78          ld   a,b
-2835: A0          and  b
-2836: 04          inc  b
-2837: 00          nop
-2838: 80          add  a,b
-2839: A0          and  b
-283A: 05          dec  b
-283B: 00          nop
-283C: 88          adc  a,b
-283D: A0          and  b
-283E: 06 00       ld   b,$00
-2840: 90          sub  b
-2841: A0          and  b
-2842: 04          inc  b
-2843: 00          nop
-2844: 98          sbc  a,b
-2845: A0          and  b
-2846: 05          dec  b
-2847: 00          nop
-2848: A0          and  b
-2849: 88          adc  a,b
-284A: 06 00       ld   b,$00
-284C: B0          or   b
-284D: 88          adc  a,b
-284E: 04          inc  b
-284F: 00          nop
-2850: B0          or   b
-2851: 88          adc  a,b
-2852: 08          ex   af,af'
-2853: 00          nop
-2854: A8          xor  b
-2855: 88          adc  a,b
-2856: 09          add  hl,bc
-2857: 00          nop
-2858: A0          and  b
-2859: 88          adc  a,b
-285A: 0A          ld   a,(bc)
-285B: 00          nop
-285C: 90          sub  b
-285D: 70          ld   (hl),b
-285E: 08          ex   af,af'
-285F: 00          nop
-2860: 88          adc  a,b
-2861: 70          ld   (hl),b
-2862: 09          add  hl,bc
-2863: 00          nop
-2864: 80          add  a,b
-2865: 70          ld   (hl),b
-2866: 0A          ld   a,(bc)
-2867: 00          nop
-2868: 78          ld   a,b
-2869: 70          ld   (hl),b
-286A: 08          ex   af,af'
-286B: 00          nop
-286C: 70          ld   (hl),b
-286D: 70          ld   (hl),b
-286E: 09          add  hl,bc
-286F: 00          nop
-2870: 68          ld   l,b
-2871: 60          ld   h,b
-2872: 0A          ld   a,(bc)
-2873: 00          nop
-2874: 60          ld   h,b
-2875: 58          ld   e,b
-2876: 08          ex   af,af'
-2877: 00          nop
-2878: 58          ld   e,b
-2879: 58          ld   e,b
-287A: 09          add  hl,bc
-287B: 00          nop
-287C: 50          ld   d,b
-287D: 58          ld   e,b
-287E: 0A          ld   a,(bc)
-287F: 00          nop
-2880: 48          ld   c,b
-2881: 58          ld   e,b
-2882: 04          inc  b
-2883: 00          nop
-2884: 50          ld   d,b
-2885: 58          ld   e,b
-2886: 05          dec  b
-2887: 00          nop
-2888: 58          ld   e,b
-2889: 58          ld   e,b
-288A: 06 00       ld   b,$00
-288C: 60          ld   h,b
-288D: 58          ld   e,b
-288E: 04          inc  b
-288F: 00          nop
-2890: 68          ld   l,b
-2891: 58          ld   e,b
-2892: 05          dec  b
-2893: 00          nop
-2894: 70          ld   (hl),b
-2895: 48          ld   c,b
-2896: 06 00       ld   b,$00
-2898: 78          ld   a,b
-2899: 40          ld   b,b
-289A: 04          inc  b
-289B: 00          nop
-289C: 80          add  a,b
-289D: 40          ld   b,b
-289E: 05          dec  b
-289F: 00          nop
-28A0: 88          adc  a,b
-28A1: 40          ld   b,b
-28A2: 06 00       ld   b,$00
-28A4: 90          sub  b
-28A5: 40          ld   b,b
-28A6: 04          inc  b
-28A7: 00          nop
-28A8: 98          sbc  a,b
-28A9: 40          ld   b,b
-28AA: 05          dec  b
-28AB: 00          nop
-28AC: A0          and  b
-28AD: 38 06       jr   c,$28B5
-28AF: 00          nop
-28B0: A8          xor  b
-28B1: 30 04       jr   nc,$28B7
-28B3: 00          nop
-28B4: B0          or   b
-28B5: 28 05       jr   z,$28BC
-28B7: 00          nop
-28B8: B8          cp   b
-28B9: 28 06       jr   z,$28C1
-28BB: 00          nop
-28BC: C0          ret  nz
-28BD: 28 04       jr   z,$28C3
-28BF: 00          nop
-28C0: C8          ret  z
-28C1: 28 05       jr   z,$28C8
-28C3: 00          nop
-28C4: D0          ret  nc
-28C5: 28 06       jr   z,$28CD
-28C7: 00          nop
-28C8: D8          ret  c
-28C9: 28 04       jr   z,$28CF
-28CB: 00          nop
-28CC: E0          ret  po
-28CD: 28 05       jr   z,$28D4
-28CF: 00          nop
+28xx: 28 E0 02 00 30 D0 04 00
+28xx: 38 D0 05 00 40 B8 05 00
+28xx: 48 B8 06 00 50 B8 04 00
+28xx: 58 B8 05 00 60 B8 06 00
+28xx: 68 B8 04 00 68 A0 05 00
+28xx: 70 A0 06 00 78 A0 04 00
+28xx: 80 A0 05 00 88 A0 06 00
+28xx: 90 A0 04 00 98 A0 05 00
+28xx: A0 88 06 00 B0 88 04 00
+28xx: B0 88 08 00 A8 88 09 00
+28xx: A0 88 0A 00 90 70 08 00
+28xx: 88 70 09 00 80 70 0A 00
+28xx: 78 70 08 00 70 70 09 00
+28xx: 68 60 0A 00 60 58 08 00
+28xx: 58 58 09 00 50 58 0A 00
+28xx: 48 58 04 00 50 58 05 00
+28xx: 58 58 06 00 60 58 04 00
+28xx: 68 58 05 00 70 48 06 00
+28xx: 78 40 04 00 80 40 05 00
+28xx: 88 40 06 00 90 40 04 00
+28xx: 98 40 05 00 A0 38 06 00
+28xx: A8 30 04 00 B0 28 05 00
+28xx: B8 28 06 00 C0 28 04 00
+28xx: C8 28 05 00 D0 28 06 00
+28xx: D8 28 04 00 E0 28 05 00
+
 28D0: FF ...
 
     ;;
@@ -6129,196 +5898,32 @@ GOT_A_BONUS
 29FF: C9          ret
 
 DINO_PATH_7 ;DATA lookup table x/y/?/?
-2A00: 18 E0       jr   $29E2
-2A02: 00          nop
-2A03: 00          nop
-2A04: 20 E0       jr   nz,$29E6
-2A06: 01 00 28    ld   bc,$2800
-2A09: E0          ret  po
-2A0A: 02          ld   (bc),a
-2A0B: 00          nop
-2A0C: 30 E0       jr   nc,$29EE
-2A0E: 03          inc  bc
-2A0F: 00          nop
-2A10: 38 D0       jr   c,$29E2
-2A12: 04          inc  b
-2A13: 00          nop
-2A14: 40          ld   b,b
-2A15: C0          ret  nz
-2A16: 05          dec  b
-2A17: 00          nop
-2A18: 48          ld   c,b
-2A19: B8          cp   b
-2A1A: 06 00       ld   b,$00
-2A1C: 48          ld   c,b
-2A1D: B8          cp   b
-2A1E: 04          inc  b
-2A1F: 00          nop
-2A20: 50          ld   d,b
-2A21: B8          cp   b
-2A22: 05          dec  b
-2A23: 00          nop
-2A24: 58          ld   e,b
-2A25: B8          cp   b
-2A26: 06 00       ld   b,$00
-2A28: 60          ld   h,b
-2A29: B8          cp   b
-2A2A: 04          inc  b
-2A2B: 00          nop
-2A2C: 68          ld   l,b
-2A2D: B0          or   b
-2A2E: 00          nop
-2A2F: 00          nop
-2A30: 70          ld   (hl),b
-2A31: B0          or   b
-2A32: 01 00 78    ld   bc,$7800
-2A35: B0          or   b
-2A36: 02          ld   (bc),a
-2A37: 00          nop
-2A38: 80          add  a,b
-2A39: B0          or   b
-2A3A: 03          inc  bc
-2A3B: 00          nop
-2A3C: 88          adc  a,b
-2A3D: B8          cp   b
-2A3E: 02          ld   (bc),a
-2A3F: 00          nop
-2A40: 98          sbc  a,b
-2A41: B8          cp   b
-2A42: 03          inc  bc
-2A43: 00          nop
-2A44: A8          xor  b
-2A45: B8          cp   b
-2A46: 02          ld   (bc),a
-2A47: 00          nop
-2A48: B0          or   b
-2A49: B0          or   b
-2A4A: 03          inc  bc
-2A4B: 00          nop
-2A4C: B8          cp   b
-2A4D: B0          or   b
-2A4E: 02          ld   (bc),a
-2A4F: 00          nop
-2A50: C0          ret  nz
-2A51: B0          or   b
-2A52: 03          inc  bc
-2A53: 00          nop
-2A54: C8          ret  z
-2A55: A0          and  b
-2A56: 04          inc  b
-2A57: 00          nop
-2A58: D0          ret  nc
-2A59: 90          sub  b
-2A5A: 05          dec  b
-2A5B: 00          nop
-2A5C: D8          ret  c
-2A5D: 88          adc  a,b
-2A5E: 06 00       ld   b,$00
-2A60: E0          ret  po
-2A61: 88          adc  a,b
-2A62: 08          ex   af,af'
-2A63: 00          nop
-2A64: D0          ret  nc
-2A65: 88          adc  a,b
-2A66: 09          add  hl,bc
-2A67: 00          nop
-2A68: D8          ret  c
-2A69: 80          add  a,b
-2A6A: 0A          ld   a,(bc)
-2A6B: 00          nop
-2A6C: C0          ret  nz
-2A6D: 70          ld   (hl),b
-2A6E: 08          ex   af,af'
-2A6F: 00          nop
-2A70: B8          cp   b
-2A71: 70          ld   (hl),b
-2A72: 09          add  hl,bc
-2A73: 00          nop
-2A74: B0          or   b
-2A75: 70          ld   (hl),b
-2A76: 0A          ld   a,(bc)
-2A77: 00          nop
-2A78: 90          sub  b
-2A79: 70          ld   (hl),b
-2A7A: 08          ex   af,af'
-2A7B: 00          nop
-2A7C: 80          add  a,b
-2A7D: 70          ld   (hl),b
-2A7E: 09          add  hl,bc
-2A7F: 00          nop
-2A80: 78          ld   a,b
-2A81: 70          ld   (hl),b
-2A82: 0A          ld   a,(bc)
-2A83: 00          nop
-2A84: 70          ld   (hl),b
-2A85: 70          ld   (hl),b
-2A86: 08          ex   af,af'
-2A87: 00          nop
-2A88: 68          ld   l,b
-2A89: 70          ld   (hl),b
-2A8A: 09          add  hl,bc
-2A8B: 00          nop
-2A8C: 60          ld   h,b
-2A8D: 60          ld   h,b
-2A8E: 0A          ld   a,(bc)
-2A8F: 00          nop
-2A90: 58          ld   e,b
-2A91: 58          ld   e,b
-2A92: 08          ex   af,af'
-2A93: 00          nop
-2A94: 50          ld   d,b
-2A95: 58          ld   e,b
-2A96: 04          inc  b
-2A97: 00          nop
-2A98: 58          ld   e,b
-2A99: 58          ld   e,b
-2A9A: 05          dec  b
-2A9B: 00          nop
-2A9C: 60          ld   h,b
-2A9D: 48          ld   c,b
-2A9E: 06 00       ld   b,$00
-2AA0: 68          ld   l,b
-2AA1: 40          ld   b,b
-2AA2: 04          inc  b
-2AA3: 00          nop
-2AA4: 70          ld   (hl),b
-2AA5: 40          ld   b,b
-2AA6: 05          dec  b
-2AA7: 00          nop
-2AA8: 78          ld   a,b
-2AA9: 40          ld   b,b
-2AAA: 06 00       ld   b,$00
-2AAC: 80          add  a,b
-2AAD: 40          ld   b,b
-2AAE: 04          inc  b
-2AAF: 00          nop
-2AB0: 90          sub  b
-2AB1: 40          ld   b,b
-2AB2: 05          dec  b
-2AB3: 00          nop
-2AB4: B0          or   b
-2AB5: 40          ld   b,b
-2AB6: 06 00       ld   b,$00
-2AB8: B8          cp   b
-2AB9: 40          ld   b,b
-2ABA: 04          inc  b
-2ABB: 00          nop
-2ABC: C0          ret  nz
-2ABD: 40          ld   b,b
-2ABE: 05          dec  b
-2ABF: 00          nop
-2AC0: C8          ret  z
-2AC1: 40          ld   b,b
-2AC2: 06 00       ld   b,$00
-2AC4: D0          ret  nc
-2AC5: 38 04       jr   c,$2ACB
-2AC7: 00          nop
-2AC8: D8          ret  c
-2AC9: 30 05       jr   nc,$2AD0
-2ACB: 00          nop
-2ACC: E0          ret  po
-2ACD: 28 06       jr   z,$2AD5
-2ACF: 00          nop
+2A00: 18 E0 00 00 20 E0 01 00
+2A08: 28 E0 02 00 30 E0 03 00
+2A10: 38 D0 04 00 40 C0 05 00
+2A18: 48 B8 06 00 48 B8 04 00
+2A20: 50 B8 05 00 58 B8 06 00
+2A28: 60 B8 04 00 68 B0 00 00
+2A30: 70 B0 01 00 78 B0 02 00
+2A38: 80 B0 03 00 88 B8 02 00
+2A40: 98 B8 03 00 A8 B8 02 00
+2A48: B0 B0 03 00 B8 B0 02 00
+2A50: C0 B0 03 00 C8 A0 04 00
+2A58: D0 90 05 00 D8 88 06 00
+2A60: E0 88 08 00 D0 88 09 00
+2A68: D8 80 0A 00 C0 70 08 00
+2A70: B8 70 09 00 B0 70 0A 00
+2A78: 90 70 08 00 80 70 09 00
+2A80: 78 70 0A 00 70 70 08 00
+2A88: 68 70 09 00 60 60 0A 00
+2A90: 58 58 08 00 50 58 04 00
+2A98: 58 58 05 00 60 48 06 00
+2AA0: 68 40 04 00 70 40 05 00
+2AA8: 78 40 06 00 80 40 04 00
+2AB0: 90 40 05 00 B0 40 06 00
+2AB8: B8 40 04 00 C0 40 05 00
+2AC0: C8 40 06 00 D0 38 04 00
+2AC8: D8 30 05 00 E0 28 06 00
 
 DRAW_BONUS_STATE
 2AD0: CD D0 16    call $DRAW_BONUS
