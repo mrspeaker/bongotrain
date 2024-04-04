@@ -45,6 +45,10 @@
     LIVES_P2       $8033
     IS_PLAYING     $8034  ; attract mode = 0, 1P = 1, 2P = 2
 
+    CH1_SFX        $8042  ; TUNE N? 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?
+    CH2_SFX        $8043  ; SFX too?
+    SFX_ID         $8044  ; queued sound effect ID to play
+
     IS_HIT_CAGE    $8051  ; did player trigger cage?
     SPEED_DELAY_P1 $805b  : speed for dino/rocks, start=1f, 10, d, then dec 2...
     SPEED_DELAY_P2 $805c  : ...until dead. Smaller delay = faster dino/rock fall
@@ -1148,19 +1152,23 @@ PHYSICS_SOMETHING
 07E4: 21 50 07    ld   hl,$PHYS_LOOKUP2
 07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
-07EB: 21 48 09    ld   hl,$0948 ; not left or right?
+07EB: 21 48 09    ld   hl,$MORE_PHYS_LOOKUP_MAYBE ; not left or right?
 07EE: CD D8 06    call $PLAYER_PHYSICS
 07F1: C9          ret
 
 07F2: FF          rst  $38
 07F3: FF          rst  $38
+
 07F4: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-07F7: 3E 04       ld   a,$04
-07F9: 32 43 80    ld   ($8043),a
+07F7: 3E 04       ld   a,$04    ; wats 4?
+07F9: 32 43 80    ld   ($CH2_SFX),a
 07FC: C9          ret
+
 07FD: FF          rst  $38
 07FE: FF          rst  $38
 07FF: FF          rst  $38
+
+    ;;  totes loks like data... who reads it?
 0800: 01 00 00    ld   bc,$0000
 0803: 00          nop
 0804: 00          nop
@@ -1338,32 +1346,21 @@ BONGO_LOOKUP3
 0930: 3E 18       ld   a,$18
 0932: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 0935: 3E 04       ld   a,$04
-0937: 32 43 80    ld   ($8043),a
+0937: 32 43 80    ld   ($CH2_SFX),a
 093A: C9          ret
     
 093B: FF ...
 
-0948: 00          nop
-0949: 17          rla
-094A: 18 0C       jr   $0958
-094C: 00          nop
-094D: 19          add  hl,de
-094E: 1A          ld   a,(de)
-094F: 0C          inc  c
-0950: 00          nop
-0951: 1B          dec  de
-0952: 1C          inc  e
-0953: 06 00       ld   b,$00
-0955: 9B          sbc  a,e
-0956: 9C          sbc  a,h
-0957: 00          nop
-0958: 00          nop
-0959: 99          sbc  a,c
-095A: 9A          sbc  a,d
-095B: FA 00 97    jp   m,$9700
-095E: 98          sbc  a,b
-095F: F4 00 17    call p,$ADD_SCORE
-0962: 18 F4       jr   $0958
+    ;; dataz
+MORE_PHYS_LOOKUP_MAYBE
+0948: 00 17 18 0C
+094C: 00 19 1A 0C
+0950: 00 1B 1C 06
+0955: 9B 9C 00 00
+0959: 99 9A FA 00
+095D: 97 98 F4 00
+0961: 17 18 F4
+
 0964: FF          rst  $38
 0965: FF          rst  $38
 0966: FF          rst  $38
@@ -1798,7 +1795,7 @@ CHECK_IF_PLAYER_DIED
 
 DO_DEATH_SEQUENCE
 0CC0: 3E 02       ld   a,$02
-0CC2: 32 42 80    ld   ($8042),a
+0CC2: 32 42 80    ld   ($CH1_SFX),a
 0CC5: 32 65 80    ld   ($8065),a
 0CC8: CD A0 0B    call $0BA0
 0CCB: CD 14 0D    call $0D14
@@ -2226,7 +2223,7 @@ EXTRA_LIFE
 1096: 32 32 80    ld   ($LIVES),a
 1099: CD A0 03    call $DRAW_LIVES
 109C: 3E 08       ld   a,$08
-109E: 32 44 80    ld   ($8044),a
+109E: 32 44 80    ld   ($SFX_ID),a
 10A1: C9          ret
 
 10A2: FF ...
@@ -2247,7 +2244,7 @@ EXTRA_LIFE
 10BE: 32 33 80    ld   ($LIVES_P2),a
 10C1: CD A0 03    call $DRAW_LIVES
 10C4: 3E 08       ld   a,$08
-10C6: 32 44 80    ld   ($8044),a
+10C6: 32 44 80    ld   ($SFX_ID),a
 10C9: C9          ret
 
 10CA: FF ...
@@ -4017,16 +4014,17 @@ INIT_SCORE_AND_SCREEN_ONCE
 1C3D: CD 33 0A    call $KILL_PLAYER
 1C40: C9          ret
 
-    ;;
-1C41: 3E 0F       ld   a,$0F
-1C43: 32 44 80    ld   ($8044),a
+PLAY_INTRO_JINGLE
+1C41: 3E 0F       ld   a,$0F    ;intro jingle
+1C43: 32 44 80    ld   ($SFX_ID),a
 1C46: AF          xor  a
-1C47: 32 42 80    ld   ($8042),a
+1C47: 32 42 80    ld   ($CH1_SFX),a
 1C4A: CD E0 24    call $24E0
 1C4D: C9          ret
 
 1C4E: FF FF
 
+;;; dino catches player?
 1C50: 3A 40 81    ld   a,($PLAYER_X)
 1C53: D6 08       sub  $08
 1C55: 32 4C 81    ld   ($DINO_X),a
@@ -5405,7 +5403,7 @@ DINO_PATH_1
 23E3: FE 18       cp   $18
 23E5: C0          ret  nz
 23E6: 3E 07       ld   a,$07
-23E8: 32 44 80    ld   ($8044),a
+23E8: 32 44 80    ld   ($SFX_ID),a
 23EB: C9          ret
 
 23EC: FF ...
@@ -5516,7 +5514,7 @@ DRAW_SCORE
 24F4: 10 F9       djnz $24EF
 24F6: C1          pop  bc
 24F7: 3E 0A       ld   a,$0A
-24F9: 32 44 80    ld   ($8044),a
+24F9: 32 44 80    ld   ($SFX_ID),a
 24FC: C9          ret
 24FD: FF          rst  $38
 24FE: FF          rst  $38
@@ -6270,8 +6268,8 @@ DRAW_BONUS_STATE
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
 2D8C: CD E3 01    call $CALL_HL_PLUS_4K
-2D8F: 3E 09       ld   a,$09
-2D91: 32 42 80    ld   ($8042),a
+2D8F: 3E 09       ld   a,$09    ; extra life sfx?
+2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
 2D95: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2D98: CD B8 37    call $37B8
@@ -8222,7 +8220,7 @@ SCR_TYPE_2
 ;;; Cut sceen
 DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
-3D4A: 32 42 80    ld   ($8042),a
+3D4A: 32 42 80    ld   ($CH1_SFX),a
 3D4D: 32 65 80    ld   ($8065),a
 3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
@@ -8400,7 +8398,7 @@ DO_CUTSCENE
 
 END_CUTSCENE
 3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
-3EB2: 32 42 80    ld   ($8042),a
+3EB2: 32 42 80    ld   ($CH1_SFX),a
 3EB5: 21 50 81    ld   hl,$DINO_X_LEGS ; set a bunch of bytes at 8150
 3EB8: 36 18       ld   (hl),$18
 3EBA: 23          inc  hl
@@ -8738,7 +8736,7 @@ GET_TILE_SCR_POS
 ;;; ; hit bonus
 HIT_BONUS
 40F4: 3E 03       ld   a,$03
-40F6: 32 44 80    ld   ($8044),a
+40F6: 32 44 80    ld   ($SFX_ID),a
 40F9: 21 80 29    ld   hl,$GOT_A_BONUS
 40FC: CD 81 5C    call $JMP_HL
 40FF: C9          ret
@@ -8777,12 +8775,13 @@ HIT_BONUS
 
 4138: FF ...
 
+SET_SYNTH_SETTINGS
 4140: DD 7E 00    ld   a,(ix+$00)
 4143: A7          and  a
 4144: C8          ret  z
 4145: 32 66 80    ld   ($8066),a
 4148: CB 27       sla  a
-414A: 21 00 44    ld   hl,$4400
+414A: 21 00 44    ld   hl,$SFX_SYNTH_SETTINGS
 414D: 85          add  a,l
 414E: 6F          ld   l,a
 414F: 3E 01       ld   a,$01
@@ -8864,40 +8863,49 @@ HIT_BONUS_PRE
 41DB: 32 50 80    ld   ($8050),a
 41DE: C3 F4 40    jp   $HIT_BONUS
 
-41E1: FF          rst  $38
-41E2: FF          rst  $38
+41E1: FF FF
+
 41E3: 3A 00 41    ld   a,($4100)
 41E6: 01 E3 01    ld   bc,$CALL_HL_PLUS_4K
 41E9: C5          push bc
 41EA: E5          push hl
 41EB: C9          ret
+
 41EC: 3E 9C       ld   a,$9C
 41EE: 32 5A 91    ld   ($915A),a
 41F1: C9          ret
+
 41F2: 3E 9D       ld   a,$9D
 41F4: 32 5A 91    ld   ($915A),a
 41F7: C9          ret
+
 41F8: 3E 9D       ld   a,$9D
 41FA: 32 1A 91    ld   ($911A),a
 41FD: C9          ret
+
 41FE: FF          rst  $38
 41FF: FF          rst  $38
+
 4200: DD 21 A0 82 ld   ix,$82A0
 4204: DD 7E 04    ld   a,(ix+$04)
 4207: A7          and  a
 4208: 28 08       jr   z,$4212
-420A: CD 40 41    call $4140
+420A: CD 40 41    call $SET_SYNTH_SETTINGS
 420D: DD 36 04 00 ld   (ix+$04),$00
 4211: C9          ret
+
 4212: CD 80 40    call $4080
 4215: C9          ret
+
 4216: 3E 9C       ld   a,$9C
 4218: 32 B1 91    ld   ($91B1),a
 421B: C9          ret
+
 421C: FF          rst  $38
 421D: FF          rst  $38
 421E: FF          rst  $38
 421F: FF          rst  $38
+
 4220: DD 21 A8 82 ld   ix,$82A8
 4224: DD 7E 04    ld   a,(ix+$04)
 4227: A7          and  a
@@ -8905,15 +8913,19 @@ HIT_BONUS_PRE
 422A: CD 80 41    call $4180
 422D: DD 36 04 00 ld   (ix+$04),$00
 4231: C9          ret
+
 4232: CD C0 40    call $40C0
 4235: C9          ret
+
 4236: 3E 9C       ld   a,$9C
 4238: 32 8E 91    ld   ($918E),a
 423B: C9          ret
+
 423C: FF          rst  $38
 423D: FF          rst  $38
 423E: FF          rst  $38
 423F: FF          rst  $38
+
 4240: DD 21 B0 82 ld   ix,$82B0
 4244: DD 7E 04    ld   a,(ix+$04)
 4247: A7          and  a
@@ -8921,8 +8933,10 @@ HIT_BONUS_PRE
 424A: CD B0 42    call $42B0
 424D: DD 36 04 00 ld   (ix+$04),$00
 4251: C9          ret
+
 4252: CD 00 41    call $4100
 4255: C9          ret
+
 4256: FF          rst  $38
 4257: FF          rst  $38
 
@@ -9068,6 +9082,7 @@ PICKUP_TILE_COLLISION
 
 4356: FF ...
 
+;;;  synth?
 4360: DD 6E 09    ld   l,(ix+$09)
 4363: DD 66 0A    ld   h,(ix+$0a)
 4366: 7E          ld   a,(hl)
@@ -9141,105 +9156,26 @@ PICKUP_TILE_COLLISION
 43FB: C9          ret
 43FC: FF ...
 
-4400: 03          inc  bc
-4401: 24          inc  h
-4402: 03          inc  bc
-4403: F6 02       or   $02
-4405: CC 02 A4    call z,$A402
-4408: 02          ld   (bc),a
-4409: 7E          ld   a,(hl)
-440A: 02          ld   (bc),a
-440B: 5A          ld   e,d
-440C: 02          ld   (bc),a
-440D: 38 02       jr   c,$4411
-440F: 18 02       jr   $4413
-4411: FA 01 DE    jp   m,$DE01
-4414: 01 C3 01    ld   bc,$01C3
-4417: AA          xor  d
-4418: 01 92 01    ld   bc,$0192
-441B: 7B          ld   a,e
-441C: 01 66 01    ld   bc,$0166
-441F: 52          ld   d,d
-4420: 01 3F 01    ld   bc,$013F
-4423: 2D          dec  l
-4424: 01 1C 01    ld   bc,$011C
-4427: 0C          inc  c
-4428: 01 00 00    ld   bc,$0000
-442B: EF          rst  $28
-442C: 00          nop
-442D: E2 00 D5    jp   po,$D500
-4430: 00          nop
-4431: C9          ret
-4432: 00          nop
-4433: BE          cp   (hl)
-4434: 00          nop
-4435: B3          or   e
-4436: 00          nop
-4437: A9          xor  c
-4438: 00          nop
-4439: A0          and  b
-443A: 00          nop
-443B: 96          sub  (hl)
-443C: 00          nop
-443D: 8E          adc  a,(hl)
-443E: 00          nop
-443F: 86          add  a,(hl)
-4440: 00          nop
-4441: 7F          ld   a,a
-4442: 00          nop
-4443: 78          ld   a,b
-4444: 00          nop
-4445: 71          ld   (hl),c
-4446: 00          nop
-4447: 6B          ld   l,e
-4448: 00          nop
-4449: 64          ld   h,h
-444A: 00          nop
-444B: 5F          ld   e,a
-444C: 00          nop
-444D: 59          ld   e,c
-444E: 00          nop
-444F: 54          ld   d,h
-4450: 00          nop
-4451: 50          ld   d,b
-4452: 00          nop
-4453: 4B          ld   c,e
-4454: 00          nop
-4455: 47          ld   b,a
-4456: 00          nop
-4457: 43          ld   b,e
-4458: 00          nop
-4459: 3F          ccf
-445A: 00          nop
-445B: 3C          inc  a
-445C: 00          nop
-445D: 38 00       jr   c,$445F
-445F: 35          dec  (hl)
-4460: 00          nop
-4461: 32 00 2F    ld   ($2F00),a
-4464: 00          nop
-4465: 2C          inc  l
-4466: 00          nop
-4467: 2A 00 28    ld   hl,($2800)
-446A: 00          nop
-446B: 25          dec  h
-446C: 00          nop
-446D: 23          inc  hl
-446E: 00          nop
-446F: 21 00 1F    ld   hl,$1F00
-4472: 00          nop
-4473: 1E 00       ld   e,$00
-4475: 00          nop
-4476: 01 04 01    ld   bc,$0104
-4479: 07          rlca
-447A: 01 FF FF    ld   bc,$FFFF
-447D: FF          rst  $38
-447E: FF          rst  $38
-447F: FF          rst  $38
-4480: FF          rst  $38
-4481: FF          rst  $38
-4482: FF          rst  $38
-4483: FF          rst  $38
+;;; SFX synth settings data
+SFX_SYNTH_SETTINGS
+4400: 03 24 03 F6 02 CC 02 A4
+4408: 02 7E 02 5A 02 38 02 18
+4410: 02 FA 01 DE 01 C3 01 AA
+4418: 01 92 01 7B 01 66 01 52
+4420: 01 3F 01 2D 01 1C 01 0C
+4428: 01 00 00 EF 00 E2 00 D5
+4430: 00 C9 00 BE 00 B3 00 A9
+4438: 00 A0 00 96 00 8E 00 86
+4440: 00 7F 00 78 00 71 00 6B
+4448: 00 64 00 5F 00 59 00 54
+4450: 00 50 00 4B 00 47 00 43
+4458: 00 3F 00 3C 00 38 00 35
+4460: 00 32 00 2F 00 2C 00 2A
+4468: 00 28 00 25 00 23 00 21
+4470: 00 1F 00 1E 00 00 01 04
+4478: 01 07 01
+
+447B: FF ...
 
 ;;; (draw?) Something when on Cage screen
 4484: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -9300,30 +9236,38 @@ PICKUP_TILE_COLLISION
 
 44ED: FF ...
 
+    ;; sfx/tune player
+    ;; plays a few samples of sfx each tick
+
+SFX_01 ; La Cucaracha
 4500: DD 7E 12    ld   a,(ix+$12)
 4503: A7          and  a
-4504: 28 05       jr   z,$450B
+4504: 28 05       jr   z,$SFX_02
 4506: 3D          dec  a
 4507: DD 77 12    ld   (ix+$12),a
 450A: C9          ret
+
+SFX_02 ; Minor-key death ditti
 450B: DD 6E 07    ld   l,(ix+$07)
 450E: DD 66 08    ld   h,(ix+$08)
 4511: 23          inc  hl
 4512: 23          inc  hl
 4513: 7E          ld   a,(hl)
 4514: FE FF       cp   $FF
-4516: 28 0A       jr   z,$4522
+4516: 28 0A       jr   z,$SFX_03
 4518: DD 75 07    ld   (ix+$07),l
 451B: DD 74 08    ld   (ix+$08),h
 451E: CD 20 43    call $4320
 4521: C9          ret
+
+SFX_03 ; Pickup bling
 4522: DD 6E 01    ld   l,(ix+$01)
 4525: DD 66 02    ld   h,(ix+$02)
 4528: 23          inc  hl
 4529: 23          inc  hl
 452A: 7E          ld   a,(hl)
 452B: FE EE       cp   $EE
-452D: 20 23       jr   nz,$4552
+452D: 20 23       jr   nz,$SFX_04
 452F: 23          inc  hl
 4530: 7E          ld   a,(hl)
 4531: 4F          ld   c,a
@@ -9343,8 +9287,11 @@ PICKUP_TILE_COLLISION
 454D: 7E          ld   a,(hl)
 454E: CD 20 43    call $4320
 4551: C9          ret
+
 4552: FE FF       cp   $FF
 4554: C8          ret  z
+
+    ;;  not sfx routine?
 4555: DD 75 01    ld   (ix+$01),l
 4558: DD 74 02    ld   (ix+$02),h
 455B: DD 77 07    ld   (ix+$07),a
@@ -9353,6 +9300,7 @@ PICKUP_TILE_COLLISION
 4560: DD 77 08    ld   (ix+$08),a
 4563: CD 20 43    call $4320
 4566: C9          ret
+
 4567: FF          rst  $38
 4568: 3E 8D       ld   a,$8D
 456A: 32 1A 91    ld   ($911A),a
@@ -9367,12 +9315,16 @@ PICKUP_TILE_COLLISION
 4579: 32 CB 90    ld   ($90CB),a
 457C: CD 70 40    call $4070
 457F: C9          ret
+
+SFX_06 ; cutscene dance start
 4580: DD 7E 13    ld   a,(ix+$13)
 4583: A7          and  a
 4584: 28 05       jr   z,$458B
 4586: 3D          dec  a
 4587: DD 77 13    ld   (ix+$13),a
 458A: C9          ret
+
+    ;; sfxsomething #4
 458B: DD 6E 09    ld   l,(ix+$09)
 458E: DD 66 0A    ld   h,(ix+$0a)
 4591: 23          inc  hl
@@ -9384,6 +9336,8 @@ PICKUP_TILE_COLLISION
 459B: DD 74 0A    ld   (ix+$0a),h
 459E: CD 60 43    call $4360
 45A1: C9          ret
+
+    ;; sfxsomething #5
 45A2: DD 6E 03    ld   l,(ix+$03)
 45A5: DD 66 04    ld   h,(ix+$04)
 45A8: 23          inc  hl
@@ -9410,6 +9364,8 @@ PICKUP_TILE_COLLISION
 45CD: 7E          ld   a,(hl)
 45CE: CD 60 43    call $4360
 45D1: C9          ret
+
+    ;; sfxsomething #6
 45D2: FE FF       cp   $FF
 45D4: C8          ret  z
 45D5: DD 75 03    ld   (ix+$03),l
@@ -9427,6 +9383,7 @@ PICKUP_TILE_COLLISION
 
 45EE: FF ...
 
+    ;; sfxsomething #7
 4600: DD 7E 14    ld   a,(ix+$14)
 4603: A7          and  a
 4604: 28 05       jr   z,$460B
@@ -9444,6 +9401,8 @@ PICKUP_TILE_COLLISION
 461B: DD 74 0C    ld   (ix+$0c),h
 461E: CD A0 43    call $43A0
 4621: C9          ret
+
+    ;; sfxsomething #8
 4622: DD 6E 05    ld   l,(ix+$05)
 4625: DD 66 06    ld   h,(ix+$06)
 4628: 23          inc  hl
@@ -9470,6 +9429,8 @@ PICKUP_TILE_COLLISION
 464D: 7E          ld   a,(hl)
 464E: CD A0 43    call $43A0
 4651: C9          ret
+
+    ;; sfxsomething #9
 4652: FE FF       cp   $FF
 4654: C8          ret  z
 4655: DD 75 05    ld   (ix+$05),l
@@ -9482,7 +9443,7 @@ PICKUP_TILE_COLLISION
 4666: C9          ret
 4667: FF ...
 
-
+;;; sfx something #10
 4680: DD 21 B8 82 ld   ix,$82B8
 4684: DD 7E 0D    ld   a,(ix+$0d)
 4687: A7          and  a
@@ -9502,7 +9463,6 @@ PICKUP_TILE_COLLISION
 
 46A2: FF ...
 
-
 46B0: E1          pop  hl
 46B1: 06 00       ld   b,$00
 46B3: 4F          ld   c,a
@@ -9511,7 +9471,6 @@ PICKUP_TILE_COLLISION
 46B6: C9          ret
 
 46B7: FF ...
-
 
 46C0: 21 B8 82    ld   hl,$82B8
 46C3: 06 18       ld   b,$18
@@ -9522,20 +9481,25 @@ PICKUP_TILE_COLLISION
 
 46CB: FF ...
 
+    ;; gets here on death and re-spawn
+CLEAR_SFX_1
 46D0: CD C0 46    call $46C0
-46D3: 3A 42 80    ld   a,($8042)
+46D3: 3A 42 80    ld   a,($CH1_SFX)
 46D6: CD 30 47    call $4730
 46D9: DD 21 B8 82 ld   ix,$82B8
 46DD: CD 90 47    call $4790
 46E0: AF          xor  a
-46E1: 32 42 80    ld   ($8042),a
+46E1: 32 42 80    ld   ($CH1_SFX),a
 46E4: C9          ret
+
 46E5: FF          rst  $38
 46E6: FF          rst  $38
 46E7: FF          rst  $38
+
 46E8: 3A 34 80    ld   a,($IS_PLAYING)
 46EB: A7          and  a
 46EC: C8          ret  z
+
 46ED: 3A 04 80    ld   a,($PLAYER_NUM)
 46F0: A7          and  a
 46F1: 20 05       jr   nz,$46F8
@@ -9551,16 +9515,14 @@ PICKUP_TILE_COLLISION
 4705: B8          cp   b
 4706: C8          ret  z
 4707: 78          ld   a,b
-4708: 32 42 80    ld   ($8042),a
+4708: 32 42 80    ld   ($CH1_SFX),a ; wat sfx is this?
 470B: 32 65 80    ld   ($8065),a
 470E: C9          ret
 470F: FF ...
 
-
-4720: 76          halt
+4720: 76          halt          ; only halt in file!
 4721: 0D          dec  c
 4722: FF ...
-
 
 ;;;
 4730: CB 27       sla  a
@@ -9702,27 +9664,29 @@ PICKUP_TILE_COLLISION
 4824: C9          ret
 4825: FF ...
 
-4840: 3A 42 80    ld   a,($8042)
+SFX_QUEUER
+4840: 3A 42 80    ld   a,($CH1_SFX)
 4843: A7          and  a
 4844: 20 05       jr   nz,$484B
-4846: CD 80 46    call $4680
+4846: CD 80 46    call $4680    ; (42)==0
 4849: 18 03       jr   $484E
-484B: CD D0 46    call $46D0
-484E: 3A 43 80    ld   a,($8043)
+484B: CD D0 46    call $CLEAR_SFX_1  ; (42)>0
+484E: 3A 43 80    ld   a,($CH2_SFX)
 4851: A7          and  a
 4852: 20 05       jr   nz,$4859
 4854: CD E0 48    call $48E0
 4857: 18 03       jr   $485C
-4859: CD 20 49    call $4920
-485C: 3A 44 80    ld   a,($8044)
+4859: CD 20 49    call $CLEAR_SFX_2
+485C: 3A 44 80    ld   a,($SFX_ID)
 485F: A7          and  a
 4860: 20 05       jr   nz,$4867
-4862: CD 7C 48    call $487C
+4862: CD 7C 48    call $MORE_SFX_SOMETHING
 4865: 18 03       jr   $486A
-4867: CD 9C 48    call $489C
+4867: CD 9C 48    call $PLAY_SFX
 486A: C9          ret
 486B: FF ...
 
+;;; called from PLAY_SFX...
 4870: 21 E8 82    ld   hl,$82E8
 4873: 06 18       ld   b,$18
 4875: 36 00       ld   (hl),$00
@@ -9730,6 +9694,9 @@ PICKUP_TILE_COLLISION
 4878: 10 FB       djnz $4875
 487A: C9          ret
 487B: FF          rst  $38
+
+;;; more sfx something
+MORE_SFX_SOMETHING
 487C: DD 21 E8 82 ld   ix,$82E8
 4880: DD 7E 0D    ld   a,(ix+$0d)
 4883: A7          and  a
@@ -9745,17 +9712,20 @@ PICKUP_TILE_COLLISION
 4895: C8          ret  z
 4896: CD 80 45    call $4580
 4899: C9          ret
-489A: FF          rst  $38
-489B: FF          rst  $38
+
+489A: FF FF
+
+PLAY_SFX
 489C: CD 70 48    call $4870
-489F: 3A 44 80    ld   a,($8044)
+489F: 3A 44 80    ld   a,($SFX_ID)
 48A2: CD 30 47    call $4730
 48A5: DD 21 E8 82 ld   ix,$82E8
 48A9: CD 90 47    call $4790
 48AC: AF          xor  a
-48AD: 32 44 80    ld   ($8044),a
+48AD: 32 44 80    ld   ($SFX_ID),a
 48B0: C9          ret
 48B1: FF          rst  $38
+
 48B2: CD 50 4B    call $4B50
 48B5: CD A8 5A    call $5AA8
 48B8: CD A8 5A    call $5AA8
@@ -9767,6 +9737,7 @@ PICKUP_TILE_COLLISION
 48CA: C9          ret
 48CB: FF ...
 
+;;; Even more sfx something
 48E0: DD 21 D0 82 ld   ix,$82D0
 48E4: DD 7E 0D    ld   a,(ix+$0d)
 48E7: A7          and  a
@@ -9804,13 +9775,14 @@ PICKUP_TILE_COLLISION
 491A: C9          ret
 491B: FF ...
 
+CLEAR_SFX_2
 4920: CD 10 49    call $4910
-4923: 3A 43 80    ld   a,($8043)
+4923: 3A 43 80    ld   a,($CH2_SFX)
 4926: CD 30 47    call $4730
 4929: DD 21 D0 82 ld   ix,$82D0
 492D: CD 90 47    call $4790
 4930: AF          xor  a
-4931: 32 43 80    ld   ($8043),a
+4931: 32 43 80    ld   ($CH2_SFX),a
 4934: C9          ret
 4935: FF ...
 
@@ -9850,9 +9822,8 @@ PICKUP_TILE_COLLISION
 497A: 00          nop
 497B: 00          nop
 497C: C9          ret
-497D: FF          rst  $38
-497E: FF          rst  $38
-497F: FF          rst  $38
+497D: FF ...
+
 4980: 00          nop
 4981: 00          nop
 4982: 0E F0       ld   c,$F0
@@ -9874,21 +9845,10 @@ PICKUP_TILE_COLLISION
 499F: 00          nop
 49A0: 00          nop
 49A1: C9          ret
-49A2: FF          rst  $38
-49A3: FF          rst  $38
-49A4: FF          rst  $38
-49A5: FF          rst  $38
-49A6: FF          rst  $38
-49A7: FF          rst  $38
-49A8: FF          rst  $38
-49A9: FF          rst  $38
-49AA: FF          rst  $38
-49AB: FF          rst  $38
-49AC: FF          rst  $38
-49AD: FF          rst  $38
-49AE: FF          rst  $38
-49AF: FF          rst  $38
+49A2: FF ...
+
 49B0: CD B0 46    call $46B0
+    ;; Is this code or data? 27 cases...
 49B3: 3E 0E       ld   a,$0E
 49B5: C9          ret
 49B6: 00          nop
@@ -9970,7 +9930,9 @@ PICKUP_TILE_COLLISION
 4A1B: 3E 0E       ld   a,$0E
 4A1D: C9          ret
 4A1E: 00          nop
+
 4A1F: FF          rst  $38
+
 4A20: 15          dec  d
 4A21: 01 17 01    ld   bc,$0117
 4A24: 19          add  hl,de
@@ -10637,7 +10599,7 @@ DONE_CAGED_DINO
 4E74: FF          rst  $38
 4E75: F5          push af
 4E76: 3E 05       ld   a,$05
-4E78: 32 44 80    ld   ($8044),a
+4E78: 32 44 80    ld   ($SFX_ID),a
 4E7B: F1          pop  af
 4E7C: 21 C9 91    ld   hl,$91C9
 4E7F: C9          ret
@@ -11603,7 +11565,7 @@ TBL_1
 556E: FF          rst  $38
 556F: FF          rst  $38
 
-;;;
+;;; looks data-y
 5570: 3A 00 B8    ld   a,($WATCHDOG)
 5573: 21 40 90    ld   hl,$9040
 5576: C1          pop  bc

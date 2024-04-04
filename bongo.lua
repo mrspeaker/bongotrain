@@ -7,12 +7,12 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {14, 18, 26}: repeat a sequence of screens
 
 disable_dino = true   -- no pesky dino... but now you can't catch him
-fast_death = true     -- restart super fast after death
+fast_death = true    -- restart super fast after death
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
-alt_bongo_place = true -- I think was supposed to put guy on the ground for highwire levels
+alt_bongo_place = false -- I think was supposed to put guy on the ground for highwire levels
 ---------------------
 
 mem = manager.machine.devices[":maincpu"].spaces["program"]

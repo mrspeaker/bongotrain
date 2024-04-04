@@ -6,7 +6,8 @@ debug -> new memory window
 drop down device dropdown, look for the "zero page" (seems to be 8000-83fff for bongo)
 find the cheat (I just eyeballed it... cheat didn't seem to work?) - lives at 32 (actually 8032!)
 set it with: `do b@8032 = 10`... boom, 10 lives.
-look for write: wpset 8032,1,w 
+look for write: wpset 8032,1,w
+wpset 8042,1,w,,{ printf "w@%04X : %02X",wpaddr,wpdata ; g }
 0247 ld (hl),a ... one opcode! 77. How to nop it out?
 
 video ram:
@@ -246,3 +247,11 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
 	map(0xb000, 0xb000).mirror(0x7f8).nopw(); // interrupt enable moved
 	map(0xb001, 0xb001).mirror(0x7f8).w(FUNC(galaxian_state::irq_enable_w));
 	map(0xb800, 0xb800).mirror(0x7ff).nopw(); // written once at start
+
+
+    ----
+
+    Secret track
+    
+    woah, secret track: 0x0b sfx (set 0x8042/3/4...) wow. crazy.
+    0x10 is hilarious... but think it's just playing game code as sfx.
