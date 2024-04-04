@@ -13,16 +13,18 @@
 
     TICK_MOD_3     $8000  ; timer for every 3 frames
     TICK_MOD_6     $8001  ; timer for every 6 frames
+    PL_Y_LEGS_COPY $8002  ; copy of player y legs?
+    _              $8003  ; ? used with 8002 s bunch
     PLAYER_NUM     $8004  ; current player
     JUMP_BTN_DOWN  $8005  ; player is holding down the jump button
     SECOND_TIMER   $8006
     P1_TIME        $8007  ; time of player's run: never displayed!
     P2_TIME        $8009  ; ...we could have had speed running!
-    CONTROLS:      $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
-    BUTTONS_1:     $800C  ; P1/P2 buttons... and?
-    BUTTONS_2:     $800D  ; ... more buttons?
-    CONTROLSN:     $800E  ; some kind of "normalized" controls
-    JUMP_ACC:      $800F
+    CONTROLS       $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
+    BUTTONS_1      $800C  ; P1/P2 buttons... and?
+    BUTTONS_2      $800D  ; ... more buttons?
+    CONTROLSN      $800E  ; some kind of "normalized" controls
+    JUMP_ACC       $800F
     P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
     P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
     SCORE_TO_ADD   $801D  ; amount to add to the current score
@@ -33,8 +35,8 @@
     BONGO_DIR_FLAG $8025 ; 4 = jump | 2 = left | 1 = right
     BONGO_TIMER    $8027  ; ticks 0-1f for troll
 
-    SCREEN_NUM:    $8029  ; Current screen player is on
-    SCREEN_NUM_P2: $802A  ; Player 2 screen
+    SCREEN_NUM     $8029  ; Current screen player is on
+    SCREEN_NUM_P2  $802A  ; Player 2 screen
     DINO_COUNTER   $802D  ; Ticks up when DINO_TIMER is done
 
     PLAYER_PREV_X  $8030  ; maybe previous x (used to calc score move)
@@ -51,7 +53,7 @@
     BONUSES        $8060  ; How many bonuses collected
     BONUS_MULT     $8062  ; Bonus multiplier.
 
-    _???           $8010  ; whats tis?
+    _              $8010  ; whats tis?
     FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
     PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
     _UNUSED_1      $801B  ; unused? Set once, never read
@@ -97,18 +99,20 @@
     ENEMY_3_Y      $815F
 ;;; ============================
 
-    PLATFORM_XOFFS $8180 ; maybe
+    PLATFORM_XOFFS $8180  ; maybe
 
     CREDITS        $8303
-    _              $8305 ; Coins? dunno
+    _              $8305  ; Coins? dunno
 
     TICK_NUM       $8312  ; adds 1 every tick
-    INPUT_BUTTONS  $83F1  ; copied to 800C and 800D
-    INPUT_BUTTONS_2 $83F2 ; dunno
+
+    STACK_LOCATION  $83F0  ; I think?
+    INPUT_BUTTONS   $83F1  ; copied to 800C and 800D
+    INPUT_BUTTONS_2 $83F2  ; dunno what buttons
 
 ;;;  constants
 
-    SCREEN_WIDTH    $E0 ; 224
+    SCREEN_WIDTH    $E0  ; 224
     ROUND1_SPEED    $1f
     ROUND2_SPEED    $10
     ROUND3_SPEED    $0D
@@ -119,25 +123,28 @@
 
 ;;; hardware
 
-    _???            $4000
-    SCREEN_RAM      $9000 ;
+    SCREEN_RAM      $9000 ; - 0x93ff  videoram
     START_OF_TILES  $9040 ; top right tile...
     XOFF_COL_RAM    $9800 ; xoffset and color data per tile row
-    SPRITES         $9840
-
+    SPRITES         $9840 ; 0x9800 - 0x98ff is spriteram
+    PORT_IN0        $A000 ;
+    PORT_IN1        $A800 ;
+    PORT_IN2        $B000 ;
+    INT_ENABLE      $b001 ; interrupt enable
+    WATCHDOG        $b800 ; main timer?
 
 0000: A2          and  d
-0001: 32 01 B0    ld   ($B001),a
+0001: 32 01 B0    ld   ($INT_ENABLE),a
 0004: 32 FF 80    ld   ($80FF),a
 0007: 3E FF       ld   a,$FF
-0009: 32 00 B8    ld   ($B800),a
+0009: 32 00 B8    ld   ($WATCHDOG),a
 000C: C3 A0 14    jp   $CLEAR_SCREEN
 
-000F: 31 F0 83    ld   sp,$83F0
+000F: 31 F0 83    ld   sp,$STACK_LOCATION
 0012: CD 00 3F    call $3F00
 0015: CD 48 00    call $0048
-0018: CD 88 22    call $2288
-001B: C3 8D 00    jp   $008D
+0018: CD 88 22    call $WRITE_TO_0_AND_1
+001B: C3 8D 00    jp   $SETUP
 
 001E: DD 19       add  ix,de
 0020: DD 19       add  ix,de
@@ -152,11 +159,11 @@
 0030: DD          db   $dd
 0031: FF ...
 
-0038: 3A 00 B8    ld   a,($B800)
-003B: 18 FB       jr   $0038
+0038: 3A 00 B8    ld   a,($WATCHDOG)
+003B: 18 FB       jr   $0038    ;infinite loop?
 003D: FF ...
 
-0048: 3A 00 A0    ld   a,($A000) ; PORT IN0?
+0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
@@ -174,8 +181,8 @@
 0063: 18 E3       jr   $0048
 0065: FF          rst  $38
 0066: AF          xor  a
-0067: 32 01 B0    ld   ($B001),a
-006A: 3A 00 B8    ld   a,($B800)
+0067: 32 01 B0    ld   ($INT_ENABLE),a
+006A: 3A 00 B8    ld   a,($WATCHDOG)
 006D: CD C0 00    call $00C0
 0070: 3A 34 80    ld   a,($IS_PLAYING)
 0073: A7          and  a
@@ -185,14 +192,14 @@
 007B: CD 00 11    call $FALLING_ROCKS
 007E: CD 20 24    call $2420
 0081: 00          nop
-0082: 3A 00 A0    ld   a,($A000) ; coin 2 addr
+0082: 3A 00 A0    ld   a,($PORT_IN0)
 0085: CB 4F       bit  1,a
 0087: C2 03 C0    jp   nz,$C003
 008A: ED 45       retn
 
-008C: FF          rst  $38
+008C: FF
 
-;;; ;
+SETUP
 008D: CD 48 03    call $0348
 0090: CD 80 30    call $3080
 0093: CD A0 13    call $WAIT_VBLANK
@@ -213,7 +220,9 @@
 00B9: A7          and  a
 00BA: C2 E7 01    jp   nz,$RESET_A_BUNCH
 00BD: 18 E5       jr   $00A4
-00BF: FF          rst  $38
+00BF: FF
+
+    ;;
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
 00C4: CD 50 15    call $COPY_XOFFS_COL_SPRITES_TO_SCREEN
@@ -221,7 +230,9 @@
 00CA: CD D0 01    call $01D0
 00CD: D9          exx
 00CE: C9          ret
-00CF: FF          rst  $38
+00CF: FF
+
+;;;
 00D0: 3E 01       ld   a,$01
 00D2: 32 90 80    ld   ($8090),a
 00D5: AF          xor  a
@@ -317,7 +328,7 @@
     ;; called a lot (via... CALL_HL_PLUS_4K)
 DO_CALL_HL_PLUS_4K
 0180: C5          push bc
-0181: 01 00 40    ld   bc,$4000
+0181: 01 00 40    ld   bc,$INT_HANDLER
 0184: 09          add  hl,bc
 0185: C1          pop  bc
 0186: E9          jp   (hl)
@@ -358,7 +369,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01CB: FF ...
 
 ;;;
-01D0: 3A 00 A0    ld   a,($A000) ; IO IN0
+01D0: 3A 00 A0    ld   a,($PORT_IN0)
 01D3: 32 0B 80    ld   ($CONTROLS),a
 01D6: 3A F1 83    ld   a,($INPUT_BUTTONS)
 01D9: 32 0C 80    ld   ($800C),a
@@ -370,14 +381,13 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 CALL_HL_PLUS_4K
 01E3: C3 80 01    jp   $DO_CALL_HL_PLUS_4K
 01E6: C9          ret
-;;;
 
 RESET_A_BUNCH
 01E7: 3E 1F       ld   a,$ROUND1_SPEED
 01E9: 32 5B 80    ld   ($SPEED_DELAY_P1),a
 01EC: 32 5C 80    ld   ($SPEED_DELAY_P2),a
 01EF: 00          nop
-01F0: 3A F2 83    ld   a,($83F2) ; from dip-switch settings?
+01F0: 3A F2 83    ld   a,($INPUT_BUTTONS_2) ; from dip-switch settings?
 01F3: E6 06       and  $06
 01F5: CB 2F       sra  a
 01F7: C6 02       add  a,$02
@@ -431,7 +441,7 @@ RESET_A_BUNCH
 0260: AF          xor  a
 0261: 32 06 B0    ld   ($B006),a
 0264: 32 07 B0    ld   ($B007),a
-0267: 3A F2 83    ld   a,($83F2)
+0267: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
 026A: CB 5F       bit  3,a
 026C: 28 10       jr   z,$027E
 026E: 3E 03       ld   a,$03    ; set 3 lives
@@ -452,13 +462,13 @@ COINAGE_ROUTINE
 028E: 3D          dec  a
 028F: 32 06 83    ld   ($8306),a
 0292: C0          ret  nz
-0293: 3A 00 A0    ld   a,($A000)
+0293: 3A 00 A0    ld   a,($PORT_IN0)
 0296: E6 03       and  $03
 0298: C8          ret  z
 0299: 3E 05       ld   a,$05
 029B: 32 06 83    ld   ($8306),a
 029E: C9          ret
-029F: 3A 00 A0    ld   a,($A000)
+029F: 3A 00 A0    ld   a,($PORT_IN0)
 02A2: E6 03       and  $03
 02A4: C8          ret  z
 02A5: 47          ld   b,a
@@ -517,12 +527,9 @@ COINAGE_ROUTINE
 0308: 32 05 83    ld   ($8305),a
 030B: C9          ret
     
-030C: FF          rst  $38
-030D: FF          rst  $38
-030E: FF          rst  $38
-030F: FF          rst  $38
+030C: FF ...
     
-0310: 3A 00 B8    ld   a,($B800)
+0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$9040
 0316: C1          pop  bc
 0317: 0A          ld   a,(bc)
@@ -566,7 +573,7 @@ COINAGE_ROUTINE
 0353: 2C          inc  l
 0354: 20 FB       jr   nz,$0351
 0356: 24          inc  h
-0357: 3A 00 B8    ld   a,($B800)
+0357: 3A 00 B8    ld   a,($WATCHDOG)
 035A: 7C          ld   a,h
 035B: FE 88       cp   $88
 035D: 20 F2       jr   nz,$0351
@@ -591,7 +598,7 @@ COINAGE_ROUTINE
 038D: 00          nop
 038E: C9          ret
     
-038F: FF          rst  $38
+038F: FF
     
 0390: CD A0 13    call $WAIT_VBLANK
 0393: 18 FB       jr   $0390
@@ -637,7 +644,7 @@ DRAW_LIVES
 03E3: 32 A2 91    ld   ($91A2),a
 03E6: C9          ret
     
-03E7: FF          rst  $38
+03E7: FF
     
 03E8: AF          xor  a
 03E9: 32 34 80    ld   ($IS_PLAYING),a
@@ -658,8 +665,7 @@ DRAW_LIVES
 040A: 32 05 81    ld   ($SCREEN_XOFF_COL+5),a
 040D: C9          ret
     
-040E: FF          rst  $38
-040F: FF          rst  $38
+040E: FF FF
     
 0410: 21 E8 16    ld   hl,$16E8
 0413: CD E3 01    call $CALL_HL_PLUS_4K
@@ -703,12 +709,7 @@ DRAW_LIVES
 0466: DC E0 04    call c,$04E0
 0469: C9          ret
     
-046A: FF          rst  $38
-046B: FF          rst  $38
-046C: FF          rst  $38
-046D: FF          rst  $38
-046E: FF          rst  $38
-046F: FF          rst  $38
+046A: FF ...
     
 0470: 3A 19 80    ld   a,($P2_SCORE+2)
 0473: 4F          ld   c,a
@@ -734,6 +735,7 @@ DRAW_LIVES
 0495: 99          sbc  a,c
 0496: DC 00 05    call c,$0500
 0499: C9          ret
+
 049A: FF ...
 
 04B0: 0E 01       ld   c,$01
@@ -742,7 +744,7 @@ DRAW_LIVES
 04B6: 20 FA       jr   nz,$04B2
 04B8: C9          ret
     
-04B9: FF          rst  $38
+04B9: FF
 
 ;; count up timer - every SPEED_DELAY ticks
 CHECK_DINO_TIMER
@@ -765,9 +767,7 @@ CHECK_DINO_TIMER
 04D9: CD F0 22    call $DINO_PATHFIND_NOPSLIDE
 04DC: C9          ret
     
-04DD: FF          rst  $38
-04DE: FF          rst  $38
-04DF: FF          rst  $38
+04DD: FF FF FF
     
 04E0: 3A 14 80    ld   a,($P1_SCORE)
 04E3: 32 00 83    ld   ($8300),a
@@ -789,11 +789,10 @@ CHECK_DINO_TIMER
 0512: E1          pop  hl
 0513: C9          ret
     
-0514: FF          rst  $38
-0515: FF          rst  $38
-0516: FF          rst  $38
-0517: FF          rst  $38
-    
+0514: FF ...
+
+    ;; This looks suspicious. 25 bytes written
+    ;; to $8038+, code is never called.
 0518: 21 38 80    ld   hl,$8038
 051B: 36 39       ld   (hl),$39
 051D: 23          inc  hl
@@ -844,7 +843,7 @@ CHECK_DINO_TIMER
 0560: 36 30       ld   (hl),$30
 0562: 23          inc  hl
 0563: 36 30       ld   (hl),$30
-0565: CD 88 08    call $0888
+0565: CD 88 08    call $CLEAR_JUMP_BUTTON
 0568: C9          ret
     
 0569: FF ...
@@ -913,25 +912,15 @@ NORMALIZE_INPUT
     
 05FF: FF ...
 
-0608: 0C          inc  c
-0609: 0E 10       ld   c,$10
-060B: 0E 0C       ld   c,$0C
-060D: 12          ld   (de),a
-060E: 14          inc  d
-060F: 12          ld   (de),a
-0610: FF          rst  $38
-0611: FF          rst  $38
-0612: FF          rst  $38
-0613: FF          rst  $38
-0614: FF          rst  $38
-0615: FF          rst  $38
-0616: FF          rst  $38
-0617: FF          rst  $38
+PLAYER_FRAME_DATA               ; whats this anim?
+0608: 0C 0E 10 0E 0C 12 14 12
+0610: FF FF FF FF FF FF FF FF
+
 0618: 3A 10 80    ld   a,($8010)
 061B: 3C          inc  a
 061C: E6 07       and  $07
 061E: 32 10 80    ld   ($8010),a
-0621: 21 08 06    ld   hl,$0608
+0621: 21 08 06    ld   hl,$PLAYER_FRAME_DATA
 0624: 85          add  a,l
 0625: 6F          ld   l,a
 0626: 7E          ld   a,(hl)
@@ -951,27 +940,15 @@ NORMALIZE_INPUT
     
 063E: FF ...
 
-0648: 8C          adc  a,h
-0649: 8E          adc  a,(hl)
-064A: 90          sub  b
-064B: 8E          adc  a,(hl)
-064C: 8C          adc  a,h
-064D: 92          sub  d
-064E: 94          sub  h
-064F: 92          sub  d
-0650: FF          rst  $38
-0651: FF          rst  $38
-0652: FF          rst  $38
-0653: FF          rst  $38
-0654: FF          rst  $38
-0655: FF          rst  $38
-0656: FF          rst  $38
-0657: FF          rst  $38
+PLAYER_FRAME_DATA_2             ;what's this anim?
+0648: 8C 8E 90 8E 8C 92 94 92
+0650: FF FF FF FF FF FF FF FF
+
 0658: 3A 10 80    ld   a,($8010)
 065B: 3C          inc  a
 065C: E6 07       and  $07
 065E: 32 10 80    ld   ($8010),a
-0661: 21 48 06    ld   hl,$0648
+0661: 21 48 06    ld   hl,$PLAYER_FRAME_DATA_2
 0664: 85          add  a,l
 0665: 6F          ld   l,a
 0666: 7E          ld   a,(hl)
@@ -1272,7 +1249,7 @@ PHYSICS_SOMETHING
 0875: DD BE 00    cp   (ix+$00)
 0878: 28 06       jr   z,$0880
 087A: 09          add  hl,bc
-087B: 3A 00 B8    ld   a,($B800)
+087B: 3A 00 B8    ld   a,($WATCHDOG)
 087E: 18 EB       jr   $086B
 0880: D9          exx
 0881: C9          ret
@@ -1285,6 +1262,7 @@ CLEAR_JUMP_BUTTON
 088E: AF          xor  a
 088F: 32 05 80    ld   (JUMP_BTN_DOWN),a
 0892: C9          ret
+
 0893: FF ...
 
 INIT_PLAYER_SPRITE
@@ -2228,8 +2206,8 @@ MAIN_LOOP
 104E: CD 30 11    call $UPDATE_CUSTOM_SCREEN_LOGIC
 1051: CD 70 11    call $UPDATE_EVERYTHING ; Main logic
 1054: CD A0 13    call $WAIT_VBLANK
-1057: 3A 00 B8    ld   a,($B800) ; what? Interrup ack?
-105A: 3A 00 40    ld   a,($4000) ; what? Interrup ack?
+1057: 3A 00 B8    ld   a,($WATCHDOG)    ; why load? ack?
+105A: 3A 00 40    ld   a,($INT_HANDLER) ; why load?
 105D: 18 EC       jr   $MAIN_LOOP
 
 105F: FF          rst  $38
@@ -2447,7 +2425,8 @@ UPDATE_EVERYTHING
 11FC: C9          ret
 11FD: FF ...
 
-    ;; Ooh, what's this checking?
+    ;; Ooh, what's this checking/setting?
+    ;; Called from a few places
 PLAYER_POS_???
 1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1203: 47          ld   b,a
@@ -2674,14 +2653,14 @@ DRAW_BACKGROUND
 WAIT_VBLANK
 13A0: 06 00       ld   b,$00
 13A2: 3E 01       ld   a,$01
-13A4: 32 01 B0    ld   ($B001),a
-13A7: 3A 00 B8    ld   a,($B800)
+13A4: 32 01 B0    ld   ($INT_ENABLE),a ; enable interrupts
+13A7: 3A 00 B8    ld   a,($WATCHDOG)
 13AA: 78          ld   a,b
 13AB: FE 01       cp   $01
 13AD: 20 F3       jr   nz,$13A2
 13AF: AF          xor  a
-13B0: 32 01 B0    ld   ($B001),a
-13B3: 3A 00 B8    ld   a,($B800)
+13B0: 32 01 B0    ld   ($INT_ENABLE),a ; disable interrupts
+13B3: 3A 00 B8    ld   a,($WATCHDOG)
 13B6: C9          ret
 
 13B7: FF
@@ -5285,8 +5264,10 @@ DINO_COLLISION
 2281: 00          nop
 2282: 09          add  hl,bc
 2283: FC 00 1E    call m,$1E00
-2286: FC FF 3E    call m,$3EFF
-2289: 07          rlca
+2286: FC FF
+
+WRITE_TO_0_AND_1
+2288: 3E 07       ld   a,$07
 228A: D3 00       out  ($00),a
 228C: 3E 38       ld   a,$38
 228E: D3 01       out  ($01),a
@@ -5468,15 +5449,15 @@ DINO_ANIM_LOOKUP
 
 2418: FF ...
 
-2420: 3A 00 A8    ld   a,($A800) ; PORT_IN1
+2420: 3A 00 A8    ld   a,($PORT_IN1)
 2423: 32 F1 83    ld   ($INPUT_BUTTONS),a
-2426: 3A 00 B0    ld   a,($B000)
-2429: 32 F2 83    ld   ($83F2),a
+2426: 3A 00 B0    ld   a,($PORT_IN2)
+2429: 32 F2 83    ld   ($INPUT_BUTTONS_2),a
 242C: CD 40 36    call $3640
 242F: C9          ret
 
 2430: 06 00       ld   b,$00
-2432: 3A 00 B8    ld   a,($B800)
+2432: 3A 00 B8    ld   a,($WATCHDOG)
 2435: 05          dec  b
 2436: 20 FA       jr   nz,$2432
 2438: C9          ret
@@ -5706,7 +5687,7 @@ DINO_PATH_2                     ;DATA lookup table x/y/?/?
 2612: 02          ld   (bc),a
 2613: 00          nop
 2614: 38 E0       jr   c,$25F6
-2616: 01 00 40    ld   bc,$4000
+2616: 01 00 40    ld   bc,$INT_HANDLER
 2619: D8          ret  c
 261A: 02          ld   (bc),a
 261B: 00          nop
@@ -6801,7 +6782,7 @@ DRAW_BONUS_STATE
 2C79: 28 04       jr   z,$2C7F
 2C7B: CB 78       bit  7,b
 2C7D: 20 09       jr   nz,$2C88
-2C7F: 3A 00 A0    ld   a,($A000) ; port IN0?
+2C7F: 3A 00 A0    ld   a,($PORT_IN0)
 2C82: CB 6F       bit  5,a
 2C84: C4 D8 2E    call nz,$2ED8
 2C87: C9          ret
@@ -7075,7 +7056,7 @@ DRAW_BONUS_STATE
 2E8B: 28 06       jr   z,$2E93
 2E8D: DD CB 00 7E bit  7,(ix+$00)
 2E91: 20 04       jr   nz,$2E97
-2E93: DD 21 00 A0 ld   ix,$A000 ; port in0?
+2E93: DD 21 00 A0 ld   ix,$PORT_IN0
 2E97: DD CB 00 5E bit  3,(ix+$00)
 2E9B: 28 03       jr   z,$2EA0
 2E9D: CD A8 2F    call $2FA8
@@ -8022,7 +8003,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3647: 3E 0E       ld   a,$0E
 3649: D3 00       out  ($00),a
 364B: DB 02       in   a,($02)
-364D: 32 F2 83    ld   ($83F2),a
+364D: 32 F2 83    ld   ($INPUT_BUTTONS_2),a
 3650: E6 C0       and  $C0
 3652: 81          add  a,c
 3653: 32 F1 83    ld   ($INPUT_BUTTONS),a
@@ -9251,14 +9232,15 @@ END_CUTSCENE
 
 3FFA: FF ...
 
+INT_HANDLER
 4000: AF          xor  a
-4001: 32 01 B0    ld   ($B001),a
+4001: 32 01 B0    ld   ($INT_ENABLE),a
 4004: 3A 40 40    ld   a,($4040)
 4007: 00          nop
 4008: 00          nop
 4009: 00          nop
 400A: 3E FF       ld   a,$FF
-400C: 32 00 B8    ld   ($B800),a
+400C: 32 00 B8    ld   ($WATCHDOG),a
 400F: 31 F0 83    ld   sp,$83F0
 4012: 3A 40 40    ld   a,($4040)
 4015: 00          nop
@@ -9286,7 +9268,8 @@ END_CUTSCENE
 4038: 21 00 C0    ld   hl,$C000
 403B: CD 81 5C    call $JMP_HL
 403E: C9          ret
-403F: FF          rst  $38
+403F: FF
+
 4040: CD 68 45    call $4568
 4043: 3E 8E       ld   a,$8E
 4045: 32 7A 92    ld   ($927A),a
@@ -12267,7 +12250,7 @@ TBL_1
 556F: FF          rst  $38
 
 ;;;
-5570: 3A 00 B8    ld   a,($B800)
+5570: 3A 00 B8    ld   a,($WATCHDOG)
 5573: 21 40 90    ld   hl,$9040
 5576: C1          pop  bc
 5577: 0A          ld   a,(bc)
