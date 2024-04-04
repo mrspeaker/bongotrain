@@ -1573,7 +1573,8 @@ FALL_UNDER_A_LEDGE
 0AD9: 18 03       jr   $0ADE
 0ADB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 0ADE: 3D          dec  a
-0ADF: 21 00 0B    ld   hl,$0B00
+0ADF: 21 00 0B    ld   hl,$SOME_DATA_1
+
 0AE2: CB 27       sla  a
 0AE4: 85          add  a,l
 0AE5: 6F          ld   l,a
@@ -1593,35 +1594,18 @@ FALL_UNDER_A_LEDGE
     
 0AF9: FF ...
 
-0B00: 38 0C       jr   c,$0B0E
-0B02: 38 0C       jr   c,$0B10
-0B04: 38 0C       jr   c,$0B12
-0B06: 38 0C       jr   c,$0B14
-0B08: 38 0C       jr   c,$0B16
-0B0A: 38 0C       jr   c,$0B18
-0B0C: 38 0C       jr   c,$0B1A
-0B0E: 38 0C       jr   c,$0B1C
-0B10: 38 0C       jr   c,$0B1E
-0B12: 38 0C       jr   c,$0B20
-0B14: 38 0C       jr   c,$0B22
-0B16: 38 0C       jr   c,$0B24
-0B18: 38 0C       jr   c,$0B26
-0B1A: 38 0C       jr   c,$0B28
-0B1C: 38 0C       jr   c,$0B2A
-0B1E: 10 0C       djnz $0B2C
-0B20: 38 0C       jr   c,$0B2E
-0B22: 38 0C       jr   c,$0B30
-0B24: 10 0C       djnz $0B32
-0B26: 38 0C       jr   c,$0B34
-0B28: 38 0C       jr   c,$0B36
-0B2A: 38 0C       jr   c,$0B38
-0B2C: 38 0C       jr   c,$0B3A
-0B2E: 38 0C       jr   c,$0B3C
-0B30: 38 0C       jr   c,$0B3E
-0B32: 38 0C       jr   c,$0B40
-0B34: 10 0C       djnz $0B42
-0B36: 00 x 71
-0B7C: FF FF FF FF
+;;; platform data? nah. 2 bytes per screen
+SOME_DATA_1
+0B00: 38 0C 38 0C 38 0C 38 0C
+0B0A: 38 0C 38 0C 38 0C 38 0C
+0B12: 38 0C 38 0C 38 0C 38 0C
+0B1A: 38 0C 38 0C 10 0C 38 0C
+0B22: 38 0C 10 0C 38 0C 38 0C
+0B2A: 38 0C 38 0C 38 0C 38 0C
+0B32: 38 0C 10 0C
+
+0B36: 00 ...
+0B7C: FF ...
     
 0B80: DD 7E 01    ld   a,(ix+$01)
 0B83: DD 77 03    ld   (ix+$03),a
@@ -1876,7 +1860,7 @@ DO_DEATH_SEQUENCE
     ;; Oooh, mystery function - commented out.
     ;; Think it was going to place Bongo on the
     ;; bottom right for levels where player is
-    ;; up top.
+    ;; up top. Only looks correct for those levels.
 MOVE_BONGO_REDACTED
 0D40: C9          ret           ; just rets.
 0D41: 3A 48 81    ld   a,($BONGO_X)
