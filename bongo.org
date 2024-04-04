@@ -219,3 +219,30 @@ PREVENT_CLOUD_JUMP_REDACTED
 
 
 mini "bug" 8011 "falling timer' continues over to next screen - but you're on the ground, so next frame it resets. But, I reckon if you could time your fall so you got out of the screen when teh timer was 1, you'd die on the first frame of the next screen...
+
+* mame bongo
+inputs:
+https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/src/mame/galaxian/galaxian.cpp#L4663
+
+	map(0xa000, 0xa000).mirror(0x07ff).portr("IN0");
+	map(0xa800, 0xa800).mirror(0x07ff).portr("IN1");
+	map(0xb000, 0xb000).mirror(0x07ff).portr("IN2");
+
+    map(0x0000, 0x3fff).rom();
+	map(0x8000, 0x83ff).mirror(0x0400).ram();
+	map(0x9000, 0x93ff).mirror(0x0400).ram().w(FUNC(galaxian_state::galaxian_videoram_w)).share("videoram");
+	map(0x9800, 0x98ff).mirror(0x0700).ram().w(FUNC(galaxian_state::galaxian_objram_w)).share("spriteram");
+	map(0xa000, 0xa000).mirror(0x07ff).portr("IN0");
+	map(0xa800, 0xa800).mirror(0x07ff).portr("IN1");
+	map(0xb000, 0xb000).mirror(0x07ff).portr("IN2");
+	map(0xb000, 0xb000).mirror(0x07f8).w(FUNC(galaxian_state::irq_enable_w));
+	map(0xb004, 0xb004).mirror(0x07f8).w(FUNC(galaxian_state::galaxian_stars_enable_w));
+	map(0xb006, 0xb006).mirror(0x07f8).w(FUNC(galaxian_state::galaxian_flip_screen_x_w));
+	map(0xb007, 0xb007).mirror(0x07f8).w(FUNC(galaxian_state::galaxian_flip_screen_y_w));
+	map(0xb800, 0xb800).mirror(0x07ff).r("watchdog", FUNC(watchdog_timer_device::reset_r));
+
+    -- overritten by bongo:
+    map(0x0000, 0x5fff).rom().region("maincpu", 0); // extend ROM
+	map(0xb000, 0xb000).mirror(0x7f8).nopw(); // interrupt enable moved
+	map(0xb001, 0xb001).mirror(0x7f8).w(FUNC(galaxian_state::irq_enable_w));
+	map(0xb800, 0xb800).mirror(0x7ff).nopw(); // written once at start
