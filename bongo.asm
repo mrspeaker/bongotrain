@@ -8441,8 +8441,8 @@ END_CUTSCENE
 
 3F0A: FF ...
 
-
 3F10: CD 10 03    call $0310
+    ;; C0-DA as a list... but where is it read?
 3F13: 1F          rra
 3F14: 00          nop
 3F15: C0          ret  nz
@@ -8461,9 +8461,10 @@ END_CUTSCENE
 3F2B: D6 D7       sub  $D7
 3F2D: D8          ret  c
 3F2E: D9          exx
-3F2F: DA FF 3A    jp   c,$3AFF
-3F32: 04          inc  b
-3F33: 80          add  a,b
+3F2F: DA
+3F30: FF
+
+3F31: 3A 04 80    ld   a,($PLAYER_NUM)
 3F34: A7          and  a
 3F35: 20 05       jr   nz,$3F3C
 3F37: 3A 29 80    ld   a,($SCREEN_NUM)
@@ -8479,7 +8480,9 @@ END_CUTSCENE
 3F4E: 18 F2       jr   $3F42
 3F50: CD D0 2A    call $DRAW_BONUS_STATE
 3F53: C9          ret
-3F54: FF          rst  $38
+
+3F54: FF
+
 3F55: F5          push af
 3F56: E5          push hl
 3F57: 1E 01       ld   e,$01
@@ -8491,9 +8494,11 @@ END_CUTSCENE
 3F61: E1          pop  hl
 3F62: F1          pop  af
 3F63: C9          ret
-3F64: FF          rst  $38
-3F65: FF          rst  $38
+
+3F64: FF FF
+
 3F66: CD 10 03    call $0310
+    ;; data again.. how is it used?
 3F69: 0C          inc  c
 3F6A: 0A          ld   a,(bc)
 3F6B: 1A          ld   a,(de)
@@ -8617,6 +8622,7 @@ INT_HANDLER
 4035: FF          rst  $38
 4036: FF          rst  $38
 4037: FF          rst  $38
+
 4038: 21 00 C0    ld   hl,$C000
 403B: CD 81 5C    call $JMP_HL
 403E: C9          ret
