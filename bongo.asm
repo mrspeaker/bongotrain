@@ -920,6 +920,7 @@ PLAYER_FRAME_DATA               ; whats this anim?
 0608: 0C 0E 10 0E 0C 12 14 12
 0610: FF FF FF FF FF FF FF FF
 
+    ;; move right
 0618: 3A 10 80    ld   a,($8010)
 061B: 3C          inc  a
 061C: E6 07       and  $07
@@ -948,6 +949,7 @@ PLAYER_FRAME_DATA_2             ;what's this anim?
 0648: 8C 8E 90 8E 8C 92 94 92
 0650: FF FF FF FF FF FF FF FF
 
+PLAYER_MOVE_RIGHT
 0658: 3A 10 80    ld   a,($8010)
 065B: 3C          inc  a
 065C: E6 07       and  $07
@@ -998,7 +1000,7 @@ PLAYER_INPUT
 06B5: C9          ret
 06B6: CB 57       bit  2,a      ; right
 06B8: 28 04       jr   z,$06BE
-06BA: CD 58 06    call $0658
+06BA: CD 58 06    call $PLAYER_MOVE_RIGHT
 06BD: C9          ret
 06BE: CB 5F       bit  3,a      ; left
 06C0: 28 04       jr   z,$06C6
@@ -2357,7 +2359,7 @@ UPDATE_EVERYTHING
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $0A80
 118B: CD B0 0B    call $0BB0
-118E: CD 00 12    call $PLAYER_POS_???
+118E: CD 00 12    call $PLAYER_POS_UPDATE
 1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
 1194: CD 50 17    call $CHECK_DONE_SCREEN
 1197: CD 88 08    call $CLEAR_JUMP_BUTTON
@@ -2408,12 +2410,12 @@ UPDATE_EVERYTHING
 
     ;; Ooh, what's this checking/setting?
     ;; Called from a few places
-PLAYER_POS_???
+PLAYER_POS_UPDATE
 1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1203: 47          ld   b,a
-1204: 3A 02 80    ld   a,($8002)
+1204: 3A 02 80    ld   a,($PL_Y_LEGS_COPY)
 1207: B8          cp   b
-1208: 20 1E       jr   nz,$1228
+1208: 20 1E       jr   nz,$1228 ; legs copy diferent from legs?
 120A: C6 08       add  a,$08
 120C: CB 3F       srl  a
 120E: CB 3F       srl  a
@@ -2552,7 +2554,7 @@ DRAW_BACKGROUND
 1308: 23          inc  hl
 1309: 23          inc  hl
 130A: E5          push hl
-130B: CD 00 12    call $1200
+130B: CD 00 12    call $PLAYER_POS_UPDATE
 130E: E1          pop  hl
 130F: 7D          ld   a,l
 1310: FE 3E       cp   $3E
@@ -4287,7 +4289,7 @@ DINO_COLLISION
 1DC2: 42          ld   b,d
 1DC3: 00          nop
 1DC4: 0C          inc  c
-1DC5: FC 00 12    call m,$1200
+1DC5: FC 00 12    call m,$PLAYER_POS_UPDATE
 1DC8: FC 00 18    call m,$1800
 1DCB: FC 10 10    call m,$1010
 1DCE: 3A 3F 3E    ld   a,($3E3F)
@@ -4804,7 +4806,7 @@ DINO_COLLISION
 205C: 41          ld   b,c
 205D: 00          nop
 205E: 0C          inc  c
-205F: FC 00 12    call m,$1200
+205F: FC 00 12    call m,$PLAYER_POS_UPDATE
 2062: FC 00 18    call m,$1800
 2065: FC 3E 3F    call m,$3F3E
 2068: 3E 3F       ld   a,$3F
@@ -4895,7 +4897,7 @@ DINO_COLLISION
 20D0: 40          ld   b,b
 20D1: 00          nop
 20D2: 0C          inc  c
-20D3: FC 00 12    call m,$1200
+20D3: FC 00 12    call m,$PLAYER_POS_UPDATE
 20D6: FC 00 18    call m,$1800
 20D9: FC 3F 3E    call m,$3E3F
 20DC: 3B          dec  sp
@@ -7934,22 +7936,22 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3B7F: C9          ret
 
 PLAYER_ENTITY_COLLISION
-3B80: FD 7E 00    ld   a,(iy+$00)
-3B83: DD 96 00    sub  (ix+$00)
+3B80: FD 7E 00    ld   a,(iy+$00) ; points to enemy X
+3B83: DD 96 00    sub  (ix+$00)   ; minus player_x
 3B86: 37          scf
-3B87: 3F          ccf
-3B88: D6 0C       sub  $0C      ; -12px
-3B8A: 38 03       jr   c,$3B8F
-3B8C: C6 18       add  a,$18    ; +24px
-3B8E: D0          ret  nc       ; Nope, no X hit
-3B8F: DD 7E 03    ld   a,(ix+$03) ; YPOS = XPOS_addr + 3
-3B92: FD 96 03    sub  (iy+$03)
+3B87: 3F          ccf           ; (clear carry)
+3B88: D6 0C       sub  $0C      ; is X diff < 12 ?
+3B8A: 38 03       jr   c,$3B8F  ; ... yes, check Y
+3B8C: C6 18       add  a,$18    ; no... (why add 24?! Maybe for (unwritten) collision resolution?)
+3B8E: D0          ret  nc       ;
+3B8F: DD 7E 03    ld   a,(ix+$03) ; player Y pos (player_x addr + 3)
+3B92: FD 96 03    sub  (iy+$03)   ; minus enemy Y pos (enemy Y addr + 3)
 3B95: 37          scf
-3B96: 3F          ccf
-3B97: D6 0A       sub  $0A      ; -10px
-3B99: 38 03       jr   c,$3B9E
-3B9B: C6 21       add  a,$21    ; +33px
-3B9D: D0          ret  nc       ; Nope, no Y hit
+3B96: 3F          ccf           ; (clear carry)
+3B97: D6 0A       sub  $0A      ; is Y diff < 10px? (todo: < or <= ?)
+3B99: 38 03       jr   c,$3B9E  ; ... yes - we collided.
+3B9B: C6 21       add  a,$21    ; no... (why add 33?)
+3B9D: D0          ret  nc       ;
 3B9E: CD 33 0A    call $KILL_PLAYER    ; YEP, hit.
 3BA1: C9          ret
 3BA2: FF ...
@@ -8948,7 +8950,7 @@ HIT_BONUS_PRE
 
 PICKUP_TILE_COLLISION
 4258: 3A 40 81    ld   a,($PLAYER_X)
-425B: C6 04       add  a,$04    ; lol, 4 pixels
+425B: C6 04       add  a,$04    ; lol, 4 pixels to get pickup
 425D: 67          ld   h,a
 425E: 3A 43 81    ld   a,($PLAYER_Y)
 4261: C6 18       add  a,$18
