@@ -5,8 +5,9 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
+round_two = true -- start in round two
 
-infinite_lives = false
+infinite_lives = true
 disable_dino = false   -- no pesky dino... but now you can't catch him
 fast_death = false    -- restart super fast after death
 
@@ -61,6 +62,12 @@ tap1 = mem:install_write_tap(screen_addr, lives_addr, "writes", function(offset,
       if data == 1 and not started then
          -- player has started
          started = true
+         -- go to round 2 if requested
+         local SPEED_DELAY_P1 = 0x805b
+         if round_two == true and mem:read_u8(SPEED_DELAY_P1) == 0x1f then
+            mem:write_u8(SPEED_DELAY_P1, 0x10) -- round2 speed
+         end
+
          if loop_len == 0 then
             return start_screen
          end
