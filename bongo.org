@@ -251,7 +251,30 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
 
     ----
 
-    Secret track
+    Secret track? No! I think it's in there....
     
     woah, secret track: 0x0b sfx (set 0x8042/3/4...) wow. crazy.
     0x10 is hilarious... but think it's just playing game code as sfx.
+
+    ---
+
+    Interesting AABB algo
+
+    > enemy x = 0, player x = 12 = NO HIT
+    > enemy x = 12, player x = 0 = YEP HIT!
+
+  #+BEGIN_SRC
+        00 (eX)        00            x88
+    .-  12 (pX)    .-   8          - x94
+     = -12          = - 8          -  6
+    .-  12 (w/2)   .-  12          - xa
+     = -24          = -20          - 22
+     C?  N          C?  N          N
+    .+  24 (w*2)   .+  24          + 33
+     =   0          =   4          = 11
+     C?  N              Y          = Y
+
+    
+    
+  #+END_SRC
+    

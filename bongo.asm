@@ -123,6 +123,14 @@
 
     TILE_BLANK      $10
     TILE_SOLID      $F8
+    TILE_CROWN_PIKA $8C ; alt crown
+    TILE_PIK_CROSSA $8D ;
+    TILE_PIK_RINGA  $8E
+    TILE_PIK_VASEA  $8F
+    TILE_CROWN_PIK  $9C
+    TILE_PIK_CROSS  $9D
+    TILE_PIK_RING   $9E
+    TILE_PIK_VASE   $9F
     TILE_?          $C0
 
 ;;; hardware
@@ -171,7 +179,7 @@
 004B: E6 83       and  $83
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-0051: CD 10 03    call $0310
+0051: CD 10 03    call $ANIMATE_TILES
 0054: 09          add  hl,bc
 0055: 00          nop
 0056: 13          inc  de
@@ -255,7 +263,7 @@ SETUP
 00EE: 00          nop
 00EF: 00          nop
 00F0: CD 50 24    call $DRAW_SCORE
-00F3: CD 10 03    call $0310
+00F3: CD 10 03    call $ANIMATE_TILES
 00F6: 09          add  hl,bc
 00F7: 0B          dec  bc
 00F8: 20 22       jr   nz,$011C
@@ -263,7 +271,7 @@ SETUP
 00FB: 23          inc  hl
 00FC: 23          inc  hl
 00FD: FF          rst  $38
-00FE: CD 10 03    call $0310
+00FE: CD 10 03    call $ANIMATE_TILES
 0101: 0C          inc  c
 0102: 09          add  hl,bc
 0103: 1F          rra
@@ -281,7 +289,7 @@ SETUP
 0116: 24          inc  h
 0117: 1F          rra
 0118: 1E FF       ld   e,$FF
-011A: CD 10 03    call $0310
+011A: CD 10 03    call $ANIMATE_TILES
 011D: 19          add  hl,de
 011E: 09          add  hl,bc
 011F: 13          inc  de
@@ -311,7 +319,7 @@ SETUP
 014A: B8          cp   b
 014B: 00          nop
 014C: CD D0 00    call $00D0
-014F: CD 10 03    call $0310
+014F: CD 10 03    call $ANIMATE_TILES
 0152: 0C          inc  c
 0153: 06 1F       ld   b,$1F
 0155: 1E 15       ld   e,$15
@@ -532,9 +540,11 @@ COINAGE_ROUTINE
 030B: C9          ret
     
 030C: FF ...
-    
+
+    ;; Animate tiles?
+ANIMATE_TILES
 0310: 3A 00 B8    ld   a,($WATCHDOG)
-0313: 21 40 90    ld   hl,$9040
+0313: 21 40 90    ld   hl,$START_OF_TILES
 0316: C1          pop  bc
 0317: 0A          ld   a,(bc)
 0318: 03          inc  bc
@@ -1178,7 +1188,8 @@ PHYSICS_SOMETHING
 0806: 00          nop
 0807: 01 3A 00    ld   bc,$003A
 080A: B8          cp   b
-080B: 21 40 90    ld   hl,$9040
+    ;; this looks similar to other tile-related code - ab
+080B: 21 40 90    ld   hl,$START_OF_TILES
 080E: C1          pop  bc
 080F: 0A          ld   a,(bc)
 0810: 03          inc  bc
@@ -2101,7 +2112,7 @@ BONGO_ANIM_DATA
 0F85: 00          nop
 0F86: 00          nop
 0F87: 00          nop
-0F88: CD 10 03    call $0310
+0F88: CD 10 03    call $ANIMATE_TILES
 0F8B: 02          ld   (bc),a
 0F8C: 02          ld   (bc),a
 0F8D: E0          ret  po
@@ -2370,7 +2381,7 @@ UPDATE_EVERYTHING
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $CHECK_DINO_TIMER
 11AC: CD 50 2B    call $2B50
-11AF: CD A8 3B    call $PLAYER_ENTITIES_COLLISION
+11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $CALL_HL_PLUS_4K
 11B8: C9          ret
@@ -2504,8 +2515,8 @@ PREVENT_CLOUD_JUMP_REDACTED
 12A9: C9          ret
 12AA: FF ...
 
-DRAW_BACKGROUND
-12B8: CD 10 03    call $0310
+DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
+12B8: CD 10 03    call $ANIMATE_TILES
 12BB: 03          inc  bc
 12BC: 00          nop
 12BD: 40          ld   b,b
@@ -2515,7 +2526,8 @@ DRAW_BACKGROUND
 12C1: 41          ld   b,c
 12C2: 40          ld   b,b
 12C3: FF          rst  $38
-12C4: CD 10 03    call $0310
+
+12C4: CD 10 03    call $ANIMATE_TILES
 12C7: 09          add  hl,bc
 12C8: 00          nop
 12C9: FE FD       cp   $FD
@@ -2889,48 +2901,53 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1561: C9          ret
 
 1562: FF FF
+
 1564: 00          nop
 1565: 00          nop
 
-1566: 3A 08 93    ld   a,($9308)
-1569: FE 10       cp   $10
+ANIMATE_SPLASH_PICKUPS
+1566: 3A 08 93    ld   a,($9308) ;
+1569: FE 10       cp   $TILE_BLANK
 156B: 28 10       jr   z,$157D
-156D: FE 8C       cp   $8C
+156D: FE 8C       cp   $TILE_CROWN_PIKA
 156F: 20 07       jr   nz,$1578
-1571: 3E 9C       ld   a,$9C
+1571: 3E 9C       ld   a,$TILE_CROWN_PIK
 1573: 32 08 93    ld   ($9308),a
 1576: 18 05       jr   $157D
-1578: 3E 8C       ld   a,$8C
-157A: 32 08 93    ld   ($9308),a
-157D: 3A 0C 93    ld   a,($930C)
-1580: FE 10       cp   $10
+1578: 3E 8C       ld   a,$TILE_CROWN_PIKA
+157A: 32 08 93    ld   ($9308),
+    ;;
+157D: 3A 0C 93    ld   a,($930C) ;
+1580: FE 10       cp   $TILE_BLANK
 1582: 28 10       jr   z,$1594
-1584: FE 8D       cp   $8D
+1584: FE 8D       cp   $TILE_PIK_CROSSA
 1586: 20 07       jr   nz,$158F
-1588: 3E 9D       ld   a,$9D
+1588: 3E 9D       ld   a,$TILE_PIK_CROSS
 158A: 32 0C 93    ld   ($930C),a
 158D: 18 05       jr   $1594
-158F: 3E 8D       ld   a,$8D
+158F: 3E 8D       ld   a,$TILE_PIK_CROSSA
 1591: 32 0C 93    ld   ($930C),a
+    ;;
 1594: 3A 10 93    ld   a,($9310)
-1597: FE 10       cp   $10
+1597: FE 10       cp   $TILE_BLANK
 1599: 28 10       jr   z,$15AB
-159B: FE 8E       cp   $8E
+159B: FE 8E       cp   $TILE_PIK_RINGA
 159D: 20 07       jr   nz,$15A6
-159F: 3E 9E       ld   a,$9E
+159F: 3E 9E       ld   a,$TILE_PIK_RING
 15A1: 32 10 93    ld   ($9310),a
 15A4: 18 05       jr   $15AB
-15A6: 3E 8E       ld   a,$8E
+15A6: 3E 8E       ld   a,$TILE_PIK_RINGA
 15A8: 32 10 93    ld   ($9310),a
+
 15AB: 3A 14 93    ld   a,($9314)
-15AE: FE 10       cp   $10
+15AE: FE 10       cp   $TILE_BLANK
 15B0: 28 10       jr   z,$15C2
-15B2: FE 8F       cp   $8F
+15B2: FE 8F       cp   $TILE_PIK_VASEA
 15B4: 20 07       jr   nz,$15BD
-15B6: 3E 9F       ld   a,$9F
+15B6: 3E 9F       ld   a,$TILE_PIK_VASE
 15B8: 32 14 93    ld   ($9314),a
 15BB: 18 05       jr   $15C2
-15BD: 3E 8F       ld   a,$8F
+15BD: 3E 8F       ld   a,$TILE_PIK_VASEA
 15BF: 32 14 93    ld   ($9314),a
 15C2: C9          ret
 15C3: FF          rst  $38
@@ -2939,16 +2956,16 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 15C8: CD E3 01    call $CALL_HL_PLUS_4K
 15CB: D1          pop  de
 15CC: C9          ret
-15CD: FF          rst  $38
-15CE: FF          rst  $38
-15CF: FF          rst  $38
+15CD: FF ...
+
+DO_ATTRACK_MODE
 15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 15D3: CD 88 0F    call $0F88
-15D6: CD 60 16    call $1660
+15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15D9: 3E 8C       ld   a,$8C
 15DB: 32 08 93    ld   ($9308),a
-15DE: CD 60 16    call $1660
-15E1: CD 10 03    call $0310
+15DE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+15E1: CD 10 03    call $ANIMATE_TILES
 15E4: 08          ex   af,af'
 15E5: 10 02       djnz $15E9
 15E7: 00          nop
@@ -2957,11 +2974,11 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 15EB: 24          inc  h
 15EC: 23          inc  hl
 15ED: FF          rst  $38
-15EE: CD 60 16    call $1660
+15EE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F1: 3E 8D       ld   a,$8D
 15F3: 32 0C 93    ld   ($930C),a
-15F6: CD 60 16    call $1660
-15F9: CD 10 03    call $0310
+15F6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+15F9: CD 10 03    call $ANIMATE_TILES
 15FC: 0C          inc  c
 15FD: 10 04       djnz $1603
 15FF: 00          nop
@@ -2970,11 +2987,11 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1603: 24          inc  h
 1604: 23          inc  hl
 1605: FF          rst  $38
-1606: CD 60 16    call $1660
+1606: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1609: 3E 8E       ld   a,$8E
 160B: 32 10 93    ld   ($9310),a
-160E: CD 60 16    call $1660
-1611: CD 10 03    call $0310
+160E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+1611: CD 10 03    call $ANIMATE_TILES
 1614: 10 10       djnz $1626
 1616: 06 00       ld   b,$00
 1618: 00          nop
@@ -2982,11 +2999,11 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 161B: 24          inc  h
 161C: 23          inc  hl
 161D: FF          rst  $38
-161E: CD 60 16    call $1660
+161E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1621: 3E 8F       ld   a,$8F
 1623: 32 14 93    ld   ($9314),a
-1626: CD 60 16    call $1660
-1629: CD 10 03    call $0310
+1626: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+1629: CD 10 03    call $ANIMATE_TILES
 162C: 14          inc  d
 162D: 10 01       djnz $1630
 162F: 00          nop
@@ -2996,10 +3013,10 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1634: 24          inc  h
 1635: 23          inc  hl
 1636: FF          rst  $38
-1637: CD 60 16    call $1660
-163A: CD 60 16    call $1660
-163D: CD 60 16    call $1660
-1640: CD 60 16    call $1660
+1637: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+163A: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
+1640: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1643: 21 94 14    ld   hl,$1494
 1646: CD E3 01    call $CALL_HL_PLUS_4K
 1649: C9          ret
@@ -3011,14 +3028,11 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1655: 00          nop
 1656: CD 50 24    call $DRAW_SCORE
 1659: C9          ret
-165A: FF          rst  $38
-165B: FF          rst  $38
-165C: FF          rst  $38
-165D: FF          rst  $38
-165E: FF          rst  $38
-165F: FF          rst  $38
+165A: FF ...
+
+ANIMATE_SPLASH_SCREEN
 1660: 16 10       ld   d,$10
-1662: CD 64 15    call $1564
+1662: CD 64 15    call $ANIMATE_SPLASH_PICKUPS
 1665: CD C4 15    call $15C4
 1668: 1E 04       ld   e,$04
 166A: D5          push de
@@ -3029,6 +3043,8 @@ COPY_XOFFS_COL_SPRITES_TO_SCREEN
 1672: 15          dec  d
 1673: 20 ED       jr   nz,$1662
 1675: C9          ret
+
+
 1676: FF          rst  $38
 1677: FF          rst  $38
 1678: E8          ret  pe
@@ -3080,14 +3096,14 @@ UPDATE_FALLING_ROCKS
 
 
 DRAW_BONUS
-16D0: CD 10 03    call $0310
+16D0: CD 10 03    call $ANIMATE_TILES
 16D3: 0A          ld   a,(bc)
 16D4: 00          nop
 16D5: E0          ret  po
 16D6: DC DD DE    call c,$DEDD
 16D9: DF          rst  $18
 16DA: FF          rst  $38
-16DB: CD 10 03    call $0310
+16DB: CD 10 03    call $ANIMATE_TILES
 16DE: 0B          dec  bc
 16DF: 00          nop
 16E0: E1          pop  hl
@@ -3095,7 +3111,7 @@ DRAW_BONUS
 16E2: E5          push hl
 16E3: E5          push hl
 16E4: E6 FF       and  $FF
-16E6: CD 10 03    call $0310
+16E6: CD 10 03    call $ANIMATE_TILES
 16E9: 0C          inc  c
 16EA: 00          nop
 16EB: E1          pop  hl
@@ -3103,7 +3119,7 @@ DRAW_BONUS
 16ED: E5          push hl
 16EE: E5          push hl
 16EF: E6 FF       and  $FF
-16F1: CD 10 03    call $0310
+16F1: CD 10 03    call $ANIMATE_TILES
 16F4: 0D          dec  c
 16F5: 00          nop
 16F6: E2 E3 E3    jp   po,$E3E3
@@ -3244,7 +3260,7 @@ RESET_DINO
 
 17CB: FF ...
 
-17D0: CD 10 03    call $0310
+17D0: CD 10 03    call $ANIMATE_TILES
 17D3: 0A          ld   a,(bc)
 17D4: 00          nop
 17D5: B8          cp   b
@@ -3253,27 +3269,27 @@ RESET_DINO
 17D8: B6          or   (hl)
 17D9: B7          or   a
 17DA: FF          rst  $38
-17DB: CD 10 03    call $0310
+17DB: CD 10 03    call $ANIMATE_TILES
 17DE: 0B          dec  bc
 17DF: 00          nop
 17E0: B9          cp   c
 17E1: FF          rst  $38
-17E2: CD 10 03    call $0310
+17E2: CD 10 03    call $ANIMATE_TILES
 17E5: 0B          dec  bc
 17E6: 04          inc  b
 17E7: BE          cp   (hl)
 17E8: FF          rst  $38
-17E9: CD 10 03    call $0310
+17E9: CD 10 03    call $ANIMATE_TILES
 17EC: 0C          inc  c
 17ED: 00          nop
 17EE: B9          cp   c
 17EF: FF          rst  $38
-17F0: CD 10 03    call $0310
+17F0: CD 10 03    call $ANIMATE_TILES
 17F3: 0C          inc  c
 17F4: 04          inc  b
 17F5: BE          cp   (hl)
 17F6: FF          rst  $38
-17F7: CD 10 03    call $0310
+17F7: CD 10 03    call $ANIMATE_TILES
 17FA: 0D          dec  c
 17FB: 00          nop
 17FC: BA          cp   d
@@ -3929,14 +3945,14 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BA7: 3A 04 80    ld   a,($PLAYER_NUM)
 1BAA: A7          and  a
 1BAB: 20 10       jr   nz,$1BBD
-1BAD: CD 10 03    call $0310
+1BAD: CD 10 03    call $ANIMATE_TILES
 1BB0: 10 0A       djnz $1BBC
 1BB2: 20 1C       jr   nz,$1BD0
 1BB4: 11 29 15    ld   de,$1529
 1BB7: 22 10 01    ld   ($0110),hl
 1BBA: FF          rst  $38
 1BBB: 18 0E       jr   $1BCB
-1BBD: CD 10 03    call $0310
+1BBD: CD 10 03    call $ANIMATE_TILES
 1BC0: 10 0A       djnz $1BCC
 1BC2: 20 1C       jr   nz,$1BE0
 1BC4: 11 29 15    ld   de,$1529
@@ -3949,7 +3965,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BD4: C9          ret
 
 1BD5: FF          rst  $38
-1BD6: CD 10 03    call $0310
+1BD6: CD 10 03    call $ANIMATE_TILES
 1BD9: 1B          dec  de
 1BDA: 02          ld   (bc),a
 1BDB: E2 E3 E3    jp   po,$E3E3
@@ -6279,7 +6295,7 @@ DRAW_BONUS_STATE
 2D9E: CD 40 08    call $0840
 2DA1: 00          nop
 2DA2: 00          nop
-2DA3: CD 10 03    call $0310
+2DA3: CD 10 03    call $ANIMATE_TILES
 2DA6: 04          inc  b
 2DA7: 0A          ld   a,(bc)
 2DA8: 20 1C       jr   nz,$2DC6
@@ -6303,7 +6319,7 @@ DRAW_BONUS_STATE
 2DC6: 23          inc  hl
 2DC7: 24          inc  h
 2DC8: FF          rst  $38
-2DC9: CD 10 03    call $0310
+2DC9: CD 10 03    call $ANIMATE_TILES
 2DCC: 09          add  hl,bc
 2DCD: 03          inc  bc
 2DCE: 23          inc  hl
@@ -6316,7 +6332,7 @@ DRAW_BONUS_STATE
 2DD8: 18 15       jr   $2DEF
 2DDA: 10 14       djnz $2DF0
 2DDC: 11 29 FF    ld   de,$FF29
-2DDF: CD 10 03    call $0310
+2DDF: CD 10 03    call $ANIMATE_TILES
 2DE2: 0B          dec  bc
 2DE3: 03          inc  bc
 2DE4: 20 1C       jr   nz,$2E02
@@ -6331,7 +6347,7 @@ DRAW_BONUS_STATE
 2DF4: 22 10 1E    ld   ($1E10),hl
 2DF7: 11 1D 15    ld   de,$151D
 2DFA: FF          rst  $38
-2DFB: CD 10 03    call $0310
+2DFB: CD 10 03    call $ANIMATE_TILES
 2DFE: 0D          dec  c
 2DFF: 03          inc  bc
 2E00: 11 10 12    ld   de,$1210
@@ -6346,7 +6362,7 @@ DRAW_BONUS_STATE
 2E13: 10 1B       djnz $2E30
 2E15: 10 1C       djnz $2E33
 2E17: FF          rst  $38
-2E18: CD 10 03    call $0310
+2E18: CD 10 03    call $ANIMATE_TILES
 2E1B: 0F          rrca
 2E1C: 03          inc  bc
 2E1D: 1D          dec  e
@@ -6362,7 +6378,7 @@ DRAW_BONUS_STATE
 2E30: 10 27       djnz $2E59
 2E32: 10 28       djnz $2E5C
 2E34: FF          rst  $38
-2E35: CD 10 03    call $0310
+2E35: CD 10 03    call $ANIMATE_TILES
 2E38: 11 03 29    ld   de,$2903
 2E3B: 10 2A       djnz $2E67
 2E3D: 10 10       djnz $2E4F
@@ -6378,7 +6394,7 @@ DRAW_BONUS_STATE
 2E50: 5A          ld   e,d
 2E51: 5B          ld   e,e
 2E52: FF          rst  $38
-2E53: CD 10 03    call $0310
+2E53: CD 10 03    call $ANIMATE_TILES
 2E56: 17          rla
 2E57: 0A          ld   a,(bc)
 2E58: 2B          dec  hl
@@ -7597,33 +7613,35 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 38D8: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
 38DB: 32 55 81    ld   ($ENEMY_1_FRAME),a
 38DE: C9          ret
+
 38DF: FF          rst  $38
-38E0: CD 10 03    call $0310
+
+38E0: CD 10 03    call $ANIMATE_TILES
 38E3: 0A          ld   a,(bc)
 38E4: 00          nop
 38E5: E0          ret  po
 38E6: DC DD DE    call c,$DEDD
 38E9: DF          rst  $18
 38EA: FF          rst  $38
-38EB: CD 10 03    call $0310
+38EB: CD 10 03    call $ANIMATE_TILES
 38EE: 0B          dec  bc
 38EF: 00          nop
 38F0: E1          pop  hl
 38F1: FF          rst  $38
-38F2: CD 10 03    call $0310
+38F2: CD 10 03    call $ANIMATE_TILES
 38F5: 0B          dec  bc
 38F6: 04          inc  b
 38F7: E6 FF       and  $FF
-38F9: CD 10 03    call $0310
+38F9: CD 10 03    call $ANIMATE_TILES
 38FC: 0C          inc  c
 38FD: 00          nop
 38FE: E1          pop  hl
 38FF: FF          rst  $38
-3900: CD 10 03    call $0310
+3900: CD 10 03    call $ANIMATE_TILES
 3903: 0C          inc  c
 3904: 04          inc  b
 3905: E6 FF       and  $FF
-3907: CD 10 03    call $0310
+3907: CD 10 03    call $ANIMATE_TILES
 390A: 0D          dec  c
 390B: 00          nop
 390C: E2 E3 E3    jp   po,$E3E3
@@ -7935,35 +7953,40 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3B7E: E1          pop  hl
 3B7F: C9          ret
 
-PLAYER_ENTITY_COLLISION
+PLAYER_ENEMY_COLLISION
+    ;; Check X
 3B80: FD 7E 00    ld   a,(iy+$00) ; points to enemy X
 3B83: DD 96 00    sub  (ix+$00)   ; minus player_x
 3B86: 37          scf
 3B87: 3F          ccf           ; (clear carry)
-3B88: D6 0C       sub  $0C      ; is X diff < 12 ?
-3B8A: 38 03       jr   c,$3B8F  ; ... yes, check Y
-3B8C: C6 18       add  a,$18    ; no... (why add 24?! Maybe for (unwritten) collision resolution?)
-3B8E: D0          ret  nc       ;
+3B88: D6 0C       sub  $0C      ; is enemy to the right and X diff <= sprite width?
+3B8A: 38 03       jr   c,_CHECK_Y  ;   ... yes, check Y
+3B8C: C6 18       add  a,$18    ; no, but enemy might be to the left: try "+ width * 2"
+3B8E: D0          ret  nc       ;   no collision on X, leave.
+_CHECK_Y
 3B8F: DD 7E 03    ld   a,(ix+$03) ; player Y pos (player_x addr + 3)
 3B92: FD 96 03    sub  (iy+$03)   ; minus enemy Y pos (enemy Y addr + 3)
 3B95: 37          scf
 3B96: 3F          ccf           ; (clear carry)
-3B97: D6 0A       sub  $0A      ; is Y diff < 10px? (todo: < or <= ?)
-3B99: 38 03       jr   c,$3B9E  ; ... yes - we collided.
-3B9B: C6 21       add  a,$21    ; no... (why add 33?)
-3B9D: D0          ret  nc       ;
-3B9E: CD 33 0A    call $KILL_PLAYER    ; YEP, hit.
+3B97: D6 0A       sub  $0A      ; is Y diff <= 10?
+3B99: 38 03       jr   c,$_HIT  ;   ... yes - we collided.
+3B9B: C6 21       add  a,$21    ; no, but is player above? Check legs.
+3B9D: D0          ret  nc       ;   no - no collsions on Y, leave
+_HIT
+3B9E: CD 33 0A    call $KILL_PLAYER
 3BA1: C9          ret
 3BA2: FF ...
 
-PLAYER_ENTITIES_COLLISION
+    ;; Always checks all 3 enemies. "Offscreen" enemies
+    ;; have x = 0, so the "check x" test fails.
+PLAYER_ENEMIES_COLLISION
 3BA8: FD 21 54 81 ld   iy,$ENEMY_1_X
-3BAC: DD 21 40 81 ld   ix,$PLAYER_X
-3BB0: CD 80 3B    call $PLAYER_ENTITY_COLLISION
+3BAC: DD 21 40 81n ld   ix,$PLAYER_X
+3BB0: CD 80 3B    call $PLAYER_ENEMY_COLLISION
 3BB3: FD 21 58 81 ld   iy,$ENEMY_2_X
-3BB7: CD 80 3B    call $PLAYER_ENTITY_COLLISION
+3BB7: CD 80 3B    call $PLAYER_ENEMY_COLLISION
 3BBA: FD 21 5C 81 ld   iy,$ENEMY_3_X
-3BBE: CD 80 3B    call $PLAYER_ENTITY_COLLISION
+3BBE: CD 80 3B    call $PLAYER_ENEMY_COLLISION
 3BC1: C9          ret
 3BC2: FF ...
 
@@ -7976,7 +7999,9 @@ PLAYER_ENTITIES_COLLISION
 3BD2: FE 40       cp   $40
 3BD4: 20 F5       jr   nz,$3BCB
 3BD6: C9          ret
-3BD7: FF          rst  $38
+
+3BD7: FF
+
 3BD8: DD E1       pop  ix
 3BDA: 26 00       ld   h,$00
 3BDC: DD 6E 00    ld   l,(ix+$00)
@@ -7989,7 +8014,7 @@ PLAYER_ENTITIES_COLLISION
 3BE6: DD 7E 00    ld   a,(ix+$00)
 3BE9: 85          add  a,l
 3BEA: 6F          ld   l,a
-3BEB: 01 40 90    ld   bc,$9040
+3BEB: 01 40 90    ld   bc,$START_OF_TILES
 3BEE: 09          add  hl,bc
 3BEF: DD 23       inc  ix
 3BF1: DD 7E 00    ld   a,(ix+$00)
@@ -8039,7 +8064,7 @@ SCR_TYPE_1
 3C3E: 32 4B 80    ld   ($804B),a
 3C41: A7          and  a
 3C42: 20 0B       jr   nz,$3C4F
-3C44: CD 10 03    call $0310
+3C44: CD 10 03    call $ANIMATE_TILES
 3C47: 1D          dec  e
 3C48: 0E 80       ld   c,$80
 3C4A: 80          add  a,b
@@ -8050,7 +8075,7 @@ SCR_TYPE_1
 
 3C4F: FE 01       cp   $01
 3C51: 20 0B       jr   nz,$3C5E
-3C53: CD 10 03    call $0310
+3C53: CD 10 03    call $ANIMATE_TILES
 3C56: 1D          dec  e
 3C57: 0E 85       ld   c,$85
 3C59: 81          add  a,c
@@ -8061,7 +8086,7 @@ SCR_TYPE_1
 
 3C5E: FE 02       cp   $02
 3C60: 20 0B       jr   nz,$3C6D
-3C62: CD 10 03    call $0310
+3C62: CD 10 03    call $ANIMATE_TILES
 3C65: 1D          dec  e
 3C66: 0E 86       ld   c,$86
 3C68: 82          add  a,d
@@ -8070,7 +8095,7 @@ SCR_TYPE_1
 3C6B: FF          rst  $38
 3C6C: C9          ret
 
-3C6D: CD 10 03    call $0310
+3C6D: CD 10 03    call $ANIMATE_TILES
 3C70: 1D          dec  e
 3C71: 0E 85       ld   c,$85
 3C73: 83          add  a,e
@@ -8088,10 +8113,11 @@ SCR_TYPE_2
 3C81: 32 4B 80    ld   ($804B),a
 3C84: A7          and  a
 3C85: 20 0C       jr   nz,$3C93
-3C87: CD 10 03    call $0310
-3C8A: 19          add  hl,de
-3C8B: 0F          rrca
-3C8C: 80          add  a,b
+3C87: CD 10 03    call $ANIMATE_TILES
+
+    ;; lava animation data
+3C8A: 19 0F                     ;read by sub at $ANIMATE_TILES
+3C8C: 80
 3C8D: 80          add  a,b
 3C8E: 80          add  a,b
 3C8F: 80          add  a,b
@@ -8101,10 +8127,9 @@ SCR_TYPE_2
 
 3C93: FE 01       cp   $01
 3C95: 20 0C       jr   nz,$3CA3
-3C97: CD 10 03    call $0310
-3C9A: 19          add  hl,de
-3C9B: 0F          rrca
-3C9C: 85          add  a,l
+3C97: CD 10 03    call $ANIMATE_TILES
+3C9A: 19 0F                     ;read by sub at $ANIMATE_TILES
+3C9C: 85                        ; lava tile 1
 3C9D: 81          add  a,c
 3C9E: 84          add  a,h
 3C9F: 81          add  a,c
@@ -8114,10 +8139,10 @@ SCR_TYPE_2
 
 3CA3: FE 02       cp   $02
 3CA5: 20 0C       jr   nz,$3CB3
-3CA7: CD 10 03    call $0310
-3CAA: 19          add  hl,de
-3CAB: 0F          rrca
-3CAC: 86          add  a,(hl)
+3CA7: CD 10 03    call $ANIMATE_TILES
+
+3CAA: 19 0F                     ; read by sub at $ANIMATE_TILES
+3CAC: 86                        ; lava tile 2
 3CAD: 82          add  a,d
 3CAE: 88          adc  a,b
 3CAF: 86          add  a,(hl)
@@ -8125,10 +8150,9 @@ SCR_TYPE_2
 3CB1: FF          rst  $38
 3CB2: C9          ret
 
-3CB3: CD 10 03    call $0310
-3CB6: 19          add  hl,de
-3CB7: 0F          rrca
-3CB8: 85          add  a,l
+3CB3: CD 10 03    call $ANIMATE_TILES
+3CB6: 19 0F                     ;read by sub at $ANIMATE_TILES
+3CB8: 85
 3CB9: 83          add  a,e
 3CBA: 80          add  a,b
 3CBB: 83          add  a,e
@@ -8291,7 +8315,7 @@ DO_CUTSCENE
 3DCF: 32 33 81    ld   ($SCREEN_XOFF_COL+33),a
 3DD2: 32 35 81    ld   ($SCREEN_XOFF_COL+35),a
 3DD5: 32 37 81    ld   ($SCREEN_XOFF_COL+37),a
-3DD8: CD 10 03    call $0310
+3DD8: CD 10 03    call $ANIMATE_TILES
 3DDB: 1C          inc  e
 3DDC: 00          nop
 3DDD: 38 39       jr   c,$3E18
@@ -8317,7 +8341,7 @@ DO_CUTSCENE
 3DFA: 39          add  hl,sp
 3DFB: 39          add  hl,sp
 3DFC: 38 FF       jr   c,$3DFD
-3DFE: CD 10 03    call $0310
+3DFE: CD 10 03    call $ANIMATE_TILES
 3E01: 12          ld   (de),a
 3E02: 00          nop
 3E03: FE FD       cp   $FD
@@ -8443,11 +8467,10 @@ END_CUTSCENE
 
 3F0A: FF ...
 
-3F10: CD 10 03    call $0310
-    ;; C0-DA as a list... but where is it read?
+3F10: CD 10 03    call $ANIMATE_TILES
 3F13: 1F          rra
 3F14: 00          nop
-3F15: C0          ret  nz
+3F15: C0          ret  nz       ;data for sure: run of bytes!
 3F16: C1          pop  bc
 3F17: C2 C3 C4    jp   nz,$C4C3
 3F1A: C5          push bc
@@ -8499,8 +8522,8 @@ END_CUTSCENE
 
 3F64: FF FF
 
-3F66: CD 10 03    call $0310
-    ;; data again.. how is it used?
+3F66: CD 10 03    call $ANIMATE_TILES
+    ;; data again.. how is it used? must be by animate_tiles!
 3F69: 0C          inc  c
 3F6A: 0A          ld   a,(bc)
 3F6B: 1A          ld   a,(de)
@@ -8511,7 +8534,7 @@ END_CUTSCENE
 3F70: 16 24       ld   d,$24
 3F72: FF          rst  $38
 3F73: C9          ret
-3F74: CD 10 03    call $0310
+3F74: CD 10 03    call $ANIMATE_TILES
 3F77: 14          inc  d
 3F78: 07          rlca
 3F79: 20 22       jr   nz,$3F9D
@@ -8528,13 +8551,13 @@ END_CUTSCENE
 3F89: C9          ret
 3F8A: FF          rst  $38
 3F8B: FF          rst  $38
-3F8C: CD 10 03    call $0310
+3F8C: CD 10 03    call $ANIMATE_TILES
 3F8F: 10 04       djnz $3F95
 3F91: 8B          adc  a,e
 3F92: 01 09 08    ld   bc,$0809
 3F95: 03          inc  bc
 3F96: FF          rst  $38
-3F97: CD 10 03    call $0310
+3F97: CD 10 03    call $ANIMATE_TILES
 3F9A: 12          ld   (de),a
 3F9B: 04          inc  b
 3F9C: 1A          ld   a,(de)
@@ -8548,7 +8571,7 @@ END_CUTSCENE
 3FA5: FF          rst  $38
 3FA6: FF          rst  $38
 3FA7: FF          rst  $38
-3FA8: CD 10 03    call $0310
+3FA8: CD 10 03    call $ANIMATE_TILES
 3FAB: 1F          rra
 3FAC: 00          nop
 3FAD: 10 10       djnz $3FBF
@@ -8879,15 +8902,18 @@ HIT_BONUS_PRE
 41EA: E5          push hl
 41EB: C9          ret
 
-41EC: 3E 9C       ld   a,$9C
+    ;; DRAW_CROWN_PIK_BOT_RIGHT
+41EC: 3E 9C       ld   a,$TILE_CROWN_PIK
 41EE: 32 5A 91    ld   ($915A),a
 41F1: C9          ret
 
-41F2: 3E 9D       ld   a,$9D
+    ;; DRAW_CROSS_PIK_BOT_RIGHT
+41F2: 3E 9D       ld   a,$TILE_PIK_CROSS
 41F4: 32 5A 91    ld   ($915A),a
 41F7: C9          ret
 
-41F8: 3E 9D       ld   a,$9D
+    ;; draw pikup cross, bot, right-er
+41F8: 3E 9D       ld   a,$TILE_PIK_CROSS
 41FA: 32 1A 91    ld   ($911A),a
 41FD: C9          ret
 
@@ -8957,38 +8983,39 @@ PICKUP_TILE_COLLISION
 4263: 6F          ld   l,a
 4264: CD A7 40    call $GET_TILE_SCR_POS
 4267: 7E          ld   a,(hl)
-4268: FE 10       cp   $10      ; blank
+4268: FE 10       cp   $TILE_BLANK
 426A: C8          ret  z
-426B: FE 8C       cp   $8C
+    ;;
+426B: FE 8C       cp   $TILE_CROWN_PIKA
 426D: 20 08       jr   nz,$4277
-426F: 3E 20       ld   a,$20
-4271: 36 10       ld   (hl),$10
+426F: 3E 20       ld   a,$20    ; 200 bonus
+4271: 36 10       ld   (hl),$TILE_BLANK
 4273: CD B0 41    call $HIT_BONUS_PRE
 4276: C9          ret
-4277: FE 8D       cp   $8D
+4277: FE 8D       cp   $TILE_PIK_CROSSA
 4279: 20 08       jr   nz,$4283
-427B: 3E 40       ld   a,$40
-427D: 36 10       ld   (hl),$10
+427B: 3E 40       ld   a,$40    ; 400 bonus
+427D: 36 10       ld   (hl),$TILE_BLANK
 427F: CD B0 41    call $HIT_BONUS_PRE
 4282: C9          ret
-4283: FE 8E       cp   $8E
+4283: FE 8E       cp   $TILE_PIK_RINGA
 4285: 20 08       jr   nz,$428F
-4287: 3E 60       ld   a,$60
-4289: 36 10       ld   (hl),$10
+4287: 3E 60       ld   a,$60    ; 600 bonus
+4289: 36 10       ld   (hl),$TILE_BLANK
 428B: CD B0 41    call $HIT_BONUS_PRE
 428E: C9          ret
-428F: FE 8F       cp   $8F
+428F: FE 8F       cp   $TILE_PIK_VASEA
 4291: C0          ret  nz
-4292: 3E A0       ld   a,$A0
-4294: 36 10       ld   (hl),$10
+4292: 3E A0       ld   a,$A0    ; 1000 bonus
+4294: 36 10       ld   (hl),$TILE_BLANK
 4296: CD B0 41    call $HIT_BONUS_PRE
 4299: C9          ret
 
 ;;;
-429A: 3E 9D       ld   a,$9D
+429A: 3E 9D       ld   a,$TILE_PIK_CROSS
 429C: 32 D2 91    ld   ($91D2),a
 429F: C9          ret
-42A0: 3E 8E       ld   a,$8E
+42A0: 3E 8E       ld   a,$TILE_PIK_RINGA
 42A2: 32 CB 90    ld   ($90CB),a
 42A5: CD 02 36    call $3602
 42A8: C9          ret
@@ -11236,7 +11263,7 @@ TBL_1
 531E: 23          inc  hl
 531F: 36 38       ld   (hl),$38
 5321: CD AC 53    call $53AC
-5324: C3 28 54    jp   $5428
+5324: C3 28 54    jp   $CALL_DO_ATTRACK_MODE
 5327: FF          rst  $38
 5328: 16 00       ld   d,$00
 532A: 21 80 53    ld   hl,$5380
@@ -11376,7 +11403,9 @@ TBL_1
 5425: FF          rst  $38
 5426: FF          rst  $38
 5427: FF          rst  $38
-5428: 21 D0 15    ld   hl,$15D0
+
+CALL_DO_ATTRACK_MODE
+5428: 21 D0 15    ld   hl,$DO_ATTRACK_MODE
 542B: CD 81 5C    call $JMP_HL
 542E: C9          ret
 542F: FF          rst  $38
@@ -11575,7 +11604,7 @@ TBL_1
 
 ;;; looks data-y
 5570: 3A 00 B8    ld   a,($WATCHDOG)
-5573: 21 40 90    ld   hl,$9040
+5573: 21 40 90    ld   hl,$START_OF_TILES
 5576: C1          pop  bc
 5577: 0A          ld   a,(bc)
 5578: 03          inc  bc
@@ -12159,6 +12188,7 @@ TBL_1
 58CD: FF          rst  $38
 58CE: FF          rst  $38
 58CF: FF          rst  $38
+
 58D0: DD E1       pop  ix
 58D2: 26 00       ld   h,$00
 58D4: DD 6E 00    ld   l,(ix+$00)
@@ -12171,7 +12201,7 @@ TBL_1
 58DE: DD 7E 00    ld   a,(ix+$00)
 58E1: 85          add  a,l
 58E2: 6F          ld   l,a
-58E3: 01 40 90    ld   bc,$9040
+58E3: 01 40 90    ld   bc,$START_OF_TILES
 58E6: 09          add  hl,bc
 58E7: DD 23       inc  ix
 58E9: DD 7E 00    ld   a,(ix+$00)
@@ -12183,16 +12213,10 @@ TBL_1
 58F4: DD 23       inc  ix
 58F6: DD E5       push ix
 58F8: C9          ret
-58F9: FF          rst  $38
-58FA: FF          rst  $38
-58FB: FF          rst  $38
-58FC: FF          rst  $38
-58FD: FF          rst  $38
-58FE: FF          rst  $38
-58FF: FF          rst  $38
+
+58F9: FF ...
 
 5900: CD 70 55    call $5570
-
 5903: 01 01 51    ld   bc,$5101
 5906: 52          ld   d,d
 5907: 53          ld   d,e
