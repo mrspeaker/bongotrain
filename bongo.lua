@@ -6,8 +6,9 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
 
-disable_dino = true   -- no pesky dino... but now you can't catch him
-fast_death = true    -- restart super fast after death
+infinite_lives = false
+disable_dino = false   -- no pesky dino... but now you can't catch him
+fast_death = false    -- restart super fast after death
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -51,7 +52,7 @@ screen_addr = 0x8029
 lives_addr = 0x8032
 tap1 = mem:install_write_tap(screen_addr, lives_addr, "writes", function(offset, data)
    -- infinite lives
-   if offset == lives_addr and data < 3 then
+   if infinite_lives == true and offset == lives_addr and data < 3 then
       return 3
    end
 

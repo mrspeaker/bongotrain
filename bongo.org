@@ -142,8 +142,11 @@ Pickup tile collision: has to be 4 pixels from the left of the player and 24px d
 Also, bonuses are capped at 40k for sure.
  
 Here's the pickup lookup table for each screen (up to 3 pickups per screen maximum): so, easy to modify for a level editor.
- 
+
+--- TIME SPEED RUN
 And I found this funny thing: there was meant to be a timer that showed under the score - but it was removed by returning from the draw function. Damn it, we could have had speed-runner mode too! In my improved lua script, I removed the return instruction so now it draws the time:
+
+Looks like it was half-baked: on transition, flashes white for a couple of frames. Disappears on the end screen (where you'd want to compare it to other runs), and doesn't show at all on the hiscore entry or display.
 
 ----
 
@@ -251,7 +254,7 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
 
     ----
 
-    Secret track? No! I think it's in there....
+    Secret track? No! I think it's in there.... best track though
     
     woah, secret track: 0x0b sfx (set 0x8042/3/4...) wow. crazy.
     0x10 is hilarious... but think it's just playing game code as sfx.

@@ -45,6 +45,11 @@
     LIVES_P2       $8033
     IS_PLAYING     $8034  ; attract mode = 0, 1P = 1, 2P = 2
 
+    ROCK_FALL_TIMER $8036 ; resets falling pos of rock
+    ENEMY_1_ACTIVE $8037  ;
+    ENEMY_2_ACTIVE $8039  ;
+    ENEMY_3_ACTIVE $803B  ;
+
     CH1_SFX        $8042  ; TUNE N? 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?
     CH2_SFX        $8043  ; SFX too?
     SFX_ID         $8044  ; queued sound effect ID to play
@@ -105,10 +110,18 @@
 
     PLATFORM_XOFFS $8180  ; maybe
 
+    _JUMP?         $82A0  ; jump or acceleration?
+
     CREDITS        $8303
     _              $8305  ; Coins? dunno
 
+    SCORE          $8300  ; Current player score
+    SCORE+1        $8301
+    SCORE+2        $8302
+
     TICK_NUM       $8312  ; adds 1 every tick
+    TICK_MOD_3_1   $8315  ; same as $8000
+    TICK_MOD_6_1   $8316  ; offset by 1 from $8001
 
     STACK_LOCATION  $83F0  ; I think?
     INPUT_BUTTONS   $83F1  ; copied to 800C and 800D
@@ -419,7 +432,8 @@ RESET_A_BUNCH
 0217: 32 29 80    ld   ($SCREEN_NUM),a
 021A: 32 2A 80    ld   ($SCREEN_NUM_P2),a
 021D: 32 90 80    ld   ($8090),a
-0220: 31 F0 83    ld   sp,$83F0
+POST_DEATH_RESET
+0220: 31 F0 83    ld   sp,$STACK_LOCATION ; hmm. sets stack pointer?
 0223: 3A 04 80    ld   a,($PLAYER_NUM) ; flip flops?!
 0226: EE 01       xor  $01
 0228: 32 04 80    ld   ($PLAYER_NUM),a
@@ -591,7 +605,7 @@ ANIMATE_TILES
 035A: 7C          ld   a,h
 035B: FE 88       cp   $88
 035D: 20 F2       jr   nz,$0351
-035F: 31 F0 83    ld   sp,$83F0
+035F: 31 F0 83    ld   sp,$STACK_LOCATION
 0362: 3E 01       ld   a,$01
 0364: 32 90 80    ld   ($8090),a
 0367: C3 83 05    jp   $0583
@@ -716,7 +730,7 @@ DRAW_LIVES
 045B: C0          ret  nz
 045C: 3A 14 80    ld   a,($P1_SCORE)
 045F: 4F          ld   c,a
-0460: 3A 00 83    ld   a,($8300)
+0460: 3A 00 83    ld   a,($SCORE)
 0463: 37          scf
 0464: 3F          ccf
 0465: 99          sbc  a,c
@@ -743,7 +757,7 @@ DRAW_LIVES
 048B: C0          ret  nz
 048C: 3A 17 80    ld   a,($P2_SCORE)
 048F: 4F          ld   c,a
-0490: 3A 00 83    ld   a,($8300)
+0490: 3A 00 83    ld   a,($SCORE_0)
 0493: 37          scf
 0494: 3F          ccf
 0495: 99          sbc  a,c
@@ -784,29 +798,29 @@ CHECK_DINO_TIMER
 04DD: FF FF FF
     
 04E0: 3A 14 80    ld   a,($P1_SCORE)
-04E3: 32 00 83    ld   ($8300),a
+04E3: 32 00 83    ld   ($SCORE),a
 04E6: 3A 15 80    ld   a,($P1_SCORE+1)
-04E9: 32 01 83    ld   ($8301),a
+04E9: 32 01 83    ld   ($SCORE+1),a
 04EC: 3A 16 80    ld   a,($P1_SCORE+2)
-04EF: 32 02 83    ld   ($8302),a
+04EF: 32 02 83    ld   ($SCORE+2),a
 04F2: E1          pop  hl
 04F3: C9          ret
     
 04F4: FF ...
 
 0500: 3A 17 80    ld   a,($P2_SCORE)
-0503: 32 00 83    ld   ($8300),a
+0503: 32 00 83    ld   ($SCORE),a
 0506: 3A 18 80    ld   a,($P2_SCORE+1)
-0509: 32 01 83    ld   ($8301),a
+0509: 32 01 83    ld   ($SCORE+1),a
 050C: 3A 19 80    ld   a,($P2_SCORE+2)
-050F: 32 02 83    ld   ($8302),a
+050F: 32 02 83    ld   ($SCORE+2),a
 0512: E1          pop  hl
 0513: C9          ret
     
 0514: FF ...
 
     ;; This looks suspicious. 25 bytes written
-    ;; to $8038+, code is never called.
+    ;; to $8038+, code is never called. Is it data?
 0518: 21 38 80    ld   hl,$8038
 051B: 36 39       ld   (hl),$39
 051D: 23          inc  hl
@@ -1098,7 +1112,7 @@ PHYS_LOOKUP2
 0770: FF FF FF FF
 
 PHYSICS_SOMETHING
-0774: 3A 16 83    ld   a,($8316) ; timer?
+0774: 3A 16 83    ld   a,($TICK_MOD_6_1)
 0777: E6 07       and  $07
 0779: C0          ret  nz
 077A: 3A 12 80    ld   a,($PLAYER_DIED)
@@ -1780,7 +1794,7 @@ CHECK_IF_PLAYER_DIED
 0C8E: CD C0 0C    call $DO_DEATH_SEQUENCE
 0C91: AF          xor  a
 0C92: 32 12 80    ld   ($PLAYER_DIED),a ; clear died
-0C95: CD 20 02    call $0220
+0C95: CD 20 02    call $POST_DEATH_RESET
 0C98: C9          ret
     
 0C99: FF ...
@@ -1790,13 +1804,8 @@ CHECK_IF_PLAYER_DIED
 0CA5: 1D          dec  e
 0CA6: 20 FA       jr   nz,$0CA2
 0CA8: C9          ret
-0CA9: FF          rst  $38
-0CAA: FF          rst  $38
-0CAB: FF          rst  $38
-0CAC: FF          rst  $38
-0CAD: FF          rst  $38
-0CAE: FF          rst  $38
-0CAF: FF          rst  $38
+0CA9: FF ...
+
 0CB0: 1E 03       ld   e,$03
 0CB2: CD 30 0D    call $0D30
 0CB5: CD 60 0D    call $0D60
@@ -1804,7 +1813,7 @@ CHECK_IF_PLAYER_DIED
 0CBB: 1D          dec  e
 0CBC: 20 F4       jr   nz,$0CB2
 0CBE: C9          ret
-0CBF: FF          rst  $38
+0CBF: FF
 
 DO_DEATH_SEQUENCE
 0CC0: 3E 02       ld   a,$02
@@ -2219,7 +2228,6 @@ EXTRA_LIFE
 107A: CD A8 10    call $10A8    ; p2
 107D: C9          ret
 107E: FF FF
-
     ;; P1 extra life
 1080: 3A 70 80    ld   a,($8070)
 1083: A7          and  a
@@ -2238,9 +2246,7 @@ EXTRA_LIFE
 109C: 3E 08       ld   a,$08
 109E: 32 44 80    ld   ($SFX_ID),a
 10A1: C9          ret
-
 10A2: FF ...
-
     ;; P2 extra life
 10A8: 3A 71 80    ld   a,($8071)
 10AB: A7          and  a
@@ -2360,7 +2366,7 @@ UPDATE_CUSTOM_SCREEN_LOGIC
 115F: FF ...
 
 UPDATE_EVERYTHING
-1170: CD 04 1A    call $1A04
+1170: CD 04 1A    call $CHECK_EXIT_STAGE_LEFT
 1173: CD D0 13    call $UPDATE_TIME_TIMER
 1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
@@ -2401,7 +2407,8 @@ UPDATE_EVERYTHING
 11D5: 28 04       jr   z,$11DB
 11D7: FE 00       cp   $00
 11D9: 20 03       jr   nz,$11DE
-11DB: CD 60 39    call $3960
+11DB: CD 60 39    call $SET_ENEMY_2_F0_98
+    ;;
 11DE: 3A 5C 81    ld   a,($ENEMY_3_X)
 11E1: FE 60       cp   $60
 11E3: 28 14       jr   z,$11F9
@@ -2415,18 +2422,17 @@ UPDATE_EVERYTHING
 11F3: 28 04       jr   z,$11F9
 11F5: FE 00       cp   $00
 11F7: 20 03       jr   nz,$11FC
-11F9: CD 88 39    call $3988
+11F9: CD 88 39    call $SET_ENEMY_3_F0_68
 11FC: C9          ret
 11FD: FF ...
 
-    ;; Ooh, what's this checking/setting?
-    ;; Called from a few places
+;;;
 PLAYER_POS_UPDATE
 1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1203: 47          ld   b,a
 1204: 3A 02 80    ld   a,($PL_Y_LEGS_COPY)
 1207: B8          cp   b
-1208: 20 1E       jr   nz,$1228 ; legs copy diferent from legs?
+1208: 20 1E       jr   nz,$1228 ; legs copy different from legs?
 120A: C6 08       add  a,$08
 120C: CB 3F       srl  a
 120E: CB 3F       srl  a
@@ -2454,7 +2460,7 @@ PLAYER_POS_UPDATE
 1236: 7E          ld   a,(hl)
 1237: 32 03 80    ld   ($8003),a
 123A: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-123D: 32 02 80    ld   ($8002),a
+123D: 32 02 80    ld   ($PL_Y_LEGS_COPY),a
 1240: C9          ret
     
 1241: FF ...
@@ -2710,7 +2716,7 @@ UPDATE_TIME
 140B: FF ...
 
     ;; draws the player's time under score
-    ;; ret's immediately: must have been removed!
+    ;; ret's immediately: must have been removed! aww :(
 DRAW_TIME
 1410: C9          ret
 1411: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -2836,7 +2842,7 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14DD: C9          ret
 14DE: FF          rst  $38
 14DF: FF          rst  $38
-14E0: 3A 15 83    ld   a,($8315)
+14E0: 3A 15 83    ld   a,($TICK_MOD_3_1)
 14E3: E6 03       and  $03
 14E5: C0          ret  nz
 14E6: CD 50 3A    call $3A50
@@ -3064,32 +3070,32 @@ UPDATE_FALLING_ROCKS
 168E: FE 1F       cp   $ROUND1_SPEED
 1690: 20 19       jr   nz,$16AB
     ;;  Round 1
-1692: 3A 15 83    ld   a,($8315)
+1692: 3A 15 83    ld   a,($TICK_MOD_3_1)
 1695: 3C          inc  a
 1696: FE 03       cp   $03
 1698: 20 01       jr   nz,$169B
 169A: AF          xor  a
-169B: 32 15 83    ld   ($8315),a
-169E: 3A 16 83    ld   a,($8316)
+169B: 32 15 83    ld   ($TICK_MOD_3_1),a
+169E: 3A 16 83    ld   a,($TICK_MOD_6_1)
 16A1: 3C          inc  a
 16A2: FE 06       cp   $06
 16A4: 20 01       jr   nz,$16A7
 16A6: AF          xor  a
-16A7: 32 16 83    ld   ($8316),a
+16A7: 32 16 83    ld   ($TICK_MOD_6_1),a
 16AA: C9          ret
 ;;; Round 2+
-16AB: 3A 15 83    ld   a,($8315)
+16AB: 3A 15 83    ld   a,($TICK_MOD_3_1)
 16AE: 3C          inc  a
 16AF: FE 02       cp   $02
 16B1: 20 01       jr   nz,$16B4
 16B3: AF          xor  a
-16B4: 32 15 83    ld   ($8315),a
-16B7: 3A 16 83    ld   a,($8316)
+16B4: 32 15 83    ld   ($TICK_MOD_3_1),a
+16B7: 3A 16 83    ld   a,($TICK_MOD_6_1)
 16BA: 3C          inc  a
 16BB: FE 04       cp   $04
 16BD: 20 01       jr   nz,$16C0
 16BF: AF          xor  a
-16C0: 32 16 83    ld   ($8316),a
+16C0: 32 16 83    ld   ($TICK_MOD_6_1),a
 16C3: C9          ret
 
 16C4: FF ...
@@ -3169,11 +3175,12 @@ ADD_SCORE
 CHECK_DONE_SCREEN
 1750: 37          scf
 1751: 3F          ccf
-1752: 3A 43 81    ld   a,($PLAYER_Y)
-1755: C6 48       add  a,$48
-1757: 38 03       jr   c,$175C
-1759: D6 78       sub  $78
-175B: D0          ret  nc
+1752: 3A 43 81    ld   a,($PLAYER_Y) ; Test if player is at top or bottom
+1755: C6 48       add  a,$48         ; Y + 72 > 255?
+1757: 38 03       jr   c,$175C       ; ...yep, check x
+1759: D6 78       sub  $78           ; Y - 120 < 0?
+175B: D0          ret  nc            ; ...no, can't finish level here...
+    ;; check if gone past edge of screen
 175C: 3A 40 81    ld   a,($PLAYER_X)
 175F: 37          scf
 1760: 3F          ccf
@@ -3653,18 +3660,19 @@ CHECK_FALL_OFF_BOTTOM_SCR
 19F8: CD C0 0C    call $DO_DEATH_SEQUENCE
 19FB: AF          xor  a
 19FC: 32 12 80    ld   ($PLAYER_DIED),a
-19FF: CD 20 02    call $0220
+19FF: CD 20 02    call $POST_DEATH_RESET
 1A02: C9          ret
 
 1A03: FF
 
-;;;
+    ;; Die if you go out the screen to the left (16px)
+CHECK_EXIT_STAGE_LEFT
 1A04: 3A 40 81    ld   a,($PLAYER_X)
 1A07: 37          scf
 1A08: 3F          ccf
-1A09: D6 10       sub  $10
-1A0B: D0          ret  nc
-1A0C: C3 48 1B    jp   $1B48
+1A09: D6 10       sub  $10      ; out the start of the screen?
+1A0B: D0          ret  nc       ; ... nope, you're good
+1A0C: C3 48 1B    jp   $CALL_DO_DEATH_SEQUENCE  ; ... yep, you're dead
 1A0F: C9          ret
 
 1A10: 03          inc  bc
@@ -3895,13 +3903,14 @@ CHECK_FALL_OFF_BOTTOM_SCR
 1B40: 09          add  hl,bc
 1B41: 22 1E 80    ld   ($801E),hl
 1B44: C9          ret
-1B45: FF          rst  $38
-1B46: FF          rst  $38
-1B47: FF          rst  $38
+1B45: FF FF FF
+
+CALL_DO_DEATH_SEQUENCE
 1B48: CD C0 0C    call $DO_DEATH_SEQUENCE
-1B4B: CD 20 02    call $0220
+1B4B: CD 20 02    call $POST_DEATH_RESET
 1B4E: C9          ret
-1B4F: FF          rst  $38
+1B4F: FF
+
 1B50: 3E 03       ld   a,$03
 1B52: 32 80 80    ld   ($8080),a
 1B55: CD 00 17    call $ADD_SCORE
@@ -4150,6 +4159,7 @@ DINO_COLLISION
 1CFD: FF          rst  $38
 1CFE: FF          rst  $38
 1CFF: FF          rst  $38
+    ;; don't think these bytes are used
 1D00: 03          inc  bc
 1D01: 3B          dec  sp
 1D02: 3E 3F       ld   a,$3F
@@ -5491,7 +5501,7 @@ DRAW_SCORE
 249F: ED 67       rrd  (hl)
 24A1: AF          xor  a
 24A2: 32 61 90    ld   ($9061),a
-24A5: 21 00 83    ld   hl,$8300
+24A5: 21 00 83    ld   hl,$SCORE
 24A8: ED 67       rrd  (hl)
 24AA: 32 C1 91    ld   ($91C1),a
 24AD: ED 67       rrd  (hl)
@@ -5537,7 +5547,7 @@ DRAW_SCORE
 24FD: FF          rst  $38
 24FE: FF          rst  $38
 24FF: FF          rst  $38
-2500: 21 00 83    ld   hl,$8300
+2500: 21 00 83    ld   hl,$SCORE
 2503: 36 00       ld   (hl),$00
 2505: 2C          inc  l
 2506: 7D          ld   a,l
@@ -5809,7 +5819,7 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 2901: 21 00 02    ld   hl,$0200
 2904: CD E3 01    call $CALL_HL_PLUS_4K
 2907: CD 10 11    call $1110
-290A: 21 20 02    ld   hl,$0220
+290A: 21 20 02    ld   hl,$POST_DEATH_RESET
 290D: CD E3 01    call $CALL_HL_PLUS_4K
 2910: 21 40 02    ld   hl,$0240
 2913: CD E3 01    call $CALL_HL_PLUS_4K
@@ -6101,6 +6111,7 @@ DRAW_BONUS_STATE
 
 2BF7: FF ...
 
+SET_ROCK_1_B0_40
 2C00: 3E B0       ld   a,$B0
 2C02: 32 54 81    ld   ($ENEMY_1_X),a
 2C05: 3E 40       ld   a,$40
@@ -6110,23 +6121,23 @@ DRAW_BONUS_STATE
 2C0F: 3E 15       ld   a,$15
 2C11: 32 56 81    ld   ($ENEMY_1_COL),a
 2C14: 3E 01       ld   a,$01
-2C16: 32 37 80    ld   ($8037),a
+2C16: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 2C19: C9          ret
 
 2C1A: FF ...
 
-2C28: 3A 16 83    ld   a,($8316)
+2C28: 3A 16 83    ld   a,($TICK_MOD_6_1)
 2C2B: E6 07       and  $07
 2C2D: C0          ret  nz
-2C2E: 3A 36 80    ld   a,($8036)
+2C2E: 3A 36 80    ld   a,($ROCK_FALL_TIMER)
 2C31: 3C          inc  a
-2C32: FE 0E       cp   $0E
+2C32: FE 0E       cp   $0E      ; has rock finished falling?
 2C34: 20 01       jr   nz,$2C37
-2C36: AF          xor  a
-2C37: 32 36 80    ld   ($8036),a
+2C36: AF          xor  a        ; reset
+2C37: 32 36 80    ld   ($ROCK_FALL_TIMER),a
 2C3A: A7          and  a
 2C3B: C0          ret  nz
-2C3C: CD 00 2C    call $2C00
+2C3C: CD 00 2C    call $SET_ROCK_1_B0_40
 2C3F: C9          ret
 
 2C40: FF ...
@@ -6227,7 +6238,7 @@ DRAW_BONUS_STATE
 2CF0: FF ...
     
     ;; Score somthing
-2D00: 21 00 83    ld   hl,$8300
+2D00: 21 00 83    ld   hl,$SCORE
 2D03: 3A 14 80    ld   a,($P1_SCORE)
 2D06: BE          cp   (hl)
 2D07: 20 14       jr   nz,$2D1D
@@ -6241,7 +6252,7 @@ DRAW_BONUS_STATE
 2D15: 20 06       jr   nz,$2D1D
 2D17: CD 48 2D    call $2D48
 2D1A: C3 E8 03    jp   $03E8
-2D1D: 21 00 83    ld   hl,$8300
+2D1D: 21 00 83    ld   hl,$SCORE
 2D20: 3A 17 80    ld   a,($P2_SCORE)
 2D23: BE          cp   (hl)
 2D24: 20 F4       jr   nz,$2D1A
@@ -6674,7 +6685,7 @@ DRAW_BONUS_STATE
 309B: 36 22       ld   (hl),$22
 309D: 23          inc  hl
 309E: 36 15       ld   (hl),$15
-30A0: 21 00 83    ld   hl,$8300
+30A0: 21 00 83    ld   hl,$SCORE
 30A3: 36 00       ld   (hl),$00
 30A5: 23          inc  hl
 30A6: 36 05       ld   (hl),$05
@@ -6753,15 +6764,15 @@ DRAW_BONUS_STATE
 313E: C9          ret
 313F: FF          rst  $38
    ; load rock pos (reset rock pos?)
-3140: 3A 37 80    ld   a,($8037)
+3140: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 3143: A7          and  a
-3144: C8          ret  z
+3144: C8          ret  z        ; enemy not alive, return
     ;;  Move rock down screen
 3145: 3C          inc  a
 3146: FE 3C       cp   $3C
 3148: 20 01       jr   nz,$314B
 314A: AF          xor  a
-314B: 32 37 80    ld   ($8037),a
+314B: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 
 314E: 21 80 31    ld   hl,$ENEMY_LOOKUP
 3151: CB 27       sla  a
@@ -6924,7 +6935,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 321F: 3E 16       ld   a,$16
 3221: 32 5A 81    ld   ($ENEMY_2_COL),a
 3224: 3E 01       ld   a,$01
-3226: 32 39 80    ld   ($8039),a
+3226: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3229: C9          ret
 322A: FF ...
 
@@ -6943,10 +6954,10 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3250: C9          ret
 3251: FF ...
 
-3260: 3A 15 83    ld   a,($8315)
+3260: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3263: E6 01       and  $01
 3265: C8          ret  z
-3266: 3A 39 80    ld   a,($8039)
+3266: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
 3269: A7          and  a
 326A: C8          ret  z
 326B: 3A 58 81    ld   a,($ENEMY_2_X) ; move left
@@ -6954,7 +6965,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 326F: 3D          dec  a
 3270: 3D          dec  a
 3271: 32 58 81    ld   ($ENEMY_2_X),a
-3274: 3A 15 83    ld   a,($8315)
+3274: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3277: E6 02       and  $02
 3279: C0          ret  nz
 327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
@@ -6977,7 +6988,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 32BF: 3E 34       ld   a,$34
 32C1: 32 55 81    ld   ($ENEMY_1_FRAME),a
 32C4: 3E 01       ld   a,$01
-32C6: 32 3B 80    ld   ($803B),a
+32C6: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a ; why enemy_3?
 32C9: C9          ret
 32CA: FF ...
 
@@ -6996,14 +7007,14 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 32E7: C9          ret
 32E8: FF ...
 
-32F0: 3A 3B 80    ld   a,($803B)
+32F0: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
 32F3: A7          and  a
 32F4: C8          ret  z
 32F5: 3C          inc  a
 32F6: FE 81       cp   $81
 32F8: 20 01       jr   nz,$32FB
 32FA: AF          xor  a
-32FB: 32 3B 80    ld   ($803B),a
+32FB: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 32FE: 47          ld   b,a
 32FF: 37          scf
 3300: 3F          ccf
@@ -7052,7 +7063,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3367: 3E 16       ld   a,$16
 3369: 32 5A 81    ld   ($ENEMY_2_COL),a
 336C: 3E 01       ld   a,$01
-336E: 32 39 80    ld   ($8039),a
+336E: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3371: C9          ret
 3372: FF ...
 
@@ -7081,14 +7092,14 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 33AE: C9          ret
 33AF: FF ...
 
-33B8: 3A 3B 80    ld   a,($803B)
+33B8: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
 33BB: A7          and  a
 33BC: C8          ret  z
 33BD: 3C          inc  a
 33BE: FE 81       cp   $81
 33C0: 20 01       jr   nz,$33C3
 33C2: AF          xor  a
-33C3: 32 3B 80    ld   ($803B),a
+33C3: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 33C6: 47          ld   b,a
 33C7: 37          scf
 33C8: 3F          ccf
@@ -7199,7 +7210,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 34B7: 3E 17       ld   a,$17
 34B9: 32 56 81    ld   ($ENEMY_1_COL),a
 34BC: 3E 01       ld   a,$01
-34BE: 32 3B 80    ld   ($803B),a
+34BE: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a ; Why set enemy_3?
 34C1: C9          ret
 34C2: FF ...
 
@@ -7241,9 +7252,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3521: 32 40 80    ld   ($8040),a
 3524: AF          xor  a
 ;;;  reset a bunch of things to 0
-3525: 32 37 80    ld   ($8037),a
-3528: 32 39 80    ld   ($8039),a
-352B: 32 3B 80    ld   ($803B),a
+3525: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
+3528: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
+352B: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 352E: 32 3D 80    ld   ($803D),a
 3531: 32 3F 80    ld   ($803F),a
 3534: 32 41 80    ld   ($8041),a
@@ -7270,7 +7281,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3569: C9          ret
 356A: FF ..
 
-3570: 3A 16 83    ld   a,($8316)
+3570: 3A 16 83    ld   a,($TICK_MOD_6_1)
 3573: E6 07       and  $07
 3575: C0          ret  nz
 3576: 3A 3E 80    ld   a,($803E)
@@ -7341,7 +7352,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3608: C9          ret
 3609: FF ...
 
-3610: 3A 15 83    ld   a,($8315)
+3610: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3613: E6 01       and  $01
 3615: C8          ret  z
 3616: 3A 41 80    ld   a,($8041)
@@ -7352,7 +7363,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 361F: 3C          inc  a
 3620: 3C          inc  a
 3621: 32 5C 81    ld   ($ENEMY_3_X),a
-3624: 3A 15 83    ld   a,($8315)
+3624: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3627: E6 02       and  $02
 3629: C0          ret  nz
 362A: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
@@ -7460,7 +7471,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3728: C9          ret
 3729: FF ...
 
-3730: 3A 15 83    ld   a,($8315)
+3730: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3733: E6 01       and  $01
 3735: C8          ret  z
 3736: 3A 41 80    ld   a,($8041)
@@ -7490,7 +7501,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3787: 3E 50       ld   a,$50
 3789: 32 5B 81    ld   ($ENEMY_2_Y),a
 378C: 3E 01       ld   a,$01
-378E: 32 39 80    ld   ($8039),a
+378E: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3791: C9          ret
 3792: FF ...
 
@@ -7509,10 +7520,10 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 37B0: C9          ret
 37B1: FF ...
 
-37B8: 3A 15 83    ld   a,($8315)
+37B8: 3A 15 83    ld   a,($TICK_MOD_3_1)
 37BB: E6 01       and  $01
 37BD: C8          ret  z
-37BE: 3A 39 80    ld   a,($8039)
+37BE: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
 37C1: A7          and  a
 37C2: C8          ret  z
 37C3: 3A 58 81    ld   a,($ENEMY_2_X)
@@ -7599,7 +7610,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 38AA: 3E 16       ld   a,$16
 38AC: 32 56 81    ld   ($ENEMY_1_COL),a
 38AF: 3E 01       ld   a,$01
-38B1: 32 3B 80    ld   ($803B),a
+38B1: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 38B4: C9          ret
 38B5: FF ...
 
@@ -7658,6 +7669,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 
 391F: FF ...
 
+SET_ENEMY_1_F0_C8
 3938: 3A 54 81    ld   a,($ENEMY_1_X)
 393B: A7          and  a
 393C: C0          ret  nz
@@ -7670,11 +7682,12 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 394C: 3E C8       ld   a,$C8
 394E: 32 57 81    ld   ($ENEMY_1_Y),a
 3951: 3E 01       ld   a,$01
-3953: 32 37 80    ld   ($8037),a
+3953: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3956: C9          ret
 
 3957: FF ...
 
+SET_ENEMY_2_F0_98
 3960: 3A 58 81    ld   a,($ENEMY_2_X)
 3963: A7          and  a
 3964: C0          ret  nz
@@ -7687,10 +7700,11 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3974: 3E 98       ld   a,$98
 3976: 32 5B 81    ld   ($ENEMY_2_Y),a
 3979: 3E 01       ld   a,$01
-397B: 32 39 80    ld   ($8039),a
+397B: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 397E: C9          ret
 397F: FF ...
 
+SET_ENEMY_3_F0_68
 3988: 3A 5C 81    ld   a,($ENEMY_3_X)
 398B: A7          and  a
 398C: C0          ret  nz
@@ -7703,7 +7717,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 399C: 3E 68       ld   a,$68
 399E: 32 5F 81    ld   ($ENEMY_3_Y),a
 39A1: 3E 01       ld   a,$01
-39A3: 32 3B 80    ld   ($803B),a
+39A3: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 39A6: C9          ret
 
 39A7: FF ...
@@ -7726,63 +7740,63 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 39CD: 28 04       jr   z,$39D3
 39CF: FE 00       cp   $00
 39D1: 20 03       jr   nz,$39D6
-39D3: CD 38 39    call $3938
+39D3: CD 38 39    call $SET_ENEMY_1_F0_C8
 39D6: C3 C0 11    jp   $11C0
 39D9: FF ...
 
-39E8: 3A 15 83    ld   a,($8315)
+39E8: 3A 15 83    ld   a,($TICK_MOD_3_1)
 39EB: E6 07       and  $07
 39ED: C0          ret  nz
-39EE: 3A 37 80    ld   a,($8037)
+39EE: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 39F1: A7          and  a
 39F2: 28 19       jr   z,$3A0D
 39F4: 3C          inc  a
 39F5: FE 40       cp   $40
 39F7: 20 09       jr   nz,$3A02
 39F9: AF          xor  a
-39FA: 32 37 80    ld   ($8037),a
+    ;; enemy 1
+39FA: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 39FD: 32 54 81    ld   ($ENEMY_1_X),a
 3A00: 18 0B       jr   $3A0D
-3A02: 32 37 80    ld   ($8037),a
+3A02: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3A05: 3A 54 81    ld   a,($ENEMY_1_X)
 3A08: D6 02       sub  $02
 3A0A: 32 54 81    ld   ($ENEMY_1_X),a
-3A0D: 3A 39 80    ld   a,($8039)
+    ;; enemy 2
+3A0D: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
 3A10: A7          and  a
 3A11: 28 19       jr   z,$3A2C
 3A13: 3C          inc  a
 3A14: FE 40       cp   $40
 3A16: 20 09       jr   nz,$3A21
 3A18: AF          xor  a
-3A19: 32 39 80    ld   ($8039),a
+3A19: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A1C: 32 58 81    ld   ($ENEMY_2_X),a
 3A1F: 18 0B       jr   $3A2C
-3A21: 32 39 80    ld   ($8039),a
+3A21: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A24: 3A 58 81    ld   a,($ENEMY_2_X)
 3A27: D6 03       sub  $03
 3A29: 32 58 81    ld   ($ENEMY_2_X),a
-3A2C: 3A 3B 80    ld   a,($803B)
+    ;; enemy 3
+3A2C: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
 3A2F: A7          and  a
 3A30: C8          ret  z
 3A31: 3C          inc  a
 3A32: FE 40       cp   $40
 3A34: 20 08       jr   nz,$3A3E
 3A36: AF          xor  a
-3A37: 32 3B 80    ld   ($803B),a
+3A37: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 3A3A: 32 5C 81    ld   ($ENEMY_3_X),a
 3A3D: C9          ret
-3A3E: 32 3B 80    ld   ($803B),a
+3A3E: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 3A41: 3A 5C 81    ld   a,($ENEMY_3_X)
 3A44: D6 04       sub  $04
 3A46: 32 5C 81    ld   ($ENEMY_3_X),a
 3A49: C9          ret
-3A4A: FF          rst  $38
-3A4B: FF          rst  $38
-3A4C: FF          rst  $38
-3A4D: FF          rst  $38
-3A4E: FF          rst  $38
-3A4F: FF          rst  $38
-3A50: 3A 37 80    ld   a,($8037)
+
+3A4A: FF ...
+
+3A50: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 3A53: A7          and  a
 3A54: C8          ret  z
 3A55: 3C          inc  a
@@ -7790,9 +7804,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3A58: 20 08       jr   nz,$3A62
 3A5A: AF          xor  a
 3A5B: 32 54 81    ld   ($ENEMY_1_X),a
-3A5E: 32 37 80    ld   ($8037),a
+3A5E: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3A61: C9          ret
-3A62: 32 37 80    ld   ($8037),a
+3A62: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3A65: 3A 57 81    ld   a,($ENEMY_1_Y)
 3A68: 3D          dec  a
 3A69: 3D          dec  a
@@ -7811,7 +7825,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3A83: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3A86: C9          ret
 3A87: FF          rst  $38
-3A88: 3A 39 80    ld   a,($8039)
+
+3A88: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
 3A8B: A7          and  a
 3A8C: C8          ret  z
 3A8D: 3C          inc  a
@@ -7819,9 +7834,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3A90: 20 08       jr   nz,$3A9A
 3A92: AF          xor  a
 3A93: 32 58 81    ld   ($ENEMY_2_X),a
-3A96: 32 39 80    ld   ($8039),a
+3A96: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A99: C9          ret
-3A9A: 32 39 80    ld   ($8039),a
+3A9A: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A9D: 3A 5B 81    ld   a,($ENEMY_2_Y)
 3AA0: 3D          dec  a
 3AA1: 3D          dec  a
@@ -7840,7 +7855,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3ABB: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3ABE: C9          ret
 3ABF: FF          rst  $38
-3AC0: 3A 3B 80    ld   a,($803B)
+    ;; enemy 3
+3AC0: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
 3AC3: A7          and  a
 3AC4: C8          ret  z
 3AC5: 3C          inc  a
@@ -7848,9 +7864,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3AC8: 20 08       jr   nz,$3AD2
 3ACA: AF          xor  a
 3ACB: 32 5C 81    ld   ($ENEMY_3_X),a
-3ACE: 32 3B 80    ld   ($803B),a
+3ACE: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 3AD1: C9          ret
-3AD2: 32 3B 80    ld   ($803B),a
+3AD2: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 3AD5: 3A 5F 81    ld   a,($ENEMY_3_Y)
 3AD8: 3D          dec  a
 3AD9: 3D          dec  a
@@ -7869,51 +7885,55 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3AF3: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3AF6: C9          ret
 3AF7: FF          rst  $38
+
+    ;; enemy 1
+SET_ENEMY_1_98_C0
 3AF8: 21 54 81    ld   hl,$ENEMY_1_X
-3AFB: 36 98       ld   (hl),$98
+3AFB: 36 98       ld   (hl),$98 ; x
 3AFD: 23          inc  hl
-3AFE: 36 36       ld   (hl),$36
+3AFE: 36 36       ld   (hl),$36 ; frame
 3B00: 23          inc  hl
-3B01: 36 17       ld   (hl),$17
+3B01: 36 17       ld   (hl),$17 ; color
 3B03: 23          inc  hl
-3B04: 36 C0       ld   (hl),$C0
+3B04: 36 C0       ld   (hl),$C0 ; y
 3B06: 23          inc  hl
 3B07: 3E 01       ld   a,$01
-3B09: 32 37 80    ld   ($8037),a
+3B09: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3B0C: C9          ret
-3B0D: FF          rst  $38
-3B0E: FF          rst  $38
-3B0F: FF          rst  $38
+3B0D: FF FF FF
+
+        ;; enemy 2
+SET_ENEMY_2_90_C0
 3B10: 21 58 81    ld   hl,$ENEMY_2_X
-3B13: 36 90       ld   (hl),$90
+3B13: 36 90       ld   (hl),$90 ; x
 3B15: 23          inc  hl
-3B16: 36 36       ld   (hl),$36
+3B16: 36 36       ld   (hl),$36 ; frame
 3B18: 23          inc  hl
-3B19: 36 17       ld   (hl),$17
+3B19: 36 17       ld   (hl),$17 ; color
 3B1B: 23          inc  hl
-3B1C: 36 C0       ld   (hl),$C0
+3B1C: 36 C0       ld   (hl),$C0 ; y
 3B1E: 23          inc  hl
 3B1F: 3E 01       ld   a,$01
-3B21: 32 39 80    ld   ($8039),a
+3B21: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3B24: C9          ret
-3B25: FF          rst  $38
-3B26: FF          rst  $38
-3B27: FF          rst  $38
+3B25: FF ...
+
+        ;; enemy 3
+SET_ENEMY_3_90_C0
 3B28: 21 5C 81    ld   hl,$ENEMY_3_X
-3B2B: 36 90       ld   (hl),$90
+3B2B: 36 90       ld   (hl),$90 ; x
 3B2D: 23          inc  hl
-3B2E: 36 36       ld   (hl),$36
+3B2E: 36 36       ld   (hl),$36 ; frame
 3B30: 23          inc  hl
-3B31: 36 17       ld   (hl),$17
+3B31: 36 17       ld   (hl),$17 ; color
 3B33: 23          inc  hl
-3B34: 36 C0       ld   (hl),$C0
+3B34: 36 C0       ld   (hl),$C0 ; y
 3B36: 23          inc  hl
 3B37: 3E 01       ld   a,$01
-3B39: 32 3B 80    ld   ($803B),a
+3B39: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
 3B3C: C9          ret
-3B3D: FF          rst  $38
-3B3E: FF          rst  $38
-3B3F: FF          rst  $38
+3B3D: FF FF FF
+
 3B40: CD 78 3B    call $3B78
 3B43: 3A 36 80    ld   a,($8036)
 3B46: 3C          inc  a
@@ -7923,18 +7943,18 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3B4C: 32 36 80    ld   ($8036),a
 3B4F: FE 08       cp   $08
 3B51: 20 04       jr   nz,$3B57
-3B53: CD F8 3A    call $3AF8
+3B53: CD F8 3A    call $SET_ENEMY_1_98_C0
 3B56: C9          ret
 3B57: FE 30       cp   $30
 3B59: 20 04       jr   nz,$3B5F
-3B5B: CD 10 3B    call $3B10
+3B5B: CD 10 3B    call $SET_ENEMY_2_90_C0
 3B5E: C9          ret
 3B5F: FE 40       cp   $40
 3B61: C0          ret  nz
-3B62: CD 28 3B    call $3B28
+3B62: CD 28 3B    call $SET_ENEMY_3_90_C0
 3B65: C9          ret
-3B66: FF          rst  $38
-3B67: FF          rst  $38
+3B66: FF FF
+
 3B68: CD 40 3B    call $3B40
 3B6B: CD E0 14    call $14E0
 3B6E: 00          nop
@@ -7947,7 +7967,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3B75: FF          rst  $38
 3B76: FF          rst  $38
 3B77: FF          rst  $38
-3B78: 3A 15 83    ld   a,($8315)
+
+3B78: 3A 15 83    ld   a,($TICK_MOD_3_1)
 3B7B: E6 03       and  $03
 3B7D: C8          ret  z
 3B7E: E1          pop  hl
@@ -8330,7 +8351,7 @@ DO_CUTSCENE
 3DEB: 3D          dec  a
 3DEC: 3C          inc  a
 3DED: 39          add  hl,sp
-3DEE: 3A 38 39    ld   a,($3938)
+3DEE: 3A 38 39    ld   a,($SET_ENEMY_1_F0_C8)
 3DF1: 38 39       jr   c,$3E2C
 3DF3: 3D          dec  a
 3DF4: 3C          inc  a
@@ -8623,7 +8644,7 @@ INT_HANDLER
 4009: 00          nop
 400A: 3E FF       ld   a,$FF
 400C: 32 00 B8    ld   ($WATCHDOG),a
-400F: 31 F0 83    ld   sp,$83F0
+400F: 31 F0 83    ld   sp,$STACK_LOCATION
 4012: 3A 40 40    ld   a,($4040)
 4015: 00          nop
 4016: 00          nop
