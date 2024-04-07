@@ -2964,7 +2964,7 @@ ANIMATE_SPLASH_PICKUPS
 15CC: C9          ret
 15CD: FF ...
 
-DO_ATTRACK_MODE
+DO_ATTRACT_MODE
 15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 15D3: CD 88 0F    call $0F88
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
@@ -8491,23 +8491,10 @@ END_CUTSCENE
 3F10: CD 10 03    call $ANIMATE_TILES
 3F13: 1F          rra
 3F14: 00          nop
-3F15: C0          ret  nz       ;data for sure: run of bytes!
-3F16: C1          pop  bc
-3F17: C2 C3 C4    jp   nz,$C4C3
-3F1A: C5          push bc
-3F1B: C6 C7       add  a,$C7
-3F1D: C8          ret  z
-3F1E: C9          ret
-3F1F: CA CB CC    jp   z,$CCCB
-3F22: CD CE CF    call $CFCE
-3F25: D0          ret  nc
-3F26: D1          pop  de
-3F27: D2 D3 D4    jp   nc,$D4D3
-3F2A: D5          push de
-3F2B: D6 D7       sub  $D7
-3F2D: D8          ret  c
-3F2E: D9          exx
-3F2F: DA
+3F15: C0 C1 C2 C3 C4 C5 C6 C7
+3F1D: C8 C9 CA CB CC CD CE CF
+3F25: D0 D1 D2 D3 D4 D5 D6 D7
+3F2D: D8 D9 DA
 3F30: FF
 
 3F31: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -8555,6 +8542,7 @@ END_CUTSCENE
 3F70: 16 24       ld   d,$24
 3F72: FF          rst  $38
 3F73: C9          ret
+
 3F74: CD 10 03    call $ANIMATE_TILES
 3F77: 14          inc  d
 3F78: 07          rlca
@@ -9110,6 +9098,7 @@ PICKUP_TILE_COLLISION
 431A: C9          ret
 431B: FF ...
 
+SFX_SOMETHING
 4320: DD 6E 07    ld   l,(ix+$07)
 4323: DD 66 08    ld   h,(ix+$08)
 4326: 7E          ld   a,(hl)
@@ -9128,7 +9117,7 @@ PICKUP_TILE_COLLISION
 433E: 18 FA       jr   $433A
 4340: 3D          dec  a
 4341: DD 77 12    ld   (ix+$12),a
-4344: CD 00 52    call $5200
+4344: CD 00 52    call $MORE_SFX_SOMETHING?
 4347: FD 77 02    ld   (iy+$02),a
 434A: DD 7E 0E    ld   a,(ix+$0e)
 434D: FD 77 03    ld   (iy+$03),a
@@ -9313,7 +9302,7 @@ SFX_02 ; Minor-key death ditti
 4516: 28 0A       jr   z,$SFX_03
 4518: DD 75 07    ld   (ix+$07),l
 451B: DD 74 08    ld   (ix+$08),h
-451E: CD 20 43    call $4320
+451E: CD 20 43    call $SFX_SOMETHING
 4521: C9          ret
 
 SFX_03 ; Pickup bling
@@ -9341,7 +9330,7 @@ SFX_03 ; Pickup bling
 4547: DD 6E 07    ld   l,(ix+$07)
 454A: DD 66 08    ld   h,(ix+$08)
 454D: 7E          ld   a,(hl)
-454E: CD 20 43    call $4320
+454E: CD 20 43    call $SFX_SOMETHING
 4551: C9          ret
 
 4552: FE FF       cp   $FF
@@ -9354,7 +9343,7 @@ SFX_03 ; Pickup bling
 455E: 23          inc  hl
 455F: 7E          ld   a,(hl)
 4560: DD 77 08    ld   (ix+$08),a
-4563: CD 20 43    call $4320
+4563: CD 20 43    call $SFX_SOMETHING
 4566: C9          ret
 
 4567: FF          rst  $38
@@ -9707,7 +9696,7 @@ CLEAR_SFX_1
 480B: 23          inc  hl
 480C: 7E          ld   a,(hl)
 480D: DD 77 0C    ld   (ix+$0c),a
-4810: CD 20 43    call $4320
+4810: CD 20 43    call $SFX_SOMETHING
 4813: DD 7E 0D    ld   a,(ix+$0d)
 4816: 3D          dec  a
 4817: C8          ret  z
@@ -10516,7 +10505,7 @@ BLANK_OUT_3_TILES               ; which ones?
 4D67: 32 2A 81    ld   ($SCREEN_XOFF_COL+2A),a
 4D6A: C9          ret
 
-4D6B: FF FF FF FF FF FF FF FF FF
+4D6B: FF ...
 
 END_SCREEN_LOGIC
 4D74: 3A 04 80    ld   a,($PLAYER_NUM) ; are we on end screen?
@@ -10530,7 +10519,7 @@ END_SCREEN_LOGIC
 4D85: CD 90 4D    call $CHECK_TOUCHING_CAGE
 4D88: C9          ret
 
-4D89: FF FF FF FF FF FF FF
+4D89: FF ...
 
 CHECK_TOUCHING_CAGE
 4D90: 3A 51 80    ld   a,($IS_HIT_CAGE)
@@ -10742,7 +10731,7 @@ SPEED_UP_FOR_NEXT_ROUND
 4EF8: 20 03       jr   nz,$4EFD
 4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
 4EFC: C9          ret
-4EFD: C3 1C 50    jp   $501C    ; round 4+ = get 2 faster each time!
+4EFD: C3 1C 50    jp   $EVEN_MORE_FASTER_DINO ; round 4+ = get 2 faster each time!
 
 PICKUPS_LOOKUP
 4F00: 91 5A 8C 00 00 00 00 00 00 ; up to 3 pickups per screen
@@ -10798,6 +10787,8 @@ ANIMATE_PICKUPS
 5019: 02          ld   (bc),a
 501A: 23          inc  hl
 501B: C9          ret
+
+EVEN_MORE_FASTER_DINO
 501C: 3D          dec  a
 501D: 3D          dec  a
 501E: 77          ld   (hl),a
@@ -10850,6 +10841,7 @@ TBL_1
 505D: FF          rst  $38
 505E: FF          rst  $38
 505F: FF          rst  $38
+
 5060: 0C          inc  c
 5061: 01 0E 01    ld   bc,$010E
 5064: 10 01       djnz $5067
@@ -11135,6 +11127,7 @@ TBL_1
 51FF: FF          rst  $38
 
     ;;
+MORE_SFX_SOMETHING?
 5200: DD E5       push ix
 5202: E1          pop  hl
 5203: 7D          ld   a,l
@@ -11284,7 +11277,7 @@ TBL_1
 531E: 23          inc  hl
 531F: 36 38       ld   (hl),$38
 5321: CD AC 53    call $53AC
-5324: C3 28 54    jp   $CALL_DO_ATTRACK_MODE
+5324: C3 28 54    jp   $CALL_DO_ATTRACT_MODE
 5327: FF          rst  $38
 5328: 16 00       ld   d,$00
 532A: 21 80 53    ld   hl,$5380
@@ -11425,8 +11418,8 @@ TBL_1
 5426: FF          rst  $38
 5427: FF          rst  $38
 
-CALL_DO_ATTRACK_MODE
-5428: 21 D0 15    ld   hl,$DO_ATTRACK_MODE
+CALL_DO_ATTRACT_MODE
+5428: 21 D0 15    ld   hl,$DO_ATTRACT_MODE
 542B: CD 81 5C    call $JMP_HL
 542E: C9          ret
 542F: FF          rst  $38
@@ -11589,11 +11582,8 @@ CALL_DO_ATTRACK_MODE
 5548: 00          nop
 5549: 00          nop
 554A: C9          ret
-554B: FF          rst  $38
-554C: FF          rst  $38
-554D: FF          rst  $38
-554E: FF          rst  $38
-554F: FF          rst  $38
+554B: FF ...
+
 5550: 10 01       djnz $5553
 5552: 0B          dec  bc
 5553: 01 08 01    ld   bc,$0108
