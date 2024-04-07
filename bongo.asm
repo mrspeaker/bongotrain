@@ -55,8 +55,8 @@
     SFX_ID         $8044  ; queued sound effect ID to play
 
     IS_HIT_CAGE    $8051  ; did player trigger cage?
-    SPEED_DELAY_P1 $805b  : speed for dino/rocks, start=1f, 10, d, then dec 2...
-    SPEED_DELAY_P2 $805c  : ...until dead. Smaller delay = faster dino/rock fall
+    SPEED_DELAY_P1 $805b  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
+    SPEED_DELAY_P2 $805c  ; ...until dead. Smaller delay = faster dino/rock fall
     DINO_TIMER     $805d  ; timer based on SPEED_DELAY (current round)
 
     BONUSES        $8060  ; How many bonuses collected
@@ -144,7 +144,7 @@
     TILE_PIK_CROSS  $9D
     TILE_PIK_RING   $9E
     TILE_PIK_VASE   $9F
-    TILE_?          $C0
+    TILE_LVL_01     $C0
 
 ;;; hardware
 
@@ -8488,6 +8488,7 @@ END_CUTSCENE
 
 3F0A: FF ...
 
+;;; Probably the level tiles at the bottom of the screen
 3F10: CD 10 03    call $ANIMATE_TILES
 3F13: 1F          rra
 3F14: 00          nop
