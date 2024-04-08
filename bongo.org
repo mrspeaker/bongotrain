@@ -281,3 +281,22 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
     
   #+END_SRC
     
+--------------
+level design
+
+actually pretty good!
+intro the level, no danger - just jump,
+enxt is exactly the same, but with one rock,
+then new level, etc
+A 7 "types" of level - progressively more difficult
+
+#+BEGIN_SRC
+
+_m_,  _-`-_, _/`,`w`, `\_, _S`, _≡ ≡`, _S-
+
+#+END_SRC
+
+level 8 and 13 are the same level.
+
+ledge on blue meaninies - important later
+

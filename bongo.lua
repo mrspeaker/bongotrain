@@ -1,15 +1,17 @@
 -- Bongo Training Montage --
 
 start_screen = 1 -- used if not looping
-loop_screens = {} -- if you want to practise levels, eg:
+loop_screens = {13,14,17,18,24,25,27} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
 round_two = true -- start in round two
 
 infinite_lives = true
+disable_round_speed_up = true -- don't get faster after catching dino
+skip_cutscene = true -- don't show the cutscene
 disable_dino = false   -- no pesky dino... but now you can't catch him
-fast_death = false    -- restart super fast after death
+fast_death = false    -- restart super fast after death (oops, messes with dino!)
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -23,6 +25,17 @@ if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    mem:write_direct_u8(0x0CC0, 0xC9); -- return early
    mem:write_direct_u8(0x0CC1, 0x00); -- nop out orignal
+end
+
+if disable_round_speed_up == true then
+   mem:write_direct_u8(0x4EE3, 0xC9); -- return early
+end
+
+if skip_cutscene == true then
+   --0xc3 0x8B 0x3D
+   mem:write_direct_u8(0x3D48+0, 0xC3); -- jp
+   mem:write_direct_u8(0x3D48+1, 0x8B); -- jp
+   mem:write_direct_u8(0x3D48+2, 0x3D); -- jp
 end
 
 if alt_bongo_place == true then
