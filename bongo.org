@@ -1,4 +1,9 @@
+* blerg
+hacking away at a wr.
+
+
 * Mame debugging
+
 ./mame bongo -autoboot_script scripts/bongo.lua
 
 start: mame -debug
@@ -357,4 +362,7 @@ bonus resets on round change - don't sweat end-level deaths
 favour speed-run over careful: doesn't work in round 2
 fast round - can jump from second-to-bottom
 
-
+---
+- what's that weird tiny "slowdown" right at the start?
+- maybe the "impossible 3 bird" run - need to time it so the first pickup is your bonus
+  
