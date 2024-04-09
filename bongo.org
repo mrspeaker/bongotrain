@@ -263,6 +263,9 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
 
     Interesting AABB algo
 
+   1. subs positions and widht, checks carry.
+    2. if no hit -might be to the left so ADDS double width... if carry, hit on other side
+
     > enemy x = 0, player x = 12 = NO HIT
     > enemy x = 12, player x = 0 = YEP HIT!
 
@@ -276,7 +279,6 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
     .+  24 (w*2)   .+  24          + 33
      =   0          =   4          = 11
      C?  N              Y          = Y
-
     
     
   #+END_SRC
@@ -289,10 +291,47 @@ intro the level, no danger - just jump,
 enxt is exactly the same, but with one rock,
 then new level, etc
 A 7 "types" of level - progressively more difficult
-
+intro S quite late - very exciting
+awesome cut scene... but weirdly, no bonus.
+---
+7 types of level
 #+BEGIN_SRC
 
 _m_,  _-`-_, _/`,`w`, `\_, _S`, _≡ ≡`, _S-
+
+n_n, nTn, /,W, \, S, S_S,
+n_n, nTn, /,^^,\, S, Sc
+
+01: n_n  crown right
+02: n_n  rock right | cross right
+03: nTn  cross right
+04: n_n  bird bottom, rock right | crown right
+05: /        crown center
+06: W      crown center
+07: \        cross center
+
+08: n_n  bird bottom, rock left, rock right | cross right
+09: nTn  rock right | cross right
+10: /        bluey center | crown center
+11: W      bird top, | crown center, ring right
+12: \        blue center, blue center | cross center
+13: n_n  bird bottom, rock left, rock right | crown right (same pattern as 8)
+14: nTn  rock left, rock right, ring left, cross right
+
+15: n_n  ltr bird bottom, bird right, cross right
+16: S       right bottom center, vase top left
+17: \        ltr bird center, bluey center, bluey center, cross center
+18: n_n  ltr bird bottom, bird bottom, rock right, cross right
+19: S      arrow center, arrow top, ring bottom, vase top right
+20: \       arrow center, arrow top, bluey center, cross center
+
+21: S_S crown bottom, cross center, vase top
+22: W     bird top, ltr bird top, crown center, ring right
+23: \       bird bottom, ltr bird center, bluey center, cross center
+24: S_S flame (x3) center, crown bottom, cross center, vase top
+25: W     bird top, ltr bird top, ltr bird top, crown center, ring right
+26: \       arrow top, arrow center, arrow bottom, cross center
+27: S      bird top, ltr bird top, ltr bird top
 
 #+END_SRC
 
@@ -300,3 +339,22 @@ level 8 and 13 are the same level.
 
 ledge on blue meaninies - important later
 
+----
+3s and 6s... plus offset by 1
+inc
+inc
+inc
+---
+pro tips:
+
+Safety stair pickup (e)
+Fast rock leap (t)
+Jump from ledge will get more bonus... not flat ground
+Can wait on platform to get more points if will skip above
+Can jump over bonus, go to end, come back for more points (if skip)
+collision is left 12px - can overlap birds heading at you
+bonus resets on round change - don't sweat end-level deaths
+favour speed-run over careful: doesn't work in round 2
+---
+
+fast round - can jump from second-to-bottom
