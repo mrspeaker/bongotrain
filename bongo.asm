@@ -39,7 +39,7 @@
     SCREEN_NUM_P2  $802A  ; Player 2 screen
     DINO_COUNTER   $802D  ; Ticks up when DINO_TIMER is done
 
-    PLAYER_PREV_X  $8030  ; maybe previous x (used to calc score move)
+    PLAYER_MAX_X   $8030  ; furthest x pos (used for move score)
     _              $8031  ; ???
     LIVES          $8032
     LIVES_P2       $8033
@@ -973,7 +973,7 @@ PLAYER_FRAME_DATA_2             ;what's this anim?
 0648: 8C 8E 90 8E 8C 92 94 92
 0650: FF FF FF FF FF FF FF FF
 
-PLAYER_MOVE_RIGHT
+PLAYER_MOVE_RIGHT               ;really? looks left...
 0658: 3A 10 80    ld   a,($8010)
 065B: 3C          inc  a
 065C: E6 07       and  $07
@@ -2185,7 +2185,7 @@ BIG_RESET
 1015: 32 60 80    ld   ($BONUSES),a
 1018: 32 62 80    ld   ($BONUS_MULT),a
 101B: 3E 20       ld   a,$20
-101D: 32 30 80    ld   ($PLAYER_PREV_X),a
+101D: 32 30 80    ld   ($PLAYER_MAX_X),a
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
 1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 1026: 21 E0 0F    ld   hl,$0FE0
@@ -2822,7 +2822,7 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14B3: CD E3 01    call $CALL_HL_PLUS_4K
 14B6: CD C8 3B    call $3BC8
 14B9: 3E 20       ld   a,$20
-14BB: 32 30 80    ld   ($PLAYER_PREV_X),a
+14BB: 32 30 80    ld   ($PLAYER_MAX_X),a
 14BE: 3A 04 80    ld   a,($PLAYER_NUM)
 14C1: A7          and  a
 14C2: 20 05       jr   nz,$14C9
@@ -8670,20 +8670,23 @@ INT_HANDLER
 
 4049: FF FF FF FF FF FF FF
 
+    ;; Adds a bonus as you move right
+    ;; Keeps track of "max x" - when you go past it,
+    ;; it gets the diff (x - old max x) and adds it to bonus
 ADD_MOVE_SCORE
 4050: 3A 40 81    ld   a,($PLAYER_X)
 4053: 37          scf
 4054: 3F          ccf
-4055: 21 30 80    ld   hl,$PLAYER_PREV_X
+4055: 21 30 80    ld   hl,$PLAYER_MAX_X
 4058: 96          sub  (hl)
-4059: D8          ret  c
-    ;; adds the move score?
-405A: 47          ld   b,a                ; add a to score_to_add
+4059: D8          ret  c        ; not furthest right, no bonus
+    ;; adds the move score
+405A: 47          ld   b,a      ; add position diff to score_to_add
 405B: 3A 1D 80    ld   a,($SCORE_TO_ADD)
 405E: 80          add  a,b
 405F: 32 1D 80    ld   ($SCORE_TO_ADD),a
-4062: 3A 40 81    ld   a,($PLAYER_X)      ; put playerpos in 8030
-4065: 32 30 80    ld   ($PLAYER_PREV_X),a
+4062: 3A 40 81    ld   a,($PLAYER_X)  ; set new max X pos
+4065: 32 30 80    ld   ($PLAYER_MAX_X),a
 4068: C9          ret
 
 4069: FF FF FF FF FF FF FF
