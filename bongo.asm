@@ -38,6 +38,7 @@
     SCREEN_NUM     $8029  ; Current screen player is on
     SCREEN_NUM_P2  $802A  ; Player 2 screen
     DINO_COUNTER   $802D  ; Ticks up when DINO_TIMER is done
+    DINO_DIR       $802E  ; 01 = right, ff = left
 
     PLAYER_MAX_X   $8030  ; furthest x pos (used for move score)
     _              $8031  ; ???
@@ -61,6 +62,7 @@
 
     BONUSES        $8060  ; How many bonuses collected
     BONUS_MULT     $8062  ; Bonus multiplier.
+    _              $8066  ; ?? OE when alive, 02 when dead?
 
     _              $8010  ; whats tis?
     FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
@@ -251,8 +253,8 @@ SETUP
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
 00C4: CD 50 15    call $COPY_XOFFS_COL_SPRITES_TO_SCREEN
-00C7: CD 60 29    call $2960
-00CA: CD D0 01    call $01D0
+00C7: CD 60 29    call $SAVE_IX_AND_?
+00CA: CD D0 01    call $COPY_PORTS_TO_BUTTONS
 00CD: D9          exx
 00CE: C9          ret
 00CF: FF
@@ -394,12 +396,13 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01CB: FF ...
 
 ;;;
+COPY_PORTS_TO_BUTTONS
 01D0: 3A 00 A0    ld   a,($PORT_IN0)
 01D3: 32 0B 80    ld   ($CONTROLS),a
 01D6: 3A F1 83    ld   a,($INPUT_BUTTONS)
-01D9: 32 0C 80    ld   ($800C),a
+01D9: 32 0C 80    ld   ($BUTTONS_1),a
 01DC: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
-01DF: 32 0D 80    ld   ($800D),a
+01DF: 32 0D 80    ld   ($BUTTONS_2),a
 01E2: C9          ret
 
     ;;
@@ -776,7 +779,7 @@ DRAW_LIVES
 
 ;; count up timer - every SPEED_DELAY ticks
 CHECK_DINO_TIMER
-04BA: CD E0 28    call $28E0
+04BA: CD E0 28    call $MOVE_DINO_X
 04BD: 3A 04 80    ld   a,($PLAYER_NUM)
 04C0: A7          and  a
 04C1: 20 05       jr   nz,$04C8
@@ -1254,12 +1257,8 @@ PLAY_JUMP_SFX
 0835: 0E E0       ld   c,$E0
 0837: 09          add  hl,bc
 0838: 18 F3       jr   $082D
-083A: FF          rst  $38
-083B: FF          rst  $38
-083C: FF          rst  $38
-083D: FF          rst  $38
-083E: FF          rst  $38
-083F: FF          rst  $38
+083A: FF ...
+
 0840: E5          push hl
 0841: D9          exx
 0842: E1          pop  hl
@@ -2289,11 +2288,11 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 10E3: 3C          inc  a
 10E4: FE 03       cp   $03
 10E6: 20 01       jr   nz,$10E9
-10E8: AF          xor  a
+10E8: AF          xor  a        ; reset a
 10E9: 32 00 80    ld   ($TICK_MOD_3),a
-10EC: CB 27       sla  a
+10EC: CB 27       sla  a        ; (tick % 3) * 4
 10EE: CB 27       sla  a
-10F0: CD 90 13    call $1390
+10F0: CD 90 13    call $SHADOW_ADD_A_TO_HL
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
 
@@ -2315,6 +2314,7 @@ FALLING_ROCKS
 
 110B: FF FF FF FF FF
 
+    ;; ??
 1110: F5          push af
 1111: E5          push hl
 1112: 21 66 80    ld   hl,$8066
@@ -2330,7 +2330,7 @@ FALLING_ROCKS
 1121: 7E          ld   a,(hl)
 1122: 36 00       ld   (hl),$00
 1124: C6 18       add  a,$18
-1126: E6 7F       and  $7F
+1126: E6 7F       and  $7F      ; 0111 1111
 1128: 00          nop
 1129: 00          nop
 112A: E1          pop  hl
@@ -2351,7 +2351,7 @@ UPDATE_CUSTOM_SCREEN_LOGIC
 1139: 32 01 80    ld   ($TICK_MOD_6),a
 113C: CB 27       sla  a
 113E: CB 27       sla  a
-1140: CD 90 13    call $1390
+1140: CD 90 13    call $SHADOW_ADD_A_TO_HL
 1143: CD 02 3C    call $CUSTOM_SCREEN_LOGIC
 1146: C9          ret
 1147: 00          nop
@@ -2391,7 +2391,7 @@ UPDATE_EVERYTHING
 1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
-118B: CD B0 0B    call $0BB0
+118B: CD B0 0B    call $0BB0    ;moving platforms?
 118E: CD 00 12    call $PLAYER_POS_UPDATE
 1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
 1194: CD 50 17    call $CHECK_DONE_SCREEN
@@ -2402,7 +2402,7 @@ UPDATE_EVERYTHING
 11A3: CD 70 0E    call $BONGO_ANIMATE
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $CHECK_DINO_TIMER
-11AC: CD 50 2B    call $2B50
+11AC: CD 50 2B    call $SHADOW_HL_PLUSEQ_4_TIMES_SCR ; why?
 11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $CALL_HL_PLUS_4K
@@ -2651,9 +2651,12 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 1388: CD B8 0D    call $DRAW_BONGO
 138B: CD 08 04    call $0408
 138E: C9          ret
-138F: FF          rst  $38
 
-;;; hot dang... what's this? Called a lot. Interrupt something?
+138F: FF
+
+;;; What's this? Interrupt something?
+;; goes shadow regs, pops HL from stack, adds A, re-pushes it
+SHADOW_ADD_A_TO_HL
 1390: D9          exx
 1391: E1          pop  hl
 1392: 06 00       ld   b,$00
@@ -5338,7 +5341,7 @@ UPDATE_DINO
 22E4: 03          inc  bc
 22E5: 0A          ld   a,(bc)
 22E6: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-22E9: CD 20 29    call $2920
+22E9: CD 20 29    call $SET_DINO_DIR
 22EC: C3 E0 23    jp   $23E0
 22EF: FF          rst  $38
 
@@ -5811,22 +5814,22 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 
 28D0: FF ...
 
-    ;;
+MOVE_DINO_X
 28E0: 3A 12 83    ld   a,($TICK_NUM)
 28E3: E6 03       and  $03
 28E5: C0          ret  nz
 28E6: 3A 4C 81    ld   a,($DINO_X)
 28E9: A7          and  a
-28EA: C8          ret  z
+28EA: C8          ret  z        ; no dino out, leave
 28EB: 47          ld   b,a
-28EC: 3A 2E 80    ld   a,($802E)
+28EC: 3A 2E 80    ld   a,($DINO_DIR)
 28EF: 80          add  a,b
 28F0: 32 4C 81    ld   ($DINO_X),a
 28F3: 3A 50 81    ld   a,($DINO_X_LEGS)
 28F6: A7          and  a
 28F7: C8          ret  z
 28F8: 47          ld   b,a
-28F9: 3A 2E 80    ld   a,($802E)
+28F9: 3A 2E 80    ld   a,($DINO_DIR)
 28FC: 80          add  a,b
 28FD: 32 50 81    ld   ($DINO_X_LEGS),a
 2900: C9          ret
@@ -5842,20 +5845,23 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 2916: CD 10 11    call $1110
 2919: 21 40 08    ld   hl,$0840
 291C: 18 22       jr   $2940
-291E: FF          rst  $38
-291F: FF          rst  $38
+
+291E: FF FF
+
+    ;;
+SET_DINO_DIR
 2920: 23          inc  hl
 2921: 23          inc  hl
-2922: 46          ld   b,(hl)
+2922: 46          ld   b,(hl)   ; read DINO_PATH_X
 2923: 3A 4C 81    ld   a,($DINO_X)
 2926: 37          scf
 2927: 3F          ccf
 2928: 90          sub  b
-2929: 38 04       jr   c,$292F
+2929: 38 04       jr   c,$292F  ; reset
 292B: 3E FF       ld   a,$FF
 292D: 18 02       jr   $2931
 292F: 3E 01       ld   a,$01
-2931: 32 2E 80    ld   ($802E),a
+2931: 32 2E 80    ld   ($DINO_DIR),a
 2934: C9          ret
 
 2935: FF ...
@@ -5866,6 +5872,7 @@ DINO_PATH_6 ;DATA lookup table x/y/?/?
 
 2947: FF ...
 
+SAVE_IX_AND_?
 2960: DD E5       push ix
 2962: CD 01 29    call $2901
 2965: DD E1       pop  ix
@@ -6019,6 +6026,7 @@ DRAW_BONUS_STATE
 2B40: FF ...
 
 ;;;
+SHADOW_HL_PLUSEQ_4_TIMES_SCR
 2B50: 3A 04 80    ld   a,($PLAYER_NUM)
 2B53: A7          and  a
 2B54: 20 05       jr   nz,$2B5B
@@ -6028,7 +6036,7 @@ DRAW_BONUS_STATE
 2B5E: 3D          dec  a        ; scr#-1
 2B5F: CB 27       sla  a        ; * 2
 2B61: CB 27       sla  a        ; * 2
-2B63: CD 90 13    call $1390
+2B63: CD 90 13    call $SHADOW_ADD_A_TO_HL
 2B66: 00          nop
 2B67: 00          nop
 2B68: 00          nop
@@ -6205,11 +6213,11 @@ SET_ROCK_1_B0_40
 2CB6: 3A 29 80    ld   a,($SCREEN_NUM)
 2CB9: 18 03       jr   $2CBE
 2CBB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-2CBE: 3D          dec  a
-2CBF: E6 07       and  $07
-2CC1: CB 27       sla  a
+2CBE: 3D          dec  a        ; scr - 1
+2CBF: E6 07       and  $07      ; & 0000 0111
+2CC1: CB 27       sla  a        ; * 4
 2CC3: CB 27       sla  a
-2CC5: CD 90 13    call $1390
+2CC5: CD 90 13    call $SHADOW_ADD_A_TO_HL
 2CC8: 00          nop
 2CC9: 00          nop
 2CCA: 00          nop
@@ -8839,7 +8847,7 @@ SET_SYNTH_SETTINGS
 4140: DD 7E 00    ld   a,(ix+$00)
 4143: A7          and  a
 4144: C8          ret  z
-4145: 32 66 80    ld   ($8066),a
+4145: 32 66 80    ld   ($8066),a ; not synth!
 4148: CB 27       sla  a
 414A: 21 00 44    ld   hl,$SFX_SYNTH_SETTINGS
 414D: 85          add  a,l
@@ -9821,7 +9829,7 @@ PLAY_SFX
 48FE: FF          rst  $38
 48FF: FF          rst  $38
 
-;;;
+SHADOW_ADD_A_TO_HL_2            ; duplicate routine
 4900: D9          exx
 4901: E1          pop  hl
 4902: 06 00       ld   b,$00
@@ -10361,7 +10369,7 @@ TBL_4
 4C61: 3D          dec  a
 4C62: 87          add  a,a
 4C63: 87          add  a,a
-4C64: CD 00 49    call $4900
+4C64: CD 00 49    call $SHADOW_ADD_A_TO_HL_2
 4C67: CD E3 4C    call $4CE3
 4C6A: C9          ret
 4C6B: CD E8 45    call $45E8
@@ -10672,12 +10680,8 @@ DONE_CAGED_DINO
 4E83: CD 81 5C    call $JMP_HL
 4E86: 21 66 3F    ld   hl,$3F66
 4E89: C9          ret
-4E8A: FF          rst  $38
-4E8B: FF          rst  $38
-4E8C: FF          rst  $38
-4E8D: FF          rst  $38
-4E8E: FF          rst  $38
-4E8F: FF          rst  $38
+4E8A: FF ...
+
 4E90: 3E F9       ld   a,$F9
 4E92: 00          nop
 4E93: 00          nop
@@ -10695,8 +10699,9 @@ DONE_CAGED_DINO
 4EA2: 00          nop
 4EA3: 00          nop
 4EA4: C9          ret
+
 4EA5: 78          ld   a,b
-4EA6: CD 00 49    call $4900
+4EA6: CD 00 49    call $SHADOW_ADD_A_TO_HL_2
 4EA9: FF          rst  $38
 4EAA: FF          rst  $38
 4EAB: FF          rst  $38
@@ -10709,11 +10714,8 @@ DONE_CAGED_DINO
 4EB6: CD C2 4E    call $4EC2
 4EB9: CD C2 4E    call $4EC2
 4EBC: C9          ret
-4EBD: FF          rst  $38
-4EBE: FF          rst  $38
-4EBF: FF          rst  $38
-4EC0: FF          rst  $38
-4EC1: FF          rst  $38
+4EBD: FF ...
+
 4EC2: 16 0E       ld   d,$0E
 4EC4: E5          push hl
 4EC5: C5          push bc
@@ -10729,11 +10731,8 @@ DONE_CAGED_DINO
 4ED4: CD C2 4E    call $4EC2
 4ED7: CD C2 4E    call $4EC2
 4EDA: C9          ret
-4EDB: FF          rst  $38
-4EDC: FF          rst  $38
-4EDD: FF          rst  $38
-4EDE: FF          rst  $38
-4EDF: FF          rst  $38
+
+4EDB: FF ...
 
 SPEED_UP_FOR_NEXT_ROUND
 4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
