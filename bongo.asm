@@ -1061,7 +1061,7 @@ PLAYER_PHYSICS
 06E8: 85          add  a,l
 06E9: 6F          ld   l,a
 06EA: DD 21 40 81 ld   ix,$PLAYER_X
-06EE: 7E          ld   a,(hl)
+06EE: 7E          ld   a,(hl)     ; reads from the PHYS_JUMP_LOOKUP_XXX tables
 06EF: DD 86 00    add  a,(ix+$00) ;player x
 06F2: DD 77 00    ld   (ix+$00),a ;player x
 06F5: DD 77 04    ld   (ix+$04),a ;player_x_legs
@@ -1077,8 +1077,8 @@ PLAYER_PHYSICS
 0707: DD 77 07    ld   (ix+$07),a
 070A: D6 10       sub  $10
 070C: DD 77 03    ld   (ix+$03),a ; player y
-
 070F: C9          ret
+
 0710: F5          push af
 0711: 3E A0       ld   a,$A0
 0713: 32 4A 80    ld   ($804A),a
@@ -1098,36 +1098,46 @@ PLAYER_PHYSICS
 0726: FF          rst  $38
 0727: FF          rst  $38
 
-PHYS_LOOKUP
-0728: FA 8C 8D 0C FA 8E 8F 0C
-0730: FA 90 91 06 FA 90 96 00
-0738: FA 90 91 FA FA 8E 8F F4
-0740: FA 8C 8D F4 FF FF FF FF
-0748: FF FF FF FF FF FF FF FF
+    ;; x-off, head-anim, leg-anim, yoff
+PHYS_JUMP_LOOKUP_RIGHT
+0728: FA 8C 8D 0C
+072C: FA 8E 8F 0C
+0730: FA 90 91 06
+0734: FA 90 96 00
+0738: FA 90 91 FA
+073C: FA 8E 8F F4
+0740: FA 8C 8D F4
 
-PHYS_LOOKUP2
-0750: 06 0C 0D 0C 06 0E 0F 0C
-0758: 06 10 11 06 06 10 16 00
-0760: 06 10 11 FA 06 0E 0F F4
-0768: 06 0C 0D F4 FF FF FF FF
-0770: FF FF FF FF
+0744: FF ...
 
-PHYSICS_SOMETHING
+    ;; x-off, head-anim, leg-anim, yoff
+PHYS_JUMP_LOOKUP_LEFT
+0750: 06 0C 0D 0C
+0754: 06 0E 0F 0C
+0758: 06 10 11 06
+075C: 06 10 16 00
+0760: 06 10 11 FA
+0764: 06 0E 0F F4
+0768: 06 0C 0D F4
+
+076C: FF ...
+
+DO_JUMP_PHYSIC
 0774: 3A 16 83    ld   a,($TICK_MOD_6_1)
 0777: E6 07       and  $07
 0779: C0          ret  nz
 077A: 3A 12 80    ld   a,($PLAYER_DIED)
 077D: A7          and  a
 077E: C0          ret  nz       ; dead, get out
-077F: 3A 0F 80    ld   a,($JUMP_ACC) ; return if not jumping
+077F: 3A 0F 80    ld   a,($JUMP_ACC) ; return if not jumping/falling
 0782: A7          and  a
 0783: C8          ret  z
 0784: 3E 01       ld   a,$01
-0786: 32 05 80    ld   (JUMP_BTN_DOWN),a
+0786: 32 05 80    ld   (JUMP_BTN_DOWN),a ; force-press jump?
 0789: 3A 0E 80    ld   a,($CONTROLSN)
-078C: CB 57       bit  2,a      ; right
-078E: 28 07       jr   z,$0797
-0790: 21 28 07    ld   hl,$PHYS_LOOKUP
+078C: CB 57       bit  2,a      ; jump+right?
+078E: 28 07       jr   z,$PHYS_JUMP_LEFT_OR_UP  ; (no, not right, go check left or none)
+0790: 21 28 07    ld   hl,$PHYS_JUMP_LOOKUP_RIGHT
 0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
@@ -1176,12 +1186,14 @@ TRIGGER_JUMP_LEFT
 
 07DF: FF          rst  $38
 
+    ;; Left or no direction checkt
+PHYS_JUMP_LEFT_OR_UP
 07E0: CB 5F       bit  3,a      ; left?
 07E2: 28 07       jr   z,$07EB
-07E4: 21 50 07    ld   hl,$PHYS_LOOKUP2
+07E4: 21 50 07    ld   hl,$PHYS_JUMP_LOOKUP_LEFT
 07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
-07EB: 21 48 09    ld   hl,$MORE_PHYS_LOOKUP_MAYBE ; not left or right?
+07EB: 21 48 09    ld   hl,$PHYS_JUMP_LOOKUP_UP ; not left or right?
 07EE: CD D8 06    call $PLAYER_PHYSICS
 07F1: C9          ret
 
@@ -1380,20 +1392,18 @@ BONGO_LOOKUP3
     
 093B: FF ...
 
-    ;; dataz
-MORE_PHYS_LOOKUP_MAYBE
+    ;; jumping straight up
+    ;; x-off, head-anim, leg-anim, yoff
+PHYS_JUMP_LOOKUP_UP
 0948: 00 17 18 0C
 094C: 00 19 1A 0C
 0950: 00 1B 1C 06
-0955: 9B 9C 00 00
-0959: 99 9A FA 00
-095D: 97 98 F4 00
-0961: 17 18 F4
+0954: 00 9B 9C 00
+0958: 00 99 9A FA
+095C: 00 97 98 F4
+0960: 00 17 18 F4
 
-0964: FF          rst  $38
-0965: FF          rst  $38
-0966: FF          rst  $38
-0967: FF          rst  $38
+0964: FF ...
 
     ;; Get tile from x/y?
 0968: 45          ld   b,l
@@ -2373,7 +2383,7 @@ UPDATE_EVERYTHING
 1173: CD D0 13    call $UPDATE_TIME_TIMER
 1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
-117C: CD 74 07    call $PHYSICS_SOMETHING
+117C: CD 74 07    call $DO_JUMP_PHYSICS
 117F: CD 40 0A    call $JUMP_UPWARD_CHECK_BIG_FALL
 1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
