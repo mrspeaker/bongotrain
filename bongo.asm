@@ -944,7 +944,7 @@ PLAYER_FRAME_DATA               ; whats this anim?
 0608: 0C 0E 10 0E 0C 12 14 12
 0610: FF FF FF FF FF FF FF FF
 
-    ;; move right
+PLAYER_MOVE_RIGHT
 0618: 3A 10 80    ld   a,($8010)
 061B: 3C          inc  a
 061C: E6 07       and  $07
@@ -973,7 +973,7 @@ PLAYER_FRAME_DATA_2             ;what's this anim?
 0648: 8C 8E 90 8E 8C 92 94 92
 0650: FF FF FF FF FF FF FF FF
 
-PLAYER_MOVE_RIGHT               ;really? looks left...
+PLAYER_MOVE_LEFT
 0658: 3A 10 80    ld   a,($8010)
 065B: 3C          inc  a
 065C: E6 07       and  $07
@@ -1012,39 +1012,40 @@ PLAYER_INPUT
 069B: CB 6F       bit  5,a      ; jump? 0010 0000
 069D: 28 17       jr   z,$06B6
 069F: CD 10 07    call $0710
-06A2: CB 57       bit  2,a      ; jump + right? 0000 0100
+06A2: CB 57       bit  2,a      ; not left? 0000 0100
 06A4: 28 04       jr   z,$06AA
 06A6: CD A0 07    call $TRIGGER_JUMP_RIGHT
 06A9: C9          ret
-06AA: CB 5F       bit  3,a      ; jump + left?
+06AA: CB 5F       bit  3,a      ; not right?
 06AC: 28 04       jr   z,$06B2
 06AE: CD C0 07    call $TRIGGER_JUMP_LEFT
 06B1: C9          ret
 06B2: CD C0 08    call $08C0
 06B5: C9          ret
-06B6: CB 57       bit  2,a      ; right
+06B6: CB 57       bit  2,a      ; is left?
 06B8: 28 04       jr   z,$06BE
-06BA: CD 58 06    call $PLAYER_MOVE_RIGHT
+06BA: CD 58 06    call $PLAYER_MOVE_LEFT
 06BD: C9          ret
-06BE: CB 5F       bit  3,a      ; left
+06BE: CB 5F       bit  3,a      ; is right?
 06C0: 28 04       jr   z,$06C6
-06C2: CD 18 06    call $0618
+06C2: CD 18 06    call $PLAYER_MOVE_RIGHT
 06C5: C9          ret
+    ;; looks like bit 4 and 6 aren't used
 06C6: CB 67       bit  4,a      ;?
 06C8: 28 04       jr   z,$06CE
 06CA: 00          nop
 06CB: 00          nop
 06CC: 00          nop
 06CD: C9          ret
+    ;; bit 6?
 06CE: CB 77       bit  6,a
 06D0: C8          ret  z
 06D1: 00          nop
 06D2: 00          nop
 06D3: 00          nop
 06D4: C9          ret
-06D5: FF          rst  $38
-06D6: FF          rst  $38
-06D7: FF          rst  $38
+
+06D5: FF ...
 
     ;; Physics: fall with gravity (maybe?)
 PLAYER_PHYSICS
@@ -1099,7 +1100,7 @@ PLAYER_PHYSICS
 0727: FF          rst  $38
 
     ;; x-off, head-anim, leg-anim, yoff
-PHYS_JUMP_LOOKUP_RIGHT
+PHYS_JUMP_LOOKUP_LEFT
 0728: FA 8C 8D 0C
 072C: FA 8E 8F 0C
 0730: FA 90 91 06
@@ -1111,7 +1112,7 @@ PHYS_JUMP_LOOKUP_RIGHT
 0744: FF ...
 
     ;; x-off, head-anim, leg-anim, yoff
-PHYS_JUMP_LOOKUP_LEFT
+PHYS_JUMP_LOOKUP_RIGHT           ; right?
 0750: 06 0C 0D 0C
 0754: 06 0E 0F 0C
 0758: 06 10 11 06
@@ -1135,9 +1136,9 @@ DO_JUMP_PHYSIC
 0784: 3E 01       ld   a,$01
 0786: 32 05 80    ld   (JUMP_BTN_DOWN),a ; force-press jump?
 0789: 3A 0E 80    ld   a,($CONTROLSN)
-078C: CB 57       bit  2,a      ; jump+right?
-078E: 28 07       jr   z,$PHYS_JUMP_LEFT_OR_UP  ; (no, not right, go check left or none)
-0790: 21 28 07    ld   hl,$PHYS_JUMP_LOOKUP_RIGHT
+078C: CB 57       bit  2,a      ; not left?
+078E: 28 07       jr   z,$PHYS_JUMP_RIGHT_OR_UP  ; (no, not right_l, go check left or none)
+0790: 21 28 07    ld   hl,$PHYS_JUMP_LOOKUP_LEFT
 0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
@@ -1186,11 +1187,11 @@ TRIGGER_JUMP_LEFT
 
 07DF: FF          rst  $38
 
-    ;; Left or no direction checkt
-PHYS_JUMP_LEFT_OR_UP
-07E0: CB 5F       bit  3,a      ; left?
+    ;; Right or no direction checkt
+PHYS_JUMP_RIGHT_OR_UP
+07E0: CB 5F       bit  3,a      ; right?
 07E2: 28 07       jr   z,$07EB
-07E4: 21 50 07    ld   hl,$PHYS_JUMP_LOOKUP_LEFT
+07E4: 21 50 07    ld   hl,$PHYS_JUMP_LOOKUP_RIGHT
 07E7: CD D8 06    call $PLAYER_PHYSICS
 07EA: C9          ret
 07EB: 21 48 09    ld   hl,$PHYS_JUMP_LOOKUP_UP ; not left or right?
@@ -1406,6 +1407,7 @@ PHYS_JUMP_LOOKUP_UP
 0964: FF ...
 
     ;; Get tile from x/y?
+GET_TILE_ADDR_FROM_XY
 0968: 45          ld   b,l
 0969: AF          xor  a
 096A: 94          sub  h
@@ -1444,7 +1446,8 @@ GROUND_CHECK
 099F: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 09A2: C6 10       add  a,$10
 09A4: 6F          ld   l,a
-09A5: CD 68 09    call $0968
+09A5: CD 68 09    call $GET_TILE_ADDR_FROM_XY
+
 09A8: 7E          ld   a,(hl)
 09A9: E6 F8       and  $TILE_SOLID
 09AB: FE F8       cp   $TILE_SOLID
@@ -1560,7 +1563,7 @@ JUMP_UPWARD_CHECK_BIG_FALL
     
 0A76: FF ...
 
-;;;
+CHECK_HEAD_HIT_TILE
 0A80: 3A 12 80    ld   a,($PLAYER_DIED)
 0A83: A7          and  a
 0A84: C0          ret  nz       ; player dead, get outta here
@@ -1579,9 +1582,9 @@ JUMP_UPWARD_CHECK_BIG_FALL
 0A9C: 3A 43 81    ld   a,($PLAYER_Y)
 0A9F: C6 01       add  a,$01
 0AA1: 6F          ld   l,a
-0AA2: CD 68 09    call $0968
+0AA2: CD 68 09    call $GET_TILE_ADDR_FROM_XY
 0AA5: 7E          ld   a,(hl)
-0AA6: E6 C0       and  $C0
+0AA6: E6 C0       and  $C0      ; 1100 0000
 0AA8: FE C0       cp   $C0      ; whats a C0 tile?
 0AAA: C0          ret  nz
 0AAB: CD B8 0A    call $FALL_UNDER_A_LEDGE
@@ -1800,7 +1803,7 @@ CHECK_IF_PLAYER_DIED
 0C80: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 0C83: C6 20       add  a,$20
 0C85: 6F          ld   l,a
-0C86: CD 68 09    call $0968
+0C86: CD 68 09    call $GET_TILE_ADDR_FROM_XY
 0C89: 7E          ld   a,(hl)
 0C8A: FE 10       cp   $10
 0C8C: 28 D7       jr   z,$0C65
@@ -1900,7 +1903,7 @@ MOVE_BONGO_REDACTED
 0D45: 32 4B 81    ld   ($BONGO_Y),a
 0D48: C6 10       add  a,$10
 0D4A: 6F          ld   l,a
-0D4B: CD 68 09    call $0968
+0D4B: CD 68 09    call $GET_TILE_ADDR_FROM_XY
 0D4E: 7E          ld   a,(hl)
 0D4F: 37          scf
 0D50: 3F          ccf
@@ -2387,7 +2390,7 @@ UPDATE_EVERYTHING
 117F: CD 40 0A    call $JUMP_UPWARD_CHECK_BIG_FALL
 1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
-1188: CD 80 0A    call $0A80
+1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
 118B: CD B0 0B    call $0BB0
 118E: CD 00 12    call $PLAYER_POS_UPDATE
 1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
@@ -2492,7 +2495,7 @@ PREVENT_CLOUD_JUMP_REDACTED_2
 1260: CB 23       sla  e
 1262: 83          add  a,e
 1263: 6F          ld   l,a
-1264: CD 68 09    call $0968
+1264: CD 68 09    call $GET_TILE_ADDR_FROM_XY
 1267: 00          nop
 1268: 00          nop
 1269: 00          nop
