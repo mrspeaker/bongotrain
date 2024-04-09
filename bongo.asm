@@ -1007,18 +1007,18 @@ PLAYER_INPUT
 0692: C0          ret  nz       ; dead, get out
 0693: 3A 0F 80    ld   a,($JUMP_ACC)
 0696: A7          and  a
-0697: C0          ret  nz
+0697: C0          ret  nz       ; don't do this input if jumping?
 0698: 3A 0E 80    ld   a,($CONTROLSN)
 069B: CB 6F       bit  5,a      ; jump? 0010 0000
 069D: 28 17       jr   z,$06B6
 069F: CD 10 07    call $0710
 06A2: CB 57       bit  2,a      ; jump + right? 0000 0100
 06A4: 28 04       jr   z,$06AA
-06A6: CD A0 07    call $07A0
+06A6: CD A0 07    call $TRIGGER_JUMP_RIGHT
 06A9: C9          ret
 06AA: CB 5F       bit  3,a      ; jump + left?
 06AC: 28 04       jr   z,$06B2
-06AE: CD C0 07    call $07C0
+06AE: CD C0 07    call $TRIGGER_JUMP_LEFT
 06B1: C9          ret
 06B2: CD C0 08    call $08C0
 06B5: C9          ret
@@ -1062,21 +1062,22 @@ PLAYER_PHYSICS
 06E9: 6F          ld   l,a
 06EA: DD 21 40 81 ld   ix,$PLAYER_X
 06EE: 7E          ld   a,(hl)
-06EF: DD 86 00    add  a,(ix+$00)
-06F2: DD 77 00    ld   (ix+$00),a
-06F5: DD 77 04    ld   (ix+$04),a
+06EF: DD 86 00    add  a,(ix+$00) ;player x
+06F2: DD 77 00    ld   (ix+$00),a ;player x
+06F5: DD 77 04    ld   (ix+$04),a ;player_x_legs
 06F8: 23          inc  hl
 06F9: 7E          ld   a,(hl)
-06FA: DD 77 01    ld   (ix+$01),a
+06FA: DD 77 01    ld   (ix+$01),a ; frame
 06FD: 23          inc  hl
 06FE: 7E          ld   a,(hl)
-06FF: DD 77 05    ld   (ix+$05),a
+06FF: DD 77 05    ld   (ix+$05),a ; legs frame
 0702: 23          inc  hl
 0703: 7E          ld   a,(hl)
-0704: DD 86 07    add  a,(ix+$07)
+0704: DD 86 07    add  a,(ix+$07) ; player y legs?
 0707: DD 77 07    ld   (ix+$07),a
 070A: D6 10       sub  $10
-070C: DD 77 03    ld   (ix+$03),a
+070C: DD 77 03    ld   (ix+$03),a ; player y
+
 070F: C9          ret
 0710: F5          push af
 0711: 3E A0       ld   a,$A0
@@ -1133,13 +1134,14 @@ PHYSICS_SOMETHING
 
 079A: FF ...
 
-;;; (only called when jumping right?)
+;;; jump button, but not jumping, and on ground)
+TRIGGER_JUMP_RIGHT
 07A0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07A3: A7          and  a
 07A4: C0          ret  nz
 07A5: 3A 0F 80    ld   a,($JUMP_ACC)
 07A8: A7          and  a
-07A9: C0          ret  nz
+07A9: C0          ret  nz       ;
 07AA: CD 88 09    call $GROUND_CHECK 
 07AD: A7          and  a
 07AE: C8          ret  z
@@ -1148,12 +1150,13 @@ PHYSICS_SOMETHING
 07B4: 3E 8C       ld   a,$8C
 07B6: 32 41 81    ld   ($PLAYER_FRAME),a
 07B9: 3E 8D       ld   a,$8D
-07BB: C3 F4 07    jp   $07F4
+07BB: C3 F4 07    jp   $PLAY_JUMP_SFX
 07BE: C9          ret
 
 07BF: FF          rst  $38
 
 ;;;  is this one when jump left?
+TRIGGER_JUMP_LEFT
 07C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07C3: A7          and  a
 07C4: C0          ret  nz
@@ -1168,7 +1171,7 @@ PHYSICS_SOMETHING
 07D4: 3E 0C       ld   a,$0C
 07D6: 32 41 81    ld   ($PLAYER_FRAME),a
 07D9: 3E 0D       ld   a,$0D
-07DB: C3 F4 07    jp   $07F4
+07DB: C3 F4 07    jp   $PLAY_JUMP_SFX
 07DE: C9          ret
 
 07DF: FF          rst  $38
@@ -1185,14 +1188,13 @@ PHYSICS_SOMETHING
 07F2: FF          rst  $38
 07F3: FF          rst  $38
 
+PLAY_JUMP_SFX
 07F4: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-07F7: 3E 04       ld   a,$04    ; wats 4?
+07F7: 3E 04       ld   a,$04    ; jump sfx
 07F9: 32 43 80    ld   ($CH2_SFX),a
 07FC: C9          ret
 
-07FD: FF          rst  $38
-07FE: FF          rst  $38
-07FF: FF          rst  $38
+07FD: FF ...
 
     ;;  totes loks like data... who reads it?
 0800: 01 00 00    ld   bc,$0000
@@ -1450,13 +1452,13 @@ ON_GROUND_KIND_OF_CHECK
 09C4: C0          ret  nz       ; dead, get out
 09C5: 3A 0F 80    ld   a,($JUMP_ACC)
 09C8: A7          and  a
-09C9: 28 1B       jr   z,$09E6
-09CB: E6 0C       and  $0C
-09CD: C0          ret  nz
+09C9: 28 1B       jr   z,$_NO_JUMP_ACC
+09CB: E6 0C       and  $0C      ; 0000 1100
+09CD: C0          ret  nz       ; wat?
 09CE: CD 88 09    call $GROUND_CHECK
 09D1: A7          and  a
-09D2: C8          ret  z
-09D3: AF          xor  a
+09D2: C8          ret  z        ; ret if in air?
+09D3: AF          xor  a        ; clear jump_acc
 09D4: 32 0F 80    ld   ($JUMP_ACC),a
 09D7: 3A 41 81    ld   a,($PLAYER_FRAME)
 09DA: E6 80       and  $80
@@ -1465,6 +1467,7 @@ ON_GROUND_KIND_OF_CHECK
 09E1: 3C          inc  a
 09E2: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 09E5: C9          ret
+_NO_JUMP_ACC
 09E6: CD 88 09    call $GROUND_CHECK
 09E9: A7          and  a
 09EA: 20 0B       jr   nz,$_ON_GROUND
