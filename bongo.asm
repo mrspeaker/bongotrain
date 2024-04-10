@@ -24,7 +24,7 @@
     BUTTONS_1      $800C  ; P1/P2 buttons... and?
     BUTTONS_2      $800D  ; ... more buttons?
     CONTROLSN      $800E  ; some kind of "normalized" controls
-    JUMP_ACC       $800F
+    JUMP_TBL_IDX   $800F
     P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
     P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
     SCORE_TO_ADD   $801D  ; amount to add to the current score
@@ -50,6 +50,7 @@
     ENEMY_1_ACTIVE $8037  ;
     ENEMY_2_ACTIVE $8039  ;
     ENEMY_3_ACTIVE $803B  ;
+    _              $8041   ; enemy 3 something..
 
     CH1_SFX        $8042  ; TUNE N? 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?
     CH2_SFX        $8043  ; SFX too?
@@ -115,8 +116,6 @@
 
     PLATFORM_XOFFS $8180  ; maybe
 
-    _JUMP?         $82A0  ; jump or acceleration?
-
     CREDITS        $8303
     _              $8305  ; Coins? dunno
 
@@ -125,8 +124,11 @@
     SCORE+2        $8302
 
     TICK_NUM       $8312  ; adds 1 every tick
-    TICK_MOD_3_1   $8315  ; same as $8000
-    TICK_MOD_6_1   $8316  ; offset by 1 from $8001
+    ;; NOTE: TICK_MOD is sped up after round 1!
+    ;; % 3 becomes % 2
+    ;; % 6 becomes % 4!
+    TICK_MOD_FAST  $8315  ; % 3 in round 1, % 2 in round 2+
+    TICK_MOD_SLOW  $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
     STACK_LOCATION  $83F0  ; I think?
     INPUT_BUTTONS   $83F1  ; copied to 800C and 800D
@@ -193,6 +195,7 @@
 003B: 18 FB       jr   $0038    ;infinite loop?
 003D: FF ...
 
+    ;; Is this called every loop? does TICK_TICKS.
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83
 004D: C8          ret  z
@@ -219,7 +222,7 @@
 0074: 20 03       jr   nz,$0079
 0076: CD 90 01    call $DID_PLAYER_PRESS_START
 0079: 06 01       ld   b,$01
-007B: CD 00 11    call $FALLING_ROCKS
+007B: CD 00 11    call $TICK_TICKS ; update ticks...
 007E: CD 20 24    call $2420
 0081: 00          nop
 0082: 3A 00 A0    ld   a,($PORT_IN0)
@@ -1011,7 +1014,7 @@ PLAYER_INPUT
 068E: 3A 12 80    ld   a,($PLAYER_DIED)
 0691: A7          and  a
 0692: C0          ret  nz       ; dead, get out
-0693: 3A 0F 80    ld   a,($JUMP_ACC)
+0693: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 0696: A7          and  a
 0697: C0          ret  nz       ; don't do this input if jumping?
 0698: 3A 0E 80    ld   a,($CONTROLSN)
@@ -1060,9 +1063,9 @@ PLAYER_PHYSICS
 06DA: 00          nop
 06DB: 00          nop
 06DC: 00          nop    
-06DD: 3A 0F 80    ld   a,($JUMP_ACC)
+06DD: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 06E0: 3D          dec  a
-06E1: 32 0F 80    ld   ($JUMP_ACC),a
+06E1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 06E4: CB 27       sla  a
 06E6: CB 27       sla  a
 06E8: 85          add  a,l
@@ -1129,14 +1132,14 @@ PHYS_JUMP_LOOKUP_RIGHT           ; right?
 
 076C: FF ...
 
-DO_JUMP_PHYSIC
-0774: 3A 16 83    ld   a,($TICK_MOD_6_1)
+DO_JUMP_PHYSICS
+0774: 3A 16 83    ld   a,($TICK_MOD_SLOW) ; speeds up after round 1
 0777: E6 07       and  $07
 0779: C0          ret  nz
 077A: 3A 12 80    ld   a,($PLAYER_DIED)
 077D: A7          and  a
 077E: C0          ret  nz       ; dead, get out
-077F: 3A 0F 80    ld   a,($JUMP_ACC) ; return if not jumping/falling
+077F: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; return if not jumping/falling
 0782: A7          and  a
 0783: C8          ret  z
 0784: 3E 01       ld   a,$01
@@ -1156,14 +1159,14 @@ TRIGGER_JUMP_RIGHT
 07A0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07A3: A7          and  a
 07A4: C0          ret  nz
-07A5: 3A 0F 80    ld   a,($JUMP_ACC)
+07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 07A8: A7          and  a
 07A9: C0          ret  nz       ;
 07AA: CD 88 09    call $GROUND_CHECK 
 07AD: A7          and  a
 07AE: C8          ret  z
 07AF: 3E 07       ld   a,$07
-07B1: 32 0F 80    ld   ($JUMP_ACC),a
+07B1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 07B4: 3E 8C       ld   a,$8C
 07B6: 32 41 81    ld   ($PLAYER_FRAME),a
 07B9: 3E 8D       ld   a,$8D
@@ -1177,14 +1180,14 @@ TRIGGER_JUMP_LEFT
 07C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 07C3: A7          and  a
 07C4: C0          ret  nz
-07C5: 3A 0F 80    ld   a,($JUMP_ACC)
+07C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 07C8: A7          and  a
 07C9: C0          ret  nz
 07CA: CD 88 09    call $GROUND_CHECK
 07CD: A7          and  a
 07CE: C8          ret  z
 07CF: 3E 07       ld   a,$07
-07D1: 32 0F 80    ld   ($JUMP_ACC),a
+07D1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 07D4: 3E 0C       ld   a,$0C
 07D6: 32 41 81    ld   ($PLAYER_FRAME),a
 07D9: 3E 0D       ld   a,$0D
@@ -1343,14 +1346,14 @@ INIT_PLAYER_SPRITE
 08C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
 08C3: A7          and  a
 08C4: C0          ret  nz
-08C5: 3A 0F 80    ld   a,($JUMP_ACC)
+08C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 08C8: A7          and  a
 08C9: C0          ret  nz
 08CA: CD 88 09    call $GROUND_CHECK
 08CD: A7          and  a
 08CE: C8          ret  z
 08CF: 3E 07       ld   a,$07
-08D1: 32 0F 80    ld   ($JUMP_ACC),a
+08D1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 08D4: 3E 17       ld   a,$17
 08D6: 32 41 81    ld   ($PLAYER_FRAME),a
 08D9: C3 30 09    jp   $0930
@@ -1465,16 +1468,16 @@ ON_GROUND_KIND_OF_CHECK
 09C0: 3A 12 80    ld   a,($PLAYER_DIED)
 09C3: A7          and  a
 09C4: C0          ret  nz       ; dead, get out
-09C5: 3A 0F 80    ld   a,($JUMP_ACC)
+09C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 09C8: A7          and  a
-09C9: 28 1B       jr   z,$_NO_JUMP_ACC
+09C9: 28 1B       jr   z,$_JUMP_TBL_IDX_0
 09CB: E6 0C       and  $0C      ; 0000 1100
 09CD: C0          ret  nz       ; wat?
 09CE: CD 88 09    call $GROUND_CHECK
 09D1: A7          and  a
 09D2: C8          ret  z        ; ret if in air?
-09D3: AF          xor  a        ; clear jump_acc
-09D4: 32 0F 80    ld   ($JUMP_ACC),a
+09D3: AF          xor  a        ; clear jump_tbl_idx
+09D4: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 09D7: 3A 41 81    ld   a,($PLAYER_FRAME)
 09DA: E6 80       and  $80
 09DC: C6 0C       add  a,$0C
@@ -1482,7 +1485,7 @@ ON_GROUND_KIND_OF_CHECK
 09E1: 3C          inc  a
 09E2: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 09E5: C9          ret
-_NO_JUMP_ACC
+_JUMP_TBLE_IDX_0
 09E6: CD 88 09    call $GROUND_CHECK
 09E9: A7          and  a
 09EA: 20 0B       jr   nz,$_ON_GROUND
@@ -1599,7 +1602,7 @@ FALL_UNDER_A_LEDGE
 0ABB: A7          and  a
 0ABC: C0          ret  nz       ; falling? Get outta here
 0ABD: AF          xor  a
-0ABE: 32 0F 80    ld   ($JUMP_ACC),a ; clear jump acc
+0ABE: 32 0F 80    ld   ($JUMP_TBL_IDX),a ; clear jump idx
 0AC1: 3E 08       ld   a,$08
 0AC3: 32 11 80    ld   ($FALLING_TIMER),a ; set low fall
 0AC6: CD A0 13    call $WAIT_VBLANK
@@ -2197,7 +2200,7 @@ BIG_RESET
 1002: 32 1B 80    ld   ($_UNUSED_1),a ; never read?
 1005: AF          xor  a
 1006: 32 0E 80    ld   ($CONTROLSN),a
-1009: 32 0F 80    ld   ($JUMP_ACC),a
+1009: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 100C: 32 12 80    ld   ($PLAYER_DIED),a
 100F: 32 11 80    ld   ($FALLING_TIMER),a
 1012: 32 51 80    ld   ($IS_HIT_CAGE),a
@@ -2309,14 +2312,15 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 
 10FF: FF
 
-FALLING_ROCKS
+    ;; Ticks the main ticks and speed timers
+TICK_TICKS                      ;
 1100: 3A 12 83    ld   a,($TICK_NUM)
 1103: 3C          inc  a
 1104: 32 12 83    ld   ($TICK_NUM),a
-1107: CD 80 16    call $UPDATE_FALLING_ROCKS
+1107: CD 80 16    call $UPDATE_SPEED_TIMERS
 110A: C9          ret
 
-110B: FF FF FF FF FF
+110B: FF ...
 
     ;; ?? is it about dino?
 MYSTERY_8066_FN
@@ -2862,9 +2866,9 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14D8: 46          ld   b,(hl)
 14D9: ED 43 20 80 ld   ($8020),bc
 14DD: C9          ret
-14DE: FF          rst  $38
-14DF: FF          rst  $38
-14E0: 3A 15 83    ld   a,($TICK_MOD_3_1)
+14DE: FF ..
+
+14E0: 3A 15 83    ld   a,($TICK_MOD_FAST) ; faster in round 2
 14E3: E6 03       and  $03
 14E5: C0          ret  nz
 14E6: CD 50 3A    call $3A50
@@ -3082,7 +3086,7 @@ ANIMATE_SPLASH_SCREEN
 167E: EF          rst  $28
 167F: F1          pop  af
 
-UPDATE_FALLING_ROCKS
+UPDATE_SPEED_TIMERS
 1680: 3A 04 80    ld   a,($PLAYER_NUM)
 1683: A7          and  a
 1684: 20 05       jr   nz,$168B
@@ -3092,32 +3096,32 @@ UPDATE_FALLING_ROCKS
 168E: FE 1F       cp   $ROUND1_SPEED
 1690: 20 19       jr   nz,$16AB
     ;;  Round 1
-1692: 3A 15 83    ld   a,($TICK_MOD_3_1)
+1692: 3A 15 83    ld   a,($TICK_MOD_FAST)
 1695: 3C          inc  a
 1696: FE 03       cp   $03
 1698: 20 01       jr   nz,$169B
 169A: AF          xor  a
-169B: 32 15 83    ld   ($TICK_MOD_3_1),a
-169E: 3A 16 83    ld   a,($TICK_MOD_6_1)
+169B: 32 15 83    ld   ($TICK_MOD_FAST),a
+169E: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 16A1: 3C          inc  a
 16A2: FE 06       cp   $06
 16A4: 20 01       jr   nz,$16A7
 16A6: AF          xor  a
-16A7: 32 16 83    ld   ($TICK_MOD_6_1),a
+16A7: 32 16 83    ld   ($TICK_MOD_SLOW),a
 16AA: C9          ret
 ;;; Round 2+
-16AB: 3A 15 83    ld   a,($TICK_MOD_3_1)
+16AB: 3A 15 83    ld   a,($TICK_MOD_FAST)
 16AE: 3C          inc  a
 16AF: FE 02       cp   $02
 16B1: 20 01       jr   nz,$16B4
 16B3: AF          xor  a
-16B4: 32 15 83    ld   ($TICK_MOD_3_1),a
-16B7: 3A 16 83    ld   a,($TICK_MOD_6_1)
+16B4: 32 15 83    ld   ($TICK_MOD_FAST),a
+16B7: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 16BA: 3C          inc  a
 16BB: FE 04       cp   $04
 16BD: 20 01       jr   nz,$16C0
 16BF: AF          xor  a
-16C0: 32 16 83    ld   ($TICK_MOD_6_1),a
+16C0: 32 16 83    ld   ($TICK_MOD_SLOW),a
 16C3: C9          ret
 
 16C4: FF ...
@@ -3274,7 +3278,7 @@ ADD_AMOUNT_BDC
 RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 17B4: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a ; set bottom row col
 17B7: AF          xor  a
-17B8: 32 0F 80    ld   ($JUMP_ACC),a
+17B8: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 17BB: 32 05 80    ld   ($JUMP_BTN_DOWN),a
 17BE: C9          ret
 
@@ -6154,7 +6158,7 @@ SET_ROCK_1_B0_40
 
 2C1A: FF ...
 
-2C28: 3A 16 83    ld   a,($TICK_MOD_6_1)
+2C28: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 2C2B: E6 07       and  $07
 2C2D: C0          ret  nz
 2C2E: 3A 36 80    ld   a,($ROCK_FALL_TIMER)
@@ -6982,7 +6986,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3250: C9          ret
 3251: FF ...
 
-3260: 3A 15 83    ld   a,($TICK_MOD_3_1)
+3260: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3263: E6 01       and  $01
 3265: C8          ret  z
 3266: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
@@ -6993,7 +6997,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 326F: 3D          dec  a
 3270: 3D          dec  a
 3271: 32 58 81    ld   ($ENEMY_2_X),a
-3274: 3A 15 83    ld   a,($TICK_MOD_3_1)
+3274: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3277: E6 02       and  $02
 3279: C0          ret  nz
 327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
@@ -7309,7 +7313,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3569: C9          ret
 356A: FF ..
 
-3570: 3A 16 83    ld   a,($TICK_MOD_6_1)
+3570: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 3573: E6 07       and  $07
 3575: C0          ret  nz
 3576: 3A 3E 80    ld   a,($803E)
@@ -7380,7 +7384,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3608: C9          ret
 3609: FF ...
 
-3610: 3A 15 83    ld   a,($TICK_MOD_3_1)
+UPDATE_ENEMY_3
+3610: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3613: E6 01       and  $01
 3615: C8          ret  z
 3616: 3A 41 80    ld   a,($8041)
@@ -7391,7 +7396,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 361F: 3C          inc  a
 3620: 3C          inc  a
 3621: 32 5C 81    ld   ($ENEMY_3_X),a
-3624: 3A 15 83    ld   a,($TICK_MOD_3_1)
+3624: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3627: E6 02       and  $02
 3629: C0          ret  nz
 362A: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
@@ -7418,8 +7423,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3653: 32 F1 83    ld   ($INPUT_BUTTONS),a
 3656: C1          pop  bc
 3657: C9          ret
+
 3658: CD F0 35    call $35F0
-365B: CD 10 36    call $3610
+365B: CD 10 36    call $UPDATE_ENEMY_3
 365E: CD 38 32    call $3238
 3661: CD 60 32    call $3260
 3664: C9          ret
@@ -7430,7 +7436,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3676: CD 88 34    call $3488
 3679: CD E8 34    call $34E8
 367C: CD A8 36    call $36A8
-367F: CD 10 36    call $3610
+367F: CD 10 36    call $UPDATE_ENEMY_3
 3682: C9          ret
 3683: FF ...
 
@@ -7463,7 +7469,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 36C1: FF ...
 
 36D0: CD F0 35    call $35F0
-36D3: CD 10 36    call $3610
+36D3: CD 10 36    call $UPDATE_ENEMY_3
 36D6: CD 38 32    call $3238
 36D9: CD 60 32    call $3260
 36DC: CD 28 2C    call $2C28
@@ -7499,7 +7505,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3728: C9          ret
 3729: FF ...
 
-3730: 3A 15 83    ld   a,($TICK_MOD_3_1)
+3730: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3733: E6 01       and  $01
 3735: C8          ret  z
 3736: 3A 41 80    ld   a,($8041)
@@ -7548,7 +7554,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 37B0: C9          ret
 37B1: FF ...
 
-37B8: 3A 15 83    ld   a,($TICK_MOD_3_1)
+37B8: 3A 15 83    ld   a,($TICK_MOD_FAST)
 37BB: E6 01       and  $01
 37BD: C8          ret  z
 37BE: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
@@ -7577,7 +7583,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3808: CD 78 33    call $3378
 380B: CD 60 32    call $3260
 380E: CD 40 38    call $3840
-3811: CD 10 36    call $3610
+3811: CD 10 36    call $UPDATE_ENEMY_3
 3814: C9          ret
 
 3815: FF ...
@@ -7614,7 +7620,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3868: CD 88 34    call $3488
 386B: CD B8 33    call $33B8
 386E: CD A8 36    call $36A8
-3871: CD 10 36    call $3610
+3871: CD 10 36    call $UPDATE_ENEMY_3
 3874: CD 38 32    call $3238
 3877: CD 60 32    call $3260
 387A: C9          ret
@@ -7624,7 +7630,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3888: CD 78 33    call $3378
 388B: CD 60 32    call $3260
 388E: CD 40 38    call $3840
-3891: CD 10 36    call $3610
+3891: CD 10 36    call $UPDATE_ENEMY_3
 3894: CD C0 38    call $38C0
 3897: CD D0 38    call $38D0
 389A: C9          ret
@@ -7772,7 +7778,7 @@ SET_ENEMY_3_F0_68
 39D6: C3 C0 11    jp   $11C0
 39D9: FF ...
 
-39E8: 3A 15 83    ld   a,($TICK_MOD_3_1)
+39E8: 3A 15 83    ld   a,($TICK_MOD_FAST)
 39EB: E6 07       and  $07
 39ED: C0          ret  nz
 39EE: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
@@ -7996,7 +8002,7 @@ SET_ENEMY_3_90_C0
 3B76: FF          rst  $38
 3B77: FF          rst  $38
 
-3B78: 3A 15 83    ld   a,($TICK_MOD_3_1)
+3B78: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3B7B: E6 03       and  $03
 3B7D: C8          ret  z
 3B7E: E1          pop  hl
@@ -8959,8 +8965,7 @@ HIT_BONUS_PRE
 41FA: 32 1A 91    ld   ($911A),a
 41FD: C9          ret
 
-41FE: FF          rst  $38
-41FF: FF          rst  $38
+41FE: FF FF
 
 4200: DD 21 A0 82 ld   ix,$82A0
 4204: DD 7E 04    ld   a,(ix+$04)
@@ -8969,7 +8974,6 @@ HIT_BONUS_PRE
 420A: CD 40 41    call $SET_SYNTH_SETTINGS
 420D: DD 36 04 00 ld   (ix+$04),$00
 4211: C9          ret
-
 4212: CD 80 40    call $4080
 4215: C9          ret
 
