@@ -1665,22 +1665,22 @@ SOME_DATA_1
 
 0BB0: DD 21 80 81 ld   ix,$PLATFORM_XOFFS
 0BB4: FD 21 38 81 ld   iy,$SCREEN_XOFF_COL+38
-0BB8: 16 09       ld   d,$09
-0BBA: DD 7E 01    ld   a,(ix+$01)
+0BB8: 16 09       ld   d,$09    ; loop 9 times
+0BBA: DD 7E 01    ld   a,(ix+$01) ; xoff + 1
 0BBD: A7          and  a
 0BBE: 28 26       jr   z,$0BE6
-0BC0: DD 7E 02    ld   a,(ix+$02)
+0BC0: DD 7E 02    ld   a,(ix+$02) ; xoff + 2
 0BC3: E6 FE       and  $FE
 0BC5: 20 0F       jr   nz,$0BD6
-0BC7: DD 7E 00    ld   a,(ix+$00)
+0BC7: DD 7E 00    ld   a,(ix+$00) ; xoff
 0BCA: E6 FE       and  $FE
-0BCC: DD 86 02    add  a,(ix+$02)
+0BCC: DD 86 02    add  a,(ix+$02) ; xoff + 2
 0BCF: EE 01       xor  $01
-0BD1: DD 77 02    ld   (ix+$02),a
+0BD1: DD 77 02    ld   (ix+$02),a ; xoff + 2
 0BD4: 18 06       jr   $0BDC
 0BD6: DD 35 02    dec  (ix+$02)
 0BD9: DD 35 02    dec  (ix+$02)
-0BDC: DD 7E 03    ld   a,(ix+$03)
+0BDC: DD 7E 03    ld   a,(ix+$03) ; xoff + 3
 0BDF: A7          and  a
 0BE0: CC 80 0B    call z,$0B80
 0BE3: DD 35 03    dec  (ix+$03)
