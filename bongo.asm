@@ -125,8 +125,6 @@
 
     TICK_NUM       $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
-    ;; % 3 becomes % 2
-    ;; % 6 becomes % 4!
     TICK_MOD_FAST  $8315  ; % 3 in round 1, % 2 in round 2+
     TICK_MOD_SLOW  $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
@@ -174,7 +172,7 @@
 
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
 0012: CD 00 3F    call $3F00
-0015: CD 48 00    call $0048
+0015: CD 48 00    call $IMPORTANT_LOOKIN
 0018: CD 88 22    call $WRITE_TO_0_AND_1
 001B: C3 8D 00    jp   $SETUP
 
@@ -195,9 +193,12 @@
 003B: 18 FB       jr   $0038    ;infinite loop?
 003D: FF ...
 
-    ;; Is this called every loop? does TICK_TICKS.
+    ;; Is this called every loop? Only place that calls TICK_TICKS.
+
+
+IMPORTANT_LOOKIN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
-004B: E6 83       and  $83
+004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 0051: CD 10 03    call $ANIMATE_TILES
@@ -211,7 +212,7 @@
 005E: 11 25 1C    ld   de,$1C25
 0061: 24          inc  h
 0062: FF          rst  $38
-0063: 18 E3       jr   $0048
+0063: 18 E3       jr   $IMPORTANT_LOOKIN
 0065: FF          rst  $38
 0066: AF          xor  a
 0067: 32 01 B0    ld   ($INT_ENABLE),a
@@ -222,8 +223,8 @@
 0074: 20 03       jr   nz,$0079
 0076: CD 90 01    call $DID_PLAYER_PRESS_START
 0079: 06 01       ld   b,$01
-007B: CD 00 11    call $TICK_TICKS ; update ticks...
-007E: CD 20 24    call $2420
+007B: CD 00 11    call $TICK_TICKS ; update ticks... I reckon something else must call here
+007E: CD 20 24    call $COPY_INP_TO_BUTTONS_AND_CHECK_BUTTONS
 0081: 00          nop
 0082: 3A 00 A0    ld   a,($PORT_IN0)
 0085: CB 4F       bit  1,a
@@ -1194,7 +1195,7 @@ TRIGGER_JUMP_LEFT
 07DB: C3 F4 07    jp   $PLAY_JUMP_SFX
 07DE: C9          ret
 
-07DF: FF          rst  $38
+07DF: FF
 
     ;; Right or no direction checkt
 PHYS_JUMP_RIGHT_OR_UP
@@ -1207,8 +1208,7 @@ PHYS_JUMP_RIGHT_OR_UP
 07EE: CD D8 06    call $PLAYER_PHYSICS
 07F1: C9          ret
 
-07F2: FF          rst  $38
-07F3: FF          rst  $38
+07F2: FF FF
 
 PLAY_JUMP_SFX
 07F4: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
@@ -2316,7 +2316,7 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 TICK_TICKS                      ;
 1100: 3A 12 83    ld   a,($TICK_NUM)
 1103: 3C          inc  a
-1104: 32 12 83    ld   ($TICK_NUM),a
+1104: 32 12 83    ld   ($TICK_NUM),a ; only place tick_num is set
 1107: CD 80 16    call $UPDATE_SPEED_TIMERS
 110A: C9          ret
 
@@ -2787,10 +2787,10 @@ DRAW_TIME
 1466: 20 FB       jr   nz,$1463
 1468: 24          inc  h
 1469: 7C          ld   a,h
-146A: FE 83       cp   $83
+146A: FE 83       cp   $83      ; 1000 0011
 146C: 20 F5       jr   nz,$1463
 146E: C9          ret
-146F: FF          rst  $38
+146F: FF
 
     ;; lotsa calls here
 CALL_RESET_SCREEN_META_AND_SPRITES
@@ -5473,11 +5473,13 @@ DINO_ANIM_LOOKUP
 
 2418: FF ...
 
+    ;;
+COPY_INP_TO_BUTTONS_AND_CHECK_BUTTONS
 2420: 3A 00 A8    ld   a,($PORT_IN1)
 2423: 32 F1 83    ld   ($INPUT_BUTTONS),a
 2426: 3A 00 B0    ld   a,($PORT_IN2)
 2429: 32 F2 83    ld   ($INPUT_BUTTONS_2),a
-242C: CD 40 36    call $3640
+242C: CD 40 36    call $CHECK_BUTTONS_FOR_SOMETHING
 242F: C9          ret
 
 2430: 06 00       ld   b,$00
@@ -6158,6 +6160,7 @@ SET_ROCK_1_B0_40
 
 2C1A: FF ...
 
+ROCK_FALL_1
 2C28: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 2C2B: E6 07       and  $07
 2C2D: C0          ret  nz
@@ -6174,7 +6177,7 @@ SET_ROCK_1_B0_40
 
 2C40: FF ...
 
-2C48: CD 28 2C    call $2C28
+2C48: CD 28 2C    call $ROCK_FALL_1
 2C4B: CD 40 31    call $3140
 2C4E: C9          ret
 
@@ -7295,7 +7298,6 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 353B: CD 60 32    call $3260
 353E: CD 28 2C    call $2C28
 3541: CD 40 31    call $3140
-3544: CD 70 35    call $3570
 3547: CD 90 35    call $3590
 354A: C9          ret
 354B: FF ...
@@ -7410,6 +7412,7 @@ UPDATE_ENEMY_3
 363C: C9          ret
 363D: FF ...
 
+CHECK_BUTTONS_FOR_SOMETHING
 3640: C5          push bc
 3641: 3A F1 83    ld   a,($INPUT_BUTTONS)
 3644: E6 3F       and  $3F      ; 0011 1111
