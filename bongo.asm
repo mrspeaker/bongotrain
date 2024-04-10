@@ -41,7 +41,7 @@
     DINO_DIR       $802E  ; 01 = right, ff = left
 
     PLAYER_MAX_X   $8030  ; furthest x pos (used for move score)
-    _              $8031  ; ???
+    PLAYER_UMM     $8031  ; ???
     LIVES          $8032
     LIVES_P2       $8033
     IS_PLAYING     $8034  ; attract mode = 0, 1P = 1, 2P = 2
@@ -62,9 +62,12 @@
 
     BONUSES        $8060  ; How many bonuses collected
     BONUS_MULT     $8062  ; Bonus multiplier.
-    _              $8066  ; ?? OE when alive, 02 when dead?
 
-    _              $8010  ; whats tis?
+    _              $8066  ; ?? OE when alive, 02 when dead?
+    _              $8067  ; ?? used with 66
+    _              $8068  ; ?? used with 67
+
+    WALK_ANIM_TIMER $8010 ; % 7?
     FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
     PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
     _UNUSED_1      $801B  ; unused? Set once, never read
@@ -422,11 +425,11 @@ RESET_A_BUNCH
 01F9: 32 32 80    ld   ($LIVES),a
 01FC: 32 33 80    ld   ($LIVES_P2),a
 01FF: 3A 34 80    ld   a,($IS_PLAYING)
-0202: 3D          dec  a
-0203: 32 31 80    ld   ($8031),a
+0202: 3D          dec  a        ; is playing - 1?
+0203: 32 31 80    ld   ($PLAYER_UMM),a
 0206: 3E 01       ld   a,$01
 0208: 32 04 80    ld   ($PLAYER_NUM),a
-020B: 3A 31 80    ld   a,($8031)
+020B: 3A 31 80    ld   a,($PLAYER_UMM)
 020E: A7          and  a
 020F: 20 04       jr   nz,$0215
 0211: AF          xor  a
@@ -948,10 +951,10 @@ PLAYER_FRAME_DATA               ; whats this anim?
 0610: FF FF FF FF FF FF FF FF
 
 PLAYER_MOVE_RIGHT
-0618: 3A 10 80    ld   a,($8010)
+0618: 3A 10 80    ld   a,($WALK_ANIM_TIMER)
 061B: 3C          inc  a
-061C: E6 07       and  $07
-061E: 32 10 80    ld   ($8010),a
+061C: E6 07       and  $07      ; 0111
+061E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
 0621: 21 08 06    ld   hl,$PLAYER_FRAME_DATA
 0624: 85          add  a,l
 0625: 6F          ld   l,a
@@ -977,10 +980,10 @@ PLAYER_FRAME_DATA_2             ;what's this anim?
 0650: FF FF FF FF FF FF FF FF
 
 PLAYER_MOVE_LEFT
-0658: 3A 10 80    ld   a,($8010)
+0658: 3A 10 80    ld   a,($WALK_ANIM_TIMER)
 065B: 3C          inc  a
 065C: E6 07       and  $07
-065E: 32 10 80    ld   ($8010),a
+065E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
 0661: 21 48 06    ld   hl,$PLAYER_FRAME_DATA_2
 0664: 85          add  a,l
 0665: 6F          ld   l,a
@@ -2315,22 +2318,23 @@ FALLING_ROCKS
 
 110B: FF FF FF FF FF
 
-    ;; ??
+    ;; ?? is it about dino?
+MYSTERY_8066_FN
 1110: F5          push af
 1111: E5          push hl
 1112: 21 66 80    ld   hl,$8066
-1115: AF          xor  a
-1116: BE          cp   (hl)
-1117: 20 08       jr   nz,$1121
-1119: 23          inc  hl
-111A: BE          cp   (hl)
+1115: AF          xor  a        ; cp: If A == N, then Z flag is set
+1116: BE          cp   (hl)     ; state == 0?
+1117: 20 08       jr   nz,$1121 ; no, off to AND
+1119: 23          inc  hl       ; yep, what about $8067
+111A: BE          cp   (hl)     ; == 0?
 111B: 20 04       jr   nz,$1121
-111D: 23          inc  hl
-111E: BE          cp   (hl)
-111F: 28 05       jr   z,$1126
-1121: 7E          ld   a,(hl)
+111D: 23          inc  hl       ; yep, what about $8068
+111E: BE          cp   (hl)     ; == 0?
+111F: 28 05       jr   z,$1126  ; no, all zero - don't load
+1121: 7E          ld   a,(hl)   ; ...first non-zero
 1122: 36 00       ld   (hl),$00
-1124: C6 18       add  a,$18
+1124: C6 18       add  a,$18    ; 0001 1000
 1126: E6 7F       and  $7F      ; 0111 1111
 1128: 00          nop
 1129: 00          nop
@@ -2338,9 +2342,7 @@ FALLING_ROCKS
 112B: F1          pop  af
 112C: C9          ret
 
-112D: FF          rst  $38
-112E: FF          rst  $38
-112F: FF          rst  $38
+112D: FF ...
 
     ;;
 UPDATE_CUSTOM_SCREEN_LOGIC
@@ -3951,7 +3953,7 @@ CALL_DO_DEATH_SEQUENCE
 1B73: FF ...
 
 INIT_SCORE_AND_SCREEN_ONCE
-1B80: 3A 31 80    ld   a,($8031)
+1B80: 3A 31 80    ld   a,($PLAYER_UMM)
 1B83: A7          and  a
 1B84: 20 0B       jr   nz,$1B91
 1B86: 3A 22 80    ld   a,($DID_INIT) ; $8022 never used anywhere else
@@ -5838,14 +5840,14 @@ MOVE_DINO_X
     ;;
 2901: 21 00 02    ld   hl,$0200
 2904: CD E3 01    call $CALL_HL_PLUS_4K
-2907: CD 10 11    call $1110
+2907: CD 10 11    call $MYSTERY_8066_FN
 290A: 21 20 02    ld   hl,$POST_DEATH_RESET
 290D: CD E3 01    call $CALL_HL_PLUS_4K
 2910: 21 40 02    ld   hl,$0240
 2913: CD E3 01    call $CALL_HL_PLUS_4K
-2916: CD 10 11    call $1110
+2916: CD 10 11    call $MYSTERY_8066_FN
 2919: 21 40 08    ld   hl,$0840
-291C: 18 22       jr   $2940
+291C: 18 22       jr   $CALL_MYSTERY_8066_FN
 
 291E: FF FF
 
@@ -5867,8 +5869,9 @@ SET_DINO_DIR
 
 2935: FF ...
 
+CALL_MYSTERY_8066_FN
 2940: CD E3 01    call $CALL_HL_PLUS_4K
-2943: CD 10 11    call $1110
+2943: CD 10 11    call $MYSTERY_8066_FN
 2946: C9          ret
 
 2947: FF ...
@@ -8877,10 +8880,11 @@ SET_SYNTH_SETTINGS
 
 4179: FF ...
 
+RELATED_TO_MYSTERY_8066
 4180: DD 7E 00    ld   a,(ix+$00)
 4183: A7          and  a
 4184: C8          ret  z
-4185: 32 67 80    ld   ($8067),a
+4185: 32 67 80    ld   ($8067),a ; 8067
 4188: CB 27       sla  a
 418A: 21 00 44    ld   hl,$4400
 418D: 85          add  a,l
@@ -8973,16 +8977,13 @@ HIT_BONUS_PRE
 4218: 32 B1 91    ld   ($91B1),a
 421B: C9          ret
 
-421C: FF          rst  $38
-421D: FF          rst  $38
-421E: FF          rst  $38
-421F: FF          rst  $38
+421C: FF ...
 
 4220: DD 21 A8 82 ld   ix,$82A8
 4224: DD 7E 04    ld   a,(ix+$04)
 4227: A7          and  a
 4228: 28 08       jr   z,$4232
-422A: CD 80 41    call $4180
+422A: CD 80 41    call $RELATED_TO_MYSTERY_8066
 422D: DD 36 04 00 ld   (ix+$04),$00
 4231: C9          ret
 
@@ -8993,10 +8994,7 @@ HIT_BONUS_PRE
 4238: 32 8E 91    ld   ($918E),a
 423B: C9          ret
 
-423C: FF          rst  $38
-423D: FF          rst  $38
-423E: FF          rst  $38
-423F: FF          rst  $38
+423C: FF ..
 
 4240: DD 21 B0 82 ld   ix,$82B0
 4244: DD 7E 04    ld   a,(ix+$04)
@@ -9009,8 +9007,7 @@ HIT_BONUS_PRE
 4252: CD 00 41    call $4100
 4255: C9          ret
 
-4256: FF          rst  $38
-4257: FF          rst  $38
+4256: FF FF
 
 PICKUP_TILE_COLLISION
 4258: 3A 40 81    ld   a,($PLAYER_X)
@@ -9060,6 +9057,7 @@ PICKUP_TILE_COLLISION
 
 42A9: FF ...
 
+RELATED_TO_MYSTERY_8066_2
 42B0: DD 7E 00    ld   a,(ix+$00)
 42B3: A7          and  a
 42B4: C8          ret  z
@@ -12249,7 +12247,7 @@ CALL_DO_ATTRACT_MODE
 
 5900: CD 70 55    call $5570
 5903: 01 01 51    ld   bc,$5101
-5906: 52          ld   d,d
+5906: 52          ld   d,d      ;data, but who reads?
 5907: 53          ld   d,e
 5908: 51          ld   d,c
 5909: 52          ld   d,d
@@ -12606,13 +12604,8 @@ CALL_DO_ATTRACT_MODE
 5A8E: 52          ld   d,d
 5A8F: FF          rst  $38
 5A90: C9          ret
-5A91: FF          rst  $38
-5A92: FF          rst  $38
-5A93: FF          rst  $38
-5A94: FF          rst  $38
-5A95: FF          rst  $38
-5A96: FF          rst  $38
-5A97: FF          rst  $38
+5A91: FF ...
+
 5A98: E5          push hl
 5A99: C5          push bc
 5A9A: D5          push de
@@ -12622,9 +12615,9 @@ CALL_DO_ATTRACT_MODE
 5AA2: C1          pop  bc
 5AA3: E1          pop  hl
 5AA4: C9          ret
-5AA5: FF          rst  $38
-5AA6: FF          rst  $38
-5AA7: FF          rst  $38
+5AA5: FF ...
+
+    ;;
 5AA8: 1E 05       ld   e,$05
 5AAA: 16 05       ld   d,$05
 5AAC: D5          push de
@@ -12650,9 +12643,8 @@ CALL_DO_ATTRACT_MODE
 5AD1: 1D          dec  e
 5AD2: 20 D6       jr   nz,$5AAA
 5AD4: C9          ret
-5AD5: FF          rst  $38
-5AD6: FF          rst  $38
-5AD7: FF          rst  $38
+5AD5: FF ...
+
 5AD8: 47          ld   b,a
 5AD9: 21 01 81    ld   hl,$SCREEN_XOFF_COL+1 ;col for row 1
 5ADC: 70          ld   (hl),b
