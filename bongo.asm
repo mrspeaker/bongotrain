@@ -1539,6 +1539,10 @@ KILL_PLAYER
 
 0A3E: FF FF
 
+    ;; There's a bug in level one/two: if you jump of the
+    ;; edge of level one, and hold jump... it bashes invisible
+    ;; head barrier at the start of level two and dies here.
+    ;; (because of falling timer). Not sure why.
 JUMP_UPWARD_CHECK_BIG_FALL
 0A40: 3A 11 80    ld   a,($FALLING_TIMER) ; did we fall too far?
 0A43: A7          and  a
@@ -1651,24 +1655,28 @@ SOME_DATA_1
 
 0B36: 00 ...
 0B7C: FF ...
-    
-0B80: DD 7E 01    ld   a,(ix+$01)
+
+MOVE_MOVING_PLATFORM
+0B80: DD 7E 01    ld   a,(ix+$01) ;$PLATFORM_XOFFS+1
 0B83: DD 77 03    ld   (ix+$03),a
 0B86: DD CB 02 46 bit  0,(ix+$02)
 0B8A: 20 0A       jr   nz,$0B96
-0B8C: FD 34 00    inc  (iy+$00)
+0B8C: FD 34 00    inc  (iy+$00) ; move right
 0B8F: FD 34 02    inc  (iy+$02)
 0B92: FD 34 04    inc  (iy+$04)
 0B95: C9          ret
-0B96: FD 35 00    dec  (iy+$00)
+0B96: FD 35 00    dec  (iy+$00) ; move left
 0B99: FD 35 02    dec  (iy+$02)
 0B9C: FD 35 04    dec  (iy+$04)
 0B9F: C9          ret
+
+RESET_DINO_COUNTER
 0BA0: AF          xor  a
 0BA1: 32 2D 80    ld   ($DINO_COUNTER),a
 0BA4: C9          ret
 0BA5: FF ...
 
+MOVING_PLATFORMS
 0BB0: DD 21 80 81 ld   ix,$PLATFORM_XOFFS
 0BB4: FD 21 38 81 ld   iy,$SCREEN_XOFF_COL+38
 0BB8: 16 09       ld   d,$09    ; loop 9 times
@@ -1688,7 +1696,7 @@ SOME_DATA_1
 0BD9: DD 35 02    dec  (ix+$02)
 0BDC: DD 7E 03    ld   a,(ix+$03) ; xoff + 3
 0BDF: A7          and  a
-0BE0: CC 80 0B    call z,$0B80
+0BE0: CC 80 0B    call z,$MOVE_MOVING_PLATFORM
 0BE3: DD 35 03    dec  (ix+$03)
 0BE6: FD 2B       dec  iy
 0BE8: FD 2B       dec  iy
@@ -1840,7 +1848,7 @@ DO_DEATH_SEQUENCE
 0CC0: 3E 02       ld   a,$02
 0CC2: 32 42 80    ld   ($CH1_SFX),a
 0CC5: 32 65 80    ld   ($8065),a
-0CC8: CD A0 0B    call $0BA0
+0CC8: CD A0 0B    call $RESET_DINO_COUNTER
 0CCB: CD 14 0D    call $0D14
 0CCE: CD A0 0C    call $0CA0
 0CD1: 3E 26       ld   a,$26
@@ -2398,7 +2406,7 @@ UPDATE_EVERYTHING
 1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
 1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
 1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
-118B: CD B0 0B    call $0BB0    ;moving platforms?
+118B: CD B0 0B    call $MOVING_PLATFORMS
 118E: CD 00 12    call $PLAYER_POS_UPDATE
 1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
 1194: CD 50 17    call $CHECK_DONE_SCREEN
@@ -2636,6 +2644,7 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 1354: 18 D5       jr   $132B
 1356: FF          rst  $38
 1357: FF          rst  $38
+
     ;;
 1358: CD B8 13    call $13B8
 135B: 00          nop
@@ -3242,7 +3251,7 @@ TRANSITION_TO_NEXT_SCREEN
 178A: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 178D: 3C          inc  a
 178E: 32 2A 80    ld   ($SCREEN_NUM_P2),a
-1791: CD E0 27    call $27E0
+1791: CD E0 27    call $27E0    ;player ypos
 1794: CD 58 13    call $1358
 1797: CD D0 0A    call $0AD0
 179A: 3E 02       ld   a,$02
