@@ -165,6 +165,7 @@
     INT_ENABLE      $b001 ; interrupt enable
     WATCHDOG        $b800 ; main timer?
 
+SOFT_RESET
 0000: A2          and  d
 0001: 32 01 B0    ld   ($INT_ENABLE),a
 0004: 32 FF 80    ld   ($80FF),a
@@ -191,13 +192,13 @@
 0030: DD          db   $dd
 0031: FF ...
 
+    ;;  Reset vector
+RESET_VECTOR
 0038: 3A 00 B8    ld   a,($WATCHDOG)
-003B: 18 FB       jr   $0038    ;infinite loop?
+003B: 18 FB       jr   $RESET_VECTOR
 003D: FF ...
 
-    ;; Is this called every loop? Only place that calls TICK_TICKS.
-
-
+    ;; Is this called every loop or just once?
 IMPORTANT_LOOKIN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83           ; 1000 0011
@@ -216,7 +217,9 @@ IMPORTANT_LOOKIN
 0062: FF          rst  $38
 0063: 18 E3       jr   $IMPORTANT_LOOKIN
 0065: FF          rst  $38
-0066: AF          xor  a
+
+    ;; Non-Maskable Interrupt
+0066: AF          xor  a        ; NMI address
 0067: 32 01 B0    ld   ($INT_ENABLE),a
 006A: 3A 00 B8    ld   a,($WATCHDOG)
 006D: CD C0 00    call $00C0
@@ -231,7 +234,7 @@ IMPORTANT_LOOKIN
 0082: 3A 00 A0    ld   a,($PORT_IN0)
 0085: CB 4F       bit  1,a
 0087: C2 03 C0    jp   nz,$C003
-008A: ED 45       retn
+008A: ED 45       retn          ; NMI return
 
 008C: FF
 
