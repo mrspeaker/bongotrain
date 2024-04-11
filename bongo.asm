@@ -8748,8 +8748,12 @@ INT_HANDLER
 
 403F: FF
 
+    ;; Whole bunch of PICKUP drawing below - is
+    ;; it one bunch of code per screen? Does something
+    ;; dispatch to each sub?
+
 4040: CD 68 45    call $4568
-4043: 3E 8E       ld   a,$8E
+4043: 3E 8E       ld   a,$TILE_PIK_RINGA
 4045: 32 7A 92    ld   ($927A),a
 4048: C9          ret
 
@@ -8776,13 +8780,13 @@ ADD_MOVE_SCORE
 
 4069: FF ...
 
-4070: 3E 8C       ld   a,$8C
+4070: 3E 8C       ld   a,$TILE_CROWN_PIKA
 4072: 32 8E 91    ld   ($918E),a
 4075: C9          ret
 
 4076: FF ...
 
-4078: 3E 8D       ld   a,$8D
+4078: 3E 8D       ld   a,$TILE_PIK_CROSSA
 407A: 32 D2 91    ld   ($91D2),a
 407D: C9          ret
 
@@ -8858,9 +8862,9 @@ GET_TILE_SCR_POS
 40E5: C9          ret
 40E6: FF ...
 
-40E8: 3E 8F       ld   a,$8F
+40E8: 3E 8F       ld   a,$TILE_PIK_VASEA
 40EA: 32 EE 92    ld   ($92EE),a
-40ED: 3E 8E       ld   a,$8E
+40ED: 3E 8E       ld   a,$TILE_PIK_RINGA
 40EF: 32 17 92    ld   ($9217),a
 40F2: C9          ret
 40F3: FF
@@ -8873,6 +8877,7 @@ HIT_BONUS
 40FC: CD 81 5C    call $JMP_HL
 40FF: C9          ret
 
+    ;;
 4100: DD 7E 05    ld   a,(ix+$05)
 4103: A7          and  a
 4104: 28 05       jr   z,$410B
@@ -8897,11 +8902,12 @@ HIT_BONUS
 
 4126: FF FF
 
-4128: 3E 8C       ld   a,$8C
+    ;; Draw crown,cross,vase (not ring?)... where? when?
+4128: 3E 8C       ld   a,$TILE_CROWN_PIKA
 412A: 32 17 92    ld   ($9217),a
-412D: 3E 8D       ld   a,$8D
+412D: 3E 8D       ld   a,$TILE_PIK_CROSSA
 412F: 32 31 92    ld   ($9231),a
-4132: 3E 8F       ld   a,$8F
+4132: 3E 8F       ld   a,$TILE_PIK_VASEA
 4134: 32 2B 92    ld   ($922B),a
 4137: C9          ret
 
@@ -8935,7 +8941,7 @@ SET_SYNTH_SETTINGS
 416F: C9          ret
 
 4170: CD 77 45    call $4577
-4173: 3E 8E       ld   a,$8E
+4173: 3E 8E       ld   a,$TILE_PIK_RINGA
 4175: 32 AB 92    ld   ($92AB),a
 4178: C9          ret
 
@@ -9032,7 +9038,7 @@ HIT_BONUS_PRE
 4212: CD 80 40    call $4080
 4215: C9          ret
 
-4216: 3E 9C       ld   a,$9C
+4216: 3E 9C       ld   a,$TILE_CROWN_PIK
 4218: 32 B1 91    ld   ($91B1),a
 421B: C9          ret
 
@@ -9049,7 +9055,7 @@ HIT_BONUS_PRE
 4232: CD C0 40    call $40C0
 4235: C9          ret
 
-4236: 3E 9C       ld   a,$9C
+4236: 3E 9C       ld   a,$TILE_CROWN_PIK
 4238: 32 8E 91    ld   ($918E),a
 423B: C9          ret
 
@@ -9111,7 +9117,7 @@ PICKUP_TILE_COLLISION
 429F: C9          ret
 42A0: 3E 8E       ld   a,$TILE_PIK_RINGA
 42A2: 32 CB 90    ld   ($90CB),a
-42A5: CD 02 36    call $3602
+42A5: CD 02 36    call $3602    ; <- that looks od. Weird jump
 42A8: C9          ret
 
 42A9: FF ...
@@ -9272,19 +9278,19 @@ SFX_SOMETHING
 
 43D6: FF ...
 
-43E0: 3E 9F       ld   a,$9F
+43E0: 3E 9F       ld   a,$TILE_PIK_VASE
 43E2: 32 EE 92    ld   ($92EE),a
-43E5: 3E 9E       ld   a,$9E
+43E5: 3E 9E       ld   a,$TILE_PIK_RING
 43E7: 32 17 92    ld   ($9217),a
 43EA: C9          ret
 
 43EB: FF
 
-43EC: 3E 9C       ld   a,$9C
+43EC: 3E 9C       ld   a,$TILE_CROWN_PIK
 43EE: 32 17 92    ld   ($9217),a
-43F1: 3E 9D       ld   a,$9D
+43F1: 3E 9D       ld   a,$TILE_PIK_CROSS
 43F3: 32 31 92    ld   ($9231),a
-43F6: 3E 9F       ld   a,$9F
+43F6: 3E 9F       ld   a,$TILE_PIK_VASE
 43F8: 32 2B 92    ld   ($922B),a
 43FB: C9          ret
 43FC: FF ...
