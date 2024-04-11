@@ -2344,7 +2344,7 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 ;;;  um, nothing calls 10f7?
 10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
-;;;  or 10fb! - done in an interupt?
+;;;  or 10fb! - done in an interupt? from data?
 10FB: CD 18 25    call $TEST_THEN_DINO_COLLISION
 10FE: C9          ret
 
@@ -4082,6 +4082,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BFE: FF          rst  $38
 1BFF: FF          rst  $38
 
+DELAY_18_VBLANKS
 1C00: 1E 18       ld   e,$18
 1C02: CD A0 13    call $WAIT_VBLANK
 1C05: 1D          dec  e
@@ -4090,8 +4091,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 
 1C09: FF ...
 
-
-    ;;
+DINO_CAUGHT_PLAYER_RIGHT
 1C10: 3A 40 81    ld   a,($PLAYER_X)
 1C13: C6 08       add  a,$08
 1C15: 32 4C 81    ld   ($DINO_X),a
@@ -4105,10 +4105,10 @@ INIT_SCORE_AND_SCREEN_ONCE
 1C2A: 32 4D 81    ld   ($DINO_FRAME),a
 1C2D: 3E B0       ld   a,$B0
 1C2F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-1C32: CD 00 1C    call $1C00
+1C32: CD 00 1C    call $DELAY_18_VBLANKS
 1C35: 3E AD       ld   a,$AD
 1C37: 32 4D 81    ld   ($DINO_FRAME),a
-1C3A: CD 00 1C    call $1C00
+1C3A: CD 00 1C    call $DELAY_18_VBLANKS
 1C3D: CD 33 0A    call $KILL_PLAYER
 1C40: C9          ret
 
@@ -4122,7 +4122,7 @@ PLAY_INTRO_JINGLE
 
 1C4E: FF FF
 
-;;; dino catches player?
+DINO_CAUGHT_PLAYER_LEFT
 1C50: 3A 40 81    ld   a,($PLAYER_X)
 1C53: D6 08       sub  $08
 1C55: 32 4C 81    ld   ($DINO_X),a
@@ -4136,10 +4136,10 @@ PLAY_INTRO_JINGLE
 1C6A: 32 4D 81    ld   ($DINO_FRAME),a
 1C6D: 3E 30       ld   a,$30
 1C6F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-1C72: CD 00 1C    call $1C00
+1C72: CD 00 1C    call $DELAY_18_VBLANKS
 1C75: 3E 2D       ld   a,$2D
 1C77: 32 4D 81    ld   ($DINO_FRAME),a
-1C7A: CD 00 1C    call $1C00
+1C7A: CD 00 1C    call $DELAY_18_VBLANKS
 1C7D: CD 33 0A    call $KILL_PLAYER
 1C80: C9          ret
 
@@ -4152,6 +4152,7 @@ PLAY_INTRO_JINGLE
 
 1C8A: FF ...
 
+DINO_GOT_PLAYER_LEFT_OR_RIGHT
 1C90: 3A 40 81    ld   a,($PLAYER_X)
 1C93: 47          ld   b,a
 1C94: 3A 4C 81    ld   a,($DINO_X)
@@ -4159,9 +4160,9 @@ PLAY_INTRO_JINGLE
 1C98: 3F          ccf
 1C99: 90          sub  b
 1C9A: 38 04       jr   c,$1CA0
-1C9C: CD 10 1C    call $1C10
+1C9C: CD 10 1C    call $DINO_CAUGHT_PLAYER_RIGHT
 1C9F: C9          ret
-1CA0: CD 50 1C    call $1C50
+1CA0: CD 50 1C    call $DINO_CAUGHT_PLAYER_LEFT
 1CA3: C9          ret
 
 1CA4: FF ...
@@ -4187,7 +4188,7 @@ DINO_COLLISION
 1CCD: 38 03       jr   c,$1CD2
 1CCF: C6 50       add  a,$50
 1CD1: D0          ret  nc
-1CD2: CD 90 1C    call $1C90
+1CD2: CD 90 1C    call $DINO_GOT_PLAYER_LEFT_OR_RIGHT
 1CD5: C9          ret
 
 1CD6: FF          rst  $38
