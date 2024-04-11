@@ -42,6 +42,7 @@
 
     SCREEN_NUM     $8029  ; Current screen player is on
     SCREEN_NUM_P2  $802A  ; Player 2 screen
+    _              $802C  ; ??
     DINO_COUNTER   $802D  ; Ticks up when DINO_TIMER is done
     DINO_DIR       $802E  ; 01 = right, ff = left
 
@@ -118,12 +119,12 @@
     PLATFORM_XOFFS $8180  ; maybe
 
     SCORE          $8300  ; Current player score
-    SCORE+1        $8301
+    SCORE+1        $8301  ; ACTUALLY! I think it's just hiscore.
     SCORE+2        $8302
 
     CREDITS        $8303  ; how many credits in machine
     _              $8305  ; Coins? dunno
-    _              $8307  ; - $8301 : some tiles to print to screen
+    TITLE_MSG      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
     TICK_NUM       $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -240,7 +241,7 @@ IMPORTANT_LOOKIN
 
 SETUP_BEFORE_PLAYING
 008D: CD 48 03    call $SETUP_MORE
-0090: CD 80 30    call $SET_DEFAULTS ;score? etc
+0090: CD 80 30    call $SET_HISCORE_TEXT
 0093: CD A0 13    call $WAIT_VBLANK
 0096: 3A 03 83    ld   a,($CREDITS)
 0099: A7          and  a
@@ -281,13 +282,13 @@ ATTRACT_MODE_MAYBE
 00DC: 47          ld   b,a
 00DD: 3A 35 80    ld   a,($CREDITS_UMM)
 00E0: B8          cp   b
-00E1: C8          ret  z
+00E1: C8          ret  z        ; credits == credits_um
 00E2: 00          nop
 00E3: 00          nop
 00E4: 00          nop
-00E5: CD 80 14    call $1480
+00E5: CD 80 14    call $CLEAR_SCREEN
 00E8: 21 E0 0F    ld   hl,$0FE0
-00EB: CD 40 08    call $0840
+00EB: CD 40 08    call $DRAW_LEVEL?
 00EE: 00          nop
 00EF: 00          nop
 00F0: CD 50 24    call $DRAW_SCORE
@@ -903,7 +904,7 @@ HISCORE_FOR_P2
 
 _SETUP_2 ;looks like SETUP - no one calls it?
 0580: CD 48 03    call $SETUP_MORE
-0583: CD 80 30    call $SET_DEFAULTS ; score etc
+0583: CD 80 30    call $SET_HISCORE_TEXT
 0586: CD A0 13    call $WAIT_VBLANK
 0589: 3A 34 80    ld   a,($IS_PLAYING)
 058C: A7          and  a
@@ -1285,12 +1286,14 @@ PLAY_JUMP_SFX
 0838: 18 F3       jr   $082D
 083A: FF ...
 
+    ;; screen something... draw level?
+DRAW_LEVEL?
 0840: E5          push hl
 0841: D9          exx
 0842: E1          pop  hl
 0843: 54          ld   d,h
 0844: 5D          ld   e,l
-0845: 21 40 90    ld   hl,$9040
+0845: 21 40 90    ld   hl,$START_OF_TILES
 0848: C1          pop  bc
 0849: 0A          ld   a,(bc)
 084A: 03          inc  bc
@@ -2239,11 +2242,11 @@ BIG_RESET
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
 1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 1026: 21 E0 0F    ld   hl,$0FE0
-1029: CD 40 08    call $0840
+1029: CD 40 08    call $DRAW_LEVEL?
 102C: 00          nop
 102D: 00          nop
 102E: CD D0 16    call $DRAW_BONUS
-1031: CD 38 30    call $3038
+1031: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
 1034: CD 50 24    call $DRAW_SCORE
 1037: CD A0 03    call $DRAW_LIVES
 103A: CD 98 08    call $INIT_PLAYER_SPRITE
@@ -2937,6 +2940,7 @@ HMMM_IN_SCR_TRANSITION
 1525: 1D          dec  e
 1526: 70          ld   (hl),b
 1527: 1E E0       ld   e,$E0
+
 1529: 1F          rra
 152A: 40          ld   b,b
 152B: 21 70 1E    ld   hl,$1E70
@@ -3090,7 +3094,7 @@ DO_ATTRACT_MODE
 164A: FF          rst  $38
 164B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 164E: 21 E0 0F    ld   hl,$0FE0
-1651: CD 40 08    call $0840
+1651: CD 40 08    call $DRAW_LEVEL?
 1654: 00          nop
 1655: 00          nop
 1656: CD 50 24    call $DRAW_SCORE
@@ -4007,7 +4011,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 1B98: 00          nop
 1B99: CD A0 03    call $DRAW_LIVES
 1B9C: 21 E0 0F    ld   hl,$0FE0
-1B9F: CD 40 08    call $0840
+1B9F: CD 40 08    call $DRAW_LEVEL?
 1BA2: 00          nop
 1BA3: 00          nop
 1BA4: CD 50 24    call $DRAW_SCORE
@@ -5582,7 +5586,7 @@ DRAW_SCORE
 24C9: ED 67       rrd  (hl)
 24CB: AF          xor  a
 24CC: 32 A1 91    ld   ($91A1),a
-24CF: CD 38 30    call $3038
+24CF: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
 24D2: C9          ret
 
 24D3: FF ...
@@ -5660,7 +5664,7 @@ TEST_THEN_DINO_COLLISION
 257E: CD E8 25    call $25E8
 2581: 15          dec  d
 2582: 20 F1       jr   nz,$2575
-2584: CD 80 14    call $1480
+2584: CD 80 14    call $CLEAR_SCREEN
 2587: C9          ret
 2588: 73          ld   (hl),e
 2589: 2C          inc  l
@@ -5881,7 +5885,7 @@ MOVE_DINO_X
 2910: 21 40 02    ld   hl,$0240
 2913: CD E3 01    call $CALL_HL_PLUS_4K
 2916: CD 10 11    call $MYSTERY_8066_FN
-2919: 21 40 08    ld   hl,$0840
+2919: 21 40 08    ld   hl,$DRAW_LEVEL?
 291C: 18 22       jr   $CALL_MYSTERY_8066_FN
 
 291E: FF FF
@@ -6366,7 +6370,7 @@ ROCK_FALL_1
 2D95: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
-2D9E: CD 40 08    call $0840
+2D9E: CD 40 08    call $DRAW_LEVEL?
 2DA1: 00          nop
 2DA2: 00          nop
 2DA3: CD 10 03    call $ANIMATE_TILES
@@ -6528,7 +6532,7 @@ ROCK_FALL_1
 2EC3: CD 08 31    call $3108
 2EC6: 18 B8       jr   $2E80
 2EC8: E1          pop  hl
-2EC9: CD 10 2F    call $2F10
+2EC9: CD 10 2F    call $THINGS_THEN_COPY_TITLE_MSG
 2ECC: C9          ret
 2ECD: FF ...
 
@@ -6540,7 +6544,7 @@ ROCK_FALL_1
 2EE2: 3E 92       ld   a,$92
 2EE4: BD          cp   l
 2EE5: 20 04       jr   nz,$2EEB
-2EE7: CD 10 2F    call $2F10
+2EE7: CD 10 2F    call $THINGS_THEN_COPY_TITLE_MSG
 2EEA: C9          ret
 2EEB: 3E D2       ld   a,$D2
 2EED: BD          cp   l
@@ -6557,11 +6561,12 @@ ROCK_FALL_1
 
 2F00: FF ...
 
+THINGS_THEN_COPY_TITLE_MSG
 2F10: AF          xor  a
 2F11: 32 86 80    ld   ($8086),a
 2F14: E1          pop  hl
 2F15: E1          pop  hl
-2F16: CD E0 2F    call $2FE0
+2F16: CD E0 2F    call $COPY_TITLE_MSG_TO_SCREEN
 2F19: C9          ret
 
 2F1A: FF ...
@@ -6614,7 +6619,7 @@ ROCK_FALL_1
 2F74: FF ...
 
 2F88: E5          push hl
-2F89: 21 07 83    ld   hl,$8307 ; default is $18
+2F89: 21 07 83    ld   hl,$TITLE_MSG ; default is "HI-SCORE", clearing...
 2F8C: 36 10       ld   (hl),$TILE_BLANK
 2F8E: 23          inc  hl
 2F8F: 7D          ld   a,l
@@ -6653,14 +6658,15 @@ ROCK_FALL_1
 2FD1: C9          ret
 2FD2: FF ...
 
-2FD5: CD 38 30    call $3038
+2FD5: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
 2FD8: CD E0 24    call $DELAY_60_VBLANKS
 2FDB: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
 
-2FE0: 21 07 83    ld   hl,$8307
+COPY_TITLE_MSG_TO_SCREEN
+2FE0: 21 07 83    ld   hl,$TITLE_MSG
 2FE3: 3A 77 92    ld   a,($9277)
 2FE6: 77          ld   (hl),a
 2FE7: 3A 57 92    ld   a,($9257)
@@ -6705,9 +6711,11 @@ ROCK_FALL_1
 3029: FF ...
 
     ;; writes some chars to screen
-3038: 3A 07 83    ld   a,($8307)
+    ;; actually - different screen loc than copy_msg 1!
+COPY_TITLE_MSG_TO_SCREEN_2
+3038: 3A 07 83    ld   a,($TITLE_MSG)
 303B: 32 80 92    ld   ($9280),a
-303E: 3A 08 83    ld   a,($8308)
+303E: 3A 08 83    ld   a,($TITLE_MSG+1)
 3041: 32 60 92    ld   ($9260),a
 3044: 3A 09 83    ld   a,($8309)
 3047: 32 40 92    ld   ($9240),a
@@ -6723,35 +6731,34 @@ ROCK_FALL_1
 3065: 32 A0 91    ld   ($91A0),a
 3068: 3A 0F 83    ld   a,($830F)
 306B: 32 80 91    ld   ($9180),a
-306E: 3A 10 83    ld   a,($8310)
+306E: 3A 10 83    ld   a,($TITLE_MSG+9)
 3071: 32 60 91    ld   ($9160),a
 3074: C9          ret
 
 3075: FF ...
 
-    ;; what are these? 8307-8310?
-    ;; they get written to screen
-SET_DEFAULTS
+    ;; Writes HIGH-SCORE to bytes (later to screen)
+SET_HISCORE_TEXT
 3080: 21 07 83    ld   hl,$8307
-3083: 36 18       ld   (hl),$18
+3083: 36 18       ld   (hl),$18 ; h
 3085: 23          inc  hl
-3086: 36 19       ld   (hl),$19
+3086: 36 19       ld   (hl),$19 ; i
 3088: 23          inc  hl
-3089: 36 17       ld   (hl),$17
+3089: 36 17       ld   (hl),$17 ; g
 308B: 23          inc  hl
-308C: 36 18       ld   (hl),$18
+308C: 36 18       ld   (hl),$18 ; h
 308E: 23          inc  hl
-308F: 36 2B       ld   (hl),$2B
+308F: 36 2B       ld   (hl),$2B ; -
 3091: 23          inc  hl
-3092: 36 23       ld   (hl),$23
+3092: 36 23       ld   (hl),$23 ; s
 3094: 23          inc  hl
-3095: 36 13       ld   (hl),$13
+3095: 36 13       ld   (hl),$13 ; c
 3097: 23          inc  hl
-3098: 36 1F       ld   (hl),$1F
+3098: 36 1F       ld   (hl),$1F ; o
 309A: 23          inc  hl
-309B: 36 22       ld   (hl),$22
+309B: 36 22       ld   (hl),$22 ; r
 309D: 23          inc  hl
-309E: 36 15       ld   (hl),$15
+309E: 36 15       ld   (hl),$15 ; e
     ;; set default score
 30A0: 21 00 83    ld   hl,$SCORE
 30A3: 36 00       ld   (hl),$00
@@ -6817,7 +6824,7 @@ SET_DEFAULTS
 3124: 7E          ld   a,(hl)
 3125: 3D          dec  a
 3126: 27          daa
-3127: CC 10 2F    call z,$2F10
+3127: CC 10 2F    call z,$THINGS_THEN_COPY_TITLE_MSG
 312A: 77          ld   (hl),a
 312B: AF          xor  a
 312C: ED 6F       rld  (hl)
@@ -8343,7 +8350,7 @@ DO_CUTSCENE
 3D4D: 32 65 80    ld   ($8065),a
 3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
-3D56: CD 40 08    call $0840
+3D56: CD 40 08    call $DRAW_LEVEL?
 3D59: 00          nop
 3D5A: 00          nop
 3D5B: CD A0 03    call $DRAW_LIVES
