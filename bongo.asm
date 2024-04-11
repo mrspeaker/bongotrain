@@ -25,10 +25,15 @@
     BUTTONS_2      $800D  ; ... more buttons?
     CONTROLSN      $800E  ; some kind of "normalized" controls
     JUMP_TBL_IDX   $800F
+    WALK_ANIM_TIMER $8010 ; % 7?
+    FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
+    PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
     P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
     P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
+    _UNUSED_1      $801B  ; unused? Set once, never read
     SCORE_TO_ADD   $801D  ; amount to add to the current score
 
+    _              $8020  ; ???
     DID_INIT       $8022  ; set after first init, not really used
     BONGO_ANIM_TIMER $8023 ; [0,1,2] updated every 8 ticks
     BONGO_JUMP_TIMER $8024 ; amount of ticks keep jumping for
@@ -45,6 +50,7 @@
     LIVES          $8032
     LIVES_P2       $8033
     IS_PLAYING     $8034  ; attract mode = 0, 1P = 1, 2P = 2
+    CREDITS_UMM    $8035  ; something to do with credits
 
     ROCK_FALL_TIMER $8036 ; resets falling pos of rock
     ENEMY_1_ACTIVE $8037  ;
@@ -52,8 +58,8 @@
     ENEMY_3_ACTIVE $803B  ;
     _              $8041   ; enemy 3 something..
 
-    CH1_SFX        $8042  ; TUNE N? 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?
-    CH2_SFX        $8043  ; SFX too?
+    CH1_SFX        $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+    CH2_SFX        $8043  ; SFX channel 2
     SFX_ID         $8044  ; queued sound effect ID to play
 
     IS_HIT_CAGE    $8051  ; did player trigger cage?
@@ -67,11 +73,6 @@
     _              $8066  ; ?? OE when alive, 02 when dead?
     _              $8067  ; ?? used with 66
     _              $8068  ; ?? used with 67
-
-    WALK_ANIM_TIMER $8010 ; % 7?
-    FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
-    PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
-    _UNUSED_1      $801B  ; unused? Set once, never read
 
     SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
                           ; Gets memcpy'd to $9800
@@ -116,12 +117,13 @@
 
     PLATFORM_XOFFS $8180  ; maybe
 
-    CREDITS        $8303
-    _              $8305  ; Coins? dunno
-
     SCORE          $8300  ; Current player score
     SCORE+1        $8301
     SCORE+2        $8302
+
+    CREDITS        $8303  ; how many credits in machine
+    _              $8305  ; Coins? dunno
+    _              $8307  ; - $8301 : some tiles to print to screen
 
     TICK_NUM       $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -171,10 +173,10 @@
 000C: C3 A0 14    jp   $CLEAR_SCREEN
 
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
-0012: CD 00 3F    call $3F00
+0012: CD 00 3F    call $DELAY_N_4E90
 0015: CD 48 00    call $IMPORTANT_LOOKIN
 0018: CD 88 22    call $WRITE_TO_0_AND_1
-001B: C3 8D 00    jp   $SETUP
+001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
 
 001E: DD 19       add  ix,de
 0020: DD 19       add  ix,de
@@ -233,21 +235,21 @@ IMPORTANT_LOOKIN
 
 008C: FF
 
-SETUP
-008D: CD 48 03    call $0348
-0090: CD 80 30    call $3080
+SETUP_BEFORE_PLAYING
+008D: CD 48 03    call $SETUP_MORE
+0090: CD 80 30    call $SET_DEFAULTS ;score? etc
 0093: CD A0 13    call $WAIT_VBLANK
 0096: 3A 03 83    ld   a,($CREDITS)
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
-009C: CD 70 03    call $0370
+009C: CD 70 03    call $RESET_ENTS_ALL
 009F: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 00A2: 18 EF       jr   $0093
 00A4: CD A0 13    call $WAIT_VBLANK
 00A7: 3A 03 83    ld   a,($CREDITS)
 00AA: FE 01       cp   $01
 00AC: 20 05       jr   nz,$00B3
-00AE: CD D0 00    call $00D0
+00AE: CD D0 00    call $ATTRACT_MODE_MAYBE
 00B1: 18 03       jr   $00B6
 00B3: CD 40 01    call $0140
 00B6: 3A 34 80    ld   a,($IS_PLAYING)
@@ -267,13 +269,14 @@ SETUP
 00CF: FF
 
 ;;;
+ATTRACT_MODE_MAYBE
 00D0: 3E 01       ld   a,$01
 00D2: 32 90 80    ld   ($8090),a
 00D5: AF          xor  a
 00D6: 32 04 B0    ld   ($B004),a
 00D9: 3A 03 83    ld   a,($CREDITS)
 00DC: 47          ld   b,a
-00DD: 3A 35 80    ld   a,($8035)
+00DD: 3A 35 80    ld   a,($CREDITS_UMM)
 00E0: B8          cp   b
 00E1: C8          ret  z
 00E2: 00          nop
@@ -328,16 +331,16 @@ SETUP
 0132: 32 79 91    ld   ($9179),a
 0135: ED 6F       rld  (hl)
 0137: 3A 03 83    ld   a,($CREDITS)
-013A: 32 35 80    ld   ($8035),a
+013A: 32 35 80    ld   ($CREDITS_UMM),a
 013D: C9          ret
     
-013E: FF          rst  $38
-013F: FF          rst  $38
-    
+013E: FF FF
+
+    ;;
 0140: CD 30 24    call $2430
 0143: 3A 03 83    ld   a,($CREDITS)
 0146: 47          ld   b,a
-0147: 3A 35 80    ld   a,($8035)
+0147: 3A 35 80    ld   a,($CREDITS_UMM)
 014A: B8          cp   b
 014B: 00          nop
 014C: CD D0 00    call $00D0
@@ -375,7 +378,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 0195: 3A F1 83    ld   a,($INPUT_BUTTONS) ; P1 pressed?
 0198: CB 47       bit  0,a
 019A: 28 11       jr   z,$01AD
-019C: CD 60 14    call $1460
+019C: CD 60 14    call $DELAY_83
 019F: 3E 01       ld   a,$01    ; start the game, 1 player
 01A1: 32 34 80    ld   ($IS_PLAYING),a
 01A4: 3A 03 83    ld   a,($CREDITS) ; use a credit
@@ -389,7 +392,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01B2: 3A F1 83    ld   a,($INPUT_BUTTONS)
 01B5: CB 4F       bit  1,a      ; is P2 pressed?
 01B7: C8          ret  z
-01B8: CD 60 14    call $1460
+01B8: CD 60 14    call $DELAY_83
 01BB: 3E 02       ld   a,$02    ; start the game, 2 player
 01BD: 32 34 80    ld   ($IS_PLAYING),a
 01C0: 3A 03 83    ld   a,($CREDITS)
@@ -602,6 +605,7 @@ ANIMATE_TILES
 033E: FF ...
 
     ;;
+SETUP_MORE
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
@@ -622,6 +626,7 @@ ANIMATE_TILES
     
 036A: FF ...
 
+RESET_ENTS_ALL
 0370: CD 70 14    call $CALL_RESET_ENTS
 0373: 21 20 15    ld   hl,$1520
 0376: CD E3 01    call $CALL_HL_PLUS_4K
@@ -643,7 +648,7 @@ ANIMATE_TILES
 0395: FF ...
 
 DRAW_LIVES
-03A0: CD 08 04    call $0408
+03A0: CD 08 04    call $SET_COLOR_ROW_3
 03A3: 3A 32 80    ld   a,($LIVES)
 03A6: A7          and  a
 03A7: 47          ld   b,a
@@ -686,7 +691,7 @@ DRAW_LIVES
     
 03E8: AF          xor  a
 03E9: 32 34 80    ld   ($IS_PLAYING),a
-03EC: 32 35 80    ld   ($8035),a
+03EC: 32 35 80    ld   ($CREDITS_UMM),a
 03EF: C3 93 00    jp   $0093
 
 03F2: FF ...
@@ -699,6 +704,7 @@ DRAW_LIVES
 
 0401: FF ...
 
+SET_COLOR_ROW_3                 ; dunno what row.
 0408: 3E 01       ld   a,$01
 040A: 32 05 81    ld   ($SCREEN_XOFF_COL+5),a
 040D: C9          ret
@@ -886,8 +892,9 @@ CHECK_DINO_TIMER
     
 0569: FF ...
 
-0580: CD 48 03    call $0348
-0583: CD 80 30    call $3080
+_SETUP_2 ;looks like SETUP - no one calls it?
+0580: CD 48 03    call $SETUP_MORE
+0583: CD 80 30    call $SET_DEFAULTS ; score etc
 0586: CD A0 13    call $WAIT_VBLANK
 0589: 3A 34 80    ld   a,($IS_PLAYING)
 058C: A7          and  a
@@ -895,7 +902,7 @@ CHECK_DINO_TIMER
 058F: 3A 03 83    ld   a,($CREDITS)
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
-0595: CD 70 03    call $0370
+0595: CD 70 03    call $RESET_ENTS_ALL
 0598: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 059B: 18 E9       jr   $0586
 059D: FE 01       cp   $01
@@ -921,6 +928,10 @@ CHECK_DINO_TIMER
     
 05C9: FF ...
 
+    ;; could this ben not P1/P2, but "player" vs "ai" (like
+    ;; in splash screen player jump automatically)
+    ;; AND/OR, could this disable input during transition?
+    ;; (hmm, no... looks like P1/P2... but why?)
 NORMALIZE_INPUT
 05D0: 3A 04 80    ld   a,($PLAYER_NUM)
 05D3: A7          and  a
@@ -928,7 +939,7 @@ NORMALIZE_INPUT
     ;; p2
 05D6: 3A 0C 80    ld   a,($BUTTONS_1)
 05D9: CB 7F       bit  7,a
-05DB: 28 10       jr   z,$05ED
+05DB: 28 10       jr   z,$05ED  ;p1 too?
 05DD: 3A 0C 80    ld   a,($BUTTONS_1)
 05E0: E6 3C       and  $3C      ; 0011 1100
 05E2: 47          ld   b,a
@@ -1614,17 +1625,17 @@ FALL_UNDER_A_LEDGE
 0ACC: C9          ret
     
 0ACD: FF FF FF
-    
+
+SET_LEVEL_PLATFORM_XOFFS
 0AD0: 3A 04 80    ld   a,($PLAYER_NUM)
 0AD3: A7          and  a
-0AD4: 20 05       jr   nz,$0ADB
+0AD4: 20 05       jr   nz,$0ADB ;p2?
 0AD6: 3A 29 80    ld   a,($SCREEN_NUM)
 0AD9: 18 03       jr   $0ADE
 0ADB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-0ADE: 3D          dec  a
+0ADE: 3D          dec  a        ; scr - 1
 0ADF: 21 00 0B    ld   hl,$SOME_DATA_1
-
-0AE2: CB 27       sla  a
+0AE2: CB 27       sla  a        ; scr - 1 * 2
 0AE4: 85          add  a,l
 0AE5: 6F          ld   l,a
 0AE6: 4E          ld   c,(hl)
@@ -2595,6 +2606,7 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 12F7: 21 50 0C    ld   hl,$0C50
 12FA: CD E3 01    call $CALL_HL_PLUS_4K
 12FD: C3 10 3F    jp   $3F10
+    ;;
 1300: 1E 04       ld   e,$04
 1302: E5          push hl
 1303: 21 06 81    ld   hl,$SCREEN_XOFF_COL+6
@@ -2615,6 +2627,7 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 131B: C9          ret
 131C: FF ...
 
+    ;;
 1328: CD 68 17    call $1768
 132B: DD 7E 00    ld   a,(ix+$00)
 132E: E5          push hl
@@ -2646,9 +2659,10 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 1357: FF          rst  $38
 
     ;;
-1358: CD B8 13    call $13B8
+DURING_TRANSITION_NEXT
+1358: CD B8 13    call $BONGO_RUNS_OFF_SCREEN
 135B: 00          nop
-135C: CD B0 14    call $14B0
+135C: CD B0 14    call $HMMM_IN_SCR_TRANSITION
 135F: DD 2A 20 80 ld   ix,($8020)
 1363: 2A 1E 80    ld   hl,($801E)
 1366: 16 15       ld   d,$15
@@ -2658,14 +2672,14 @@ DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 136F: 20 F7       jr   nz,$1368
 1371: DD 22 20 80 ld   ($8020),ix
 1375: 22 1E 80    ld   ($801E),hl
-1378: CD C0 19    call $19C0
+1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
 137B: CD B8 12    call $DRAW_BACKGROUND
 137E: AF          xor  a
-137F: 32 02 80    ld   ($8002),a
+137F: 32 02 80    ld   ($PL_Y_LEGS_COPY),a
 1382: 32 03 80    ld   ($8003),a
-1385: CD 20 18    call $1820
+1385: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
 1388: CD B8 0D    call $DRAW_BONGO
-138B: CD 08 04    call $0408
+138B: CD 08 04    call $SET_COLOR_ROW_3
 138E: C9          ret
 
 138F: FF
@@ -2701,6 +2715,7 @@ WAIT_VBLANK
 
 13B7: FF
 
+BONGO_RUNS_OFF_SCREEN
 13B8: 21 48 81    ld   hl,$BONGO_X
 13BB: 36 00       ld   (hl),$00
 13BD: 23          inc  hl
@@ -2790,6 +2805,7 @@ DRAW_TIME
 
 1454: FF ...
 
+DELAY_83                        ; maybe a delay?
 1460: 21 00 80    ld   hl,$TICK_MOD_3
 1463: 36 00       ld   (hl),$00
 1465: 2C          inc  l
@@ -2851,11 +2867,12 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14A7: FE 84       cp   $84
 14A9: 20 F8       jr   nz,$14A3
 14AB: C3 0F 00    jp   $000F
-14AE: FF          rst  $38
-14AF: FF          rst  $38
+14AE: FF FF
+
+HMMM_IN_SCR_TRANSITION
 14B0: 21 E8 06    ld   hl,$06E8
 14B3: CD E3 01    call $CALL_HL_PLUS_4K
-14B6: CD C8 3B    call $3BC8
+14B6: CD C8 3B    call $RESET_XOFFS
 14B9: 3E 20       ld   a,$20
 14BB: 32 30 80    ld   ($PLAYER_MAX_X),a
 14BE: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -3240,20 +3257,20 @@ CHECK_DONE_SCREEN
 1777: FF
 
 TRANSITION_TO_NEXT_SCREEN
-1778: CD C0 17    call $17C0
+1778: CD C0 17    call $RESET_DINO
 177B: 3A 04 80    ld   a,($PLAYER_NUM)
 177E: A7          and  a
 177F: 20 09       jr   nz,$178A
 1781: 3A 29 80    ld   a,($SCREEN_NUM)
-1784: 3C          inc  a
+1784: 3C          inc  a        ; next screen if p1
 1785: 32 29 80    ld   ($SCREEN_NUM),a
 1788: 18 07       jr   $1791
 178A: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-178D: 3C          inc  a
+178D: 3C          inc  a        ; next screen if p2
 178E: 32 2A 80    ld   ($SCREEN_NUM_P2),a
-1791: CD E0 27    call $27E0    ;player ypos
-1794: CD 58 13    call $1358
-1797: CD D0 0A    call $0AD0
+1791: CD E0 27    call $SET_PLAYER_Y_LEVEL_START
+1794: CD 58 13    call $DURING_TRANSITION_NEXT ; is this the wipe?
+1797: CD D0 0A    call $SET_LEVEL_PLATFORM_XOFFS
 179A: 3E 02       ld   a,$02
 179C: C3 B4 17    jp   $RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 179F: C9          ret
@@ -3654,6 +3671,7 @@ BONUS_SKIP_SCREEN
 19BA: 32 46 81    ld   ($PLAYER_COL_LEGS),a
 19BD: C3 78 17    jp   $TRANSITION_TO_NEXT_SCREEN
     ;; Clear screen to blanks
+CLEAR_SCR_TO_BLANKS
 19C0: 21 00 90    ld   hl,$SCREEN_RAM
 19C3: 23          inc  hl
 19C4: 23          inc  hl
@@ -3671,8 +3689,6 @@ BONUS_SKIP_SCREEN
 19D5: 00          nop
 19D6: 00          nop
 19D7: 00          nop
-
-    ;; Is this ever called?
 CLEAR_SCREEN_XOFF_COL           ; Again? dupe sub
 19D8: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 19DB: 36 00       ld   (hl),$00
@@ -5562,15 +5578,13 @@ DRAW_SCORE
 
 24D3: FF ...
 
-
 24E0: 26 60       ld   h,$60
 24E2: CD A0 13    call $WAIT_VBLANK
 24E5: 24          inc  h
 24E6: 20 FA       jr   nz,$24E2
 24E8: C9          ret
-24E9: FF          rst  $38
-24EA: FF          rst  $38
-24EB: FF          rst  $38
+24E9: FF ...
+
 24EC: C5          push bc
 24ED: 06 08       ld   b,$08
 24EF: C5          push bc
@@ -5581,9 +5595,9 @@ DRAW_SCORE
 24F7: 3E 0A       ld   a,$0A
 24F9: 32 44 80    ld   ($SFX_ID),a
 24FC: C9          ret
-24FD: FF          rst  $38
-24FE: FF          rst  $38
-24FF: FF          rst  $38
+
+24FD: FF ....
+
 2500: 21 00 83    ld   hl,$SCORE
 2503: 36 00       ld   (hl),$00
 2505: 2C          inc  l
@@ -5677,11 +5691,8 @@ TEST_THEN_DINO_COLLISION
 25C7: 20 FA       jr   nz,$25C3
 25C9: 2B          dec  hl
 25CA: C9          ret
-25CB: FF          rst  $38
-25CC: FF          rst  $38
-25CD: FF          rst  $38
-25CE: FF          rst  $38
-25CF: FF          rst  $38
+25CB: FF ...
+
 25D0: CD A0 13    call $WAIT_VBLANK
 25D3: 73          ld   (hl),e
 25D4: 01 20 00    ld   bc,$0020
@@ -5693,7 +5704,6 @@ TEST_THEN_DINO_COLLISION
 25DE: C9          ret
 25DF: FF ...
 
-
 25E8: CD A0 13    call $WAIT_VBLANK
 25EB: 73          ld   (hl),e
 25EC: 2B          dec  hl
@@ -5703,7 +5713,6 @@ TEST_THEN_DINO_COLLISION
 25F1: 23          inc  hl
 25F2: C9          ret
 25F3: FF ...
-
 
     ;; Nodes for dino to follow: 31 nodes,
     ;; four bytes per node: [ x, y, ?, ? ]
@@ -5784,17 +5793,18 @@ DINO_PATH_5
 27D8: FF ...
 
 ;;;
+SET_PLAYER_Y_LEVEL_START
 27E0: 3A 43 81    ld   a,($PLAYER_Y)
 27E3: 37          scf
 27E4: 3F          ccf
-27E5: C6 60       add  a,$60
+27E5: C6 60       add  a,$60    ; at top of screen?
 27E7: 30 0B       jr   nc,$27F4
-27E9: 3E D0       ld   a,$D0
+27E9: 3E D0       ld   a,$D0    ; no, set to bottom
 27EB: 32 43 81    ld   ($PLAYER_Y),a
 27EE: C6 10       add  a,$10
 27F0: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 27F3: C9          ret
-27F4: 3E 28       ld   a,$28
+27F4: 3E 28       ld   a,$28    ; yes, set to top
 27F6: 32 43 81    ld   ($PLAYER_Y),a
 27F9: C6 10       add  a,$10
 27FB: 32 47 81    ld   ($PLAYER_Y_LEGS),a
@@ -6319,9 +6329,8 @@ ROCK_FALL_1
 2D4F: 3E 01       ld   a,$01
 2D51: CD 88 2D    call $2D88
 2D54: C9          ret
-2D55: FF          rst  $38
-2D56: FF          rst  $38
-2D57: FF          rst  $38
+2D55: FF ...
+
 2D58: 3A F1 83    ld   a,($INPUT_BUTTONS)
 2D5B: CB 7F       bit  7,a      ; hmm what is bit 7 button?
 2D5D: 28 0A       jr   z,$2D69
@@ -6595,8 +6604,8 @@ ROCK_FALL_1
 2F74: FF ...
 
 2F88: E5          push hl
-2F89: 21 07 83    ld   hl,$8307
-2F8C: 36 10       ld   (hl),$10
+2F89: 21 07 83    ld   hl,$8307 ; default is $18
+2F8C: 36 10       ld   (hl),$TILE_BLANK
 2F8E: 23          inc  hl
 2F8F: 7D          ld   a,l
 2F90: FE 11       cp   $11
@@ -6685,6 +6694,7 @@ ROCK_FALL_1
 
 3029: FF ...
 
+    ;; writes some chars to screen
 3038: 3A 07 83    ld   a,($8307)
 303B: 32 80 92    ld   ($9280),a
 303E: 3A 08 83    ld   a,($8308)
@@ -6709,6 +6719,9 @@ ROCK_FALL_1
 
 3075: FF ...
 
+    ;; what are these? 8307-8310?
+    ;; they get written to screen
+SET_DEFAULTS
 3080: 21 07 83    ld   hl,$8307
 3083: 36 18       ld   (hl),$18
 3085: 23          inc  hl
@@ -6729,6 +6742,7 @@ ROCK_FALL_1
 309B: 36 22       ld   (hl),$22
 309D: 23          inc  hl
 309E: 36 15       ld   (hl),$15
+    ;; set default score
 30A0: 21 00 83    ld   hl,$SCORE
 30A3: 36 00       ld   (hl),$00
 30A5: 23          inc  hl
@@ -6770,8 +6784,8 @@ ROCK_FALL_1
 30F4: 15          dec  d
 30F5: DD 2B       dec  ix
 30F7: 20 F5       jr   nz,$30EE
-30F9: 3E 10       ld   a,$10
-30FB: 32 07 83    ld   ($8307),a
+30F9: 3E 10       ld   a,$TILE_BLANK
+30FB: 32 07 83    ld   ($8307),a ;default is $18
 30FE: C9          ret
 
 30FF: FF ...
@@ -8057,6 +8071,7 @@ PLAYER_ENEMIES_COLLISION
 3BC1: C9          ret
 3BC2: FF ...
 
+RESET_XOFFS                     ;(or colors?)
 3BC8: 21 08 81    ld   hl,$SCREEN_XOFF_COL+8
 3BCB: 3A 06 81    ld   a,($SCREEN_XOFF_COL+6)
 3BCE: 77          ld   (hl),a
@@ -8093,7 +8108,8 @@ PLAYER_ENEMIES_COLLISION
 3BFC: DD 23       inc  ix
 3BFE: DD E5       push ix
 3C00: C9          ret
-3C01: FF          rst  $38
+
+3C01: FF
 
 CUSTOM_SCREEN_LOGIC
 3C02: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -8526,8 +8542,8 @@ END_CUTSCENE
 
 3EF8: FF ...
 
-
-3F00: CD 60 14    call $1460
+DELAY_N_4E90
+3F00: CD 60 14    call $DELAY_83
 3F03: 21 90 0E    ld   hl,$0E90
 3F06: CD E3 01    call $CALL_HL_PLUS_4K
 3F09: C9          ret
@@ -8605,8 +8621,9 @@ END_CUTSCENE
 3F86: 1E 24       ld   e,$24
 3F88: FF          rst  $38
 3F89: C9          ret
-3F8A: FF          rst  $38
-3F8B: FF          rst  $38
+
+3F8A: FF FF
+
 3F8C: CD 10 03    call $ANIMATE_TILES
 3F8F: 10 04       djnz $3F95
 3F91: 8B          adc  a,e
@@ -8624,9 +8641,9 @@ END_CUTSCENE
 3FA1: 16 24       ld   d,$24
 3FA3: FF          rst  $38
 3FA4: C9          ret
-3FA5: FF          rst  $38
-3FA6: FF          rst  $38
-3FA7: FF          rst  $38
+
+3FA5: FF ...
+
 3FA8: CD 10 03    call $ANIMATE_TILES
 3FAB: 1F          rra
 3FAC: 00          nop
@@ -8686,7 +8703,7 @@ INT_HANDLER
 4017: 00          nop
 4018: CD 00 00    call $0000
 
-401B: FF FF FF FF FF
+401B: FF ...
 
 4020: CD 50 40    call $ADD_MOVE_SCORE
 4023: CD 58 42    call $PICKUP_TILE_COLLISION
@@ -8696,17 +8713,12 @@ INT_HANDLER
 402F: C9          ret
 
 4030: C9          ret
-4031: FF          rst  $38
-4032: FF          rst  $38
-4033: FF          rst  $38
-4034: FF          rst  $38
-4035: FF          rst  $38
-4036: FF          rst  $38
-4037: FF          rst  $38
+4031: FF ...
 
 4038: 21 00 C0    ld   hl,$C000
 403B: CD 81 5C    call $JMP_HL
 403E: C9          ret
+
 403F: FF
 
 4040: CD 68 45    call $4568
@@ -8714,7 +8726,7 @@ INT_HANDLER
 4045: 32 7A 92    ld   ($927A),a
 4048: C9          ret
 
-4049: FF FF FF FF FF FF FF
+4049: FF ...
 
     ;; Adds a bonus as you move right
     ;; Keeps track of "max x" - when you go past it,
@@ -8735,18 +8747,20 @@ ADD_MOVE_SCORE
 4065: 32 30 80    ld   ($PLAYER_MAX_X),a
 4068: C9          ret
 
-4069: FF FF FF FF FF FF FF
+4069: FF ...
 
 4070: 3E 8C       ld   a,$8C
 4072: 32 8E 91    ld   ($918E),a
 4075: C9          ret
-4076: FF          rst  $38
-4077: FF          rst  $38
+
+4076: FF ...
+
 4078: 3E 8D       ld   a,$8D
 407A: 32 D2 91    ld   ($91D2),a
 407D: C9          ret
-407E: FF          rst  $38
-407F: FF          rst  $38
+
+407E: FF ...
+
 4080: DD 7E 05    ld   a,(ix+$05)
 4083: A7          and  a
 4084: 28 05       jr   z,$408B
@@ -8768,7 +8782,8 @@ ADD_MOVE_SCORE
 40A2: D3 01       out  ($01),a
 40A4: 00          nop
 40A5: C9          ret
-40A6: FF          rst  $38
+
+40A6: FF
 
     ;; in: h = x, y = l
     ;; out: hl = screen pos of tile at xy
@@ -8814,14 +8829,14 @@ GET_TILE_SCR_POS
 40E2: D3 01       out  ($01),a
 40E4: 00          nop
 40E5: C9          ret
-40E6: FF          rst  $38
-40E7: FF          rst  $38
+40E6: FF ...
+
 40E8: 3E 8F       ld   a,$8F
 40EA: 32 EE 92    ld   ($92EE),a
 40ED: 3E 8E       ld   a,$8E
 40EF: 32 17 92    ld   ($9217),a
 40F2: C9          ret
-40F3: FF          rst  $38
+40F3: FF
 
 ;;; ; hit bonus
 HIT_BONUS
@@ -8891,6 +8906,7 @@ SET_SYNTH_SETTINGS
 4169: DD 7E 03    ld   a,(ix+$03)
 416C: DD 77 05    ld   (ix+$05),a
 416F: C9          ret
+
 4170: CD 77 45    call $4577
 4173: 3E 8E       ld   a,$8E
 4175: 32 AB 92    ld   ($92AB),a
@@ -9234,7 +9250,9 @@ SFX_SOMETHING
 43E5: 3E 9E       ld   a,$9E
 43E7: 32 17 92    ld   ($9217),a
 43EA: C9          ret
-43EB: FF          rst  $38
+
+43EB: FF
+
 43EC: 3E 9C       ld   a,$9C
 43EE: 32 17 92    ld   ($9217),a
 43F1: 3E 9D       ld   a,$9D
@@ -9841,8 +9859,8 @@ PLAY_SFX
 48F9: C8          ret  z
 48FA: CD 00 45    call $4500
 48FD: C9          ret
-48FE: FF          rst  $38
-48FF: FF          rst  $38
+
+48FE: FF ...
 
 SHADOW_ADD_A_TO_HL_2            ; duplicate routine
 4900: D9          exx
@@ -10642,9 +10660,7 @@ DONE_CAGED_DINO
 4E19: CD 81 5C    call $JMP_HL
 4E1C: C9          ret
 
-4E1D: FF          rst  $38
-4E1E: FF          rst  $38
-4E1F: FF          rst  $38
+4E1D: FF ...
 
 4E20: CD 80 4E    call $4E80
 4E23: CD 81 5C    call $JMP_HL
@@ -11420,9 +11436,8 @@ MORE_SFX_SOMETHING?
 53FF: 20 B9       jr   nz,$53BA
 5401: CD C2 4E    call $4EC2
 5404: C9          ret
-5405: FF          rst  $38
-5406: FF          rst  $38
-5407: FF          rst  $38
+5405: FF ...
+
 5408: 0D          dec  c
 5409: 0C          inc  c
 540A: 04          inc  b
