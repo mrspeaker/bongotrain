@@ -467,7 +467,7 @@ POST_DEATH_RESET
 0240: 6F          ld   l,a
 0241: 7E          ld   a,(hl)
 0242: A7          and  a
-0243: CA 10 04    jp   z,$0410
+0243: CA 10 04    jp   z,$OUT_OF_LIVES  ; out of lives? (maybe)
 0246: 3D          dec  a
 0247: 77          ld   (hl),a
 0248: 3A F1 83    ld   a,($INPUT_BUTTONS)
@@ -713,11 +713,12 @@ SET_COLOR_ROW_3                 ; dunno what row.
 040D: C9          ret
     
 040E: FF FF
-    
+
+OUT_OF_LIVES
 0410: 21 E8 16    ld   hl,$16E8
 0413: CD E3 01    call $CALL_HL_PLUS_4K
-0416: CD E0 24    call $24E0
-0419: CD 30 04    call $0430
+0416: CD E0 24    call $DELAY_60_VBLANKS
+0419: CD 30 04    call $CHECK_IF_HISCORE
 041C: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
@@ -725,27 +726,29 @@ SET_COLOR_ROW_3                 ; dunno what row.
     
 0426: FF ...
 
-0430: CD 40 04    call $0440
-0433: CD 70 04    call $0470
+CHECK_IF_HISCORE
+0430: CD 40 04    call $CHECK_IF_HISCORE_P1
+0433: CD 70 04    call $CHECK_IF_HISCORE_P2
 0436: C9          ret
 
 0437: FF ...
 
+CHECK_IF_HISCORE_P1
 0440: 3A 16 80    ld   a,($P1_SCORE+2)
 0443: 4F          ld   c,a
-0444: 3A 02 83    ld   a,($8302)
+0444: 3A 02 83    ld   a,($SCORE+2)
 0447: 37          scf
 0448: 3F          ccf
 0449: 99          sbc  a,c
-044A: DC E0 04    call c,$04E0
+044A: DC E0 04    call c,$HISCORE_FOR_P1
 044D: C0          ret  nz
 044E: 3A 15 80    ld   a,($P1_SCORE+1)
 0451: 4F          ld   c,a
-0452: 3A 01 83    ld   a,($8301)
+0452: 3A 01 83    ld   a,($SCORE+1)
 0455: 37          scf
 0456: 3F          ccf
 0457: 99          sbc  a,c
-0458: DC E0 04    call c,$04E0
+0458: DC E0 04    call c,$HISCORE_FOR_P1
 045B: C0          ret  nz
 045C: 3A 14 80    ld   a,($P1_SCORE)
 045F: 4F          ld   c,a
@@ -753,26 +756,27 @@ SET_COLOR_ROW_3                 ; dunno what row.
 0463: 37          scf
 0464: 3F          ccf
 0465: 99          sbc  a,c
-0466: DC E0 04    call c,$04E0
+0466: DC E0 04    call c,$HISCORE_FOR_P1
 0469: C9          ret
     
 046A: FF ...
-    
+
+CHECK_IF_HISCORE_P2
 0470: 3A 19 80    ld   a,($P2_SCORE+2)
 0473: 4F          ld   c,a
-0474: 3A 02 83    ld   a,($8302)
+0474: 3A 02 83    ld   a,($SCORE+2)
 0477: 37          scf
 0478: 3F          ccf
 0479: 99          sbc  a,c
-047A: DC 00 05    call c,$0500
+047A: DC 00 05    call c,$HISCORE_FOR_P2
 047D: C0          ret  nz
 047E: 3A 18 80    ld   a,($P2_SCORE+1)
 0481: 4F          ld   c,a
-0482: 3A 01 83    ld   a,($8301)
+0482: 3A 01 83    ld   a,($SCORE+1)
 0485: 37          scf
 0486: 3F          ccf
 0487: 99          sbc  a,c
-0488: DC 00 05    call c,$0500
+0488: DC 00 05    call c,$HISCORE_FOR_P2
 048B: C0          ret  nz
 048C: 3A 17 80    ld   a,($P2_SCORE)
 048F: 4F          ld   c,a
@@ -780,7 +784,7 @@ SET_COLOR_ROW_3                 ; dunno what row.
 0493: 37          scf
 0494: 3F          ccf
 0495: 99          sbc  a,c
-0496: DC 00 05    call c,$0500
+0496: DC 00 05    call c,$HISCORE_FOR_P2
 0499: C9          ret
 
 049A: FF ...
@@ -814,26 +818,28 @@ CHECK_DINO_TIMER
 04D9: CD F0 22    call $DINO_PATHFIND_NOPSLIDE
 04DC: C9          ret
     
-04DD: FF FF FF
-    
+04DD: FF ...
+
+HISCORE_FOR_P1
 04E0: 3A 14 80    ld   a,($P1_SCORE)
 04E3: 32 00 83    ld   ($SCORE),a
 04E6: 3A 15 80    ld   a,($P1_SCORE+1)
 04E9: 32 01 83    ld   ($SCORE+1),a
 04EC: 3A 16 80    ld   a,($P1_SCORE+2)
 04EF: 32 02 83    ld   ($SCORE+2),a
-04F2: E1          pop  hl
+04F2: E1          pop  hl       ; hmm
 04F3: C9          ret
     
 04F4: FF ...
 
+HISCORE_FOR_P2
 0500: 3A 17 80    ld   a,($P2_SCORE)
 0503: 32 00 83    ld   ($SCORE),a
 0506: 3A 18 80    ld   a,($P2_SCORE+1)
 0509: 32 01 83    ld   ($SCORE+1),a
 050C: 3A 19 80    ld   a,($P2_SCORE+2)
 050F: 32 02 83    ld   ($SCORE+2),a
-0512: E1          pop  hl
+0512: E1          pop  hl       ; hmm
 0513: C9          ret
     
 0514: FF ...
@@ -3968,7 +3974,7 @@ CALL_DO_DEATH_SEQUENCE
 1B50: 3E 03       ld   a,$03
 1B52: 32 80 80    ld   ($8080),a
 1B55: CD 00 17    call $ADD_SCORE
-1B58: CD E0 24    call $24E0
+1B58: CD E0 24    call $DELAY_60_VBLANKS
 1B5B: 3A 04 80    ld   a,($PLAYER_NUM)
 1B5E: A7          and  a
 1B5F: 20 05       jr   nz,$1B66
@@ -4100,7 +4106,7 @@ PLAY_INTRO_JINGLE
 1C43: 32 44 80    ld   ($SFX_ID),a
 1C46: AF          xor  a
 1C47: 32 42 80    ld   ($CH1_SFX),a
-1C4A: CD E0 24    call $24E0
+1C4A: CD E0 24    call $DELAY_60_VBLANKS
 1C4D: C9          ret
 
 1C4E: FF FF
@@ -5581,6 +5587,7 @@ DRAW_SCORE
 
 24D3: FF ...
 
+DELAY_60_VBLANKS
 24E0: 26 60       ld   h,$60
 24E2: CD A0 13    call $WAIT_VBLANK
 24E5: 24          inc  h
@@ -6647,7 +6654,7 @@ ROCK_FALL_1
 2FD2: FF ...
 
 2FD5: CD 38 30    call $3038
-2FD8: CD E0 24    call $24E0
+2FD8: CD E0 24    call $DELAY_60_VBLANKS
 2FDB: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2FDE: C9          ret
 
@@ -11448,7 +11455,7 @@ MORE_SFX_SOMETHING?
 540C: 0F          rrca
 540D: 0E 04       ld   c,$04
 540F: 00          nop
-5410: 11 10 04    ld   de,$0410
+5410: 11 10 04    ld   de,$OUT_OF_LIVES
 5413: 08          ex   af,af'
 5414: 16 12       ld   d,$12
 5416: 04          inc  b
