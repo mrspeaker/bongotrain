@@ -54,7 +54,7 @@
     CREDITS_UMM    $8035  ; something to do with credits
 
     ROCK_FALL_TIMER $8036 ; resets falling pos of rock
-    ENEMY_1_ACTIVE $8037  ;
+    ENEMY_1_ACTIVE $8037  ; really "active"? think it has many values not just on/off
     ENEMY_2_ACTIVE $8039  ;
     ENEMY_3_ACTIVE $803B  ;
     _              $8041   ; enemy 3 something..
@@ -142,7 +142,14 @@
     ROUND2_SPEED    $10
     ROUND3_SPEED    $0D
 
+    TILE_0          $00
+    TILE_9          $09
     TILE_BLANK      $10
+    TILE_A          $11
+    TILE_E          $15
+    TILE_R          $22
+    TILE_HYPHEN     $2B
+
     TILE_SOLID      $F8
     TILE_CROWN_PIKA $8C ; alt crown
     TILE_PIK_CROSSA $8D ;
@@ -6085,6 +6092,7 @@ SHADOW_HL_PLUSEQ_4_TIMES_SCR
 2B68: 00          nop
 2B69: C9          ret
 
+    ;; some kind of dispatcher - this are subs
 2B6A: CD 48 2C    call $2C48
 2B6D: C9          ret
 2B6E: 00          nop
@@ -6603,7 +6611,7 @@ THINGS_THEN_COPY_TITLE_MSG
 2F5A: 3E 92       ld   a,$92
 2F5C: BD          cp   l
 2F5D: 20 04       jr   nz,$2F63
-2F5F: 21 90 90    ld   hl,$9090
+2F5F: 21 90 90    ld   hl,$9090 ; screen somewhere
 2F62: C9          ret
 2F63: 3E 90       ld   a,$90
 2F65: BD          cp   l
@@ -6717,19 +6725,19 @@ COPY_TITLE_MSG_TO_SCREEN_2
 303B: 32 80 92    ld   ($9280),a
 303E: 3A 08 83    ld   a,($TITLE_MSG+1)
 3041: 32 60 92    ld   ($9260),a
-3044: 3A 09 83    ld   a,($8309)
+3044: 3A 09 83    ld   a,($TITLE_MSG+2)
 3047: 32 40 92    ld   ($9240),a
-304A: 3A 0A 83    ld   a,($830A)
+304A: 3A 0A 83    ld   a,($TITLE_MSG+3)
 304D: 32 20 92    ld   ($9220),a
-3050: 3A 0B 83    ld   a,($830B)
+3050: 3A 0B 83    ld   a,($TITLE_MSG+4)
 3053: 32 00 92    ld   ($9200),a
-3056: 3A 0C 83    ld   a,($830C)
+3056: 3A 0C 83    ld   a,($TITLE_MSG+5)
 3059: 32 E0 91    ld   ($91E0),a
-305C: 3A 0D 83    ld   a,($830D)
+305C: 3A 0D 83    ld   a,($TITLE_MSG+6)
 305F: 32 C0 91    ld   ($91C0),a
-3062: 3A 0E 83    ld   a,($830E)
+3062: 3A 0E 83    ld   a,($TITLE_MSG+7)
 3065: 32 A0 91    ld   ($91A0),a
-3068: 3A 0F 83    ld   a,($830F)
+3068: 3A 0F 83    ld   a,($TITLE_MSG+8)
 306B: 32 80 91    ld   ($9180),a
 306E: 3A 10 83    ld   a,($TITLE_MSG+9)
 3071: 32 60 91    ld   ($9160),a
@@ -6739,7 +6747,7 @@ COPY_TITLE_MSG_TO_SCREEN_2
 
     ;; Writes HIGH-SCORE to bytes (later to screen)
 SET_HISCORE_TEXT
-3080: 21 07 83    ld   hl,$8307
+3080: 21 07 83    ld   hl,$TITLE_MSG
 3083: 36 18       ld   (hl),$18 ; h
 3085: 23          inc  hl
 3086: 36 19       ld   (hl),$19 ; i
@@ -6748,7 +6756,7 @@ SET_HISCORE_TEXT
 308B: 23          inc  hl
 308C: 36 18       ld   (hl),$18 ; h
 308E: 23          inc  hl
-308F: 36 2B       ld   (hl),$2B ; -
+308F: 36 2B       ld   (hl),$TILE_HYPHEN
 3091: 23          inc  hl
 3092: 36 23       ld   (hl),$23 ; s
 3094: 23          inc  hl
@@ -6761,11 +6769,11 @@ SET_HISCORE_TEXT
 309E: 36 15       ld   (hl),$15 ; e
     ;; set default score
 30A0: 21 00 83    ld   hl,$SCORE
-30A3: 36 00       ld   (hl),$00
+30A3: 36 00       ld   (hl),$TILE_0
 30A5: 23          inc  hl
 30A6: 36 05       ld   (hl),$05
 30A8: 23          inc  hl
-30A9: 36 00       ld   (hl),$00
+30A9: 36 00       ld   (hl),$TILE_0
 30AB: 23          inc  hl
 30AC: C9          ret
 
@@ -6802,7 +6810,7 @@ SET_HISCORE_TEXT
 30F5: DD 2B       dec  ix
 30F7: 20 F5       jr   nz,$30EE
 30F9: 3E 10       ld   a,$TILE_BLANK
-30FB: 32 07 83    ld   ($8307),a ;default is $18
+30FB: 32 07 83    ld   ($TITLE_MSG),a
 30FE: C9          ret
 
 30FF: FF ...
@@ -7254,6 +7262,7 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3460: C9          ret
 3461: FF ...
 
+    ;; wats this?
 3470: CD B8 33    call $33B8
 3473: CD 18 34    call $3418
 3476: CD 88 34    call $3488
