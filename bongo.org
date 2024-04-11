@@ -287,6 +287,10 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
     
     
   #+END_SRC
+
+  for dino, much bigger collision area:
+  x: sub $18, add $30
+  y: sub $28, add $50
     
 --------------
 level design
@@ -366,3 +370,7 @@ fast round - can jump from second-to-bottom
 - what's that weird tiny "slowdown" right at the start?
 - maybe the "impossible 3 bird" run - need to time it so the first pickup is your bonus
   
+---
+trav bug: die on screen one/two
+---
+q: what's that tiny delay lag right at the start?
