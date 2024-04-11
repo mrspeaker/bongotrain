@@ -71,9 +71,15 @@
     BONUSES        $8060  ; How many bonuses collected
     BONUS_MULT     $8062  ; Bonus multiplier.
 
+    SPLASH_ANIM_FR $8064  ; cycles 0-2 maybe... splash anim counter
+    SFX_PREV       $8065  ; prevent retrigger effect?
+
     _              $8066  ; ?? OE when alive, 02 when dead?
     _              $8067  ; ?? used with 66
     _              $8068  ; ?? used with 67
+
+    EXTRA_GOT_P1   $8070  ; P1 Earned extra life
+    EXTRA_GOT_P1   $8071  ; P2 Earned extra life
 
     SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
                           ; Gets memcpy'd to $9800
@@ -124,7 +130,7 @@
 
     CREDITS        $8303  ; how many credits in machine
     _              $8305  ; Coins? dunno
-    HISCORE_NAME      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+    HISCORE_NAME   $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
     TICK_NUM       $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -138,6 +144,9 @@
 ;;;  constants
 
     SCREEN_WIDTH    $E0  ; 224
+    SCR_TILE_W      $1a  ; 26 columns
+    SCR_TILE_H      $1c  ; 28 rows
+
     ROUND1_SPEED    $1f
     ROUND2_SPEED    $10
     ROUND3_SPEED    $0D
@@ -183,7 +192,7 @@ SOFT_RESET
 
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
 0012: CD 00 3F    call $DELAY_N_4E90
-0015: CD 48 00    call $IMPORTANT_LOOKIN
+0015: CD 48 00    call $INIT_SCREEN
 0018: CD 88 22    call $WRITE_TO_0_AND_1
 001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
 
@@ -206,8 +215,8 @@ RESET_VECTOR
 003B: 18 FB       jr   $RESET_VECTOR
 003D: FF ...
 
-    ;; Is this called every loop or just once?
-IMPORTANT_LOOKIN
+    ;; Called once at startup
+INIT_SCREEN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
@@ -223,20 +232,21 @@ IMPORTANT_LOOKIN
 005E: 11 25 1C    ld   de,$1C25
 0061: 24          inc  h
 0062: FF          rst  $38
-0063: 18 E3       jr   $IMPORTANT_LOOKIN
+0063: 18 E3       jr   $INIT_SCREEN
 0065: FF          rst  $38
 
-    ;; Non-Maskable Interrupt
-0066: AF          xor  a        ; NMI address
+    ;; Non-Maskable Interrupt handler. Fires every frame
+NMI_LOOP
+0066: AF          xor  a
 0067: 32 01 B0    ld   ($INT_ENABLE),a
 006A: 3A 00 B8    ld   a,($WATCHDOG)
-006D: CD C0 00    call $00C0
+006D: CD C0 00    call $NMI_INT_HANDLER
 0070: 3A 34 80    ld   a,($IS_PLAYING)
 0073: A7          and  a
 0074: 20 03       jr   nz,$0079
 0076: CD 90 01    call $DID_PLAYER_PRESS_START
 0079: 06 01       ld   b,$01
-007B: CD 00 11    call $TICK_TICKS ; update ticks... I reckon something else must call here
+007B: CD 00 11    call $TICK_TICKS ; update ticks...
 007E: CD 20 24    call $COPY_INP_TO_BUTTONS_AND_CHECK_BUTTONS
 0081: 00          nop
 0082: 3A 00 A0    ld   a,($PORT_IN0)
@@ -256,6 +266,7 @@ SETUP_BEFORE_PLAYING
 009C: CD 70 03    call $RESET_ENTS_ALL
 009F: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 00A2: 18 EF       jr   $0093
+_PLAY_SPLASH
 00A4: CD A0 13    call $WAIT_VBLANK
 00A7: 3A 03 83    ld   a,($CREDITS)
 00AA: FE 01       cp   $01
@@ -269,7 +280,7 @@ SETUP_BEFORE_PLAYING
 00BD: 18 E5       jr   $00A4
 00BF: FF
 
-    ;;
+NMI_INT_HANDLER
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
 00C4: CD 50 15    call $COPY_XOFFS_COL_SPRITES_TO_SCREEN
@@ -1877,7 +1888,7 @@ CHECK_IF_PLAYER_DIED
 DO_DEATH_SEQUENCE
 0CC0: 3E 02       ld   a,$02
 0CC2: 32 42 80    ld   ($CH1_SFX),a
-0CC5: 32 65 80    ld   ($8065),a
+0CC5: 32 65 80    ld   ($SFX_PREV),a
 0CC8: CD A0 0B    call $RESET_DINO_COUNTER
 0CCB: CD 14 0D    call $0D14
 0CCE: CD A0 0C    call $0CA0
@@ -2262,6 +2273,7 @@ BIG_RESET
 1043: CD B8 0D    call $DRAW_BONGO
 1046: 3E 02       ld   a,$02    ; bottom row is red
 1048: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a
+;;; falls through to main loop:
 
 ;;; =========================================
 MAIN_LOOP
@@ -2289,16 +2301,16 @@ EXTRA_LIFE
 107D: C9          ret
 107E: FF FF
     ;; P1 extra life
-1080: 3A 70 80    ld   a,($8070)
+1080: 3A 70 80    ld   a,($EXTRA_GOT_P1)
 1083: A7          and  a
 1084: C0          ret  nz
-1085: 3A 15 80    ld   a,($8015)
+1085: 3A 15 80    ld   a,($P1_SCORE+1)
 1088: 37          scf
 1089: 3F          ccf
-108A: D6 15       sub  $15
+108A: D6 15       sub  $15      ; bonus at ??
 108C: D8          ret  c
 108D: 3E 01       ld   a,$01
-108F: 32 70 80    ld   ($8070),a
+108F: 32 70 80    ld   ($EXTRA_GOT_P1),a
 1092: 3A 32 80    ld   a,($LIVES) ; Bonus life
 1095: 3C          inc  a
 1096: 32 32 80    ld   ($LIVES),a
@@ -2308,16 +2320,16 @@ EXTRA_LIFE
 10A1: C9          ret
 10A2: FF ...
     ;; P2 extra life
-10A8: 3A 71 80    ld   a,($8071)
+10A8: 3A 71 80    ld   a,($EXTRA_GOT_P2)
 10AB: A7          and  a
 10AC: C0          ret  nz
-10AD: 3A 18 80    ld   a,($8018)
+10AD: 3A 18 80    ld   a,($P2_SCORE+1)
 10B0: 37          scf
 10B1: 3F          ccf
 10B2: D6 15       sub  $15
 10B4: D8          ret  c
 10B5: 3E 01       ld   a,$01
-10B7: 32 71 80    ld   ($8071),a
+10B7: 32 71 80    ld   ($EXTRA_GOT_P2),a
 10BA: 3A 33 80    ld   a,($LIVES_P2) ; bonus life p2
 10BD: 3C          inc  a
 10BE: 32 33 80    ld   ($LIVES_P2),a
@@ -2341,10 +2353,14 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
 
-;;;  um, nothing calls 10f7?
+;;; um, nothing calls 10f7 - must come from interrupt
+;;; (via $SHADOW_ADD_A_TO_HL somehow I reckon)
+EXTRA_LIFE_HANDLER
 10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
-;;;  or 10fb! - done in an interupt? from data?
+
+;;;  or 10fb! - done in an interrupt?
+DINO_COLLISION_HANDLER
 10FB: CD 18 25    call $TEST_THEN_DINO_COLLISION
 10FE: C9          ret
 
@@ -2704,7 +2720,8 @@ DURING_TRANSITION_NEXT
 138F: FF
 
 ;;; What's this? Interrupt something?
-;; goes shadow regs, pops HL from stack, adds A, re-pushes it
+;;; goes shadow regs, pops HL from stack, adds A, re-pushes it
+;;; Does shenanigans: hl2 calls functions that aren't otherwise called
 SHADOW_ADD_A_TO_HL
 1390: D9          exx
 1391: E1          pop  hl
@@ -3218,7 +3235,7 @@ ADD_SCORE
 ;;; player 1
 170B: 3A 1D 80    ld   a,($SCORE_TO_ADD) ; amount to add
 170E: A7          and  a
-170F: C8          ret  z
+170F: C8          ret  z        ; nothing to add... leave.
 1710: 4F          ld   c,a
 1711: 26 80       ld   h,$80    ; 8014 for p1 8017 for p2
 1713: 06 00       ld   b,$00
@@ -5053,22 +5070,17 @@ DINO_COLLISION
 2125: FF          rst  $38
 2126: FF          rst  $38
 2127: FF          rst  $38
+
+    ;;
 2128: CD A0 13    call $WAIT_VBLANK
 212B: 3A 03 83    ld   a,($CREDITS)
 212E: A7          and  a
 212F: C8          ret  z
-2130: CD 90 14    call $1490
-2133: C3 A4 00    jp   $00A4
-2136: FF          rst  $38
-2137: FF          rst  $38
-2138: FF          rst  $38
-2139: FF          rst  $38
-213A: FF          rst  $38
-213B: FF          rst  $38
-213C: FF          rst  $38
-213D: FF          rst  $38
-213E: FF          rst  $38
-213F: FF          rst  $38
+2130: CD 90 14    call $RESET_SCREEN_META_AND_SPRITES
+2133: C3 A4 00    jp   $_PLAY_SPLASH
+    ;;
+2136: FF ...
+
 2140: 03          inc  bc
 2141: 40          ld   b,b
 2142: 00          nop
@@ -8359,7 +8371,7 @@ SCR_TYPE_2
 DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($CH1_SFX),a
-3D4D: 32 65 80    ld   ($8065),a
+3D4D: 32 65 80    ld   ($SFX_PREV),a
 3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $DRAW_SCREEN
@@ -9604,6 +9616,8 @@ SFX_06 ; cutscene dance start
 
 46A2: FF ...
 
+    ;;
+ADD_A_TO_PUSHED_HL
 46B0: E1          pop  hl
 46B1: 06 00       ld   b,$00
 46B3: 4F          ld   c,a
@@ -9633,31 +9647,29 @@ CLEAR_SFX_1
 46E1: 32 42 80    ld   ($CH1_SFX),a
 46E4: C9          ret
 
-46E5: FF          rst  $38
-46E6: FF          rst  $38
-46E7: FF          rst  $38
+46E5: FF ...
 
+    ;;
 46E8: 3A 34 80    ld   a,($IS_PLAYING)
 46EB: A7          and  a
 46EC: C8          ret  z
-
 46ED: 3A 04 80    ld   a,($PLAYER_NUM)
 46F0: A7          and  a
 46F1: 20 05       jr   nz,$46F8
 46F3: 3A 29 80    ld   a,($SCREEN_NUM)
 46F6: 18 03       jr   $46FB
 46F8: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-46FB: 3D          dec  a
-46FC: 87          add  a,a
-46FD: 87          add  a,a
-46FE: CD B0 49    call $49B0
+46FB: 3D          dec  a        ; scr - 1
+46FC: 87          add  a,a      ; ...
+46FD: 87          add  a,a      ; * 3
+46FE: CD B0 49    call $CALL_ADD_A_TO_PUSHED_HL
 4701: 47          ld   b,a
-4702: 3A 65 80    ld   a,($8065)
+4702: 3A 65 80    ld   a,($SFX_PREV)
 4705: B8          cp   b
 4706: C8          ret  z
 4707: 78          ld   a,b
 4708: 32 42 80    ld   ($CH1_SFX),a ; wat sfx is this?
-470B: 32 65 80    ld   ($8065),a
+470B: 32 65 80    ld   ($SFX_PREV),a
 470E: C9          ret
 470F: FF ...
 
@@ -9668,7 +9680,7 @@ CLEAR_SFX_1
 ;;;
 4730: CB 27       sla  a
 4732: CB 27       sla  a
-4734: CD B0 46    call $46B0
+4734: CD B0 46    call $ADD_A_TO_PUSHED_HL
 4737: 00          nop
 4738: 00          nop
 4739: 00          nop
@@ -9809,15 +9821,15 @@ SFX_QUEUER
 4840: 3A 42 80    ld   a,($CH1_SFX)
 4843: A7          and  a
 4844: 20 05       jr   nz,$484B
-4846: CD 80 46    call $4680    ; (42)==0
+4846: CD 80 46    call $4680    ; play in ch1
 4849: 18 03       jr   $484E
-484B: CD D0 46    call $CLEAR_SFX_1  ; (42)>0
-484E: 3A 43 80    ld   a,($CH2_SFX)
+484B: CD D0 46    call $CLEAR_SFX_1  ; ... kill ch1?
+484E: 3A 43 80    ld   a,($CH2_SFX)  ; and try ch2?
 4851: A7          and  a
 4852: 20 05       jr   nz,$4859
-4854: CD E0 48    call $48E0
+4854: CD E0 48    call $48E0    ; play in ch2?
 4857: 18 03       jr   $485C
-4859: CD 20 49    call $CLEAR_SFX_2
+4859: CD 20 49    call $CLEAR_SFX_2 ;
 485C: 3A 44 80    ld   a,($SFX_ID)
 485F: A7          and  a
 4860: 20 05       jr   nz,$4867
@@ -9868,13 +9880,13 @@ PLAY_SFX
 48B1: FF          rst  $38
 
 48B2: CD 50 4B    call $4B50
-48B5: CD A8 5A    call $5AA8
-48B8: CD A8 5A    call $5AA8
-48BB: CD A8 5A    call $5AA8
-48BE: CD A8 5A    call $5AA8
+48B5: CD A8 5A    call $FLASH_BORDER
+48B8: CD A8 5A    call $FLASH_BORDER
+48BB: CD A8 5A    call $FLASH_BORDER
+48BE: CD A8 5A    call $FLASH_BORDER
 48C1: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 48C4: CD 81 5C    call $JMP_HL
-48C7: CD A8 5A    call $5AA8
+48C7: CD A8 5A    call $FLASH_BORDER
 48CA: C9          ret
 48CB: FF ...
 
@@ -9988,7 +10000,9 @@ CLEAR_SFX_2
 49A1: C9          ret
 49A2: FF ...
 
-49B0: CD B0 46    call $46B0
+    ;;
+CALL_ADD_A_TO_PUSHED_HL
+49B0: CD B0 46    call $ADD_A_TO_PUSHED_HL
     ;; Is this code or data? 27 cases...
 49B3: 3E 0E       ld   a,$0E
 49B5: C9          ret
@@ -10699,10 +10713,10 @@ DONE_CAGED_DINO
 
 4E20: CD 80 4E    call $4E80
 4E23: CD 81 5C    call $JMP_HL
-4E26: CD A8 5A    call $5AA8
+4E26: CD A8 5A    call $FLASH_BORDER
 4E29: 21 74 3F    ld   hl,$3F74
 4E2C: CD 81 5C    call $JMP_HL
-4E2F: CD A8 5A    call $5AA8
+4E2F: CD A8 5A    call $FLASH_BORDER
 4E32: 21 4B 16    ld   hl,$164B
 4E35: CD 81 5C    call $JMP_HL
 4E38: 3E 07       ld   a,$07
@@ -10775,6 +10789,8 @@ DONE_CAGED_DINO
 4EAD: FF          rst  $38
 4EAE: FF          rst  $38
 4EAF: FF          rst  $38
+
+    ;; some kind of effect? on splash screen something
 4EB0: CD C2 4E    call $4EC2
 4EB3: CD C2 4E    call $4EC2
 4EB6: CD C2 4E    call $4EC2
@@ -11697,8 +11713,10 @@ CALL_DO_ATTRACT_MODE
 556E: FF          rst  $38
 556F: FF          rst  $38
 
-;;; looks data-y
-5570: 3A 00 B8    ld   a,($WATCHDOG)
+    ;; bytes after the call are
+    ;; start_x, start_y, tile 1, ...tile x, 0xFF
+DRAW_TILES_H
+5570: 3A 00 B8    ld   a,($WATCHDOG) ; is this ack? "A" not used
 5573: 21 40 90    ld   hl,$START_OF_TILES
 5576: C1          pop  bc
 5577: 0A          ld   a,(bc)
@@ -11719,66 +11737,43 @@ CALL_DO_ATTRACT_MODE
 558B: 19          add  hl,de
 558C: 19          add  hl,de
 558D: 03          inc  bc
+_LP_1
 558E: 0A          ld   a,(bc)
 558F: 03          inc  bc
 5590: FE FF       cp   $FF
 5592: 20 02       jr   nz,$5596
 5594: C5          push bc
 5595: C9          ret
-5596: 77          ld   (hl),a
+5596: 77          ld   (hl),a   ; writes somewhere to screen
 5597: 16 FF       ld   d,$FF
 5599: 1E E0       ld   e,$E0
 559B: 19          add  hl,de
-559C: 18 F0       jr   $558E
-559E: FF          rst  $38
-559F: FF          rst  $38
+559C: 18 F0       jr   _LP_1
+
+559E: FF ..
+
 55A0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
 55A6: CD D0 56    call $56D0
 55A9: 00          nop
 55AA: 00          nop
 55AB: 00          nop
-55AC: CD A8 5A    call $5AA8
-55AF: CD 70 55    call $5570
-55B2: 08          ex   af,af'
-55B3: 0B          dec  bc
-55B4: 12          ld   (de),a
-55B5: 15          dec  d
-55B6: 27          daa
-55B7: 11 22 15    ld   de,$1522
-55BA: FF          rst  $38
-55BB: CD A8 5A    call $5AA8
-55BE: CD 70 55    call $5570
-55C1: 0C          inc  c
-55C2: 05          dec  b
-55C3: 29          add  hl,hl
-55C4: 1F          rra
-55C5: 25          dec  h
-55C6: 22 10 12    ld   ($1210),hl
-55C9: 15          dec  d
-55CA: 19          add  hl,de
-55CB: 1E 17       ld   e,$17
-55CD: 10 13       djnz $55E2
-55CF: 18 11       jr   $55E2
-55D1: 23          inc  hl
-55D2: 15          dec  d
-55D3: 14          inc  d
-55D4: FF          rst  $38
-55D5: CD A8 5A    call $5AA8
-55D8: CD 70 55    call $5570
-55DB: 10 07       djnz $55E4
-55DD: 12          ld   (de),a
-55DE: 29          add  hl,hl
-55DF: 10 11       djnz $55F2
-55E1: 10 14       djnz $55F7
-55E3: 19          add  hl,de
-55E4: 1E 1F       ld   e,$1F
-55E6: 23          inc  hl
-55E7: 11 25 22    ld   de,$2225
-55EA: FF          rst  $38
+55AC: CD A8 5A    call $FLASH_BORDER
+55AF: CD 70 55    call $DRAW_TILES_H
+55B2: 08 0B
+55B4: 12 15 27 11 22 15 FF
+55BB: CD A8 5A    call $FLASH_BORDER
+55BE: CD 70 55    call $DRAW_TILES_H
+55C1: 0C 05
+55C3: 29 1F 25 22 10 12 15 19 1E 17 10 18 23 15 14 FF
+55D5: CD A8 5A    call $FLASH_BORDER
+55D8: CD 70 55    call $DRAW_TILES_H
+55DB: 10 07
+55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
 55EB: C3 B2 48    jp   $48B2
-55EE: FF          rst  $38
-55EF: FF          rst  $38
+
+55EE: FF ...
+
 55F0: A1          and  c
 55F1: 02          ld   (bc),a
 55F2: C3 02 A1    jp   $A102
@@ -11788,9 +11783,7 @@ CALL_DO_ATTRACT_MODE
 55FA: C3 02 A1    jp   $A102
 55FD: 02          ld   (bc),a
 55FE: C3 02 FF    jp   $FF02
-5601: FF          rst  $38
-5602: FF          rst  $38
-5603: FF          rst  $38
+5601: FF ...
 5604: 00          nop
 5605: 02          ld   (bc),a
 5606: FF          rst  $38
@@ -12104,126 +12097,52 @@ CALL_DO_ATTRACT_MODE
 57B2: 06 02       ld   b,$02
 57B4: 02          ld   (bc),a
 57B5: 04          inc  b
-57B6: FF          rst  $38
-57B7: FF          rst  $38
-57B8: FF          rst  $38
-57B9: FF          rst  $38
-57BA: FF          rst  $38
-57BB: FF          rst  $38
-57BC: FF          rst  $38
-57BD: FF          rst  $38
-57BE: FF          rst  $38
-57BF: FF          rst  $38
-57C0: C3 F0 5A    jp   $5AF0
+57B6: FF ...
+
+CALL_DRAW_EXTRA_BONUS_SCREEN
+57C0: C3 F0 5A    jp   $DRAW_EXTRA_BONUS_SCREEN
+    ;;
 57C3: CD 81 5C    call $JMP_HL
 57C6: 21 88 0F    ld   hl,$0F88
 57C9: CD 81 5C    call $JMP_HL
-57CC: CD 70 55    call $5570
-57CF: 08          ex   af,af'
-57D0: 08          ex   af,af'
-57D1: 15          dec  d
-57D2: 28 24       jr   z,$57F8
-57D4: 22 11 10    ld   ($1011),hl
-57D7: 12          ld   (de),a
-57D8: 1F          rra
-57D9: 1E 25       ld   e,$25
-57DB: 23          inc  hl
-57DC: FF          rst  $38
-57DD: CD 70 55    call $5570
-57E0: 09          add  hl,bc
-57E1: 08          ex   af,af'
-57E2: 2B          dec  hl
-57E3: 2B          dec  hl
-57E4: 2B          dec  hl
-57E5: 2B          dec  hl
-57E6: 2B          dec  hl
-57E7: 2B          dec  hl
-57E8: 2B          dec  hl
-57E9: 2B          dec  hl
-57EA: 2B          dec  hl
-57EB: 2B          dec  hl
-57EC: 2B          dec  hl
-57ED: FF          rst  $38
+57CC: CD 70 55    call $DRAW_TILES_H
+57CF: 08 08
+57D1: 15 28 24 22 11 10 12 1F 1E 25 23 FF
+57DD: CD 70 55    call $DRAW_TILES_H
+57E0: 09 08
+57E2: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 57EE: CD B0 4E    call $4EB0
 57F1: CD B0 4E    call $4EB0
-57F4: CD 70 55    call $5570
-57F7: 0C          inc  c
-57F8: 07          rlca
-57F9: 20 19       jr   nz,$5814
-57FB: 13          inc  de
-57FC: 1B          dec  de
-57FD: 10 25       djnz $5824
-57FF: 20 10       jr   nz,$5811
-5801: 06 10       ld   b,$10
-5803: 12          ld   (de),a
-5804: 1F          rra
-5805: 1E 25       ld   e,$25
-5807: 23          inc  hl
-5808: FF          rst  $38
-5809: CD 70 55    call $5570
-580C: 10 07       djnz $5815
-580E: 1F          rra
-580F: 12          ld   (de),a
-5810: 1A          ld   a,(de)
-5811: 15          dec  d
-5812: 13          inc  de
-5813: 24          inc  h
-5814: 23          inc  hl
-5815: 10 27       djnz $583E
-5817: 19          add  hl,de
-5818: 24          inc  h
-5819: 18 1F       jr   $583A
-581B: 25          dec  h
-581C: 24          inc  h
-581D: FF          rst  $38
-581E: CD 70 55    call $5570
-5821: 14          inc  d
-5822: 07          rlca
-5823: 1C          inc  e
-5824: 1F          rra
-5825: 23          inc  hl
-5826: 19          add  hl,de
-5827: 1E 17       ld   e,$17
-5829: 10 11       djnz $583C
-582B: 10 1C       djnz $5849
-582D: 19          add  hl,de
-582E: 16 15       ld   d,$15
-5830: FF          rst  $38
+57F4: CD 70 55    call $DRAW_TILES_H
+57F7: 0C 07
+57F9: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
+5809: CD 70 55    call $DRAW_TILES_H
+580C: 10 07
+580E: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
+581E: CD 70 55    call $DRAW_TILES_H
+5821: 14 07
+5823: 1C 1F 23 19 1E 10 11 10 1C 19 16 15 FF
 5831: CD B0 4E    call $4EB0
 5834: CD B0 4E    call $4EB0
-5837: CD 70 55    call $5570
-583A: 17          rla
-583B: 0B          dec  bc
-583C: E0          ret  po
-583D: DC DD DE    call c,$DEDD
-5840: DF          rst  $18
-5841: FF          rst  $38
-5842: CD 70 55    call $5570
-5845: 18 0B       jr   $5852
-5847: E1          pop  hl
-5848: E8          ret  pe
-5849: EA F2 E6    jp   pe,$E6F2
-584C: FF          rst  $38
-584D: CD 70 55    call $5570
-5850: 19          add  hl,de
-5851: 0B          dec  bc
-5852: E1          pop  hl
-5853: E9          jp   (hl)
-5854: EB          ex   de,hl
-5855: F3          di
-5856: E6 FF       and  $FF
-5858: CD 70 55    call $5570
-585B: 1A          ld   a,(de)
-585C: 0B          dec  bc
-585D: E2 E3 E3    jp   po,$E3E3
-5860: E3          ex   (sp),hl
-5861: E4 FF CD    call po,$CDFF
-5864: B0          or   b
-5865: 4E          ld   c,(hl)
+5837: CD 70 55    call $DRAW_TILES_H
+583A: 17 0B
+583C: E0 DC DD DE DF FF
+5842: CD 70 55    call $DRAW_TILES_H
+5845: 18 0B
+5847: E1 E8 EA F2 E6 FF
+584D: CD 70 55    call $DRAW_TILES_H
+5850: 19 0B
+5852: E1 E9 EB F3 E6 FF
+5858: CD 70 55    call $DRAW_TILES_H
+585B: 1A 0B
+585D: E2 E3 E3 E3 E4 FF
+5853: CD B0 4E    call $4EB0
 5866: CD B0 4E    call $4EB0
 5869: CD B0 4E    call $4EB0
 586C: CD B0 4E    call $4EB0
 586F: C9          ret
+
+    ;;
 5870: A2          and  d
 5871: 01 A2 01    ld   bc,$01A2
 5874: A2          and  d
@@ -12284,6 +12203,9 @@ CALL_DO_ATTRACT_MODE
 58CE: FF          rst  $38
 58CF: FF          rst  $38
 
+    ;; bytes after the call are
+    ;; start_x, start_y, tile 1, ...tile x, 0xFF
+DRAW_TILES_V
 58D0: DD E1       pop  ix
 58D2: 26 00       ld   h,$00
 58D4: DD 6E 00    ld   l,(ix+$00)
@@ -12311,367 +12233,84 @@ CALL_DO_ATTRACT_MODE
 
 58F9: FF ...
 
-5900: CD 70 55    call $5570
-5903: 01 01 51    ld   bc,$5101
-5906: 52          ld   d,d      ;data, but who reads?
-5907: 53          ld   d,e
-5908: 51          ld   d,c
-5909: 52          ld   d,d
-590A: 53          ld   d,e
-590B: 51          ld   d,c
-590C: 52          ld   d,d
-590D: 53          ld   d,e
-590E: 51          ld   d,c
-590F: 52          ld   d,d
-5910: 53          ld   d,e
-5911: 51          ld   d,c
-5912: 52          ld   d,d
-5913: 53          ld   d,e
-5914: 51          ld   d,c
-5915: 52          ld   d,d
-5916: 53          ld   d,e
-5917: 51          ld   d,c
-5918: 52          ld   d,d
-5919: 53          ld   d,e
-591A: 51          ld   d,c
-591B: 52          ld   d,d
-591C: 53          ld   d,e
-591D: 51          ld   d,c
-591E: 52          ld   d,d
-591F: FF          rst  $38
-5920: CD D0 58    call $58D0
-5923: 01 02 53    ld   bc,$5302
-5926: 52          ld   d,d
-5927: 51          ld   d,c
-5928: 53          ld   d,e
-5929: 52          ld   d,d
-592A: 51          ld   d,c
-592B: 53          ld   d,e
-592C: 52          ld   d,d
-592D: 51          ld   d,c
-592E: 53          ld   d,e
-592F: 52          ld   d,d
-5930: 51          ld   d,c
-5931: 53          ld   d,e
-5932: 52          ld   d,d
-5933: 51          ld   d,c
-5934: 53          ld   d,e
-5935: 52          ld   d,d
-5936: 51          ld   d,c
-5937: 53          ld   d,e
-5938: 52          ld   d,d
-5939: 51          ld   d,c
-593A: 53          ld   d,e
-593B: 52          ld   d,d
-593C: 51          ld   d,c
-593D: 53          ld   d,e
-593E: 52          ld   d,d
-593F: FF          rst  $38
-5940: CD D0 58    call $58D0
-5943: 1A          ld   a,(de)
-5944: 02          ld   (bc),a
-5945: 51          ld   d,c
-5946: 52          ld   d,d
-5947: 53          ld   d,e
-5948: 51          ld   d,c
-5949: 52          ld   d,d
-594A: 53          ld   d,e
-594B: 51          ld   d,c
-594C: 52          ld   d,d
-594D: 53          ld   d,e
-594E: 51          ld   d,c
-594F: 52          ld   d,d
-5950: 53          ld   d,e
-5951: 51          ld   d,c
-5952: 52          ld   d,d
-5953: 53          ld   d,e
-5954: 51          ld   d,c
-5955: 52          ld   d,d
-5956: 53          ld   d,e
-5957: 51          ld   d,c
-5958: 52          ld   d,d
-5959: 53          ld   d,e
-595A: 51          ld   d,c
-595B: 52          ld   d,d
-595C: 53          ld   d,e
-595D: 51          ld   d,c
-595E: 52          ld   d,d
-595F: FF          rst  $38
-5960: CD 70 55    call $5570
-5963: 1C          inc  e
-5964: 01 53 51    ld   bc,$5153
-5967: 52          ld   d,d
-5968: 53          ld   d,e
-5969: 51          ld   d,c
-596A: 52          ld   d,d
-596B: 53          ld   d,e
-596C: 51          ld   d,c
-596D: 52          ld   d,d
-596E: 53          ld   d,e
-596F: 51          ld   d,c
-5970: 52          ld   d,d
-5971: 53          ld   d,e
-5972: 51          ld   d,c
-5973: 52          ld   d,d
-5974: 53          ld   d,e
-5975: 51          ld   d,c
-5976: 52          ld   d,d
-5977: 53          ld   d,e
-5978: 51          ld   d,c
-5979: 52          ld   d,d
-597A: 53          ld   d,e
-597B: 51          ld   d,c
-597C: 52          ld   d,d
-597D: 53          ld   d,e
-597E: 51          ld   d,c
-597F: FF          rst  $38
+DRAW_SPLASH_CIRCLE_BORDER_1
+5900: CD 70 55    call $DRAW_TILES_H
+5903: 01 01                ; start pos
+    ;; splash screen circle border (26 = tiles)
+    ;; Top Row 1
+5905: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
+5915: 52 53 51 52 53 51 52 53 51 52 FF
+
+    ;; Right side 1
+5920: CD D0 58    call $DRAW_TILES_V
+5923: 01 02                ; start pos
+5925: 53 52 51 53 52 51 53 52 51 53 52 51 53 52 51 53
+5935: 52 51 53 52 51 53 52 51 53 52 FF
+
+    ;; Left side 1
+5940: CD D0 58    call $DRAW_TILES_V
+5943: SCR_TILE_W 02       ;start pos
+5945: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
+5955: 52 53 51 52 53 51 52 53 51 52 FF
+
+    ;; Bottom row 1
+5960: CD 70 55    call $DRAW_TILES_H
+5963: SCR_TILE_H 01      ; start pos
+5965: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
+5975: 51 52 53 51 52 53 51 52 53 51 FF
 5980: C9          ret
-5981: FF          rst  $38
-5982: FF          rst  $38
-5983: FF          rst  $38
-5984: FF          rst  $38
-5985: FF          rst  $38
-5986: FF          rst  $38
-5987: FF          rst  $38
-5988: CD 70 55    call $5570
-598B: 01 01 52    ld   bc,$5201
-598E: 53          ld   d,e
-598F: 51          ld   d,c
-5990: 52          ld   d,d
-5991: 53          ld   d,e
-5992: 51          ld   d,c
-5993: 52          ld   d,d
-5994: 53          ld   d,e
-5995: 51          ld   d,c
-5996: 52          ld   d,d
-5997: 53          ld   d,e
-5998: 51          ld   d,c
-5999: 52          ld   d,d
-599A: 53          ld   d,e
-599B: 51          ld   d,c
-599C: 52          ld   d,d
-599D: 53          ld   d,e
-599E: 51          ld   d,c
-599F: 52          ld   d,d
-59A0: 53          ld   d,e
-59A1: 51          ld   d,c
-59A2: 52          ld   d,d
-59A3: 53          ld   d,e
-59A4: 51          ld   d,c
-59A5: 52          ld   d,d
-59A6: 53          ld   d,e
-59A7: FF          rst  $38
-59A8: CD D0 58    call $58D0
-59AB: 01 02 52    ld   bc,$5202
-59AE: 51          ld   d,c
-59AF: 53          ld   d,e
-59B0: 52          ld   d,d
-59B1: 51          ld   d,c
-59B2: 53          ld   d,e
-59B3: 52          ld   d,d
-59B4: 51          ld   d,c
-59B5: 53          ld   d,e
-59B6: 52          ld   d,d
-59B7: 51          ld   d,c
-59B8: 53          ld   d,e
-59B9: 52          ld   d,d
-59BA: 51          ld   d,c
-59BB: 53          ld   d,e
-59BC: 52          ld   d,d
-59BD: 51          ld   d,c
-59BE: 53          ld   d,e
-59BF: 52          ld   d,d
-59C0: 51          ld   d,c
-59C1: 53          ld   d,e
-59C2: 52          ld   d,d
-59C3: 51          ld   d,c
-59C4: 53          ld   d,e
-59C5: 52          ld   d,d
-59C6: 51          ld   d,c
-59C7: FF          rst  $38
-59C8: CD D0 58    call $58D0
-59CB: 1A          ld   a,(de)
-59CC: 02          ld   (bc),a
-59CD: 53          ld   d,e
-59CE: 51          ld   d,c
-59CF: 52          ld   d,d
-59D0: 53          ld   d,e
-59D1: 51          ld   d,c
-59D2: 52          ld   d,d
-59D3: 53          ld   d,e
-59D4: 51          ld   d,c
-59D5: 52          ld   d,d
-59D6: 53          ld   d,e
-59D7: 51          ld   d,c
-59D8: 52          ld   d,d
-59D9: 53          ld   d,e
-59DA: 51          ld   d,c
-59DB: 52          ld   d,d
-59DC: 53          ld   d,e
-59DD: 51          ld   d,c
-59DE: 52          ld   d,d
-59DF: 53          ld   d,e
-59E0: 51          ld   d,c
-59E1: 52          ld   d,d
-59E2: 53          ld   d,e
-59E3: 51          ld   d,c
-59E4: 52          ld   d,d
-59E5: 53          ld   d,e
-59E6: 51          ld   d,c
-59E7: FF          rst  $38
-59E8: CD 70 55    call $5570
-59EB: 1C          inc  e
-59EC: 01 52 53    ld   bc,$5352
-59EF: 51          ld   d,c
-59F0: 52          ld   d,d
-59F1: 53          ld   d,e
-59F2: 51          ld   d,c
-59F3: 52          ld   d,d
-59F4: 53          ld   d,e
-59F5: 51          ld   d,c
-59F6: 52          ld   d,d
-59F7: 53          ld   d,e
-59F8: 51          ld   d,c
-59F9: 52          ld   d,d
-59FA: 53          ld   d,e
-59FB: 51          ld   d,c
-59FC: 52          ld   d,d
-59FD: 53          ld   d,e
-59FE: 51          ld   d,c
-59FF: 52          ld   d,d
-5A00: 53          ld   d,e
-5A01: 51          ld   d,c
-5A02: 52          ld   d,d
-5A03: 53          ld   d,e
-5A04: 51          ld   d,c
-5A05: 52          ld   d,d
-5A06: 53          ld   d,e
-5A07: FF          rst  $38
+
+5981: FF ...
+
+DRAW_SPLASH_CIRCLE_BORDER_2
+5988: CD 70 55    call $DRAW_TILES_H
+598B: 01 01
+598D: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
+599D: 53 51 52 53 51 52 53 51 52 53 FF
+    ;;
+59A8: CD D0 58    call $DRAW_TILES_V
+59AB: 01 02
+59AD: 52 51 53 52 51 53 52 51 53 52 51 53 52 51 53 52
+59BD: 51 53 52 51 53 52 51 53 52 51 FF
+    ;;
+59C8: CD D0 58    call $DRAW_TILES_V
+59CB: 1A 02
+59CD: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
+59DD: 51 52 53 51 52 53 51 52 53 51 FF           rst  $38
+    ;;
+59E8: CD 70 55    call $DRAW_TILES_H
+59EB: 1C 01
+59ED: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
+59FD: 53 51 52 53 51 52 53 51 52 53 FF
+    ;;
 5A08: C9          ret
-5A09: FF          rst  $38
-5A0A: FF          rst  $38
-5A0B: FF          rst  $38
-5A0C: FF          rst  $38
-5A0D: FF          rst  $38
-5A0E: FF          rst  $38
-5A0F: FF          rst  $38
-5A10: CD 70 55    call $5570
-5A13: 01 01 53    ld   bc,$5301
-5A16: 51          ld   d,c
-5A17: 52          ld   d,d
-5A18: 53          ld   d,e
-5A19: 51          ld   d,c
-5A1A: 52          ld   d,d
-5A1B: 53          ld   d,e
-5A1C: 51          ld   d,c
-5A1D: 52          ld   d,d
-5A1E: 53          ld   d,e
-5A1F: 51          ld   d,c
-5A20: 52          ld   d,d
-5A21: 53          ld   d,e
-5A22: 51          ld   d,c
-5A23: 52          ld   d,d
-5A24: 53          ld   d,e
-5A25: 51          ld   d,c
-5A26: 52          ld   d,d
-5A27: 53          ld   d,e
-5A28: 51          ld   d,c
-5A29: 52          ld   d,d
-5A2A: 53          ld   d,e
-5A2B: 51          ld   d,c
-5A2C: 52          ld   d,d
-5A2D: 53          ld   d,e
-5A2E: 51          ld   d,c
-5A2F: FF          rst  $38
-5A30: CD D0 58    call $58D0
-5A33: 01 02 51    ld   bc,$5102
-5A36: 53          ld   d,e
-5A37: 52          ld   d,d
-5A38: 51          ld   d,c
-5A39: 53          ld   d,e
-5A3A: 52          ld   d,d
-5A3B: 51          ld   d,c
-5A3C: 53          ld   d,e
-5A3D: 52          ld   d,d
-5A3E: 51          ld   d,c
-5A3F: 53          ld   d,e
-5A40: 52          ld   d,d
-5A41: 51          ld   d,c
-5A42: 53          ld   d,e
-5A43: 52          ld   d,d
-5A44: 51          ld   d,c
-5A45: 53          ld   d,e
-5A46: 52          ld   d,d
-5A47: 51          ld   d,c
-5A48: 53          ld   d,e
-5A49: 52          ld   d,d
-5A4A: 51          ld   d,c
-5A4B: 53          ld   d,e
-5A4C: 52          ld   d,d
-5A4D: 51          ld   d,c
-5A4E: 53          ld   d,e
-5A4F: FF          rst  $38
-5A50: CD D0 58    call $58D0
-5A53: 1A          ld   a,(de)
-5A54: 02          ld   (bc),a
-5A55: 52          ld   d,d
-5A56: 53          ld   d,e
-5A57: 51          ld   d,c
-5A58: 52          ld   d,d
-5A59: 53          ld   d,e
-5A5A: 51          ld   d,c
-5A5B: 52          ld   d,d
-5A5C: 53          ld   d,e
-5A5D: 51          ld   d,c
-5A5E: 52          ld   d,d
-5A5F: 53          ld   d,e
-5A60: 51          ld   d,c
-5A61: 52          ld   d,d
-5A62: 53          ld   d,e
-5A63: 51          ld   d,c
-5A64: 52          ld   d,d
-5A65: 53          ld   d,e
-5A66: 51          ld   d,c
-5A67: 52          ld   d,d
-5A68: 53          ld   d,e
-5A69: 51          ld   d,c
-5A6A: 52          ld   d,d
-5A6B: 53          ld   d,e
-5A6C: 51          ld   d,c
-5A6D: 52          ld   d,d
-5A6E: 53          ld   d,e
-5A6F: FF          rst  $38
-5A70: CD 70 55    call $5570
-5A73: 1C          inc  e
-5A74: 01 51 52    ld   bc,$5251
-5A77: 53          ld   d,e
-5A78: 51          ld   d,c
-5A79: 52          ld   d,d
-5A7A: 53          ld   d,e
-5A7B: 51          ld   d,c
-5A7C: 52          ld   d,d
-5A7D: 53          ld   d,e
-5A7E: 51          ld   d,c
-5A7F: 52          ld   d,d
-5A80: 53          ld   d,e
-5A81: 51          ld   d,c
-5A82: 52          ld   d,d
-5A83: 53          ld   d,e
-5A84: 51          ld   d,c
-5A85: 52          ld   d,d
-5A86: 53          ld   d,e
-5A87: 51          ld   d,c
-5A88: 52          ld   d,d
-5A89: 53          ld   d,e
-5A8A: 51          ld   d,c
-5A8B: 52          ld   d,d
-5A8C: 53          ld   d,e
-5A8D: 51          ld   d,c
-5A8E: 52          ld   d,d
-5A8F: FF          rst  $38
+5A09: FF ...
+
+DRAW_SPLASH_CIRCLE_BORDER_3
+5A10: CD 70 55    call $DRAW_TILES_H
+5A13: 01 01
+5A15: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
+5A25: 51 52 53 51 52 53 51 52 53 51 FF
+    ;;
+5A30: CD D0 58    call $DRAW_TILES_V
+5A33: 01 02
+5A35: 51 53 52 51 53 52 51 53 52 51 53 52 51 53 52 51
+5A45: 53 52 51 53 52 51 53 52 51 53 FF
+    ;;
+5A50: CD D0 58    call $DRAW_TILES_V
+5A53: 1A 02
+5A55: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
+5A65: 53 51 52 53 51 52 53 51 52 53 FF
+    ;;
+5A70: CD 70 55    call $DRAW_TILES_H
+5A73: 1C 01
+5A75: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
+5A85: 52 53 51 52 53 51 52 53 51 52 FF
+    ;;
 5A90: C9          ret
 5A91: FF ...
 
+    ;;
 5A98: E5          push hl
 5A99: C5          push bc
 5A9A: D5          push de
@@ -12683,25 +12322,26 @@ CALL_DO_ATTRACT_MODE
 5AA4: C9          ret
 5AA5: FF ...
 
-    ;;
+    ;; Splash screen animated circle border
+FLASH_BORDER
 5AA8: 1E 05       ld   e,$05
 5AAA: 16 05       ld   d,$05
 5AAC: D5          push de
-5AAD: CD 00 59    call $5900
+5AAD: CD 00 59    call $DRAW_SPLASH_CIRCLE_BORDER_1
 5AB0: CD 98 5A    call $5A98
 5AB3: D1          pop  de
 5AB4: 15          dec  d
 5AB5: 20 F5       jr   nz,$5AAC
 5AB7: 16 05       ld   d,$05
 5AB9: D5          push de
-5ABA: CD 88 59    call $5988
+5ABA: CD 88 59    call $DRAW_SPLASH_CIRCLE_BORDER_2
 5ABD: CD 98 5A    call $5A98
 5AC0: D1          pop  de
 5AC1: 15          dec  d
 5AC2: 20 F5       jr   nz,$5AB9
 5AC4: 16 05       ld   d,$05
 5AC6: D5          push de
-5AC7: CD 10 5A    call $5A10
+5AC7: CD 10 5A    call $DRAW_SPLASH_CIRCLE_BORDER_3
 5ACA: CD 98 5A    call $5A98
 5ACD: D1          pop  de
 5ACE: 15          dec  d
@@ -12720,161 +12360,95 @@ CALL_DO_ATTRACT_MODE
 5AE0: FE 41       cp   $41
 5AE2: 20 F8       jr   nz,$5ADC
 5AE4: C9          ret
-5AE5: FF          rst  $38
+
+5AE5: FF
+
 5AE6: 3E 04       ld   a,$04
 5AE8: CD D8 5A    call $5AD8
 5AEB: C9          ret
 5AEC: FF ...
 
+DRAW_EXTRA_BONUS_SCREEN
 5AF0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$0F88
 5AF9: CD 81 5C    call $JMP_HL
 5AFC: CD E6 5A    call $5AE6
-5AFF: CD 70 55    call $5570
-5B02: 08          ex   af,af'
-5B03: 08          ex   af,af'
-5B04: 15          dec  d
-5B05: 28 24       jr   z,$5B2B
-5B07: 22 11 10    ld   ($1011),hl
-5B0A: 12          ld   (de),a
-5B0B: 1F          rra
-5B0C: 1E 25       ld   e,$25
-5B0E: 23          inc  hl
-5B0F: FF          rst  $38
-5B10: CD 70 55    call $5570
-5B13: 09          add  hl,bc
-5B14: 08          ex   af,af'
-5B15: 2B          dec  hl
-5B16: 2B          dec  hl
-5B17: 2B          dec  hl
-5B18: 2B          dec  hl
-5B19: 2B          dec  hl
-5B1A: 2B          dec  hl
-5B1B: 2B          dec  hl
-5B1C: 2B          dec  hl
-5B1D: 2B          dec  hl
-5B1E: 2B          dec  hl
-5B1F: 2B          dec  hl
-5B20: FF          rst  $38
-5B21: CD A8 5A    call $5AA8
-5B24: CD A8 5A    call $5AA8
-5B27: CD 70 55    call $5570
-5B2A: 0C          inc  c
-5B2B: 07          rlca
-5B2C: 20 19       jr   nz,$5B47
-5B2E: 13          inc  de
-5B2F: 1B          dec  de
-5B30: 10 25       djnz $5B57
-5B32: 20 10       jr   nz,$5B44
-5B34: 06 10       ld   b,$10
-5B36: 12          ld   (de),a
-5B37: 1F          rra
-5B38: 1E 25       ld   e,$25
-5B3A: 23          inc  hl
-5B3B: FF          rst  $38
-5B3C: CD 70 55    call $5570
-5B3F: 10 07       djnz $5B48
-5B41: 1F          rra
-5B42: 12          ld   (de),a
-5B43: 1A          ld   a,(de)
-5B44: 15          dec  d
-5B45: 13          inc  de
-5B46: 24          inc  h
-5B47: 23          inc  hl
-5B48: 10 27       djnz $5B71
-5B4A: 19          add  hl,de
-5B4B: 24          inc  h
-5B4C: 18 1F       jr   $5B6D
-5B4E: 25          dec  h
-5B4F: 24          inc  h
-5B50: FF          rst  $38
-5B51: CD 70 55    call $5570
-5B54: 14          inc  d
-5B55: 07          rlca
-5B56: 1C          inc  e
-5B57: 1F          rra
-5B58: 23          inc  hl
-5B59: 19          add  hl,de
-5B5A: 1E 17       ld   e,$17
-5B5C: 10 11       djnz $5B6F
-5B5E: 10 1C       djnz $5B7C
-5B60: 19          add  hl,de
-5B61: 16 15       ld   d,$15
-5B63: FF          rst  $38
-5B64: CD A8 5A    call $5AA8
-5B67: CD 70 55    call $5570
-5B6A: 17          rla
-5B6B: 0B          dec  bc
-5B6C: E0          ret  po
-5B6D: DC DD DE    call c,$DEDD
-5B70: DF          rst  $18
-5B71: FF          rst  $38
-5B72: CD 70 55    call $5570
-5B75: 18 0B       jr   $5B82
-5B77: E1          pop  hl
-5B78: E5          push hl
-5B79: E5          push hl
-5B7A: E5          push hl
-5B7B: E6 FF       and  $FF
-5B7D: CD 70 55    call $5570
-5B80: 19          add  hl,de
-5B81: 0B          dec  bc
-5B82: E1          pop  hl
-5B83: E5          push hl
-5B84: E5          push hl
-5B85: E5          push hl
-5B86: E6 FF       and  $FF
-5B88: CD 70 55    call $5570
-5B8B: 1A          ld   a,(de)
-5B8C: 0B          dec  bc
-5B8D: E2 E3 E3    jp   po,$E3E3
-5B90: E3          ex   (sp),hl
-5B91: E4 FF CD    call po,$CDFF
-5B94: A8          xor  b
-5B95: 5A          ld   e,d
-5B96: CD A8 5A    call $5AA8
-5B99: CD C8 5B    call $5BC8
-5B9C: C9          ret
-5B9D: FF ...
+5AFF: CD 70 55    call $DRAW_TILES_H
+5B02: 08 08
+    ;; EXTRA BONUS
+5B04: 15 28 24 22 11 10 12 1F 1E 25 23 FF
+5B10: CD 70 55    call $DRAW_TILES_H
+5B13: 09 08
+5B15: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
+5B21: CD A8 5A    call $FLASH_BORDER
+5B24: CD A8 5A    call $FLASH_BORDER
+5B27: CD 70 55    call $DRAW_TILES_H
+5B2A: 0C 07
+    ;; PICK UP 6 BONUS
+5B2C: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
+5B3C: CD 70 55    call $DRAW_TILES_H
+5B3F: 10 07
+5B41: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
+5B51: CD 70 55    call $DRAW_TILES_H
+5B54: 14 07
+5B56: 1C 1F 23 19 1E 17 10 11 10 1C 19 16 15 FF
+5B64: CD A8 5A    call $FLASH_BORDER
+5B67: CD 70 55    call $DRAW_TILES_H
+5B6A: 17 0B
+5B6C: E0 DC DD DE DF FF
+5B72: CD 70 55    call $DRAW_TILES_H
+5B75: 18 0B
+5B77: E1 E5 E5 E5 E6 FF
+5B7D: CD 70 55    call $DRAW_TILES_H
+5B80: 19 0B
+5B82: E1 E5 E5 E5 E6 FF
+5B88: CD 70 55    call $DRAW_TILES_H
+5B8B: 1A 0B
+5B8D: E2 E3 E3 E3 E4 FF CD A8 5A CD A8 5A CD C8 5B C9 FF
+5B9E: FF ...
 
-5BA8: 3A 64 80    ld   a,($8064)
+ANIMATE_CIRCLE_BORDER
+5BA8: 3A 64 80    ld   a,($SPLASH_ANIM_FR)
 5BAB: 3C          inc  a
 5BAC: FE 03       cp   $03
 5BAE: 20 01       jr   nz,$5BB1
 5BB0: AF          xor  a
-5BB1: 32 64 80    ld   ($8064),a
+5BB1: 32 64 80    ld   ($SPLASH_ANIM_FR),a
 5BB4: A7          and  a
-5BB5: 20 04       jr   nz,$5BBB
-5BB7: CD 10 5A    call $5A10
+5BB5: 20 04       jr   nz,$_BORDER_1_2
+5BB7: CD 10 5A    call $DRAW_SPLASH_CIRCLE_BORDER_3
 5BBA: C9          ret
+_BORDER_1_2
 5BBB: FE 01       cp   $01
 5BBD: 20 04       jr   nz,$5BC3
-5BBF: CD 88 59    call $5988
+5BBF: CD 88 59    call $DRAW_SPLASH_CIRCLE_BORDER_2
 5BC2: C9          ret
-5BC3: CD 00 59    call $5900
+5BC3: CD 00 59    call $DRAW_SPLASH_CIRCLE_BORDER_1
 5BC6: C9          ret
-5BC7: FF          rst  $38
+
+5BC7: FF
+
 5BC8: 3E F2       ld   a,$F2
 5BCA: 32 F8 91    ld   ($91F8),a
-5BCD: CD A8 5A    call $5AA8
+5BCD: CD A8 5A    call $FLASH_BORDER
 5BD0: 3E F3       ld   a,$F3
 5BD2: 32 F9 91    ld   ($91F9),a
-5BD5: CD A8 5A    call $5AA8
+5BD5: CD A8 5A    call $FLASH_BORDER
 5BD8: 3E EA       ld   a,$EA
 5BDA: 32 18 92    ld   ($9218),a
-5BDD: CD A8 5A    call $5AA8
+5BDD: CD A8 5A    call $FLASH_BORDER
 5BE0: 3E EB       ld   a,$EB
 5BE2: 32 19 92    ld   ($9219),a
-5BE5: CD A8 5A    call $5AA8
+5BE5: CD A8 5A    call $FLASH_BORDER
 5BE8: 3E E8       ld   a,$E8
 5BEA: 32 38 92    ld   ($9238),a
-5BED: CD A8 5A    call $5AA8
+5BED: CD A8 5A    call $FLASH_BORDER
 5BF0: 3E E9       ld   a,$E9
 5BF2: 32 39 92    ld   ($9239),a
-5BF5: CD A8 5A    call $5AA8
-5BF8: CD A8 5A    call $5AA8
-5BFB: CD A8 5A    call $5AA8
+5BF5: CD A8 5A    call $FLASH_BORDER
+5BF8: CD A8 5A    call $FLASH_BORDER
+5BFB: CD A8 5A    call $FLASH_BORDER
 5BFE: C9          ret
 5BFF: FF          rst  $38
 5C00: 15          dec  d

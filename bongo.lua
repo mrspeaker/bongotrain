@@ -21,6 +21,8 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 
 mem = manager.machine.devices[":maincpu"].spaces["program"]
 
+mem:write_direct_u8(0x5b04, 0x00);
+
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    mem:write_direct_u8(0x0CC0, 0xC9); -- return early
