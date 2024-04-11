@@ -118,13 +118,13 @@
 
     PLATFORM_XOFFS $8180  ; maybe
 
-    SCORE          $8300  ; Current player score
-    SCORE+1        $8301  ; ACTUALLY! I think it's just hiscore.
-    SCORE+2        $8302
+    HISCORE        $8300  ;
+    HISCORE+1      $8301  ;
+    HISCORE+2      $8302
 
     CREDITS        $8303  ; how many credits in machine
     _              $8305  ; Coins? dunno
-    TITLE_MSG      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+    HISCORE_NAME      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
     TICK_NUM       $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -295,7 +295,7 @@ ATTRACT_MODE_MAYBE
 00E4: 00          nop
 00E5: CD 80 14    call $CLEAR_SCREEN
 00E8: 21 E0 0F    ld   hl,$0FE0
-00EB: CD 40 08    call $DRAW_LEVEL?
+00EB: CD 40 08    call $DRAW_SCREEN
 00EE: 00          nop
 00EF: 00          nop
 00F0: CD 50 24    call $DRAW_SCORE
@@ -744,7 +744,7 @@ CHECK_IF_HISCORE
 CHECK_IF_HISCORE_P1
 0440: 3A 16 80    ld   a,($P1_SCORE+2)
 0443: 4F          ld   c,a
-0444: 3A 02 83    ld   a,($SCORE+2)
+0444: 3A 02 83    ld   a,($HISCORE+2)
 0447: 37          scf
 0448: 3F          ccf
 0449: 99          sbc  a,c
@@ -752,7 +752,7 @@ CHECK_IF_HISCORE_P1
 044D: C0          ret  nz
 044E: 3A 15 80    ld   a,($P1_SCORE+1)
 0451: 4F          ld   c,a
-0452: 3A 01 83    ld   a,($SCORE+1)
+0452: 3A 01 83    ld   a,($HISCORE+1)
 0455: 37          scf
 0456: 3F          ccf
 0457: 99          sbc  a,c
@@ -760,7 +760,7 @@ CHECK_IF_HISCORE_P1
 045B: C0          ret  nz
 045C: 3A 14 80    ld   a,($P1_SCORE)
 045F: 4F          ld   c,a
-0460: 3A 00 83    ld   a,($SCORE)
+0460: 3A 00 83    ld   a,($HISCORE)
 0463: 37          scf
 0464: 3F          ccf
 0465: 99          sbc  a,c
@@ -772,7 +772,7 @@ CHECK_IF_HISCORE_P1
 CHECK_IF_HISCORE_P2
 0470: 3A 19 80    ld   a,($P2_SCORE+2)
 0473: 4F          ld   c,a
-0474: 3A 02 83    ld   a,($SCORE+2)
+0474: 3A 02 83    ld   a,($HISCORE+2)
 0477: 37          scf
 0478: 3F          ccf
 0479: 99          sbc  a,c
@@ -780,7 +780,7 @@ CHECK_IF_HISCORE_P2
 047D: C0          ret  nz
 047E: 3A 18 80    ld   a,($P2_SCORE+1)
 0481: 4F          ld   c,a
-0482: 3A 01 83    ld   a,($SCORE+1)
+0482: 3A 01 83    ld   a,($HISCORE+1)
 0485: 37          scf
 0486: 3F          ccf
 0487: 99          sbc  a,c
@@ -788,7 +788,7 @@ CHECK_IF_HISCORE_P2
 048B: C0          ret  nz
 048C: 3A 17 80    ld   a,($P2_SCORE)
 048F: 4F          ld   c,a
-0490: 3A 00 83    ld   a,($SCORE_0)
+0490: 3A 00 83    ld   a,($HISCORE_0)
 0493: 37          scf
 0494: 3F          ccf
 0495: 99          sbc  a,c
@@ -830,11 +830,11 @@ CHECK_DINO_TIMER
 
 HISCORE_FOR_P1
 04E0: 3A 14 80    ld   a,($P1_SCORE)
-04E3: 32 00 83    ld   ($SCORE),a
+04E3: 32 00 83    ld   ($HISCORE),a
 04E6: 3A 15 80    ld   a,($P1_SCORE+1)
-04E9: 32 01 83    ld   ($SCORE+1),a
+04E9: 32 01 83    ld   ($HISCORE+1),a
 04EC: 3A 16 80    ld   a,($P1_SCORE+2)
-04EF: 32 02 83    ld   ($SCORE+2),a
+04EF: 32 02 83    ld   ($HISCORE+2),a
 04F2: E1          pop  hl       ; hmm
 04F3: C9          ret
     
@@ -842,11 +842,11 @@ HISCORE_FOR_P1
 
 HISCORE_FOR_P2
 0500: 3A 17 80    ld   a,($P2_SCORE)
-0503: 32 00 83    ld   ($SCORE),a
+0503: 32 00 83    ld   ($HISCORE),a
 0506: 3A 18 80    ld   a,($P2_SCORE+1)
-0509: 32 01 83    ld   ($SCORE+1),a
+0509: 32 01 83    ld   ($HISCORE+1),a
 050C: 3A 19 80    ld   a,($P2_SCORE+2)
-050F: 32 02 83    ld   ($SCORE+2),a
+050F: 32 02 83    ld   ($HISCORE+2),a
 0512: E1          pop  hl       ; hmm
 0513: C9          ret
     
@@ -1294,7 +1294,7 @@ PLAY_JUMP_SFX
 083A: FF ...
 
     ;; screen something... draw level?
-DRAW_LEVEL?
+DRAW_SCREEN
 0840: E5          push hl
 0841: D9          exx
 0842: E1          pop  hl
@@ -2249,11 +2249,11 @@ BIG_RESET
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
 1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 1026: 21 E0 0F    ld   hl,$0FE0
-1029: CD 40 08    call $DRAW_LEVEL?
+1029: CD 40 08    call $DRAW_SCREEN
 102C: 00          nop
 102D: 00          nop
 102E: CD D0 16    call $DRAW_BONUS
-1031: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
+1031: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 1034: CD 50 24    call $DRAW_SCORE
 1037: CD A0 03    call $DRAW_LIVES
 103A: CD 98 08    call $INIT_PLAYER_SPRITE
@@ -3101,7 +3101,7 @@ DO_ATTRACT_MODE
 164A: FF          rst  $38
 164B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 164E: 21 E0 0F    ld   hl,$0FE0
-1651: CD 40 08    call $DRAW_LEVEL?
+1651: CD 40 08    call $DRAW_SCREEN
 1654: 00          nop
 1655: 00          nop
 1656: CD 50 24    call $DRAW_SCORE
@@ -4018,7 +4018,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 1B98: 00          nop
 1B99: CD A0 03    call $DRAW_LIVES
 1B9C: 21 E0 0F    ld   hl,$0FE0
-1B9F: CD 40 08    call $DRAW_LEVEL?
+1B9F: CD 40 08    call $DRAW_SCREEN
 1BA2: 00          nop
 1BA3: 00          nop
 1BA4: CD 50 24    call $DRAW_SCORE
@@ -5575,7 +5575,7 @@ DRAW_SCORE
 249F: ED 67       rrd  (hl)
 24A1: AF          xor  a
 24A2: 32 61 90    ld   ($9061),a
-24A5: 21 00 83    ld   hl,$SCORE
+24A5: 21 00 83    ld   hl,$HISCORE
 24A8: ED 67       rrd  (hl)
 24AA: 32 C1 91    ld   ($91C1),a
 24AD: ED 67       rrd  (hl)
@@ -5594,7 +5594,7 @@ DRAW_SCORE
 24C9: ED 67       rrd  (hl)
 24CB: AF          xor  a
 24CC: 32 A1 91    ld   ($91A1),a
-24CF: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
+24CF: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 24D2: C9          ret
 
 24D3: FF ...
@@ -5620,7 +5620,7 @@ DELAY_60_VBLANKS
 
 24FD: FF ....
 
-2500: 21 00 83    ld   hl,$SCORE
+2500: 21 00 83    ld   hl,$HISCORE
 2503: 36 00       ld   (hl),$00
 2505: 2C          inc  l
 2506: 7D          ld   a,l
@@ -5893,7 +5893,7 @@ MOVE_DINO_X
 2910: 21 40 02    ld   hl,$0240
 2913: CD E3 01    call $CALL_HL_PLUS_4K
 2916: CD 10 11    call $MYSTERY_8066_FN
-2919: 21 40 08    ld   hl,$DRAW_LEVEL?
+2919: 21 40 08    ld   hl,$DRAW_SCREEN
 291C: 18 22       jr   $CALL_MYSTERY_8066_FN
 
 291E: FF FF
@@ -6314,8 +6314,8 @@ ROCK_FALL_1
 
 2CF0: FF ...
     
-    ;; Score somthing
-2D00: 21 00 83    ld   hl,$SCORE
+    ;; HiScore somthing
+2D00: 21 00 83    ld   hl,$HISCORE
 2D03: 3A 14 80    ld   a,($P1_SCORE)
 2D06: BE          cp   (hl)
 2D07: 20 14       jr   nz,$2D1D
@@ -6327,9 +6327,9 @@ ROCK_FALL_1
 2D11: 3A 16 80    ld   a,($P1_SCORE+2)
 2D14: BE          cp   (hl)
 2D15: 20 06       jr   nz,$2D1D
-2D17: CD 48 2D    call $2D48
+2D17: CD 48 2D    call $2D48    ; p1 got  hiscore
 2D1A: C3 E8 03    jp   $03E8
-2D1D: 21 00 83    ld   hl,$SCORE
+2D1D: 21 00 83    ld   hl,$HISCORE
 2D20: 3A 17 80    ld   a,($P2_SCORE)
 2D23: BE          cp   (hl)
 2D24: 20 F4       jr   nz,$2D1A
@@ -6341,11 +6341,12 @@ ROCK_FALL_1
 2D2E: 3A 19 80    ld   a,($P2_SCORE+2)
 2D31: BE          cp   (hl)
 2D32: 20 E6       jr   nz,$2D1A
-2D34: CD 58 2D    call $2D58
+2D34: CD 58 2D    call $2D58    ; p2 got hiscore
 2D37: C3 E8 03    jp   $03E8
     
 2D3A: FF ...
 
+P1_GOT_HISCORE
 2D48: AF          xor  a
 2D49: 32 06 B0    ld   ($B006),a
 2D4C: 32 07 B0    ld   ($B007),a
@@ -6354,6 +6355,7 @@ ROCK_FALL_1
 2D54: C9          ret
 2D55: FF ...
 
+P2_GOT_HISCORE
 2D58: 3A F1 83    ld   a,($INPUT_BUTTONS)
 2D5B: CB 7F       bit  7,a      ; hmm what is bit 7 button?
 2D5D: 28 0A       jr   z,$2D69
@@ -6373,13 +6375,13 @@ ROCK_FALL_1
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
 2D8C: CD E3 01    call $CALL_HL_PLUS_4K
-2D8F: 3E 09       ld   a,$09    ; extra life sfx?
+2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
 2D95: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
-2D9E: CD 40 08    call $DRAW_LEVEL?
+2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
 2DA1: 00          nop
 2DA2: 00          nop
 2DA3: CD 10 03    call $ANIMATE_TILES
@@ -6541,7 +6543,7 @@ ROCK_FALL_1
 2EC3: CD 08 31    call $3108
 2EC6: 18 B8       jr   $2E80
 2EC8: E1          pop  hl
-2EC9: CD 10 2F    call $THINGS_THEN_COPY_TITLE_MSG
+2EC9: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
 2ECC: C9          ret
 2ECD: FF ...
 
@@ -6553,7 +6555,7 @@ ROCK_FALL_1
 2EE2: 3E 92       ld   a,$92
 2EE4: BD          cp   l
 2EE5: 20 04       jr   nz,$2EEB
-2EE7: CD 10 2F    call $THINGS_THEN_COPY_TITLE_MSG
+2EE7: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
 2EEA: C9          ret
 2EEB: 3E D2       ld   a,$D2
 2EED: BD          cp   l
@@ -6570,12 +6572,12 @@ ROCK_FALL_1
 
 2F00: FF ...
 
-THINGS_THEN_COPY_TITLE_MSG
+THINGS_THEN_COPY_HISCORE_NAME
 2F10: AF          xor  a
 2F11: 32 86 80    ld   ($8086),a
 2F14: E1          pop  hl
 2F15: E1          pop  hl
-2F16: CD E0 2F    call $COPY_TITLE_MSG_TO_SCREEN
+2F16: CD E0 2F    call $COPY_HISCORE_NAME_TO_SCREEN
 2F19: C9          ret
 
 2F1A: FF ...
@@ -6628,7 +6630,7 @@ THINGS_THEN_COPY_TITLE_MSG
 2F74: FF ...
 
 2F88: E5          push hl
-2F89: 21 07 83    ld   hl,$TITLE_MSG ; default is "HI-SCORE", clearing...
+2F89: 21 07 83    ld   hl,$HISCORE_NAME ; default is "HI-SCORE", clearing...
 2F8C: 36 10       ld   (hl),$TILE_BLANK
 2F8E: 23          inc  hl
 2F8F: 7D          ld   a,l
@@ -6667,15 +6669,15 @@ THINGS_THEN_COPY_TITLE_MSG
 2FD1: C9          ret
 2FD2: FF ...
 
-2FD5: CD 38 30    call $COPY_TITLE_MSG_TO_SCREEN_2
+2FD5: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 2FD8: CD E0 24    call $DELAY_60_VBLANKS
 2FDB: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
 
-COPY_TITLE_MSG_TO_SCREEN
-2FE0: 21 07 83    ld   hl,$TITLE_MSG
+COPY_HISCORE_NAME_TO_SCREEN
+2FE0: 21 07 83    ld   hl,$HISCORE_NAME
 2FE3: 3A 77 92    ld   a,($9277)
 2FE6: 77          ld   (hl),a
 2FE7: 3A 57 92    ld   a,($9257)
@@ -6721,26 +6723,26 @@ COPY_TITLE_MSG_TO_SCREEN
 
     ;; writes some chars to screen
     ;; actually - different screen loc than copy_msg 1!
-COPY_TITLE_MSG_TO_SCREEN_2
-3038: 3A 07 83    ld   a,($TITLE_MSG)
+COPY_HISCORE_NAME_TO_SCREEN_2
+3038: 3A 07 83    ld   a,($HISCORE_NAME)
 303B: 32 80 92    ld   ($9280),a
-303E: 3A 08 83    ld   a,($TITLE_MSG+1)
+303E: 3A 08 83    ld   a,($HISCORE_NAME+1)
 3041: 32 60 92    ld   ($9260),a
-3044: 3A 09 83    ld   a,($TITLE_MSG+2)
+3044: 3A 09 83    ld   a,($HISCORE_NAME+2)
 3047: 32 40 92    ld   ($9240),a
-304A: 3A 0A 83    ld   a,($TITLE_MSG+3)
+304A: 3A 0A 83    ld   a,($HISCORE_NAME+3)
 304D: 32 20 92    ld   ($9220),a
-3050: 3A 0B 83    ld   a,($TITLE_MSG+4)
+3050: 3A 0B 83    ld   a,($HISCORE_NAME+4)
 3053: 32 00 92    ld   ($9200),a
-3056: 3A 0C 83    ld   a,($TITLE_MSG+5)
+3056: 3A 0C 83    ld   a,($HISCORE_NAME+5)
 3059: 32 E0 91    ld   ($91E0),a
-305C: 3A 0D 83    ld   a,($TITLE_MSG+6)
+305C: 3A 0D 83    ld   a,($HISCORE_NAME+6)
 305F: 32 C0 91    ld   ($91C0),a
-3062: 3A 0E 83    ld   a,($TITLE_MSG+7)
+3062: 3A 0E 83    ld   a,($HISCORE_NAME+7)
 3065: 32 A0 91    ld   ($91A0),a
-3068: 3A 0F 83    ld   a,($TITLE_MSG+8)
+3068: 3A 0F 83    ld   a,($HISCORE_NAME+8)
 306B: 32 80 91    ld   ($9180),a
-306E: 3A 10 83    ld   a,($TITLE_MSG+9)
+306E: 3A 10 83    ld   a,($HISCORE_NAME+9)
 3071: 32 60 91    ld   ($9160),a
 3074: C9          ret
 
@@ -6748,7 +6750,7 @@ COPY_TITLE_MSG_TO_SCREEN_2
 
     ;; Writes HIGH-SCORE to bytes (later to screen)
 SET_HISCORE_TEXT
-3080: 21 07 83    ld   hl,$TITLE_MSG
+3080: 21 07 83    ld   hl,$HISCORE_NAME
 3083: 36 18       ld   (hl),$18 ; h
 3085: 23          inc  hl
 3086: 36 19       ld   (hl),$19 ; i
@@ -6768,8 +6770,8 @@ SET_HISCORE_TEXT
 309B: 36 22       ld   (hl),$22 ; r
 309D: 23          inc  hl
 309E: 36 15       ld   (hl),$15 ; e
-    ;; set default score
-30A0: 21 00 83    ld   hl,$SCORE
+    ;; set default hiscore
+30A0: 21 00 83    ld   hl,$HISCORE
 30A3: 36 00       ld   (hl),$TILE_0
 30A5: 23          inc  hl
 30A6: 36 05       ld   (hl),$05
@@ -6811,7 +6813,7 @@ SET_HISCORE_TEXT
 30F5: DD 2B       dec  ix
 30F7: 20 F5       jr   nz,$30EE
 30F9: 3E 10       ld   a,$TILE_BLANK
-30FB: 32 07 83    ld   ($TITLE_MSG),a
+30FB: 32 07 83    ld   ($HISCORE_NAME),a
 30FE: C9          ret
 
 30FF: FF ...
@@ -6833,7 +6835,7 @@ SET_HISCORE_TEXT
 3124: 7E          ld   a,(hl)
 3125: 3D          dec  a
 3126: 27          daa
-3127: CC 10 2F    call z,$THINGS_THEN_COPY_TITLE_MSG
+3127: CC 10 2F    call z,$THINGS_THEN_COPY_HISCORE_NAME
 312A: 77          ld   (hl),a
 312B: AF          xor  a
 312C: ED 6F       rld  (hl)
@@ -8360,7 +8362,7 @@ DO_CUTSCENE
 3D4D: 32 65 80    ld   ($8065),a
 3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
-3D56: CD 40 08    call $DRAW_LEVEL?
+3D56: CD 40 08    call $DRAW_SCREEN
 3D59: 00          nop
 3D5A: 00          nop
 3D5B: CD A0 03    call $DRAW_LIVES
