@@ -221,17 +221,9 @@ INIT_SCREEN
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-0051: CD 10 03    call $ANIMATE_TILES
-0054: 09          add  hl,bc
-0055: 00          nop
-0056: 13          inc  de
-0057: 22 15 14    ld   ($1415),hl
-005A: 19          add  hl,de
-005B: 24          inc  h
-005C: 10 16       djnz $0074
-005E: 11 25 1C    ld   de,$1C25
-0061: 24          inc  h
-0062: FF          rst  $38
+0051: CD 10 03    call $ANIMATE_TILES ; data next 2 lines
+0054: 09 00                           ; scr pos x / y
+0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; tiles
 0063: 18 E3       jr   $INIT_SCREEN
 0065: FF          rst  $38
 
@@ -307,8 +299,7 @@ ATTRACT_MODE_MAYBE
 00E5: CD 80 14    call $CLEAR_SCREEN
 00E8: 21 E0 0F    ld   hl,$0FE0
 00EB: CD 40 08    call $DRAW_SCREEN
-00EE: 00          nop
-00EF: 00          nop
+00EE: 00 00                     ; params to DRAW_SCREEN
 00F0: CD 50 24    call $DRAW_SCORE
 00F3: CD 10 03    call $ANIMATE_TILES
 00F6: 09          add  hl,bc
@@ -595,11 +586,11 @@ ANIMATE_TILES
 0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$START_OF_TILES
 0316: C1          pop  bc
-0317: 0A          ld   a,(bc)
+0317: 0A          ld   a,(bc)   ; x pos
 0318: 03          inc  bc
 0319: 85          add  a,l
 031A: 6F          ld   l,a
-031B: 0A          ld   a,(bc)
+031B: 0A          ld   a,(bc)   ; y pos
 031C: 5F          ld   e,a
 031D: 3E 1B       ld   a,$1B
 031F: 93          sub  e
@@ -613,7 +604,7 @@ ANIMATE_TILES
 032B: 19          add  hl,de
 032C: 19          add  hl,de
 032D: 03          inc  bc
-032E: 0A          ld   a,(bc)
+032E: 0A          ld   a,(bc)   ; read data until 0xff
 032F: 03          inc  bc
 0330: FE FF       cp   $FF
 0332: 20 02       jr   nz,$0336
@@ -1265,14 +1256,16 @@ PLAY_JUMP_SFX
 0806: 00          nop
 0807: 01 3A 00    ld   bc,$003A
 080A: B8          cp   b
-    ;; this looks similar to other tile-related code - ab
+    ;; this looks similar to other tile-related code
+    ;; I set a breakpoint here and played a bunch (even cutscene)
+    ;; but could not get it to trigger... not used?
 080B: 21 40 90    ld   hl,$START_OF_TILES
 080E: C1          pop  bc
-080F: 0A          ld   a,(bc)
+080F: 0A          ld   a,(bc)   ; param 1
 0810: 03          inc  bc
 0811: 85          add  a,l
 0812: 6F          ld   l,a
-0813: 0A          ld   a,(bc)
+0813: 0A          ld   a,(bc)   ; param 2
 0814: 5F          ld   e,a
 0815: 3E 1B       ld   a,$1B
 0817: 93          sub  e
@@ -1286,10 +1279,10 @@ PLAY_JUMP_SFX
 0823: 19          add  hl,de
 0824: 19          add  hl,de
 0825: 03          inc  bc
-0826: 0A          ld   a,(bc)
+0826: 0A          ld   a,(bc)   ; param 3
 0827: 5F          ld   e,a
 0828: 03          inc  bc
-0829: 0A          ld   a,(bc)
+0829: 0A          ld   a,(bc)   ; param 4
 082A: 57          ld   d,a
 082B: 03          inc  bc
 082C: C5          push bc
@@ -1313,11 +1306,11 @@ DRAW_SCREEN
 0844: 5D          ld   e,l
 0845: 21 40 90    ld   hl,$START_OF_TILES
 0848: C1          pop  bc
-0849: 0A          ld   a,(bc)
+0849: 0A          ld   a,(bc)   ;param 1
 084A: 03          inc  bc
 084B: 85          add  a,l
 084C: 6F          ld   l,a
-084D: 0A          ld   a,(bc)
+084D: 0A          ld   a,(bc)   ; param 2
 084E: 03          inc  bc
 084F: C5          push bc
 0850: D5          push de
@@ -2192,31 +2185,18 @@ BONGO_ANIM_DATA
 0F85: 00          nop
 0F86: 00          nop
 0F87: 00          nop
+
 0F88: CD 10 03    call $ANIMATE_TILES
-0F8B: 02          ld   (bc),a
-0F8C: 02          ld   (bc),a
-0F8D: E0          ret  po
-0F8E: E7 x 22
-0FA4: DF          rst  $18
-0FA5: FF          rst  $38
-0FA6: CD D8 3B    call $3BD8
-0FA9: 02          ld   (bc),a
-0FAA: 03          inc  bc
-0FAB: E6 E6       and  $E6
-0FAD: E6 E6       and  $E6
-0FAF: E6 E6       and  $E6
-0FB1: E6 E6       and  $E6
-0FB3: E6 E6       and  $E6
-0FB5: E6 E6       and  $E6
-0FB7: E6 E6       and  $E6
-0FB9: E6 E6       and  $E6
-0FBB: E6 E6       and  $E6
-0FBD: E6 E6       and  $E6
-0FBF: E6 E6       and  $E6
-0FC1: E6 E6       and  $E6
-0FC3: FF          rst  $38
+0F8B: 02 02
+0F8D: E0 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7
+0F8D: E7 E7 E7 E7 E7 E7 E7 DF FF
+0FA6: CD D8 3B    call $DRAW_TILES_2
+0FA9: 02 03
+0FAB: E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6
+0FBB: E6 E6 E6 E6 E6 E6 E6 E6 FF
 0FC4: C3 D6 1B    jp   $1BD6
 0FC7: FF ...
+
 0FD1: 0F          rrca
 0FD2: FF ...
 0FDD: 0F          rrca
@@ -2349,12 +2329,12 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 10E9: 32 00 80    ld   ($TICK_MOD_3),a
 10EC: CB 27       sla  a        ; (tick % 3) * 4
 10EE: CB 27       sla  a
-10F0: CD 90 13    call $SHADOW_ADD_A_TO_HL
+10F0: CD 90 13    call $SHADOW_ADD_A_TO_RET
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
 
 ;;; um, nothing calls 10f7 - must come from interrupt
-;;; (via $SHADOW_ADD_A_TO_HL somehow I reckon)
+;;; (via $SHADOW_ADD_A_TO_RET somehow I reckon)
 EXTRA_LIFE_HANDLER
 10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
@@ -2412,7 +2392,7 @@ UPDATE_CUSTOM_SCREEN_LOGIC
 1139: 32 01 80    ld   ($TICK_MOD_6),a
 113C: CB 27       sla  a
 113E: CB 27       sla  a
-1140: CD 90 13    call $SHADOW_ADD_A_TO_HL
+1140: CD 90 13    call $SHADOW_ADD_A_TO_RET
 1143: CD 02 3C    call $CUSTOM_SCREEN_LOGIC
 1146: C9          ret
 1147: 00          nop
@@ -2600,33 +2580,15 @@ PREVENT_CLOUD_JUMP_REDACTED
 
 DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
 12B8: CD 10 03    call $ANIMATE_TILES
-12BB: 03          inc  bc
-12BC: 00          nop
-12BD: 40          ld   b,b
-12BE: 42          ld   b,d
-12BF: 43          ld   b,e
-12C0: 42          ld   b,d
-12C1: 41          ld   b,c
-12C2: 40          ld   b,b
-12C3: FF          rst  $38
-
+12BB: 03 00
+12BD: 40 42 43 42 41 40 FF
 12C4: CD 10 03    call $ANIMATE_TILES
-12C7: 09          add  hl,bc
-12C8: 00          nop
-12C9: FE FD       cp   $FD
-12CB: FD          db   $fd
-12CC: FD          db   $fd
-12CD: FD          db   $fd
-12CE: FC FF CD    call m,$CDFF
-12D1: 10 03       djnz $12D6
-12D3: 1E 00       ld   e,$00
-12D5: FE FD       cp   $FD
-12D7: FD          db   $fd
-12D8: FD          db   $fd
-12D9: FD          db   $fd
-12DA: FC FF CD    call m,$CDFF
-12DD: B0          or   b
-12DE: 14          inc  d
+12C7: 09 00
+12C9: FE FD FD FD FD FC FF
+12D0: CD 10 03    call $ANIMATE_TILES
+12D3: 1E 00
+12D5: FE FD FD FD FD FC FF
+12DC: CD B0 14    call $14B0
 12DF: 21 E0 92    ld   hl,$92E0
 12E2: DD 2A 20 80 ld   ix,($8020)
 12E6: 16 17       ld   d,$17
@@ -2720,17 +2682,17 @@ DURING_TRANSITION_NEXT
 138F: FF
 
 ;;; What's this? Interrupt something?
-;;; goes shadow regs, pops HL from stack, adds A, re-pushes it
+;;; goes shadow regs, pops ret addr from stack, adds A, re-pushes it
 ;;; Does shenanigans: hl2 calls functions that aren't otherwise called
-SHADOW_ADD_A_TO_HL
+SHADOW_ADD_A_TO_RET
 1390: D9          exx
-1391: E1          pop  hl
+1391: E1          pop  hl       ; stack RET pointer
 1392: 06 00       ld   b,$00
 1394: 4F          ld   c,a
 1395: 09          add  hl,bc
 1396: E5          push hl
 1397: D9          exx
-1398: C9          ret
+1398: C9          ret           ; so returns to RET+A?
 
 1399: FF ...
 
@@ -3061,53 +3023,29 @@ DO_ATTRACT_MODE
 15DB: 32 08 93    ld   ($9308),a
 15DE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15E1: CD 10 03    call $ANIMATE_TILES
-15E4: 08          ex   af,af'
-15E5: 10 02       djnz $15E9
-15E7: 00          nop
-15E8: 00          nop
-15E9: 10 20       djnz $160B
-15EB: 24          inc  h
-15EC: 23          inc  hl
-15ED: FF          rst  $38
+15E4: 08 10
+15E6: 02 00 00 10 20 24 23 FF
 15EE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F1: 3E 8D       ld   a,$8D
 15F3: 32 0C 93    ld   ($930C),a
 15F6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F9: CD 10 03    call $ANIMATE_TILES
-15FC: 0C          inc  c
-15FD: 10 04       djnz $1603
-15FF: 00          nop
-1600: 00          nop
-1601: 10 20       djnz $1623
-1603: 24          inc  h
-1604: 23          inc  hl
-1605: FF          rst  $38
+15FC: 0C 10
+15FD: 04 00 00 10 20 24 23 FF
 1606: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1609: 3E 8E       ld   a,$8E
 160B: 32 10 93    ld   ($9310),a
 160E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1611: CD 10 03    call $ANIMATE_TILES
-1614: 10 10       djnz $1626
-1616: 06 00       ld   b,$00
-1618: 00          nop
-1619: 10 20       djnz $163B
-161B: 24          inc  h
-161C: 23          inc  hl
-161D: FF          rst  $38
+1614: 10 10
+1616: 06 00 00 10 20 24 23 FF
 161E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1621: 3E 8F       ld   a,$8F
 1623: 32 14 93    ld   ($9314),a
 1626: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1629: CD 10 03    call $ANIMATE_TILES
-162C: 14          inc  d
-162D: 10 01       djnz $1630
-162F: 00          nop
-1630: 00          nop
-1631: 00          nop
-1632: 10 20       djnz $1654
-1634: 24          inc  h
-1635: 23          inc  hl
-1636: FF          rst  $38
+162C: 14 10
+162E: 01 00 00 00 10 20 24 23 FF
 1637: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 163A: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
@@ -3192,37 +3130,18 @@ UPDATE_SPEED_TIMERS
 
 DRAW_BONUS
 16D0: CD 10 03    call $ANIMATE_TILES
-16D3: 0A          ld   a,(bc)
-16D4: 00          nop
-16D5: E0          ret  po
-16D6: DC DD DE    call c,$DEDD
-16D9: DF          rst  $18
-16DA: FF          rst  $38
+16D3: 0A 00
+16D5: E0 DC DD DE DF FF
 16DB: CD 10 03    call $ANIMATE_TILES
-16DE: 0B          dec  bc
-16DF: 00          nop
-16E0: E1          pop  hl
-16E1: E5          push hl
-16E2: E5          push hl
-16E3: E5          push hl
-16E4: E6 FF       and  $FF
+16DE: 0B 00
+16E0: E1 E5 E5 E5 E6 FF
 16E6: CD 10 03    call $ANIMATE_TILES
-16E9: 0C          inc  c
-16EA: 00          nop
-16EB: E1          pop  hl
-16EC: E5          push hl
-16ED: E5          push hl
-16EE: E5          push hl
-16EF: E6 FF       and  $FF
+16E9: 0C 00 E1 E5 E5 E5 E6 FF
 16F1: CD 10 03    call $ANIMATE_TILES
-16F4: 0D          dec  c
-16F5: 00          nop
-16F6: E2 E3 E3    jp   po,$E3E3
-16F9: E3          ex   (sp),hl
-16FA: E4 FF C9    call po,$C9FF
-16FD: FF          rst  $38
-16FE: FF          rst  $38
-16FF: FF          rst  $38
+16F4: 0D 00
+16F6: E2 E3 E3 E3 E4 FF
+16FC: C9          ret
+16FD: FF ...
 
     ;; Adds whatever is in 801d
 ADD_SCORE
@@ -3357,43 +3276,23 @@ RESET_DINO
 17CB: FF ...
 
 17D0: CD 10 03    call $ANIMATE_TILES
-17D3: 0A          ld   a,(bc)
-17D4: 00          nop
-17D5: B8          cp   b
-17D6: B4          or   h
-17D7: B5          or   l
-17D8: B6          or   (hl)
-17D9: B7          or   a
-17DA: FF          rst  $38
+17D3: 0A 00
+17D5: B8 B4 B5 B6 B7 FF
 17DB: CD 10 03    call $ANIMATE_TILES
-17DE: 0B          dec  bc
-17DF: 00          nop
-17E0: B9          cp   c
-17E1: FF          rst  $38
+17DE: 0B 00
+17E0: B9 FF
 17E2: CD 10 03    call $ANIMATE_TILES
-17E5: 0B          dec  bc
-17E6: 04          inc  b
-17E7: BE          cp   (hl)
-17E8: FF          rst  $38
+17E5: 0B 04
+17E7: BE FF
 17E9: CD 10 03    call $ANIMATE_TILES
-17EC: 0C          inc  c
-17ED: 00          nop
-17EE: B9          cp   c
-17EF: FF          rst  $38
+17EC: 0C 00          nop
+17EE: B9 FF
 17F0: CD 10 03    call $ANIMATE_TILES
-17F3: 0C          inc  c
-17F4: 04          inc  b
-17F5: BE          cp   (hl)
-17F6: FF          rst  $38
+17F3: 0C 04
+17F5: BE FF
 17F7: CD 10 03    call $ANIMATE_TILES
-17FA: 0D          dec  c
-17FB: 00          nop
-17FC: BA          cp   d
-17FD: BB          cp   e
-17FE: BB          cp   e
-17FF: BB          cp   e
-1800: BC          cp   h
-1801: FF          rst  $38
+17FA: 0D 00          nop
+17FC: BA BB BB BB BC FF
 1802: C9          ret
 1803: FF ...
 
@@ -4043,61 +3942,27 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BAA: A7          and  a
 1BAB: 20 10       jr   nz,$1BBD
 1BAD: CD 10 03    call $ANIMATE_TILES
-1BB0: 10 0A       djnz $1BBC
-1BB2: 20 1C       jr   nz,$1BD0
-1BB4: 11 29 15    ld   de,$1529
-1BB7: 22 10 01    ld   ($0110),hl
-1BBA: FF          rst  $38
+1BB0: 10 0A
+1BB2: 20 1C 11 29 15 22 10 01 FF
 1BBB: 18 0E       jr   $1BCB
 1BBD: CD 10 03    call $ANIMATE_TILES
-1BC0: 10 0A       djnz $1BCC
-1BC2: 20 1C       jr   nz,$1BE0
-1BC4: 11 29 15    ld   de,$1529
-1BC7: 22 10 02    ld   ($0210),hl
-1BCA: FF          rst  $38
+1BC0: 10 0A
+1BC2: 20 1C 11 29 15 22 10 02 FF
 1BCB: CD 41 1C    call $1C41
 1BCE: C9          ret
+
 1BCF: 3E 08       ld   a,$08
 1BD1: 32 86 80    ld   ($8086),a
 1BD4: C9          ret
 
 1BD5: FF          rst  $38
 1BD6: CD 10 03    call $ANIMATE_TILES
-1BD9: 1B          dec  de
-1BDA: 02          ld   (bc),a
-1BDB: E2 E3 E3    jp   po,$E3E3
-1BDE: E3          ex   (sp),hl
-1BDF: E3          ex   (sp),hl
-1BE0: E3          ex   (sp),hl
-1BE1: E3          ex   (sp),hl
-1BE2: E3          ex   (sp),hl
-1BE3: E3          ex   (sp),hl
-1BE4: E3          ex   (sp),hl
-1BE5: E3          ex   (sp),hl
-1BE6: E3          ex   (sp),hl
-1BE7: E3          ex   (sp),hl
-1BE8: E3          ex   (sp),hl
-1BE9: E3          ex   (sp),hl
-1BEA: E3          ex   (sp),hl
-1BEB: E3          ex   (sp),hl
-1BEC: E3          ex   (sp),hl
-1BED: E3          ex   (sp),hl
-1BEE: E3          ex   (sp),hl
-1BEF: E3          ex   (sp),hl
-1BF0: E3          ex   (sp),hl
-1BF1: E3          ex   (sp),hl
-1BF2: E4 FF C3    call po,$C3FF
-1BF5: D8          ret  c
-1BF6: 1C          inc  e
-1BF7: FF          rst  $38
-1BF8: FF          rst  $38
-1BF9: FF          rst  $38
-1BFA: FF          rst  $38
-1BFB: FF          rst  $38
-1BFC: FF          rst  $38
-1BFD: FF          rst  $38
-1BFE: FF          rst  $38
-1BFF: FF          rst  $38
+1BD9: 1B 02       ld   (bc),a
+1BDB: E2 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3
+1BEB: E3 E3 E3 E3 E3 E3 E3 E4 FF
+1BF4: C3 D8 1C    jp   $1CD8
+
+1BF7: FF ...
 
 DELAY_18_VBLANKS
 1C00: 1E 18       ld   e,$18
@@ -4208,47 +4073,16 @@ DINO_COLLISION
 1CD2: CD 90 1C    call $DINO_GOT_PLAYER_LEFT_OR_RIGHT
 1CD5: C9          ret
 
-1CD6: FF          rst  $38
-1CD7: FF          rst  $38
-1CD8: CD D8 3B    call $3BD8
-1CDB: 19          add  hl,de
-1CDC: 03          inc  bc
-1CDD: E1          pop  hl
-1CDE: E1          pop  hl
-1CDF: E1          pop  hl
-1CE0: E1          pop  hl
-1CE1: E1          pop  hl
-1CE2: E1          pop  hl
-1CE3: E1          pop  hl
-1CE4: E1          pop  hl
-1CE5: E1          pop  hl
-1CE6: E1          pop  hl
-1CE7: E1          pop  hl
-1CE8: E1          pop  hl
-1CE9: E1          pop  hl
-1CEA: E1          pop  hl
-1CEB: E1          pop  hl
-1CEC: E1          pop  hl
-1CED: E1          pop  hl
-1CEE: E1          pop  hl
-1CEF: E1          pop  hl
-1CF0: E1          pop  hl
-1CF1: E1          pop  hl
-1CF2: E1          pop  hl
-1CF3: E1          pop  hl
-1CF4: E1          pop  hl
-1CF5: FF          rst  $38
+1CD6: FF ..
+
+1CD8: CD D8 3B    call $DRAW_TILES_2
+1CDB: 19 03
+1CDD: E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1
+1CED: E1 E1 E1 E1 E1 E1 E1 E1 FF
 1CF6: C9          ret
-1CF7: FF          rst  $38
-1CF8: FF          rst  $38
-1CF9: FF          rst  $38
-1CFA: FF          rst  $38
-1CFB: FF          rst  $38
-1CFC: FF          rst  $38
-1CFD: FF          rst  $38
-1CFE: FF          rst  $38
-1CFF: FF          rst  $38
-    ;; don't think these bytes are used
+1CF7: FF ...
+
+    ;;
 1D00: 03          inc  bc
 1D01: 3B          dec  sp
 1D02: 3E 3F       ld   a,$3F
@@ -6099,7 +5933,7 @@ SHADOW_HL_PLUSEQ_4_TIMES_SCR
 2B5E: 3D          dec  a        ; scr#-1
 2B5F: CB 27       sla  a        ; * 2
 2B61: CB 27       sla  a        ; * 2
-2B63: CD 90 13    call $SHADOW_ADD_A_TO_HL
+2B63: CD 90 13    call $SHADOW_ADD_A_TO_RET
 2B66: 00          nop
 2B67: 00          nop
 2B68: 00          nop
@@ -6282,7 +6116,7 @@ ROCK_FALL_1
 2CBF: E6 07       and  $07      ; & 0000 0111
 2CC1: CB 27       sla  a        ; * 4
 2CC3: CB 27       sla  a
-2CC5: CD 90 13    call $SHADOW_ADD_A_TO_HL
+2CC5: CD 90 13    call $SHADOW_ADD_A_TO_RET
 2CC8: 00          nop
 2CC9: 00          nop
 2CCA: 00          nop
@@ -6394,8 +6228,7 @@ P2_GOT_HISCORE
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
-2DA1: 00          nop
-2DA2: 00          nop
+2DA1: 00 00                         ; params to DRAW_SCREEN
 2DA3: CD 10 03    call $ANIMATE_TILES
 2DA6: 04          inc  b
 2DA7: 0A          ld   a,(bc)
@@ -7729,41 +7562,27 @@ CHECK_BUTTONS_FOR_SOMETHING
 38DF: FF          rst  $38
 
 38E0: CD 10 03    call $ANIMATE_TILES
-38E3: 0A          ld   a,(bc)
-38E4: 00          nop
-38E5: E0          ret  po
-38E6: DC DD DE    call c,$DEDD
-38E9: DF          rst  $18
-38EA: FF          rst  $38
+38E3: 0A 00
+38E5: E0 DC DD DE DF FF
 38EB: CD 10 03    call $ANIMATE_TILES
-38EE: 0B          dec  bc
-38EF: 00          nop
-38F0: E1          pop  hl
-38F1: FF          rst  $38
+38EE: 0B 00
+38F0: E1 FF
 38F2: CD 10 03    call $ANIMATE_TILES
-38F5: 0B          dec  bc
-38F6: 04          inc  b
-38F7: E6 FF       and  $FF
+38F5: 0B 04
+38F7: E6 FF
 38F9: CD 10 03    call $ANIMATE_TILES
-38FC: 0C          inc  c
-38FD: 00          nop
-38FE: E1          pop  hl
-38FF: FF          rst  $38
+38FC: 0C 00
+38FE: E1 FF
 3900: CD 10 03    call $ANIMATE_TILES
-3903: 0C          inc  c
-3904: 04          inc  b
-3905: E6 FF       and  $FF
+3903: 0C 04
+3905: E6 FF
 3907: CD 10 03    call $ANIMATE_TILES
-390A: 0D          dec  c
-390B: 00          nop
-390C: E2 E3 E3    jp   po,$E3E3
-390F: E3          ex   (sp),hl
-3910: E4 FF C9    call po,$C9FF
-3913: FF          rst  $38
-3914: FF          rst  $38
-3915: FF          rst  $38
-3916: FF          rst  $38
-3917: FF          rst  $38
+390A: 0D 00
+390C: E2 E3 E3 E3 E4 FF
+3912: C9          ret
+
+3913: FF ...
+
 3918: CD B8 39    call $39B8
 391B: CD E8 39    call $39E8
 391E: C9          ret
@@ -8125,22 +7944,24 @@ RESET_XOFFS                     ;(or colors?)
 
 3BD7: FF
 
+    ;; how is this different to DRAW_TILES_H?
+DRAW_TILES_2
 3BD8: DD E1       pop  ix
 3BDA: 26 00       ld   h,$00
-3BDC: DD 6E 00    ld   l,(ix+$00)
+3BDC: DD 6E 00    ld   l,(ix+$00) ; param 1
 3BDF: 29          add  hl,hl
 3BE0: 29          add  hl,hl
 3BE1: 29          add  hl,hl
 3BE2: 29          add  hl,hl
 3BE3: 29          add  hl,hl
 3BE4: DD 23       inc  ix
-3BE6: DD 7E 00    ld   a,(ix+$00)
+3BE6: DD 7E 00    ld   a,(ix+$00) ; param 2
 3BE9: 85          add  a,l
 3BEA: 6F          ld   l,a
 3BEB: 01 40 90    ld   bc,$START_OF_TILES
 3BEE: 09          add  hl,bc
 3BEF: DD 23       inc  ix
-3BF1: DD 7E 00    ld   a,(ix+$00)
+3BF1: DD 7E 00    ld   a,(ix+$00) ; read until 0xff
 3BF4: FE FF       cp   $FF
 3BF6: 28 04       jr   z,$3BFC
 3BF8: 77          ld   (hl),a
@@ -8375,8 +8196,7 @@ DO_CUTSCENE
 3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $DRAW_SCREEN
-3D59: 00          nop
-3D5A: 00          nop
+3D59: 00 00                     ; params to DRAW_SCREEN
 3D5B: CD A0 03    call $DRAW_LIVES
 3D5E: CD 50 24    call $DRAW_SCORE
 3D61: 21 40 81    ld   hl,$PLAYER_X ; destination
@@ -9617,7 +9437,7 @@ SFX_06 ; cutscene dance start
 46A2: FF ...
 
     ;;
-ADD_A_TO_PUSHED_HL
+ADD_A_TO_RET_ADDR
 46B0: E1          pop  hl
 46B1: 06 00       ld   b,$00
 46B3: 4F          ld   c,a
@@ -9662,7 +9482,7 @@ CLEAR_SFX_1
 46FB: 3D          dec  a        ; scr - 1
 46FC: 87          add  a,a      ; ...
 46FD: 87          add  a,a      ; * 3
-46FE: CD B0 49    call $CALL_ADD_A_TO_PUSHED_HL
+46FE: CD B0 49    call $CALL_ADD_A_TO_RET_ADDR
 4701: 47          ld   b,a
 4702: 3A 65 80    ld   a,($SFX_PREV)
 4705: B8          cp   b
@@ -9680,7 +9500,7 @@ CLEAR_SFX_1
 ;;;
 4730: CB 27       sla  a
 4732: CB 27       sla  a
-4734: CD B0 46    call $ADD_A_TO_PUSHED_HL
+4734: CD B0 46    call $ADD_A_TO_RET_ADDR
 4737: 00          nop
 4738: 00          nop
 4739: 00          nop
@@ -9909,7 +9729,7 @@ PLAY_SFX
 
 48FE: FF ...
 
-SHADOW_ADD_A_TO_HL_2            ; duplicate routine
+SHADOW_ADD_A_TO_RET_2            ; duplicate routine
 4900: D9          exx
 4901: E1          pop  hl
 4902: 06 00       ld   b,$00
@@ -10001,8 +9821,8 @@ CLEAR_SFX_2
 49A2: FF ...
 
     ;;
-CALL_ADD_A_TO_PUSHED_HL
-49B0: CD B0 46    call $ADD_A_TO_PUSHED_HL
+CALL_ADD_A_TO_RET_ADDR
+49B0: CD B0 46    call $ADD_A_TO_RET_ADDR
     ;; Is this code or data? 27 cases...
 49B3: 3E 0E       ld   a,$0E
 49B5: C9          ret
@@ -10451,7 +10271,7 @@ TBL_4
 4C61: 3D          dec  a
 4C62: 87          add  a,a
 4C63: 87          add  a,a
-4C64: CD 00 49    call $SHADOW_ADD_A_TO_HL_2
+4C64: CD 00 49    call $SHADOW_ADD_A_TO_RET_2
 4C67: CD E3 4C    call $4CE3
 4C6A: C9          ret
 4C6B: CD E8 45    call $45E8
@@ -10781,7 +10601,7 @@ DONE_CAGED_DINO
 4EA4: C9          ret
 
 4EA5: 78          ld   a,b
-4EA6: CD 00 49    call $SHADOW_ADD_A_TO_HL_2
+4EA6: CD 00 49    call $SHADOW_ADD_A_TO_RET_2
 4EA9: FF          rst  $38
 4EAA: FF          rst  $38
 4EAB: FF          rst  $38
@@ -11522,7 +11342,9 @@ CALL_DO_ATTRACT_MODE
 5428: 21 D0 15    ld   hl,$DO_ATTRACT_MODE
 542B: CD 81 5C    call $JMP_HL
 542E: C9          ret
-542F: FF          rst  $38
+
+542F: FF
+    ;;
 5430: 21 24 92    ld   hl,$9224
 5433: CD 08 4D    call $DRAW_CAGE_TILES
 5436: E5          push hl
@@ -11540,8 +11362,9 @@ CALL_DO_ATTRACT_MODE
 5449: 3C          inc  a
 544A: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 544D: C9          ret
-544E: FF          rst  $38
-544F: FF          rst  $38
+
+544E: FF ...
+
 5450: DD 21 40 81 ld   ix,$PLAYER_X
 5454: 3E 79       ld   a,$79
 5456: DD BE 00    cp   (ix+$00)
@@ -11573,21 +11396,21 @@ CALL_DO_ATTRACT_MODE
 5491: 18 BD       jr   $5450
 5493: FF          rst  $38
 5494: 21 40 81    ld   hl,$PLAYER_X
-5497: 36 07       ld   (hl),$07
+5497: 36 07       ld   (hl),$07 ; x
 5499: 23          inc  hl
-549A: 36 2D       ld   (hl),$2D
+549A: 36 2D       ld   (hl),$2D ; frame
 549C: 23          inc  hl
-549D: 36 12       ld   (hl),$12
+549D: 36 12       ld   (hl),$12 ; colr
 549F: 23          inc  hl
-54A0: 36 BF       ld   (hl),$BF
+54A0: 36 BF       ld   (hl),$BF ; y
 54A2: 23          inc  hl
-54A3: 36 00       ld   (hl),$00
+54A3: 36 00       ld   (hl),$00 ; x legs
 54A5: 23          inc  hl
-54A6: 36 30       ld   (hl),$30
+54A6: 36 30       ld   (hl),$30 ; frame legs
 54A8: 23          inc  hl
-54A9: 36 12       ld   (hl),$12
+54A9: 36 12       ld   (hl),$12 ; col legs
 54AB: 23          inc  hl
-54AC: 36 CF       ld   (hl),$CF
+54AC: 36 CF       ld   (hl),$CF ; y legs
 54AE: 21 24 92    ld   hl,$9224
 54B1: CD 08 4D    call $DRAW_CAGE_TILES
 54B4: CD 50 54    call $5450
@@ -11595,7 +11418,10 @@ CALL_DO_ATTRACT_MODE
 54BA: CD 30 54    call $5430
 54BD: CD D8 54    call $54D8
 54C0: C9          ret
-54C1: FF          rst  $38
+
+54C1: FF
+
+    ;;
 54C2: 3A 12 83    ld   a,($TICK_NUM)
 54C5: E6 03       and  $03
 54C7: 20 06       jr   nz,$54CF
@@ -11604,8 +11430,9 @@ CALL_DO_ATTRACT_MODE
 54CF: 21 28 21    ld   hl,$2128
 54D2: CD 81 5C    call $JMP_HL
 54D5: C9          ret
-54D6: FF          rst  $38
-54D7: FF          rst  $38
+
+54D6: FF
+
 54D8: 1E 20       ld   e,$20
 54DA: D5          push de
 54DB: CD C2 54    call $54C2
@@ -11613,7 +11440,9 @@ CALL_DO_ATTRACT_MODE
 54DF: 1D          dec  e
 54E0: 20 F8       jr   nz,$54DA
 54E2: C9          ret
-54E3: FF          rst  $38
+
+54E3: FF
+
 54E4: 2D          dec  l
 54E5: 02          ld   (bc),a
 54E6: 2D          dec  l
@@ -11718,9 +11547,9 @@ CALL_DO_ATTRACT_MODE
 DRAW_TILES_H
 5570: 3A 00 B8    ld   a,($WATCHDOG) ; is this ack? "A" not used
 5573: 21 40 90    ld   hl,$START_OF_TILES
-5576: C1          pop  bc
-5577: 0A          ld   a,(bc)
-5578: 03          inc  bc
+5576: C1          pop  bc       ; stack return pointer into bc (ie, data)
+5577: 0A          ld   a,(bc)   ; start_x
+5578: 03          inc  bc       ; start_y
 5579: 85          add  a,l
 557A: 6F          ld   l,a
 557B: 0A          ld   a,(bc)
@@ -11738,13 +11567,13 @@ DRAW_TILES_H
 558C: 19          add  hl,de
 558D: 03          inc  bc
 _LP_1
-558E: 0A          ld   a,(bc)
+558E: 0A          ld   a,(bc)   ; each character until 0xff
 558F: 03          inc  bc
 5590: FE FF       cp   $FF
 5592: 20 02       jr   nz,$5596
 5594: C5          push bc
 5595: C9          ret
-5596: 77          ld   (hl),a   ; writes somewhere to screen
+5596: 77          ld   (hl),a   ; writes to screen loc
 5597: 16 FF       ld   d,$FF
 5599: 1E E0       ld   e,$E0
 559B: 19          add  hl,de
@@ -12206,21 +12035,21 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
     ;; bytes after the call are
     ;; start_x, start_y, tile 1, ...tile x, 0xFF
 DRAW_TILES_V
-58D0: DD E1       pop  ix
+58D0: DD E1       pop  ix       ; pops next addr (eg, data) from stack
 58D2: 26 00       ld   h,$00
-58D4: DD 6E 00    ld   l,(ix+$00)
+58D4: DD 6E 00    ld   l,(ix+$00) ; start_x
 58D7: 29          add  hl,hl
 58D8: 29          add  hl,hl
 58D9: 29          add  hl,hl
 58DA: 29          add  hl,hl
 58DB: 29          add  hl,hl
-58DC: DD 23       inc  ix
+58DC: DD 23       inc  ix       ; start_y
 58DE: DD 7E 00    ld   a,(ix+$00)
 58E1: 85          add  a,l
 58E2: 6F          ld   l,a
 58E3: 01 40 90    ld   bc,$START_OF_TILES
 58E6: 09          add  hl,bc
-58E7: DD 23       inc  ix
+58E7: DD 23       inc  ix       ; read data until 0xff
 58E9: DD 7E 00    ld   a,(ix+$00)
 58EC: FE FF       cp   $FF
 58EE: 28 04       jr   z,$58F4
