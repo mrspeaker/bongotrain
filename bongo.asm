@@ -308,23 +308,11 @@ ATTRACT_MODE_MAYBE
 0101: 0C 09
 0103: 1F 1E 15 10 20 1C 11 29 15 22 FF
 010E: CD 10 03    call $DRAW_TILES_H
-0111: 0F          rrca
-0112: 8B          adc  a,e
-0113: 12          ld   (de),a
-0114: 25          dec  h
-0115: 24          inc  h
-0116: 24          inc  h
-0117: 1F          rra
-0118: 1E FF       ld   e,$FF
+0111: 0F 8B
+0113: 12 25 24 24 1F 1E FF
 011A: CD 10 03    call $DRAW_TILES_H
-011D: 19          add  hl,de
-011E: 09          add  hl,bc
-011F: 13          inc  de
-0120: 22 15 14    ld   ($1415),hl
-0123: 19          add  hl,de
-0124: 24          inc  h
-0125: 23          inc  hl
-0126: FF          rst  $38
+011D: 19 09
+011F: 13 22 15 14 19 24 23 FF
 0127: 21 03 83    ld   hl,$CREDITS
 012A: AF          xor  a
 012B: ED 6F       rld  (hl)
@@ -570,7 +558,7 @@ COINAGE_ROUTINE
     
 030C: FF ...
 
-    ;; Animate tiles?
+    ;; draw sequence of tiles at x/y
 $DRAW_TILES_H
 0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$START_OF_TILES
