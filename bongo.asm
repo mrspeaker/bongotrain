@@ -221,7 +221,7 @@ INIT_SCREEN
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-0051: CD 10 03    call $ANIMATE_TILES ; data next 2 lines
+0051: CD 10 03    call $DRAW_TILES_H ; data next 2 lines
 0054: 09 00                           ; scr pos x / y
 0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; tiles
 0063: 18 E3       jr   $INIT_SCREEN
@@ -301,24 +301,13 @@ ATTRACT_MODE_MAYBE
 00EB: CD 40 08    call $DRAW_SCREEN
 00EE: 00 00                     ; params to DRAW_SCREEN
 00F0: CD 50 24    call $DRAW_SCORE
-00F3: CD 10 03    call $ANIMATE_TILES
-00F6: 09          add  hl,bc
-00F7: 0B          dec  bc
-00F8: 20 22       jr   nz,$011C
-00FA: 15          dec  d
-00FB: 23          inc  hl
-00FC: 23          inc  hl
-00FD: FF          rst  $38
-00FE: CD 10 03    call $ANIMATE_TILES
-0101: 0C          inc  c
-0102: 09          add  hl,bc
-0103: 1F          rra
-0104: 1E 15       ld   e,$15
-0106: 10 20       djnz $0128
-0108: 1C          inc  e
-0109: 11 29 15    ld   de,$1529
-010C: 22 FF CD    ld   ($CDFF),hl
-010F: 10 03       djnz $0114
+00F3: CD 10 03    call $DRAW_TILES_H
+00F6: 09 0B
+00F8: 20 22 15 23 23 FF
+00FE: CD 10 03    call $DRAW_TILES_H
+0101: 0C 09
+0103: 1F 1E 15 10 20 1C 11 29 15 22 FF
+010E: CD 10 03    call $DRAW_TILES_H
 0111: 0F          rrca
 0112: 8B          adc  a,e
 0113: 12          ld   (de),a
@@ -327,7 +316,7 @@ ATTRACT_MODE_MAYBE
 0116: 24          inc  h
 0117: 1F          rra
 0118: 1E FF       ld   e,$FF
-011A: CD 10 03    call $ANIMATE_TILES
+011A: CD 10 03    call $DRAW_TILES_H
 011D: 19          add  hl,de
 011E: 09          add  hl,bc
 011F: 13          inc  de
@@ -357,7 +346,7 @@ ATTRACT_MODE_MAYBE
 014A: B8          cp   b
 014B: 00          nop
 014C: CD D0 00    call $00D0
-014F: CD 10 03    call $ANIMATE_TILES
+014F: CD 10 03    call $DRAW_TILES_H
 0152: 0C          inc  c
 0153: 06 1F       ld   b,$1F
 0155: 1E 15       ld   e,$15
@@ -582,7 +571,7 @@ COINAGE_ROUTINE
 030C: FF ...
 
     ;; Animate tiles?
-ANIMATE_TILES
+$DRAW_TILES_H
 0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$START_OF_TILES
 0316: C1          pop  bc
@@ -604,6 +593,7 @@ ANIMATE_TILES
 032B: 19          add  hl,de
 032C: 19          add  hl,de
 032D: 03          inc  bc
+_LP_1
 032E: 0A          ld   a,(bc)   ; read data until 0xff
 032F: 03          inc  bc
 0330: FE FF       cp   $FF
@@ -615,6 +605,7 @@ ANIMATE_TILES
 0339: 1E E0       ld   e,$E0
 033B: 19          add  hl,de
 033C: 18 F0       jr   $032E
+
 033E: FF ...
 
     ;;
@@ -2186,11 +2177,13 @@ BONGO_ANIM_DATA
 0F86: 00          nop
 0F87: 00          nop
 
-0F88: CD 10 03    call $ANIMATE_TILES
+    ;;  intro inside border top
+0F88: CD 10 03    call $DRAW_TILES_H
 0F8B: 02 02
 0F8D: E0 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7
 0F8D: E7 E7 E7 E7 E7 E7 E7 DF FF
-0FA6: CD D8 3B    call $DRAW_TILES_2
+    ;; intro inside border right
+0FA6: CD D8 3B    call $DRAW_TILES_V_COPY
 0FA9: 02 03
 0FAB: E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6
 0FBB: E6 E6 E6 E6 E6 E6 E6 E6 FF
@@ -2579,13 +2572,13 @@ PREVENT_CLOUD_JUMP_REDACTED
 12AA: FF ...
 
 DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
-12B8: CD 10 03    call $ANIMATE_TILES
+12B8: CD 10 03    call $DRAW_TILES_H
 12BB: 03 00
 12BD: 40 42 43 42 41 40 FF
-12C4: CD 10 03    call $ANIMATE_TILES
+12C4: CD 10 03    call $DRAW_TILES_H
 12C7: 09 00
 12C9: FE FD FD FD FD FC FF
-12D0: CD 10 03    call $ANIMATE_TILES
+12D0: CD 10 03    call $DRAW_TILES_H
 12D3: 1E 00
 12D5: FE FD FD FD FD FC FF
 12DC: CD B0 14    call $14B0
@@ -3022,28 +3015,28 @@ DO_ATTRACT_MODE
 15D9: 3E 8C       ld   a,$8C
 15DB: 32 08 93    ld   ($9308),a
 15DE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15E1: CD 10 03    call $ANIMATE_TILES
+15E1: CD 10 03    call $DRAW_TILES_H
 15E4: 08 10
 15E6: 02 00 00 10 20 24 23 FF
 15EE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F1: 3E 8D       ld   a,$8D
 15F3: 32 0C 93    ld   ($930C),a
 15F6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15F9: CD 10 03    call $ANIMATE_TILES
+15F9: CD 10 03    call $DRAW_TILES_H
 15FC: 0C 10
 15FD: 04 00 00 10 20 24 23 FF
 1606: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1609: 3E 8E       ld   a,$8E
 160B: 32 10 93    ld   ($9310),a
 160E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1611: CD 10 03    call $ANIMATE_TILES
+1611: CD 10 03    call $DRAW_TILES_H
 1614: 10 10
 1616: 06 00 00 10 20 24 23 FF
 161E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1621: 3E 8F       ld   a,$8F
 1623: 32 14 93    ld   ($9314),a
 1626: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1629: CD 10 03    call $ANIMATE_TILES
+1629: CD 10 03    call $DRAW_TILES_H
 162C: 14 10
 162E: 01 00 00 00 10 20 24 23 FF
 1637: CD 60 16    call $ANIMATE_SPLASH_SCREEN
@@ -3129,15 +3122,15 @@ UPDATE_SPEED_TIMERS
 
 
 DRAW_BONUS
-16D0: CD 10 03    call $ANIMATE_TILES
+16D0: CD 10 03    call $DRAW_TILES_H
 16D3: 0A 00
 16D5: E0 DC DD DE DF FF
-16DB: CD 10 03    call $ANIMATE_TILES
+16DB: CD 10 03    call $DRAW_TILES_H
 16DE: 0B 00
 16E0: E1 E5 E5 E5 E6 FF
-16E6: CD 10 03    call $ANIMATE_TILES
+16E6: CD 10 03    call $DRAW_TILES_H
 16E9: 0C 00 E1 E5 E5 E5 E6 FF
-16F1: CD 10 03    call $ANIMATE_TILES
+16F1: CD 10 03    call $DRAW_TILES_H
 16F4: 0D 00
 16F6: E2 E3 E3 E3 E4 FF
 16FC: C9          ret
@@ -3275,23 +3268,23 @@ RESET_DINO
 
 17CB: FF ...
 
-17D0: CD 10 03    call $ANIMATE_TILES
+17D0: CD 10 03    call $DRAW_TILES_H
 17D3: 0A 00
 17D5: B8 B4 B5 B6 B7 FF
-17DB: CD 10 03    call $ANIMATE_TILES
+17DB: CD 10 03    call $DRAW_TILES_H
 17DE: 0B 00
 17E0: B9 FF
-17E2: CD 10 03    call $ANIMATE_TILES
+17E2: CD 10 03    call $DRAW_TILES_H
 17E5: 0B 04
 17E7: BE FF
-17E9: CD 10 03    call $ANIMATE_TILES
-17EC: 0C 00          nop
+17E9: CD 10 03    call $DRAW_TILES_H
+17EC: 0C 00
 17EE: B9 FF
-17F0: CD 10 03    call $ANIMATE_TILES
+17F0: CD 10 03    call $DRAW_TILES_H
 17F3: 0C 04
 17F5: BE FF
-17F7: CD 10 03    call $ANIMATE_TILES
-17FA: 0D 00          nop
+17F7: CD 10 03    call $DRAW_TILES_H
+17FA: 0D 00
 17FC: BA BB BB BB BC FF
 1802: C9          ret
 1803: FF ...
@@ -3941,11 +3934,11 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BA7: 3A 04 80    ld   a,($PLAYER_NUM)
 1BAA: A7          and  a
 1BAB: 20 10       jr   nz,$1BBD
-1BAD: CD 10 03    call $ANIMATE_TILES
+1BAD: CD 10 03    call $DRAW_TILES_H
 1BB0: 10 0A
 1BB2: 20 1C 11 29 15 22 10 01 FF
 1BBB: 18 0E       jr   $1BCB
-1BBD: CD 10 03    call $ANIMATE_TILES
+1BBD: CD 10 03    call $DRAW_TILES_H
 1BC0: 10 0A
 1BC2: 20 1C 11 29 15 22 10 02 FF
 1BCB: CD 41 1C    call $1C41
@@ -3956,8 +3949,8 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BD4: C9          ret
 
 1BD5: FF          rst  $38
-1BD6: CD 10 03    call $ANIMATE_TILES
-1BD9: 1B 02       ld   (bc),a
+1BD6: CD 10 03    call $DRAW_TILES_H
+1BD9: 1B 02
 1BDB: E2 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3
 1BEB: E3 E3 E3 E3 E3 E3 E3 E4 FF
 1BF4: C3 D8 1C    jp   $1CD8
@@ -4075,7 +4068,7 @@ DINO_COLLISION
 
 1CD6: FF ..
 
-1CD8: CD D8 3B    call $DRAW_TILES_2
+1CD8: CD D8 3B    call $DRAW_TILES_V_COPY
 1CDB: 19 03
 1CDD: E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1
 1CED: E1 E1 E1 E1 E1 E1 E1 E1 FF
@@ -6229,7 +6222,7 @@ P2_GOT_HISCORE
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
 2DA1: 00 00                         ; params to DRAW_SCREEN
-2DA3: CD 10 03    call $ANIMATE_TILES
+2DA3: CD 10 03    call $DRAW_TILES_H
 2DA6: 04          inc  b
 2DA7: 0A          ld   a,(bc)
 2DA8: 20 1C       jr   nz,$2DC6
@@ -6253,7 +6246,7 @@ P2_GOT_HISCORE
 2DC6: 23          inc  hl
 2DC7: 24          inc  h
 2DC8: FF          rst  $38
-2DC9: CD 10 03    call $ANIMATE_TILES
+2DC9: CD 10 03    call $DRAW_TILES_H
 2DCC: 09          add  hl,bc
 2DCD: 03          inc  bc
 2DCE: 23          inc  hl
@@ -6266,7 +6259,7 @@ P2_GOT_HISCORE
 2DD8: 18 15       jr   $2DEF
 2DDA: 10 14       djnz $2DF0
 2DDC: 11 29 FF    ld   de,$FF29
-2DDF: CD 10 03    call $ANIMATE_TILES
+2DDF: CD 10 03    call $DRAW_TILES_H
 2DE2: 0B          dec  bc
 2DE3: 03          inc  bc
 2DE4: 20 1C       jr   nz,$2E02
@@ -6281,7 +6274,7 @@ P2_GOT_HISCORE
 2DF4: 22 10 1E    ld   ($1E10),hl
 2DF7: 11 1D 15    ld   de,$151D
 2DFA: FF          rst  $38
-2DFB: CD 10 03    call $ANIMATE_TILES
+2DFB: CD 10 03    call $DRAW_TILES_H
 2DFE: 0D          dec  c
 2DFF: 03          inc  bc
 2E00: 11 10 12    ld   de,$1210
@@ -6296,7 +6289,7 @@ P2_GOT_HISCORE
 2E13: 10 1B       djnz $2E30
 2E15: 10 1C       djnz $2E33
 2E17: FF          rst  $38
-2E18: CD 10 03    call $ANIMATE_TILES
+2E18: CD 10 03    call $DRAW_TILES_H
 2E1B: 0F          rrca
 2E1C: 03          inc  bc
 2E1D: 1D          dec  e
@@ -6312,7 +6305,7 @@ P2_GOT_HISCORE
 2E30: 10 27       djnz $2E59
 2E32: 10 28       djnz $2E5C
 2E34: FF          rst  $38
-2E35: CD 10 03    call $ANIMATE_TILES
+2E35: CD 10 03    call $DRAW_TILES_H
 2E38: 11 03 29    ld   de,$2903
 2E3B: 10 2A       djnz $2E67
 2E3D: 10 10       djnz $2E4F
@@ -6328,7 +6321,7 @@ P2_GOT_HISCORE
 2E50: 5A          ld   e,d
 2E51: 5B          ld   e,e
 2E52: FF          rst  $38
-2E53: CD 10 03    call $ANIMATE_TILES
+2E53: CD 10 03    call $DRAW_TILES_H
 2E56: 17          rla
 2E57: 0A          ld   a,(bc)
 2E58: 2B          dec  hl
@@ -7561,22 +7554,22 @@ CHECK_BUTTONS_FOR_SOMETHING
 
 38DF: FF          rst  $38
 
-38E0: CD 10 03    call $ANIMATE_TILES
+38E0: CD 10 03    call $DRAW_TILES_H
 38E3: 0A 00
 38E5: E0 DC DD DE DF FF
-38EB: CD 10 03    call $ANIMATE_TILES
+38EB: CD 10 03    call $DRAW_TILES_H
 38EE: 0B 00
 38F0: E1 FF
-38F2: CD 10 03    call $ANIMATE_TILES
+38F2: CD 10 03    call $DRAW_TILES_H
 38F5: 0B 04
 38F7: E6 FF
-38F9: CD 10 03    call $ANIMATE_TILES
+38F9: CD 10 03    call $DRAW_TILES_H
 38FC: 0C 00
 38FE: E1 FF
-3900: CD 10 03    call $ANIMATE_TILES
+3900: CD 10 03    call $DRAW_TILES_H
 3903: 0C 04
 3905: E6 FF
-3907: CD 10 03    call $ANIMATE_TILES
+3907: CD 10 03    call $DRAW_TILES_H
 390A: 0D 00
 390C: E2 E3 E3 E3 E4 FF
 3912: C9          ret
@@ -7944,8 +7937,7 @@ RESET_XOFFS                     ;(or colors?)
 
 3BD7: FF
 
-    ;; how is this different to DRAW_TILES_H?
-DRAW_TILES_2
+DRAW_TILES_V_COPY
 3BD8: DD E1       pop  ix
 3BDA: 26 00       ld   h,$00
 3BDC: DD 6E 00    ld   l,(ix+$00) ; param 1
@@ -8009,7 +8001,7 @@ SCR_TYPE_1
 3C3E: 32 4B 80    ld   ($804B),a
 3C41: A7          and  a
 3C42: 20 0B       jr   nz,$3C4F
-3C44: CD 10 03    call $ANIMATE_TILES
+3C44: CD 10 03    call $DRAW_TILES_H
 3C47: 1D          dec  e
 3C48: 0E 80       ld   c,$80
 3C4A: 80          add  a,b
@@ -8020,7 +8012,7 @@ SCR_TYPE_1
 
 3C4F: FE 01       cp   $01
 3C51: 20 0B       jr   nz,$3C5E
-3C53: CD 10 03    call $ANIMATE_TILES
+3C53: CD 10 03    call $DRAW_TILES_H
 3C56: 1D          dec  e
 3C57: 0E 85       ld   c,$85
 3C59: 81          add  a,c
@@ -8031,7 +8023,7 @@ SCR_TYPE_1
 
 3C5E: FE 02       cp   $02
 3C60: 20 0B       jr   nz,$3C6D
-3C62: CD 10 03    call $ANIMATE_TILES
+3C62: CD 10 03    call $DRAW_TILES_H
 3C65: 1D          dec  e
 3C66: 0E 86       ld   c,$86
 3C68: 82          add  a,d
@@ -8040,7 +8032,7 @@ SCR_TYPE_1
 3C6B: FF          rst  $38
 3C6C: C9          ret
 
-3C6D: CD 10 03    call $ANIMATE_TILES
+3C6D: CD 10 03    call $DRAW_TILES_H
 3C70: 1D          dec  e
 3C71: 0E 85       ld   c,$85
 3C73: 83          add  a,e
@@ -8058,10 +8050,10 @@ SCR_TYPE_2
 3C81: 32 4B 80    ld   ($804B),a
 3C84: A7          and  a
 3C85: 20 0C       jr   nz,$3C93
-3C87: CD 10 03    call $ANIMATE_TILES
+3C87: CD 10 03    call $DRAW_TILES_H
 
     ;; lava animation data
-3C8A: 19 0F                     ;read by sub at $ANIMATE_TILES
+3C8A: 19 0F                     ;read by sub at $DRAW_TILES_H
 3C8C: 80
 3C8D: 80          add  a,b
 3C8E: 80          add  a,b
@@ -8072,8 +8064,8 @@ SCR_TYPE_2
 
 3C93: FE 01       cp   $01
 3C95: 20 0C       jr   nz,$3CA3
-3C97: CD 10 03    call $ANIMATE_TILES
-3C9A: 19 0F                     ;read by sub at $ANIMATE_TILES
+3C97: CD 10 03    call $DRAW_TILES_H
+3C9A: 19 0F                     ;read by sub at $DRAW_TILES_H
 3C9C: 85                        ; lava tile 1
 3C9D: 81          add  a,c
 3C9E: 84          add  a,h
@@ -8084,9 +8076,9 @@ SCR_TYPE_2
 
 3CA3: FE 02       cp   $02
 3CA5: 20 0C       jr   nz,$3CB3
-3CA7: CD 10 03    call $ANIMATE_TILES
+3CA7: CD 10 03    call $DRAW_TILES_H
 
-3CAA: 19 0F                     ; read by sub at $ANIMATE_TILES
+3CAA: 19 0F                     ; read by sub at $DRAW_TILES_H
 3CAC: 86                        ; lava tile 2
 3CAD: 82          add  a,d
 3CAE: 88          adc  a,b
@@ -8095,8 +8087,8 @@ SCR_TYPE_2
 3CB1: FF          rst  $38
 3CB2: C9          ret
 
-3CB3: CD 10 03    call $ANIMATE_TILES
-3CB6: 19 0F                     ;read by sub at $ANIMATE_TILES
+3CB3: CD 10 03    call $DRAW_TILES_H
+3CB6: 19 0F                     ;read by sub at $DRAW_TILES_H
 3CB8: 85
 3CB9: 83          add  a,e
 3CBA: 80          add  a,b
@@ -8259,7 +8251,7 @@ DO_CUTSCENE
 3DCF: 32 33 81    ld   ($SCREEN_XOFF_COL+33),a
 3DD2: 32 35 81    ld   ($SCREEN_XOFF_COL+35),a
 3DD5: 32 37 81    ld   ($SCREEN_XOFF_COL+37),a
-3DD8: CD 10 03    call $ANIMATE_TILES
+3DD8: CD 10 03    call $DRAW_TILES_H
 3DDB: 1C          inc  e
 3DDC: 00          nop
 3DDD: 38 39       jr   c,$3E18
@@ -8285,7 +8277,7 @@ DO_CUTSCENE
 3DFA: 39          add  hl,sp
 3DFB: 39          add  hl,sp
 3DFC: 38 FF       jr   c,$3DFD
-3DFE: CD 10 03    call $ANIMATE_TILES
+3DFE: CD 10 03    call $DRAW_TILES_H
 3E01: 12          ld   (de),a
 3E02: 00          nop
 3E03: FE FD       cp   $FD
@@ -8412,7 +8404,7 @@ DELAY_N_4E90
 3F0A: FF ...
 
 ;;; Probably the level tiles at the bottom of the screen
-3F10: CD 10 03    call $ANIMATE_TILES
+3F10: CD 10 03    call $DRAW_TILES_H
 3F13: 1F          rra
 3F14: 00          nop
 3F15: C0 C1 C2 C3 C4 C5 C6 C7
@@ -8454,8 +8446,8 @@ DELAY_N_4E90
 
 3F64: FF FF
 
-3F66: CD 10 03    call $ANIMATE_TILES
-    ;; data again.. how is it used? must be by animate_tiles!
+3F66: CD 10 03    call $DRAW_TILES_H
+    ;; data again.. how is it used? must be by $DRAW_TILES_H!
 3F69: 0C          inc  c
 3F6A: 0A          ld   a,(bc)
 3F6B: 1A          ld   a,(de)
@@ -8467,7 +8459,7 @@ DELAY_N_4E90
 3F72: FF          rst  $38
 3F73: C9          ret
 
-3F74: CD 10 03    call $ANIMATE_TILES
+3F74: CD 10 03    call $DRAW_TILES_H
 3F77: 14          inc  d
 3F78: 07          rlca
 3F79: 20 22       jr   nz,$3F9D
@@ -8485,13 +8477,13 @@ DELAY_N_4E90
 
 3F8A: FF FF
 
-3F8C: CD 10 03    call $ANIMATE_TILES
+3F8C: CD 10 03    call $DRAW_TILES_H
 3F8F: 10 04       djnz $3F95
 3F91: 8B          adc  a,e
 3F92: 01 09 08    ld   bc,$0809
 3F95: 03          inc  bc
 3F96: FF          rst  $38
-3F97: CD 10 03    call $ANIMATE_TILES
+3F97: CD 10 03    call $DRAW_TILES_H
 3F9A: 12          ld   (de),a
 3F9B: 04          inc  b
 3F9C: 1A          ld   a,(de)
@@ -8505,7 +8497,7 @@ DELAY_N_4E90
 
 3FA5: FF ...
 
-3FA8: CD 10 03    call $ANIMATE_TILES
+3FA8: CD 10 03    call $DRAW_TILES_H
 3FAB: 1F          rra
 3FAC: 00          nop
 3FAD: 10 10       djnz $3FBF
@@ -11544,15 +11536,15 @@ CALL_DO_ATTRACT_MODE
 
     ;; bytes after the call are
     ;; start_x, start_y, tile 1, ...tile x, 0xFF
-DRAW_TILES_H
+DRAW_TILES_H_COPY
 5570: 3A 00 B8    ld   a,($WATCHDOG) ; is this ack? "A" not used
 5573: 21 40 90    ld   hl,$START_OF_TILES
 5576: C1          pop  bc       ; stack return pointer into bc (ie, data)
 5577: 0A          ld   a,(bc)   ; start_x
-5578: 03          inc  bc       ; start_y
+5578: 03          inc  bc
 5579: 85          add  a,l
 557A: 6F          ld   l,a
-557B: 0A          ld   a,(bc)
+557B: 0A          ld   a,(bc)   ; start_y
 557C: 5F          ld   e,a
 557D: 3E 1B       ld   a,$1B
 557F: 93          sub  e
@@ -11579,7 +11571,7 @@ _LP_1
 559B: 19          add  hl,de
 559C: 18 F0       jr   _LP_1
 
-559E: FF ..
+559E: FF ...
 
 55A0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
@@ -11588,15 +11580,15 @@ _LP_1
 55AA: 00          nop
 55AB: 00          nop
 55AC: CD A8 5A    call $FLASH_BORDER
-55AF: CD 70 55    call $DRAW_TILES_H
+55AF: CD 70 55    call $DRAW_TILES_H_COPY
 55B2: 08 0B
 55B4: 12 15 27 11 22 15 FF
 55BB: CD A8 5A    call $FLASH_BORDER
-55BE: CD 70 55    call $DRAW_TILES_H
+55BE: CD 70 55    call $DRAW_TILES_H_COPY
 55C1: 0C 05
 55C3: 29 1F 25 22 10 12 15 19 1E 17 10 18 23 15 14 FF
 55D5: CD A8 5A    call $FLASH_BORDER
-55D8: CD 70 55    call $DRAW_TILES_H
+55D8: CD 70 55    call $DRAW_TILES_H_COPY
 55DB: 10 07
 55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
 55EB: C3 B2 48    jp   $48B2
@@ -11934,35 +11926,35 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 57C3: CD 81 5C    call $JMP_HL
 57C6: 21 88 0F    ld   hl,$0F88
 57C9: CD 81 5C    call $JMP_HL
-57CC: CD 70 55    call $DRAW_TILES_H
+57CC: CD 70 55    call $DRAW_TILES_H_COPY
 57CF: 08 08
 57D1: 15 28 24 22 11 10 12 1F 1E 25 23 FF
-57DD: CD 70 55    call $DRAW_TILES_H
+57DD: CD 70 55    call $DRAW_TILES_H_COPY
 57E0: 09 08
 57E2: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 57EE: CD B0 4E    call $4EB0
 57F1: CD B0 4E    call $4EB0
-57F4: CD 70 55    call $DRAW_TILES_H
+57F4: CD 70 55    call $DRAW_TILES_H_COPY
 57F7: 0C 07
 57F9: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
-5809: CD 70 55    call $DRAW_TILES_H
+5809: CD 70 55    call $DRAW_TILES_H_COPY
 580C: 10 07
 580E: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
-581E: CD 70 55    call $DRAW_TILES_H
+581E: CD 70 55    call $DRAW_TILES_H_COPY
 5821: 14 07
 5823: 1C 1F 23 19 1E 10 11 10 1C 19 16 15 FF
 5831: CD B0 4E    call $4EB0
 5834: CD B0 4E    call $4EB0
-5837: CD 70 55    call $DRAW_TILES_H
+5837: CD 70 55    call $DRAW_TILES_H_COPY
 583A: 17 0B
 583C: E0 DC DD DE DF FF
-5842: CD 70 55    call $DRAW_TILES_H
+5842: CD 70 55    call $DRAW_TILES_H_COPY
 5845: 18 0B
 5847: E1 E8 EA F2 E6 FF
-584D: CD 70 55    call $DRAW_TILES_H
+584D: CD 70 55    call $DRAW_TILES_H_COPY
 5850: 19 0B
 5852: E1 E9 EB F3 E6 FF
-5858: CD 70 55    call $DRAW_TILES_H
+5858: CD 70 55    call $DRAW_TILES_H_COPY
 585B: 1A 0B
 585D: E2 E3 E3 E3 E4 FF
 5853: CD B0 4E    call $4EB0
@@ -12063,7 +12055,7 @@ DRAW_TILES_V
 58F9: FF ...
 
 DRAW_SPLASH_CIRCLE_BORDER_1
-5900: CD 70 55    call $DRAW_TILES_H
+5900: CD 70 55    call $DRAW_TILES_H_COPY
 5903: 01 01                ; start pos
     ;; splash screen circle border (26 = tiles)
     ;; Top Row 1
@@ -12083,7 +12075,7 @@ DRAW_SPLASH_CIRCLE_BORDER_1
 5955: 52 53 51 52 53 51 52 53 51 52 FF
 
     ;; Bottom row 1
-5960: CD 70 55    call $DRAW_TILES_H
+5960: CD 70 55    call $DRAW_TILES_H_COPY
 5963: SCR_TILE_H 01      ; start pos
 5965: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
 5975: 51 52 53 51 52 53 51 52 53 51 FF
@@ -12092,7 +12084,7 @@ DRAW_SPLASH_CIRCLE_BORDER_1
 5981: FF ...
 
 DRAW_SPLASH_CIRCLE_BORDER_2
-5988: CD 70 55    call $DRAW_TILES_H
+5988: CD 70 55    call $DRAW_TILES_H_COPY
 598B: 01 01
 598D: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
 599D: 53 51 52 53 51 52 53 51 52 53 FF
@@ -12107,7 +12099,7 @@ DRAW_SPLASH_CIRCLE_BORDER_2
 59CD: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
 59DD: 51 52 53 51 52 53 51 52 53 51 FF           rst  $38
     ;;
-59E8: CD 70 55    call $DRAW_TILES_H
+59E8: CD 70 55    call $DRAW_TILES_H_COPY
 59EB: 1C 01
 59ED: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
 59FD: 53 51 52 53 51 52 53 51 52 53 FF
@@ -12116,7 +12108,7 @@ DRAW_SPLASH_CIRCLE_BORDER_2
 5A09: FF ...
 
 DRAW_SPLASH_CIRCLE_BORDER_3
-5A10: CD 70 55    call $DRAW_TILES_H
+5A10: CD 70 55    call $DRAW_TILES_H_COPY
 5A13: 01 01
 5A15: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
 5A25: 51 52 53 51 52 53 51 52 53 51 FF
@@ -12131,7 +12123,7 @@ DRAW_SPLASH_CIRCLE_BORDER_3
 5A55: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
 5A65: 53 51 52 53 51 52 53 51 52 53 FF
     ;;
-5A70: CD 70 55    call $DRAW_TILES_H
+5A70: CD 70 55    call $DRAW_TILES_H_COPY
 5A73: 1C 01
 5A75: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
 5A85: 52 53 51 52 53 51 52 53 51 52 FF
@@ -12203,36 +12195,36 @@ DRAW_EXTRA_BONUS_SCREEN
 5AF6: 21 88 0F    ld   hl,$0F88
 5AF9: CD 81 5C    call $JMP_HL
 5AFC: CD E6 5A    call $5AE6
-5AFF: CD 70 55    call $DRAW_TILES_H
+5AFF: CD 70 55    call $DRAW_TILES_H_COPY
 5B02: 08 08
     ;; EXTRA BONUS
 5B04: 15 28 24 22 11 10 12 1F 1E 25 23 FF
-5B10: CD 70 55    call $DRAW_TILES_H
+5B10: CD 70 55    call $DRAW_TILES_H_COPY
 5B13: 09 08
 5B15: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 5B21: CD A8 5A    call $FLASH_BORDER
 5B24: CD A8 5A    call $FLASH_BORDER
-5B27: CD 70 55    call $DRAW_TILES_H
+5B27: CD 70 55    call $DRAW_TILES_H_COPY
 5B2A: 0C 07
     ;; PICK UP 6 BONUS
 5B2C: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
-5B3C: CD 70 55    call $DRAW_TILES_H
+5B3C: CD 70 55    call $DRAW_TILES_H_COPY
 5B3F: 10 07
 5B41: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
-5B51: CD 70 55    call $DRAW_TILES_H
+5B51: CD 70 55    call $DRAW_TILES_H_COPY
 5B54: 14 07
 5B56: 1C 1F 23 19 1E 17 10 11 10 1C 19 16 15 FF
 5B64: CD A8 5A    call $FLASH_BORDER
-5B67: CD 70 55    call $DRAW_TILES_H
+5B67: CD 70 55    call $DRAW_TILES_H_COPY
 5B6A: 17 0B
 5B6C: E0 DC DD DE DF FF
-5B72: CD 70 55    call $DRAW_TILES_H
+5B72: CD 70 55    call $DRAW_TILES_H_COPY
 5B75: 18 0B
 5B77: E1 E5 E5 E5 E6 FF
-5B7D: CD 70 55    call $DRAW_TILES_H
+5B7D: CD 70 55    call $DRAW_TILES_H_COPY
 5B80: 19 0B
 5B82: E1 E5 E5 E5 E6 FF
-5B88: CD 70 55    call $DRAW_TILES_H
+5B88: CD 70 55    call $DRAW_TILES_H_COPY
 5B8B: 1A 0B
 5B8D: E2 E3 E3 E3 E4 FF CD A8 5A CD A8 5A CD C8 5B C9 FF
 5B9E: FF ...
