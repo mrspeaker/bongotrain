@@ -1,16 +1,16 @@
 -- Bongo Training Montage --
 
 start_screen = 1 -- used if not looping
-loop_screens = {} --{14,13,18,13,18,13,10,13,14,18,24,25} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
+loop_screens = {} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
-round_two = true -- start in round two
+round_two = false -- start in round two
 
 infinite_lives = true
 disable_round_speed_up = true -- don't get faster after catching dino
-skip_cutscene = false -- don't show the cutscene
-disable_dino = false   -- no pesky dino... but now you can't catch him
+skip_cutscene = true -- don't show the cutscene
+disable_dino = true   -- no pesky dino... but now you can't catch him
 fast_death = false    -- restart super fast after death (oops, messes with dino!)
 
 -- Removed features I found in the code

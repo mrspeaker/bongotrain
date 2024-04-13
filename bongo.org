@@ -303,8 +303,9 @@ A 7 "types" of level - progressively more difficult
 intro S quite late - very exciting
 awesome cut scene... but weirdly, no bonus.
 ---
-29 pickups: 4 full sets of bonuses, max bonus = 10 + 20 + 30 + 40k = 100k
-~100k for screens, + 100k for bonus  = ~200k max for one round.
+33 pickups: 5 full sets of bonuses, max bonus = 10 + 20 + 30 + 40 + 40 = 140k
+~60k for screens, + 140k for bonus  = ~200k max for one round.
+
 ----
 
 7 types of level
@@ -321,36 +322,42 @@ n_n, nTn, /,^^,\, S, Sc
 04: n_n  bird bottom, rock right | crown right
 05: /    | crown center
 06: W    | crown center
+(bonuses: 6)
 07: \    | cross center
-
 08: n_n  bird bottom, rock left, rock right | cross right
 09: nTn  rock right | cross right
 10: /    bluey center | crown center
 11: W    bird top, | crown center, ring right
+(bonuses: 6)
 12: \    blue center, blue center | cross center
 13: n_n  bird bottom, rock left, rock right | crown right (same pattern as 8)
 14: nTn  rock left, rock right | ring left, cross right
-
 15: n_n  ltr bird bottom, bird right | cross right
 16: S    | ring bottom center, vase top left
+(bonuses: 7)
 17: \    ltr bird center, bluey center, bluey center | cross center
 18: n_n  ltr bird bottom, bird bottom, rock right | cross right
 19: S    arrow center, arrow top | ring bottom, vase top right
 20: \     arrow center, arrow top, bluey center | cross center
-
-21: S_S  | crown bottom, cross center, vase top
+21: S_S  | crown bottom, ... cross center, vase top
+(bonuses: 8)
 22: W    bird top, ltr bird top | crown center, ring right
 23: \    bird bottom, ltr bird center, bluey center | cross center
 24: S_S  flame (x3) center | crown bottom, cross center, vase top
+(bonuses: 6)
 25: W    bird top, ltr bird top, ltr bird top | crown center, ring right
 26: \    arrow top, arrow center, arrow bottom | cross center
 27: S    bird top, ltr bird top, ltr bird top
-
+(bonuses: 6)
 #+END_SRC
 
 level 8 and 13 are the same level (different pickup!)
 
 ledge on blue meaninies - important later
+
+levels lead up and down consistently: pro tip, careful getting bonuses at the bottom - forget to look up at the birds on the next level.
+
+No bonus for catching dino. how cool is that? Also, dino screen is lowest point scoring: no bonuses to pickup, can't get full move bonus
 
 ----
 3s and 6s... plus offset by 1
@@ -650,4 +657,18 @@ But to be an issue, a JUMP_TRIGGERED has to happen before GROUND_CHECK clears th
 
 Maybe NMI sets CONTROLN slightly earlier on level 2 for some reason? Then jump is set BEFORE check ground... otherwise check ground resets the falling_timer before jump sets jump_tbl_idx/
 
-But why the inconsistency? Always triggers on level 1->2, but more random on other screens. Should be random everywhere?
+Or, if not NMI issue: it's DO_JUMP_PHYSICS: only runs once every 6 frames (in round 1, then 4 after that)... this triggers jump. Seems right, 1-in-6 chance to trigger: Buuut, why does it run EVERY TIME in screen 2?
+
+Why the inconsistency? Always triggers on level 1->2, but more random on other screens. Should be random everywhere?
+
+
+* lore
+   ;; - We decided "Bongo" is actually name of the lil' jumpy
+    ;;   guy in the corner of the screen, not the player.
+    ;;   He's complicated: celebrates the player's death,
+    ;;   but also parties with player on dino capture.
+
+    what are those lil' bongolians at the dance party?
+
+    is the player Australian? Spanish? Wearing high-heels? Indiana Jones (Raiders was 1981).
+    Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?

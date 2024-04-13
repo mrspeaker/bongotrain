@@ -37,7 +37,8 @@
     _UNUSED_1      $801B  ; unused? Set once, never read
     SCORE_TO_ADD   $801D  ; amount to add to the current score
 
-    _              $8020  ; ???
+    LEVEL_DATA_PTR $8020  ; screen data pointer (2 byte addr)
+
     DID_INIT       $8022  ; set after first init, not really used
     BONGO_ANIM_TIMER $8023 ; [0,1,2] updated every 8 ticks
     BONGO_JUMP_TIMER $8024 ; amount of ticks keep jumping for
@@ -1031,7 +1032,7 @@ PLAYER_INPUT
 0697: C0          ret  nz       ; don't do this input if jumping?
 0698: 3A 0E 80    ld   a,($CONTROLSN)
 069B: CB 6F       bit  5,a      ; jump pressed? 0010 0000
-069D: 28 17       jr   z,$06B6
+069D: 28 17       jr   z,$_NO_JUMP
 069F: CD 10 07    call $SET_UNUSED_804A_49
 06A2: CB 57       bit  2,a      ; not left? 0000 0100
 06A4: 28 04       jr   z,$06AA
@@ -1044,6 +1045,7 @@ PLAYER_INPUT
 06B2: CD C0 08    call $TRIGGER_JUMP_STRAIGHT_UP
 06B5: C9          ret
     ;; no jump: left/right?
+_NO_JUMP
 06B6: CB 57       bit  2,a      ; is left?
 06B8: 28 04       jr   z,$06BE
 06BA: CD 58 06    call $PLAYER_MOVE_LEFT
@@ -1052,7 +1054,7 @@ PLAYER_INPUT
 06C0: 28 04       jr   z,$06C6
 06C2: CD 18 06    call $PLAYER_MOVE_RIGHT
 06C5: C9          ret
-    ;; looks like bit 4 and 6 aren't used
+    ;; looks like bit 4 and 6 aren't used (up/dpwn?)
 06C6: CB 67       bit  4,a      ;?
 06C8: 28 04       jr   z,$06CE
 06CA: 00          nop
@@ -1069,7 +1071,7 @@ PLAYER_INPUT
 
 06D5: FF ...
 
-    ;; Physics: fall with gravity (maybe?)
+    ;; "Physics": do jumps according to jump lookup tables
 PLAYER_PHYSICS
 06D8: 00          nop
 06D9: 00          nop
@@ -1149,34 +1151,36 @@ PHYS_JUMP_LOOKUP_RIGHT           ; right?
 
 076C: FF ...
 
-DO_JUMP_PHYSICS
+    ;; only runs every "tick_mod_slow" frames
+APPLY_JUMP_PHYSICS
 0774: 3A 16 83    ld   a,($TICK_MOD_SLOW) ; speeds up after round 1
 0777: E6 07       and  $07
 0779: C0          ret  nz
 077A: 3A 12 80    ld   a,($PLAYER_DIED)
 077D: A7          and  a
 077E: C0          ret  nz       ; dead, get out
-077F: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; return if not jumping/falling
+077F: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; return if not mid jump tbl
 0782: A7          and  a
 0783: C8          ret  z
 0784: 3E 01       ld   a,$01             ;
 0786: 32 05 80    ld   (JUMP_TRIGGERED),a ; jump was triggererd
+    ;; set the correct jump lookup table based on left, right, or none.
 0789: 3A 0E 80    ld   a,($CONTROLSN)
 078C: CB 57       bit  2,a      ; not left?
-078E: 28 07       jr   z,$PHYS_JUMP_RIGHT_OR_UP  ; (no, not right_l, go check left or none)
-0790: 21 28 07    ld   hl,$PHYS_JUMP_LOOKUP_LEFT
+078E: 28 07       jr   z,$PHYS_JUMP_SET_RIGHT_OR_UP_LOOKUP
+0790: 21 28 07    ld   hl,$PHYS_JUMP_SET_LEFT_LOOKUP
 0793: CD D8 06    call $PLAYER_PHYSICS
 0796: C9          ret
 0797: C3 E0 07    jp   $07E0
 
 079A: FF ...
 
-;;; jump button, but not jumping, and on ground)
+;;; jump button, but not jumping, and on ground, right
 TRIGGER_JUMP_RIGHT
-07A0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
+07A0: 3A 05 80    ld   a,(JUMP_TRIGGERED) ; already jumping, leave
 07A3: A7          and  a
 07A4: C0          ret  nz
-07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
+07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; already jumping, leave
 07A8: A7          and  a
 07A9: C0          ret  nz       ;
 07AA: CD 88 09    call $GROUND_CHECK 
@@ -1190,14 +1194,14 @@ TRIGGER_JUMP_RIGHT
 07BB: C3 F4 07    jp   $PLAY_JUMP_SFX
 07BE: C9          ret
 
-07BF: FF          rst  $38
+07BF: FF
 
-;;;  is this one when jump left?
+;;; jump button, but not jumping, and on ground, left
 TRIGGER_JUMP_LEFT
-07C0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
+07C0: 3A 05 80    ld   a,(JUMP_TRIGGERED) ; already jumping, leave
 07C3: A7          and  a
 07C4: C0          ret  nz
-07C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
+07C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; already jumping, leave
 07C8: A7          and  a
 07C9: C0          ret  nz
 07CA: CD 88 09    call $GROUND_CHECK
@@ -1214,7 +1218,7 @@ TRIGGER_JUMP_LEFT
 07DF: FF
 
     ;; Right or no direction checkt
-PHYS_JUMP_RIGHT_OR_UP
+PHYS_JUMP_SET_RIGHT_OR_UP_LOOKUP
 07E0: CB 5F       bit  3,a      ; right?
 07E2: 28 07       jr   z,$07EB
 07E4: 21 50 07    ld   hl,$PHYS_JUMP_LOOKUP_RIGHT
@@ -1380,6 +1384,7 @@ TRIGGER_JUMP_STRAIGHT_UP
     
 08DC: FF ...
 
+MOVE_BONGO_RIGHT
 08E8: 3A 12 83    ld   a,($TICK_NUM)
 08EB: E6 07       and  $07
 08ED: 20 15       jr   nz,$0904
@@ -1492,7 +1497,7 @@ CHECK_IF_LANDED_ON_GROUND
 09C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 09C8: A7          and  a
 09C9: 28 1B       jr   z,$_JUMP_TBL_IDX_0
-09CB: E6 0C       and  $0C      ; 0000 1100 (only last 3 are falling)
+09CB: E6 0C       and  $0C      ; 1100 (only last 3 entries are falling)
 09CD: C0          ret  nz       ; not falling, leave
 09CE: CD 88 09    call $GROUND_CHECK
 09D1: A7          and  a
@@ -1513,7 +1518,7 @@ _JUMP_TBLE_IDX_0
 09EC: 3A 11 80    ld   a,($FALLING_TIMER)
 09EF: A7          and  a
 09F0: C0          ret  nz
-09F1: 3E 10       ld   a,$10
+09F1: 3E 10       ld   a,$10    ; start falling timer
 09F3: 32 11 80    ld   ($FALLING_TIMER),a
 09F6: C9          ret
 _ON_GROUND
@@ -1524,6 +1529,7 @@ _ON_GROUND
     
 09FF: FF ...
 
+MOVE_BONGO_LEFT
 0A08: 3A 12 83    ld   a,($TICK_NUM)
 0A0B: E6 07       and  $07
 0A0D: 20 15       jr   nz,$0A24
@@ -1534,7 +1540,7 @@ _ON_GROUND
 0A16: 00          nop
 0A17: 00          nop
 0A18: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
-0A1B: 21 20 09    ld   hl,$0920
+0A1B: 21 20 09    ld   hl,$BONGO_LOOKUP3 + 8
 0A1E: 85          add  a,l
 0A1F: 6F          ld   l,a
 0A20: 7E          ld   a,(hl)
@@ -1818,7 +1824,7 @@ MOVING_PLATFORMS
 0C5E: FF          rst  $38
 0C5F: FF          rst  $38
 
-MOVE_PLAYER_TOWARDS_GROUND_IF_DEAD
+ANIMATE_PLAYER_TO_GROUND_IF_DEAD
 0C60: 3A 12 80    ld   a,($PLAYER_DIED)
 0C63: A7          and  a
 0C64: C8          ret  z        ; player still alive... leave.
@@ -1852,6 +1858,7 @@ _LOOP
     
 0C99: FF ...
 
+DELAY_8_VBLANKS
 0CA0: 1E 08       ld   e,$08
 0CA2: CD A0 13    call $WAIT_VBLANK
 0CA5: 1D          dec  e
@@ -1859,10 +1866,11 @@ _LOOP
 0CA8: C9          ret
 0CA9: FF ...
 
-0CB0: 1E 03       ld   e,$03
-0CB2: CD 30 0D    call $0D30
-0CB5: CD 60 0D    call $0D60
-0CB8: CD A0 13    call $WAIT_VBLANK
+BONGO_JUMP_ON_PLAYER_DEATH
+0CB0: 1E 03       ld   e,$03    ; jumps 3 times
+0CB2: CD 30 0D    call $START_BONGO_JUMP
+0CB5: CD 60 0D    call $START_BONGO_JUMP ; why twice? Checks before re-setting
+0CB8: CD A0 13    call $WAIT_VBLANK      ; (is this blocking?)
 0CBB: 1D          dec  e
 0CBC: 20 F4       jr   nz,$0CB2
 0CBE: C9          ret
@@ -1874,7 +1882,7 @@ DO_DEATH_SEQUENCE
 0CC5: 32 65 80    ld   ($SFX_PREV),a
 0CC8: CD A0 0B    call $RESET_DINO_COUNTER
 0CCB: CD 14 0D    call $0D14
-0CCE: CD A0 0C    call $0CA0
+0CCE: CD A0 0C    call $DELAY_8_VBLANKS
 0CD1: 3E 26       ld   a,$26
 0CD3: 32 41 81    ld   ($PLAYER_FRAME),a
 0CD6: 3E 27       ld   a,$27
@@ -1884,7 +1892,7 @@ DO_DEATH_SEQUENCE
 0CE1: 3A 40 81    ld   a,($PLAYER_X)
 0CE4: D6 10       sub  $10
 0CE6: 32 40 81    ld   ($PLAYER_X),a
-0CE9: CD A0 0C    call $0CA0
+0CE9: CD A0 0C    call $DELAY_8_VBLANKS
 0CEC: 3A 40 81    ld   a,($PLAYER_X)
 0CEF: C6 08       add  a,$08
 0CF1: 32 5C 81    ld   ($ENEMY_3_X),a
@@ -1896,7 +1904,7 @@ DO_DEATH_SEQUENCE
 0D01: D6 10       sub  $10
 0D03: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D06: 16 28       ld   d,$28
-0D08: CD B0 0C    call $0CB0
+0D08: CD B0 0C    call $BONGO_JUMP_ON_PLAYER_DEATH
 0D0B: 3A 5F 81    ld   a,($ENEMY_3_Y)
 0D0E: 3D          dec  a
 0D0F: 3D          dec  a
@@ -1907,7 +1915,7 @@ DO_DEATH_SEQUENCE
 
     ;; called?
 MOVE_PLAYER_TOWARDS_GROUND_FOR_A_WHILE
-0D17: 16 08       ld   d,$08
+0D17: 16 08       ld   d,$08    ; 8 frames
 0D19: 3A 43 81    ld   a,($PLAYER_Y)
 0D1C: 3C          inc  a
 0D1D: 3C          inc  a
@@ -1922,6 +1930,7 @@ MOVE_PLAYER_TOWARDS_GROUND_FOR_A_WHILE
 
 0D2E: FF ...
 
+START_BONGO_JUMP
 0D30: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D33: A7          and  a
 0D34: C0          ret  nz
@@ -1954,7 +1963,7 @@ MOVE_BONGO_REDACTED
 
 0D59: FF ...
 
-MOVE_BONGO
+JUMP_BONGO
 0D60: CD 40 0D    call $MOVE_BONGO_REDACTED
 0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D66: A7          and  a
@@ -1976,6 +1985,7 @@ MOVE_BONGO
 
 0D82: FF ...
 
+ON_THE_SPOT_BONGO    ; animate on the spot (no left/right)
 0D88: 3A 12 83    ld   a,($TICK_NUM)
 0D8B: E6 07       and  $07
 0D8D: C0          ret  nz
@@ -2036,27 +2046,28 @@ BONGO_LOOKUP2
 0E30: E0 38 E0 38 D0 38 00 00
 0E38: 00 00 00 00 00 00 FF FF
 
-    ;;
-BONGO_ANIMATE_SOMETHING
+BONGO_MOVE_AND_ANIMATE
 0E40: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
 0E43: E6 03       and  $03      ;left or right
 0E45: 20 05       jr   nz,$0E4C
-0E47: CD 88 0D    call $0D88    ; not moving?
+0E47: CD 88 0D    call $ON_THE_SPOT_BONGO
 0E4A: 18 0C       jr   $0E58
 0E4C: FE 01       cp   $01
-0E4E: 20 05       jr   nz,$0E55
-0E50: CD E8 08    call $08E8
+0E4E: 20 05       jr   nz,$_LEFT
+_RIGHT
+0E50: CD E8 08    call $MOVE_BONGO_RIGHT
 0E53: 18 03       jr   $0E58
-0E55: CD 08 0A    call $0A08
+_LEFT
+0E55: CD 08 0A    call $MOVE_BONGO_LEFT
 0E58: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
-0E5B: CB 57       bit  2,a      ; left
+0E5B: CB 57       bit  2,a      ; jump
 0E5D: C8          ret  z
-0E5E: CD 30 0D    call $0D30
+0E5E: CD 30 0D    call $START_BONGO_JUMP
 0E61: C9          ret
 
 0E62: FF ...
 
-BONGO_ANIMATE
+BONGO_ANIMATE_PER_SCREEN
 0E70: 3A 12 83    ld   a,($TICK_NUM)
 0E73: E6 07       and  $07
 0E75: C0          ret  nz
@@ -2069,9 +2080,9 @@ BONGO_ANIMATE
 0E84: 47          ld   b,a
 0E85: CD 30 0F    call $BONGO_RUN_WHEN_PLAYER_CLOSE
 0E88: 78          ld   a,b
-0E89: 3D          dec  a
-0E8A: CB 27       sla  a
-0E8C: 21 C0 0E    ld   hl,$BONGO_LOOKUP
+0E89: 3D          dec  a        ; scr #
+0E8A: CB 27       sla  a        ; * 2
+0E8C: 21 C0 0E    ld   hl,$BONGO_ANIM_LOOKUP
 0E8F: 85          add  a,l
 0E90: 6F          ld   l,a
 0E91: 4E          ld   c,(hl)
@@ -2093,17 +2104,16 @@ BONGO_ANIMATE
 
 0EA9: FF ...
 
-    ;; what's this data for?
-BONGO_LOOKUP
+    ;; addr lookup: 2 bytes per screen, points to BONGO_ANIM_DATA
+BONGO_ANIM_LOOKUP
 0EC0: 08 0F 08 0F 68 0F 08 0F
 0EC8: 08 0F 68 0F 08 0F 08 0F
 0ED0: 68 0F 08 0F 68 0F 08 0F
 0ED8: 08 0F 68 0F 08 0F 08 0F
 0EE0: 08 0F 08 0F 08 0F 08 0F
 0EE8: 68 0F 68 0F 08 0F 68 0F
-0EF0: 68 0F 08 0F 08 0F 00 00
-0EF8: 00 00 00 00 00 00 00 00
-
+0EF0: 68 0F 08 0F 08 0F
+0EF6: 00 ...
 0F00: FF ...
 
     ;; this looks like bongo anim data
@@ -2390,6 +2400,7 @@ UPDATE_SCREEN_TILE_ANIMATIONS
 1140: CD 90 13    call $SHADOW_ADD_A_TO_RET
 1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS
 1146: C9          ret
+
 1147: 00          nop
 1148: 00          nop
 1149: 00          nop
@@ -2422,9 +2433,9 @@ UPDATE_EVERYTHING
 1173: CD D0 13    call $UPDATE_TIME_TIMER
 1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
-117C: CD 74 07    call $DO_JUMP_PHYSICS
+117C: CD 74 07    call $APPLY_JUMP_PHYSICS ; tick_mod_slow
 117F: CD 40 0A    call $ADD_GRAVITY_AND_CHECK_BIG_FALL
-1182: CD 60 0C    call $MOVE_PLAYER_TOWARDS_GROUND_IF_DEAD
+1182: CD 60 0C    call $ANIMATE_PLAYER_TO_GROUND_IF_DEAD
 1185: CD C0 09    call $CHECK_IF_LANDED_ON_GROUND
 1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
 118B: CD B0 0B    call $MOVING_PLATFORMS
@@ -2432,10 +2443,10 @@ UPDATE_EVERYTHING
 1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
 1194: CD 50 17    call $CHECK_DONE_SCREEN
 1197: CD 88 08    call $CLEAR_JUMP_BUTTON
-119A: CD 60 0D    call $MOVE_BONGO
+119A: CD 60 0D    call $JUMP_BONGO
 119D: CD 40 0D    call $MOVE_BONGO_REDACTED
-11A0: CD 40 0E    call $BONGO_ANIMATE_SOMETHING
-11A3: CD 70 0E    call $BONGO_ANIMATE
+11A0: CD 40 0E    call $BONGO_MOVE_AND_ANIMATE
+11A3: CD 70 0E    call $BONGO_ANIMATE_PER_SCREEN
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $CHECK_DINO_TIMER
 11AC: CD 50 2B    call $SHADOW_HL_PLUSEQ_4_TIMES_SCR ; why?
@@ -2579,13 +2590,13 @@ DRAW_BACKGROUND
 12BD: 40 42 43 42 41 40 FF      ; downward spikes
 12C4: CD 10 03    call $DRAW_TILES_H
 12C7: 09 00
-12C9: FE FD FD FD FD FC FF      ; platform
+12C9: FE FD FD FD FD FC FF      ; top left platform
 12D0: CD 10 03    call $DRAW_TILES_H
 12D3: 1E 00
-12D5: FE FD FD FD FD FC FF      ; platform
+12D5: FE FD FD FD FD FC FF      ; bottomleft platform
 12DC: CD B0 14    call $14B0
 12DF: 21 E0 92    ld   hl,$92E0
-12E2: DD 2A 20 80 ld   ix,($8020)
+12E2: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
 12E6: 16 17       ld   d,$17
 12E8: CD 28 13    call $1328
 12EB: 00          nop
@@ -2655,14 +2666,14 @@ DURING_TRANSITION_NEXT
 1358: CD B8 13    call $BONGO_RUNS_OFF_SCREEN
 135B: 00          nop
 135C: CD B0 14    call $HMMM_IN_SCR_TRANSITION
-135F: DD 2A 20 80 ld   ix,($8020)
+135F: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
 1363: 2A 1E 80    ld   hl,($801E)
 1366: 16 15       ld   d,$15
 1368: CD 28 13    call $1328
 136B: CD 00 13    call $1300
 136E: 15          dec  d
 136F: 20 F7       jr   nz,$1368
-1371: DD 22 20 80 ld   ($8020),ix
+1371: DD 22 20 80 ld   ($LEVEL_DATA_PTR),ix
 1375: 22 1E 80    ld   ($801E),hl
 1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
 137B: CD B8 12    call $DRAW_BACKGROUND
@@ -2862,10 +2873,11 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14AB: C3 0F 00    jp   $000F
 14AE: FF FF
 
-HMMM_IN_SCR_TRANSITION
+HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 14B0: 21 E8 06    ld   hl,$06E8
 14B3: CD E3 01    call $CALL_HL_PLUS_4K
 14B6: CD C8 3B    call $RESET_XOFFS
+    ;; set init player pos
 14B9: 3E 20       ld   a,$20
 14BB: 32 30 80    ld   ($PLAYER_MAX_X),a
 14BE: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -2874,16 +2886,16 @@ HMMM_IN_SCR_TRANSITION
 14C4: 3A 29 80    ld   a,($SCREEN_NUM)
 14C7: 18 03       jr   $14CC
 14C9: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-14CC: 21 00 15    ld   hl,$1500
+14CC: 21 00 15    ld   hl,$LEVEL_DATA_PTR_LOOKUP
 14CF: 06 00       ld   b,$00
-14D1: 3D          dec  a
+14D1: 3D          dec  a        ; scr# - 1
 14D2: 4F          ld   c,a
-14D3: CB 21       sla  c
+14D3: CB 21       sla  c        ; * 2
 14D5: 09          add  hl,bc
 14D6: 4E          ld   c,(hl)
 14D7: 23          inc  hl
 14D8: 46          ld   b,(hl)
-14D9: ED 43 20 80 ld   ($8020),bc
+14D9: ED 43 20 80 ld   ($LEVEL_DATA_PTR),bc
 14DD: C9          ret
 14DE: FF ..
 
@@ -2897,46 +2909,16 @@ HMMM_IN_SCR_TRANSITION
 
 14F0: FF ...
 
-
-1500: B0          or   b
-1501: 18 B0       jr   $14B3
-1503: 18 40       jr   $1545
-1505: 21 B0 18    ld   hl,$18B0
-1508: 10 1A       djnz $1524
-150A: 40          ld   b,b
-150B: 21 70 1E    ld   hl,$1E70
-150E: B0          or   b
-150F: 18 40       jr   $1551
-1511: 21 10 1A    ld   hl,$1A10
-1514: 40          ld   b,b
-1515: 21 70 1E    ld   hl,$1E70
-1518: B0          or   b
-1519: 18 40       jr   $155B
-151B: 21 B0 18    ld   hl,$18B0
-151E: 00          nop
-151F: 1D          dec  e
-1520: 70          ld   (hl),b
-1521: 1E B0       ld   e,$B0
-1523: 18 00       jr   $1525
-1525: 1D          dec  e
-1526: 70          ld   (hl),b
-1527: 1E E0       ld   e,$E0
-
-1529: 1F          rra
-152A: 40          ld   b,b
-152B: 21 70 1E    ld   hl,$1E70
-152E: E0          ret  po
-152F: 1F          rra
-1530: 40          ld   b,b
-1531: 21 70 1E    ld   hl,$1E70
-1534: 00          nop
-1535: 1D          dec  e
-1536: 00          nop
-1537: 00          nop
-1538: 00          nop
-1539: 00          nop
-153A: 00          nop
-153B: 00          nop
+    ;; DATA... 54bytes, 2 bytes per screen
+LEVEL_DATA_PTR_LOOKUP
+1500: B0 18 B0 18 40 21 B0 18
+1508: 10 1A 40 21 70 1E B0 18
+1510: 40 21 10 1A 40 21 70 1E
+1518: B0 18 40 21 B0 18 00 1D
+1520: 70 1E B0 18 00 1D 70 1E
+1528: E0 1F 40 21 70 1E E0 1F
+1530: 40 21 70 1E 00 1D
+1536: 00 ...
 153C: FF ...
 
 COPY_XOFFS_COL_SPRITES_TO_SCREEN
@@ -3377,12 +3359,9 @@ RESET_XOFF_AND_COLS
 18A4: C9          ret
 18A5: FF ...
 
-18B0: 03          inc  bc
-18B1: 41          ld   b,c
-18B2: 00          nop
-18B3: 09          add  hl,bc
-18B4: FE 00       cp   $00
-18B6: 1E 39       ld   e,$39
+    ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
+    ;; (all `n_n` screens)
+18B0: 03 41 00 09 FE 00 1E 39
 18B8: FF          rst  $38
 18B9: 03          inc  bc
 18BA: 43          ld   b,e
@@ -3658,6 +3637,8 @@ CHECK_EXIT_STAGE_LEFT
 1A0C: C3 48 1B    jp   $CALL_DO_DEATH_SEQUENCE  ; ... yep, you're dead
 1A0F: C9          ret
 
+    ;; Level data for screens 5, 10
+    ;; (`/` screens)
 1A10: 03          inc  bc
 1A11: 3F          ccf
 1A12: 00          nop
@@ -3880,7 +3861,7 @@ CHECK_EXIT_STAGE_LEFT
 1B31: 20 80       jr   nz,$1AB3
 1B33: 01 14 00    ld   bc,$0014
 1B36: 09          add  hl,bc
-1B37: 22 20 80    ld   ($8020),hl
+1B37: 22 20 80    ld   ($LEVEL_DATA_PTR),hl
 1B3A: 2A 1E 80    ld   hl,($801E)
 1B3D: 01 14 00    ld   bc,$0014
 1B40: 09          add  hl,bc
@@ -4078,7 +4059,8 @@ DINO_COLLISION
 1CF6: C9          ret
 1CF7: FF ...
 
-    ;;
+    ;; Lvel data for screens: 16, 19, 27
+    ;; (all `S` screens)
 1D00: 03          inc  bc
 1D01: 3B          dec  sp
 1D02: 3E 3F       ld   a,$3F
@@ -4366,6 +4348,9 @@ DINO_COLLISION
 1E6D: FF          rst  $38
 1E6E: FF          rst  $38
 1E6F: FF          rst  $38
+
+    ;; Level data for screens 7, 12, 17, 20, 23, 26
+    ;; (all `\` screens)
 1E70: 03          inc  bc
 1E71: 42          ld   b,d
 1E72: 00          nop
@@ -4653,6 +4638,9 @@ DINO_COLLISION
 1FDD: FF          rst  $38
 1FDE: FF          rst  $38
 1FDF: FF          rst  $38
+
+    ;; Level data for screens 21, 24
+    ;; (all `S_S` screens)
 1FE0: 03          inc  bc
 1FE1: 42          ld   b,d
 1FE2: 00          nop
@@ -4911,13 +4899,9 @@ DINO_COLLISION
     ;;
 2136: FF ...
 
-2140: 03          inc  bc
-2141: 40          ld   b,b
-2142: 00          nop
-2143: 0A          ld   a,(bc)
-2144: 48          ld   c,b
-2145: 00          nop
-2146: 1E 39       ld   e,$39
+    ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
+    ;; (all `nTn` and `W` levels)
+2140: 03 40 00 0A 48 00 1E 39
 2148: FF          rst  $38
 2149: 03          inc  bc
 214A: 41          ld   b,c
@@ -8166,8 +8150,8 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 ;;;  End of level screen?
 3E33: D5          push de
 3E34: CD F0 3E    call $3EF0
-3E37: CD E8 08    call $08E8
-3E3A: CD E8 08    call $08E8
+3E37: CD E8 08    call $MOVE_BONGO_RIGHT
+3E3A: CD E8 08    call $MOVE_BONGO_RIGHT
 3E3D: CD A0 13    call $WAIT_VBLANK
 3E40: D1          pop  de
 3E41: 1D          dec  e
