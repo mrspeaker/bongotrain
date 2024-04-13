@@ -303,6 +303,10 @@ A 7 "types" of level - progressively more difficult
 intro S quite late - very exciting
 awesome cut scene... but weirdly, no bonus.
 ---
+29 pickups: 4 full sets of bonuses, max bonus = 10 + 20 + 30 + 40k = 100k
+~100k for screens, + 100k for bonus  = ~200k max for one round.
+----
+
 7 types of level
 #+BEGIN_SRC
 
@@ -311,36 +315,36 @@ _m_,  _-`-_, _/`,`w`, `\_, _S`, _≡ ≡`, _S-
 n_n, nTn, /,W, \, S, S_S,
 n_n, nTn, /,^^,\, S, Sc
 
-01: n_n  crown right
+01: n_n  | crown right
 02: n_n  rock right | cross right
-03: nTn  cross right
+03: nTn  | cross right
 04: n_n  bird bottom, rock right | crown right
-05: /        crown center
-06: W      crown center
-07: \        cross center
+05: /    | crown center
+06: W    | crown center
+07: \    | cross center
 
 08: n_n  bird bottom, rock left, rock right | cross right
 09: nTn  rock right | cross right
-10: /        bluey center | crown center
-11: W      bird top, | crown center, ring right
-12: \        blue center, blue center | cross center
+10: /    bluey center | crown center
+11: W    bird top, | crown center, ring right
+12: \    blue center, blue center | cross center
 13: n_n  bird bottom, rock left, rock right | crown right (same pattern as 8)
-14: nTn  rock left, rock right, ring left, cross right
+14: nTn  rock left, rock right | ring left, cross right
 
-15: n_n  ltr bird bottom, bird right, cross right
-16: S       right bottom center, vase top left
-17: \        ltr bird center, bluey center, bluey center, cross center
-18: n_n  ltr bird bottom, bird bottom, rock right, cross right
-19: S      arrow center, arrow top, ring bottom, vase top right
-20: \       arrow center, arrow top, bluey center, cross center
+15: n_n  ltr bird bottom, bird right | cross right
+16: S    | ring bottom center, vase top left
+17: \    ltr bird center, bluey center, bluey center | cross center
+18: n_n  ltr bird bottom, bird bottom, rock right | cross right
+19: S    arrow center, arrow top | ring bottom, vase top right
+20: \     arrow center, arrow top, bluey center | cross center
 
-21: S_S crown bottom, cross center, vase top
-22: W     bird top, ltr bird top, crown center, ring right
-23: \       bird bottom, ltr bird center, bluey center, cross center
-24: S_S flame (x3) center, crown bottom, cross center, vase top
-25: W     bird top, ltr bird top, ltr bird top, crown center, ring right
-26: \       arrow top, arrow center, arrow bottom, cross center
-27: S      bird top, ltr bird top, ltr bird top
+21: S_S  | crown bottom, cross center, vase top
+22: W    bird top, ltr bird top | crown center, ring right
+23: \    bird bottom, ltr bird center, bluey center | cross center
+24: S_S  flame (x3) center | crown bottom, cross center, vase top
+25: W    bird top, ltr bird top, ltr bird top | crown center, ring right
+26: \    arrow top, arrow center, arrow bottom | cross center
+27: S    bird top, ltr bird top, ltr bird top
 
 #+END_SRC
 
@@ -364,7 +368,7 @@ Can jump over bonus, go to end, come back for more points (if skip)
 collision is left 12px - can overlap birds heading at you
 bonus resets on round change - don't sweat end-level deaths
 favour speed-run over careful: doesn't work in round 2
-fast round - can jump from second-to-bottom
+fast round - can jump from second-to-bottom stair
 
 ---
 - what's that weird tiny "slowdown" right at the start? Lags for a split second
@@ -516,7 +520,9 @@ w@8143 : D0
 ---
 
 
-
+8143 = player Y
+800f = jump table index
+8011 = falling timer
 
 Fail to die (held jump, but didn't glitch)
 w@8143 : B8 <- platform scr 1
@@ -597,9 +603,9 @@ w@800F : 07 <- JUMP TRIGGERED!
 w@8011 : 0F <- fall timer - 1
 w@8143 : D2
 w@8011 : 0E <- oh noes, not reset - because (jump_idx & 0xc) > 0
-w@8143 : D4 <- +2 : going into ground, not upwards
+w@8143 : D4 <- +2 from JUMP_UPWARD_CHECK_BIG_FALL
 w@800F : 06
-w@8143 : C8 <- now some phys, -0C
+w@8143 : C8 <- now some phys, -12 (0xf4) from table idx 6
 w@8011 : 0D
 w@8143 : CA <- but oh, +2 again
 w@8011 : 0C
@@ -613,7 +619,7 @@ w@8143 : D2 <- +2
 w@8011 : 08
 w@8143 : D4 <- +2
 w@800F : 05 <- phys tick
-w@8143 : C8 <- -0C 
+w@8143 : C8 <- -12 (0xf4) from table idx 5
 w@8011 : 07
 w@8143 : CA
 w@8011 : 06
@@ -627,7 +633,7 @@ w@8143 : D2
 w@8011 : 02
 w@8143 : D4
 w@800F : 04 <- phys tick
-w@8143 : CE
+w@8143 : CE <- -6 (0xfa) from table idx 4
 w@8011 : 01
 w@8143 : D0
 w@8011 : 00
@@ -637,3 +643,11 @@ w@8143 : D9
 w@8143 : E9
 User-initiated break
 
+
+--- theories
+Bug seems to be that falling_timer is not reset on screen transition.
+But to be an issue, a JUMP_TRIGGERED has to happen before GROUND_CHECK clears the falling_timer.
+
+Maybe NMI sets CONTROLN slightly earlier on level 2 for some reason? Then jump is set BEFORE check ground... otherwise check ground resets the falling_timer before jump sets jump_tbl_idx/
+
+But why the inconsistency? Always triggers on level 1->2, but more random on other screens. Should be random everywhere?

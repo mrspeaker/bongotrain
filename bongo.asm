@@ -559,16 +559,16 @@ COINAGE_ROUTINE
     
 030C: FF ...
 
-    ;; draw sequence of tiles at x/y (or is it y/x)?
+    ;; draw sequence of tiles at (y, x)
 DRAW_TILES_H
 0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$START_OF_TILES
 0316: C1          pop  bc
-0317: 0A          ld   a,(bc)   ; x pos (or y pos?!)
+0317: 0A          ld   a,(bc)   ; y pos
 0318: 03          inc  bc
 0319: 85          add  a,l
 031A: 6F          ld   l,a
-031B: 0A          ld   a,(bc)   ; y pos
+031B: 0A          ld   a,(bc)   ; x pos
 031C: 5F          ld   e,a
 031D: 3E 1B       ld   a,$1B
 031F: 93          sub  e
@@ -1077,10 +1077,10 @@ PLAYER_PHYSICS
 06DB: 00          nop
 06DC: 00          nop    
 06DD: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
-06E0: 3D          dec  a
+06E0: 3D          dec  a        ; idx - 1
 06E1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-06E4: CB 27       sla  a
-06E6: CB 27       sla  a
+06E4: CB 27       sla  a        ; * 2
+06E6: CB 27       sla  a        ; * 2 = 4th byte in table row
 06E8: 85          add  a,l
 06E9: 6F          ld   l,a
 06EA: DD 21 40 81 ld   ix,$PLAYER_X
@@ -1426,9 +1426,9 @@ PHYS_JUMP_LOOKUP_UP
 094C: 00 19 1A 0C
 0950: 00 1B 1C 06
 0954: 00 9B 9C 00
-0958: 00 99 9A FA
-095C: 00 97 98 F4
-0960: 00 17 18 F4
+0958: 00 99 9A FA               ; -6
+095C: 00 97 98 F4               ; -12
+0960: 00 17 18 F4               ; -12
 
 0964: FF ...
 
@@ -1562,9 +1562,9 @@ KILL_PLAYER
 
     ;; There's a bug in level one/two: if you jump of the
     ;; edge of level one, and hold jump... it bashes invisible
-    ;; head barrier at the start of level two and dies here.
-    ;; (because of falling timer). Not sure why.
-JUMP_UPWARD_CHECK_BIG_FALL
+    ;; head barrier at the start of level two and dies.
+    ;; (because of falling timer here). Not sure why.
+ADD_GRAVITY_AND_CHECK_BIG_FALL
 0A40: 3A 11 80    ld   a,($FALLING_TIMER) ; did we fall too far?
 0A43: A7          and  a
 0A44: C8          ret  z
@@ -1574,7 +1574,8 @@ JUMP_UPWARD_CHECK_BIG_FALL
 0A4A: 20 04       jr   nz,$0A50
 0A4C: CD 33 0A    call $KILL_PLAYER ; yep.
 0A4F: C9          ret
-0A50: 3A 43 81    ld   a,($PLAYER_Y) ; Nope... move downwards 2.
+    ;; Ok, what's this... "gravity"? always pushing down 2
+0A50: 3A 43 81    ld   a,($PLAYER_Y)
 0A53: 3C          inc  a             ; Why? Looks suspicious - related to bug?
 0A54: 3C          inc  a             ; force to ground I think
 0A55: 32 43 81    ld   ($PLAYER_Y),a
@@ -2422,7 +2423,7 @@ UPDATE_EVERYTHING
 1176: CD D0 05    call $NORMALIZE_INPUT
 1179: CD 88 06    call $PLAYER_INPUT
 117C: CD 74 07    call $DO_JUMP_PHYSICS
-117F: CD 40 0A    call $JUMP_UPWARD_CHECK_BIG_FALL
+117F: CD 40 0A    call $ADD_GRAVITY_AND_CHECK_BIG_FALL
 1182: CD 60 0C    call $MOVE_PLAYER_TOWARDS_GROUND_IF_DEAD
 1185: CD C0 09    call $CHECK_IF_LANDED_ON_GROUND
 1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
@@ -3009,7 +3010,7 @@ ANIMATE_SPLASH_PICKUPS
 15CC: C9          ret
 15CD: FF ...
 
-DO_ATTRACT_MODE
+ATTRACT_BONUS_SCREEN
 15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 15D3: CD 88 0F    call $0F88
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
@@ -3018,28 +3019,28 @@ DO_ATTRACT_MODE
 15DE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15E1: CD 10 03    call $DRAW_TILES_H
 15E4: 08 10
-15E6: 02 00 00 10 20 24 23 FF
+15E6: 02 00 00 10 20 24 23 FF   ; 200
 15EE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F1: 3E 8D       ld   a,$8D
 15F3: 32 0C 93    ld   ($930C),a
 15F6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15F9: CD 10 03    call $DRAW_TILES_H
 15FC: 0C 10
-15FD: 04 00 00 10 20 24 23 FF
+15FD: 04 00 00 10 20 24 23 FF   ; 400 ...
 1606: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1609: 3E 8E       ld   a,$8E
 160B: 32 10 93    ld   ($9310),a
 160E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1611: CD 10 03    call $DRAW_TILES_H
 1614: 10 10
-1616: 06 00 00 10 20 24 23 FF
+1616: 06 00 00 10 20 24 23 FF   ; 600 ...
 161E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1621: 3E 8F       ld   a,$8F
 1623: 32 14 93    ld   ($9314),a
 1626: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1629: CD 10 03    call $DRAW_TILES_H
 162C: 14 10
-162E: 01 00 00 00 10 20 24 23 FF
+162E: 01 00 00 00 10 20 24 23 FF ; 1000 ...
 1637: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 163A: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
@@ -7860,6 +7861,8 @@ RESET_XOFFS                     ;(or colors?)
 
 3BD7: FF
 
+    ;; bytes after the call are:
+    ;; start_x, start_y, tile 1, ...tile id, 0xFF
 DRAW_TILES_V_COPY
 3BD8: DD E1       pop  ix
 3BDA: 26 00       ld   h,$00
@@ -11035,7 +11038,7 @@ MORE_SFX_SOMETHING?
 531E: 23          inc  hl
 531F: 36 38       ld   (hl),$38
 5321: CD AC 53    call $53AC
-5324: C3 28 54    jp   $CALL_DO_ATTRACT_MODE
+5324: C3 28 54    jp   $CALL_ATTRACT_BONUS_SCREEN
 5327: FF          rst  $38
 5328: 16 00       ld   d,$00
 532A: 21 80 53    ld   hl,$5380
@@ -11175,8 +11178,8 @@ MORE_SFX_SOMETHING?
 5426: FF          rst  $38
 5427: FF          rst  $38
 
-CALL_DO_ATTRACT_MODE
-5428: 21 D0 15    ld   hl,$DO_ATTRACT_MODE
+CALL_ATTRACT_BONUS_SCREEN
+5428: 21 D0 15    ld   hl,$ATTRACT_BONUS_SCREEN
 542B: CD 81 5C    call $JMP_HL
 542E: C9          ret
 
@@ -11380,16 +11383,16 @@ CALL_DO_ATTRACT_MODE
 556F: FF          rst  $38
 
     ;; bytes after the call are
-    ;; start_x, start_y, tile 1, ...tile x, 0xFF
+    ;; start_y, start_x, tile 1, ...tile x, 0xFF
 DRAW_TILES_H_COPY
 5570: 3A 00 B8    ld   a,($WATCHDOG) ; is this ack? "A" not used
 5573: 21 40 90    ld   hl,$START_OF_TILES
 5576: C1          pop  bc       ; stack return pointer into bc (ie, data)
-5577: 0A          ld   a,(bc)   ; start_x
+5577: 0A          ld   a,(bc)   ; start_y
 5578: 03          inc  bc
 5579: 85          add  a,l
 557A: 6F          ld   l,a
-557B: 0A          ld   a,(bc)   ; start_y
+557B: 0A          ld   a,(bc)   ; start_x
 557C: 5F          ld   e,a
 557D: 3E 1B       ld   a,$1B
 557F: 93          sub  e
@@ -11869,8 +11872,8 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 58CE: FF          rst  $38
 58CF: FF          rst  $38
 
-    ;; bytes after the call are
-    ;; start_x, start_y, tile 1, ...tile x, 0xFF
+    ;; bytes after the call are:
+    ;; start_x, start_y, tile 1, ...tile id, 0xFF
 DRAW_TILES_V
 58D0: DD E1       pop  ix       ; pops next addr (eg, data) from stack
 58D2: 26 00       ld   h,$00
@@ -11907,13 +11910,13 @@ DRAW_SPLASH_CIRCLE_BORDER_1
 5905: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
 5915: 52 53 51 52 53 51 52 53 51 52 FF
 
-    ;; Right side 1
+    ;; left side 1
 5920: CD D0 58    call $DRAW_TILES_V
 5923: 01 02                ; start pos
 5925: 53 52 51 53 52 51 53 52 51 53 52 51 53 52 51 53
 5935: 52 51 53 52 51 53 52 51 53 52 FF
 
-    ;; Left side 1
+    ;; right side 1
 5940: CD D0 58    call $DRAW_TILES_V
 5943: SCR_TILE_W 02       ;start pos
 5945: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
