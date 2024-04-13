@@ -6,17 +6,21 @@
     ;; - BIG_RESET ($1000) inits and starts loop
     ;; - Main loop is at MAIN_LOOP ($104b)
     ;; - ... which calls UPDATE_EVERYTHING ($1170)
+    ;; - Also a NMI interrupt loop ($66)
+    ;; - ... which calls hardware-y stuff
 
     ;; Important Bongo lore:
     ;; - We decided "Bongo" is actually name of the lil' jumpy
     ;;   guy in the corner of the screen, not the player.
+    ;;   He's complicated: celebrates the player's death,
+    ;;   but also parties with player on dino capture.
 
     TICK_MOD_3     $8000  ; timer for every 3 frames
     TICK_MOD_6     $8001  ; timer for every 6 frames
     PL_Y_LEGS_COPY $8002  ; copy of player y legs?
     _              $8003  ; ? used with 8002 s bunch
     PLAYER_NUM     $8004  ; current player
-    JUMP_BTN_DOWN  $8005  ; player is holding down the jump button
+    JUMP_TRIGGERED $8005  ; jump triggered by setting jump_tbl_idx
     SECOND_TIMER   $8006
     P1_TIME        $8007  ; time of player's run: never displayed!
     P2_TIME        $8009  ; ...we could have had speed running!
@@ -24,7 +28,7 @@
     BUTTONS_1      $800C  ; P1/P2 buttons... and?
     BUTTONS_2      $800D  ; ... more buttons?
     CONTROLSN      $800E  ; some kind of "normalized" controls
-    JUMP_TBL_IDX   $800F
+    JUMP_TBL_IDX   $800F  ; index into table for physics jump
     WALK_ANIM_TIMER $8010 ; % 7?
     FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
     PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
@@ -170,6 +174,10 @@
     TILE_PIK_VASE   $9F
     TILE_LVL_01     $C0
 
+    TILE_PLATFORM_L $FE
+    TILE_PLATFORM_C $FD
+    TILE_PLATFORM_R $FC
+
 ;;; hardware
 
     SCREEN_RAM      $9000 ; - 0x93ff  videoram
@@ -263,9 +271,9 @@ _PLAY_SPLASH
 00A7: 3A 03 83    ld   a,($CREDITS)
 00AA: FE 01       cp   $01
 00AC: 20 05       jr   nz,$00B3
-00AE: CD D0 00    call $ATTRACT_MODE_MAYBE
+00AE: CD D0 00    call $ATTRACT_PRESS_P1_SCREEN
 00B1: 18 03       jr   $00B6
-00B3: CD 40 01    call $0140
+00B3: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
 00B6: 3A 34 80    ld   a,($IS_PLAYING)
 00B9: A7          and  a
 00BA: C2 E7 01    jp   nz,$RESET_A_BUNCH
@@ -283,7 +291,7 @@ NMI_INT_HANDLER
 00CF: FF
 
 ;;;
-ATTRACT_MODE_MAYBE
+ATTRACT_PRESS_P1_SCREEN
 00D0: 3E 01       ld   a,$01
 00D2: 32 90 80    ld   ($8090),a
 00D5: AF          xor  a
@@ -303,16 +311,16 @@ ATTRACT_MODE_MAYBE
 00F0: CD 50 24    call $DRAW_SCORE
 00F3: CD 10 03    call $DRAW_TILES_H
 00F6: 09 0B
-00F8: 20 22 15 23 23 FF
+00F8: 20 22 15 23 23 FF         ; PRESS
 00FE: CD 10 03    call $DRAW_TILES_H
 0101: 0C 09
-0103: 1F 1E 15 10 20 1C 11 29 15 22 FF
+0103: 1F 1E 15 10 20 1C 11 29 15 22 FF ; ONE PLAYER
 010E: CD 10 03    call $DRAW_TILES_H
 0111: 0F 8B
-0113: 12 25 24 24 1F 1E FF
+0113: 12 25 24 24 1F 1E FF      ; BUTTON
 011A: CD 10 03    call $DRAW_TILES_H
 011D: 19 09
-011F: 13 22 15 14 19 24 23 FF
+011F: 13 22 15 14 19 24 23 FF   ; CREDITS
 0127: 21 03 83    ld   hl,$CREDITS
 012A: AF          xor  a
 012B: ED 6F       rld  (hl)
@@ -327,6 +335,7 @@ ATTRACT_MODE_MAYBE
 013E: FF FF
 
     ;;
+DRAW_ONE_OR_TWO_PLAYER
 0140: CD 30 24    call $2430
 0143: 3A 03 83    ld   a,($CREDITS)
 0146: 47          ld   b,a
@@ -335,18 +344,10 @@ ATTRACT_MODE_MAYBE
 014B: 00          nop
 014C: CD D0 00    call $00D0
 014F: CD 10 03    call $DRAW_TILES_H
-0152: 0C          inc  c
-0153: 06 1F       ld   b,$1F
-0155: 1E 15       ld   e,$15
-0157: 10 1F       djnz $0178
-0159: 22 10 24    ld   ($2410),hl
-015C: 27          daa
-015D: 1F          rra
-015E: 10 20       djnz $0180
-0160: 1C          inc  e
-0161: 11 29 15    ld   de,$1529
-0164: 22 FF C9    ld   ($C9FF),hl
-0167: FF ...
+0152: 0C 06
+0154: 1F 1E 15 10 1F 22 10 24 27 1F 10 20 1C 11 29 15
+0164: 22 FF C9 FF               ; ONE OR TWO PLAYER
+0168: FF ...
 
 0170: CD 20 00    call $0020
 0173: C9          ret
@@ -558,12 +559,12 @@ COINAGE_ROUTINE
     
 030C: FF ...
 
-    ;; draw sequence of tiles at x/y
-$DRAW_TILES_H
+    ;; draw sequence of tiles at x/y (or is it y/x)?
+DRAW_TILES_H
 0310: 3A 00 B8    ld   a,($WATCHDOG)
 0313: 21 40 90    ld   hl,$START_OF_TILES
 0316: C1          pop  bc
-0317: 0A          ld   a,(bc)   ; x pos
+0317: 0A          ld   a,(bc)   ; x pos (or y pos?!)
 0318: 03          inc  bc
 0319: 85          add  a,l
 031A: 6F          ld   l,a
@@ -592,7 +593,7 @@ _LP_1
 0337: 16 FF       ld   d,$FF
 0339: 1E E0       ld   e,$E0
 033B: 19          add  hl,de
-033C: 18 F0       jr   $032E
+033C: 18 F0       jr   $_LP_1
 
 033E: FF ...
 
@@ -834,9 +835,10 @@ HISCORE_FOR_P2
 0514: FF ...
 
     ;; This looks suspicious. 25 bytes written
-    ;; to $8038+, code is never called. Is it data?
+    ;; to $8038+, code is never called (or read?)
+    ;; wpset 0518,18,rw doesn't trigger
 0518: 21 38 80    ld   hl,$8038
-051B: 36 39       ld   (hl),$39
+051B: 36 39       ld   (hl),$39 ; 57
 051D: 23          inc  hl
 051E: 36 39       ld   (hl),$39
 0520: 23          inc  hl
@@ -851,7 +853,7 @@ HISCORE_FOR_P2
 052D: 36 39       ld   (hl),$39
 052F: 23          inc  hl
 0530: 36 39       ld   (hl),$39
-0532: 23          inc  hl
+0532: 23          inc  hl       ;8040
 0533: 36 38       ld   (hl),$38
 0535: 23          inc  hl
 0536: 36 39       ld   (hl),$39
@@ -1028,9 +1030,9 @@ PLAYER_INPUT
 0696: A7          and  a
 0697: C0          ret  nz       ; don't do this input if jumping?
 0698: 3A 0E 80    ld   a,($CONTROLSN)
-069B: CB 6F       bit  5,a      ; jump? 0010 0000
+069B: CB 6F       bit  5,a      ; jump pressed? 0010 0000
 069D: 28 17       jr   z,$06B6
-069F: CD 10 07    call $0710
+069F: CD 10 07    call $SET_UNUSED_804A_49
 06A2: CB 57       bit  2,a      ; not left? 0000 0100
 06A4: 28 04       jr   z,$06AA
 06A6: CD A0 07    call $TRIGGER_JUMP_RIGHT
@@ -1039,8 +1041,9 @@ PLAYER_INPUT
 06AC: 28 04       jr   z,$06B2
 06AE: CD C0 07    call $TRIGGER_JUMP_LEFT
 06B1: C9          ret
-06B2: CD C0 08    call $08C0
+06B2: CD C0 08    call $TRIGGER_JUMP_STRAIGHT_UP
 06B5: C9          ret
+    ;; no jump: left/right?
 06B6: CB 57       bit  2,a      ; is left?
 06B8: 28 04       jr   z,$06BE
 06BA: CD 58 06    call $PLAYER_MOVE_LEFT
@@ -1099,6 +1102,10 @@ PLAYER_PHYSICS
 070C: DD 77 03    ld   (ix+$03),a ; player y
 070F: C9          ret
 
+    ;; jump pressed, sets these... why?
+    ;; 804a and 8049 never read?
+    ;; wpset 804a,1,r never triggers?
+SET_UNUSED_804A_49
 0710: F5          push af
 0711: 3E A0       ld   a,$A0
 0713: 32 4A 80    ld   ($804A),a
@@ -1152,8 +1159,8 @@ DO_JUMP_PHYSICS
 077F: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; return if not jumping/falling
 0782: A7          and  a
 0783: C8          ret  z
-0784: 3E 01       ld   a,$01
-0786: 32 05 80    ld   (JUMP_BTN_DOWN),a ; force-press jump?
+0784: 3E 01       ld   a,$01             ;
+0786: 32 05 80    ld   (JUMP_TRIGGERED),a ; jump was triggererd
 0789: 3A 0E 80    ld   a,($CONTROLSN)
 078C: CB 57       bit  2,a      ; not left?
 078E: 28 07       jr   z,$PHYS_JUMP_RIGHT_OR_UP  ; (no, not right_l, go check left or none)
@@ -1166,7 +1173,7 @@ DO_JUMP_PHYSICS
 
 ;;; jump button, but not jumping, and on ground)
 TRIGGER_JUMP_RIGHT
-07A0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
+07A0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
 07A3: A7          and  a
 07A4: C0          ret  nz
 07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
@@ -1187,7 +1194,7 @@ TRIGGER_JUMP_RIGHT
 
 ;;;  is this one when jump left?
 TRIGGER_JUMP_LEFT
-07C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
+07C0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
 07C3: A7          and  a
 07C4: C0          ret  nz
 07C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
@@ -1328,7 +1335,7 @@ CLEAR_JUMP_BUTTON
 088B: CB 6F       bit  5,a      ; jump
 088D: C0          ret  nz
 088E: AF          xor  a
-088F: 32 05 80    ld   (JUMP_BTN_DOWN),a
+088F: 32 05 80    ld   (JUMP_TRIGGERED),a
 0892: C9          ret
 
 0893: FF ...
@@ -1355,8 +1362,8 @@ INIT_PLAYER_SPRITE
     
 08B6: FF ...
 
-;; jump somethin'
-08C0: 3A 05 80    ld   a,(JUMP_BTN_DOWN)
+TRIGGER_JUMP_STRAIGHT_UP
+08C0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
 08C3: A7          and  a
 08C4: C0          ret  nz
 08C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
@@ -1369,7 +1376,7 @@ INIT_PLAYER_SPRITE
 08D1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 08D4: 3E 17       ld   a,$17
 08D6: 32 41 81    ld   ($PLAYER_FRAME),a
-08D9: C3 30 09    jp   $0930
+08D9: C3 30 09    jp   $FACE_BACKWARDS_AND_PLAY_JUMP_SFX
     
 08DC: FF ...
 
@@ -1403,6 +1410,7 @@ BONGO_LOOKUP3
 0920: A9 AA AB AA FF FF FF FF
 0928: FF FF FF FF FF FF FF FF
 
+FACE_BACKWARDS_AND_PLAY_JUMP_SFX
 0930: 3E 18       ld   a,$18
 0932: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 0935: 3E 04       ld   a,$04
@@ -1477,15 +1485,15 @@ GROUND_CHECK
     
 09B4: FF ...
 
-ON_GROUND_KIND_OF_CHECK
+CHECK_IF_LANDED_ON_GROUND
 09C0: 3A 12 80    ld   a,($PLAYER_DIED)
 09C3: A7          and  a
 09C4: C0          ret  nz       ; dead, get out
 09C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 09C8: A7          and  a
 09C9: 28 1B       jr   z,$_JUMP_TBL_IDX_0
-09CB: E6 0C       and  $0C      ; 0000 1100
-09CD: C0          ret  nz       ; wat?
+09CB: E6 0C       and  $0C      ; 0000 1100 (only last 3 are falling)
+09CD: C0          ret  nz       ; not falling, leave
 09CE: CD 88 09    call $GROUND_CHECK
 09D1: A7          and  a
 09D2: C8          ret  z        ; ret if in air?
@@ -1511,7 +1519,7 @@ _JUMP_TBLE_IDX_0
 _ON_GROUND
 09F7: AF          xor  a        ; reset
 09F8: 32 11 80    ld   ($FALLING_TIMER),a
-09FB: CD 68 0A    call $0A68
+09FB: CD 68 0A    call $SNAP_Y_TO_8
 09FE: C9          ret
     
 09FF: FF ...
@@ -1566,9 +1574,9 @@ JUMP_UPWARD_CHECK_BIG_FALL
 0A4A: 20 04       jr   nz,$0A50
 0A4C: CD 33 0A    call $KILL_PLAYER ; yep.
 0A4F: C9          ret
-0A50: 3A 43 81    ld   a,($PLAYER_Y) ; Nope... move upwards
-0A53: 3C          inc  a
-0A54: 3C          inc  a
+0A50: 3A 43 81    ld   a,($PLAYER_Y) ; Nope... move downwards 2.
+0A53: 3C          inc  a             ; Why? Looks suspicious - related to bug?
+0A54: 3C          inc  a             ; force to ground I think
 0A55: 32 43 81    ld   ($PLAYER_Y),a
 0A58: C6 10       add  a,$10
 0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
@@ -1576,8 +1584,9 @@ JUMP_UPWARD_CHECK_BIG_FALL
     
 0A5E: FF ...
 
+SNAP_Y_TO_8
 0A68: 3A 43 81    ld   a,($PLAYER_Y)
-0A6B: E6 F8       and  $F8
+0A6B: E6 F8       and  $F8      ; 1111 1000
 0A6D: 32 43 81    ld   ($PLAYER_Y),a
 0A70: C6 10       add  a,$10
 0A72: 32 47 81    ld   ($PLAYER_Y_LEGS),a
@@ -1808,12 +1817,13 @@ MOVING_PLATFORMS
 0C5E: FF          rst  $38
 0C5F: FF          rst  $38
 
-CHECK_IF_PLAYER_DIED
+MOVE_PLAYER_TOWARDS_GROUND_IF_DEAD
 0C60: 3A 12 80    ld   a,($PLAYER_DIED)
 0C63: A7          and  a
 0C64: C8          ret  z        ; player still alive... leave.
+_LOOP
 0C65: CD A0 13    call $WAIT_VBLANK
-0C68: 3A 43 81    ld   a,($PLAYER_Y)
+0C68: 3A 43 81    ld   a,($PLAYER_Y) ; push player towards ground
 0C6B: 3C          inc  a
 0C6C: 3C          inc  a
 0C6D: 3C          inc  a
@@ -1823,7 +1833,7 @@ CHECK_IF_PLAYER_DIED
 0C76: 37          scf
 0C77: 3F          ccf
 0C78: C6 10       add  a,$10
-0C7A: 38 12       jr   c,$0C8E
+0C7A: 38 12       jr   c,$0C8E  ; deaded.
 0C7C: 3A 40 81    ld   a,($PLAYER_X)
 0C7F: 67          ld   h,a
 0C80: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
@@ -1831,8 +1841,8 @@ CHECK_IF_PLAYER_DIED
 0C85: 6F          ld   l,a
 0C86: CD 68 09    call $GET_TILE_ADDR_FROM_XY
 0C89: 7E          ld   a,(hl)
-0C8A: FE 10       cp   $10
-0C8C: 28 D7       jr   z,$0C65
+0C8A: FE 10       cp   $TILE_BLANK ; are we still in the air?
+0C8C: 28 D7       jr   z,$_LOOP    ; keep falling
 0C8E: CD C0 0C    call $DO_DEATH_SEQUENCE
 0C91: AF          xor  a
 0C92: 32 12 80    ld   ($PLAYER_DIED),a ; clear died
@@ -1894,21 +1904,23 @@ DO_DEATH_SEQUENCE
 0D14: 20 F2       jr   nz,$0D08
 0D16: C9          ret
 
-    ;;
+    ;; called?
+MOVE_PLAYER_TOWARDS_GROUND_FOR_A_WHILE
 0D17: 16 08       ld   d,$08
 0D19: 3A 43 81    ld   a,($PLAYER_Y)
 0D1C: 3C          inc  a
 0D1D: 3C          inc  a
 0D1E: 3C          inc  a
-0D1F: 32 43 81    ld   ($PLAYER_),a
+0D1F: 32 43 81    ld   ($PLAYER_Y),a
 0D22: C6 10       add  a,$10
 0D24: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0D27: CD A0 13    call $WAIT_VBLANK
 0D2A: 15          dec  d
 0D2B: 20 EC       jr   nz,$0D19
 0D2D: C9          ret
-0D2E: FF          rst  $38
-0D2F: FF          rst  $38
+
+0D2E: FF ...
+
 0D30: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D33: A7          and  a
 0D34: C0          ret  nz
@@ -2054,7 +2066,7 @@ BONGO_ANIMATE
 0E7F: 18 03       jr   $0E84
 0E81: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 0E84: 47          ld   b,a
-0E85: CD 30 0F    call $0F30
+0E85: CD 30 0F    call $BONGO_RUN_WHEN_PLAYER_CLOSE
 0E88: 78          ld   a,b
 0E89: 3D          dec  a
 0E8A: CB 27       sla  a
@@ -2104,6 +2116,7 @@ BONGO_ANIM_DATA
 0F28: FF ...
 
     ;;
+BONGO_RUN_WHEN_PLAYER_CLOSE
 0F30: 3A 48 81    ld   a,($BONGO_X)
 0F33: 37          scf
 0F34: 3F          ccf
@@ -2239,7 +2252,7 @@ BIG_RESET
 ;;; =========================================
 MAIN_LOOP
 104B: CD E0 10    call $SET_TICK_MOD_3_AND_ADD_SCORE
-104E: CD 30 11    call $UPDATE_CUSTOM_SCREEN_LOGIC
+104E: CD 30 11    call $UPDATE_SCREEN_TILE_ANIMATIONS
 1051: CD 70 11    call $UPDATE_EVERYTHING ; Main logic
 1054: CD A0 13    call $WAIT_VBLANK
 1057: 3A 00 B8    ld   a,($WATCHDOG)    ; why load? ack?
@@ -2364,7 +2377,7 @@ MYSTERY_8066_FN
 112D: FF ...
 
     ;;
-UPDATE_CUSTOM_SCREEN_LOGIC
+UPDATE_SCREEN_TILE_ANIMATIONS
 1130: 3A 01 80    ld   a,($TICK_MOD_6) ; set tick % 6
 1133: 3C          inc  a
 1134: FE 06       cp   $06
@@ -2374,7 +2387,7 @@ UPDATE_CUSTOM_SCREEN_LOGIC
 113C: CB 27       sla  a
 113E: CB 27       sla  a
 1140: CD 90 13    call $SHADOW_ADD_A_TO_RET
-1143: CD 02 3C    call $CUSTOM_SCREEN_LOGIC
+1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS
 1146: C9          ret
 1147: 00          nop
 1148: 00          nop
@@ -2410,8 +2423,8 @@ UPDATE_EVERYTHING
 1179: CD 88 06    call $PLAYER_INPUT
 117C: CD 74 07    call $DO_JUMP_PHYSICS
 117F: CD 40 0A    call $JUMP_UPWARD_CHECK_BIG_FALL
-1182: CD 60 0C    call $CHECK_IF_PLAYER_DIED
-1185: CD C0 09    call $ON_GROUND_KIND_OF_CHECK
+1182: CD 60 0C    call $MOVE_PLAYER_TOWARDS_GROUND_IF_DEAD
+1185: CD C0 09    call $CHECK_IF_LANDED_ON_GROUND
 1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
 118B: CD B0 0B    call $MOVING_PLATFORMS
 118E: CD 00 12    call $PLAYER_POS_UPDATE
@@ -2559,16 +2572,16 @@ PREVENT_CLOUD_JUMP_REDACTED
 12A9: C9          ret
 12AA: FF ...
 
-DRAW_BACKGROUND                 ; why think drawbg?! looks like "animate bg.
+DRAW_BACKGROUND
 12B8: CD 10 03    call $DRAW_TILES_H
 12BB: 03 00
-12BD: 40 42 43 42 41 40 FF
+12BD: 40 42 43 42 41 40 FF      ; downward spikes
 12C4: CD 10 03    call $DRAW_TILES_H
 12C7: 09 00
-12C9: FE FD FD FD FD FC FF
+12C9: FE FD FD FD FD FC FF      ; platform
 12D0: CD 10 03    call $DRAW_TILES_H
 12D3: 1E 00
-12D5: FE FD FD FD FD FC FF
+12D5: FE FD FD FD FD FC FF      ; platform
 12DC: CD B0 14    call $14B0
 12DF: 21 E0 92    ld   hl,$92E0
 12E2: DD 2A 20 80 ld   ix,($8020)
@@ -3117,7 +3130,8 @@ DRAW_BONUS
 16DE: 0B 00
 16E0: E1 E5 E5 E5 E6 FF
 16E6: CD 10 03    call $DRAW_TILES_H
-16E9: 0C 00 E1 E5 E5 E5 E6 FF
+16E9: 0C 00
+16EB: E1 E5 E5 E5 E6 FF
 16F1: CD 10 03    call $DRAW_TILES_H
 16F4: 0D 00
 16F6: E2 E3 E3 E3 E4 FF
@@ -3242,7 +3256,7 @@ RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 17B4: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a ; set bottom row col
 17B7: AF          xor  a
 17B8: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-17BB: 32 05 80    ld   ($JUMP_BTN_DOWN),a
+17BB: 32 05 80    ld   ($JUMP_TRIGGERED),a
 17BE: C9          ret
 
 17BF: FF
@@ -6060,6 +6074,7 @@ ROCK_FALL_1
 
 2C65: FF ...
 
+    ;; maybe entering letters on hiscore? maybe?
 2C70: 3A F1 83    ld   a,($INPUT_BUTTONS)
 2C73: 47          ld   b,a
 2C74: 3A 84 91    ld   a,($9184)
@@ -6068,10 +6083,10 @@ ROCK_FALL_1
 2C7B: CB 78       bit  7,b
 2C7D: 20 09       jr   nz,$2C88
 2C7F: 3A 00 A0    ld   a,($PORT_IN0)
-2C82: CB 6F       bit  5,a
+2C82: CB 6F       bit  5,a      ; jump?
 2C84: C4 D8 2E    call nz,$2ED8
 2C87: C9          ret
-2C88: CB 68       bit  5,b
+2C88: CB 68       bit  5,b      ; jump?
 2C8A: C4 D8 2E    call nz,$2ED8
 2C8D: C9          ret
 
@@ -6178,7 +6193,7 @@ P1_GOT_HISCORE
 2D49: 32 06 B0    ld   ($B006),a
 2D4C: 32 07 B0    ld   ($B007),a
 2D4F: 3E 01       ld   a,$01
-2D51: CD 88 2D    call $2D88
+2D51: CD 88 2D    call $ENTER_HISCORE_SCREEN
 2D54: C9          ret
 2D55: FF ...
 
@@ -6194,11 +6209,12 @@ P2_GOT_HISCORE
 2D6A: 32 06 B0    ld   ($B006),a
 2D6D: 32 07 B0    ld   ($B007),a
 2D70: 3E 02       ld   a,$02
-2D72: CD 88 2D    call $2D88
+2D72: CD 88 2D    call $ENTER_HISCORE_SCREEN
 2D75: C9          ret
     
 2D76: FF ...
 
+ENTER_HISCORE_SCREEN
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8
 2D8C: CD E3 01    call $CALL_HL_PLUS_4K
@@ -6211,118 +6227,37 @@ P2_GOT_HISCORE
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
 2DA1: 00 00                         ; params to DRAW_SCREEN
 2DA3: CD 10 03    call $DRAW_TILES_H
-2DA6: 04          inc  b
-2DA7: 0A          ld   a,(bc)
-2DA8: 20 1C       jr   nz,$2DC6
-2DAA: 11 29 15    ld   de,$1529
-2DAD: 22 FF CD    ld   ($CDFF),hl
-2DB0: 10 03       djnz $2DB5
-2DB2: 07          rlca
-2DB3: 03          inc  bc
-2DB4: 29          add  hl,hl
-2DB5: 1F          rra
-2DB6: 25          dec  h
-2DB7: 10 12       djnz $2DCB
-2DB9: 15          dec  d
-2DBA: 11 24 10    ld   de,$1024
-2DBD: 24          inc  h
-2DBE: 18 15       jr   $2DD5
-2DC0: 10 18       djnz $2DDA
-2DC2: 19          add  hl,de
-2DC3: 17          rla
-2DC4: 18 15       jr   $2DDB
-2DC6: 23          inc  hl
-2DC7: 24          inc  h
-2DC8: FF          rst  $38
+2DA6: 04 0A
+2DA8: 20 1C 11 29 15 22 FF      ; PLAYER
+2DAF: CD 10 03    call $DRAW_TILES_H
+2DB2: 07 03
+2DB4: 29 1F 25 10 12 15 11 24 10 24 18 15 10 18 19 17
+2DC4: 18 15 23 24 FF            ; YOU BEAT THE HIGHEST
 2DC9: CD 10 03    call $DRAW_TILES_H
-2DCC: 09          add  hl,bc
-2DCD: 03          inc  bc
-2DCE: 23          inc  hl
-2DCF: 13          inc  de
-2DD0: 1F          rra
-2DD1: 22 15 10    ld   ($1015),hl
-2DD4: 1F          rra
-2DD5: 16 10       ld   d,$10
-2DD7: 24          inc  h
-2DD8: 18 15       jr   $2DEF
-2DDA: 10 14       djnz $2DF0
-2DDC: 11 29 FF    ld   de,$FF29
+2DCC: 09 03                     ; SCORE OF THE DAY
+2DCE: 23 13 1F 22 15 10 1F 16 10 24 18 15 10 14 11 29 FF
 2DDF: CD 10 03    call $DRAW_TILES_H
-2DE2: 0B          dec  bc
-2DE3: 03          inc  bc
-2DE4: 20 1C       jr   nz,$2E02
-2DE6: 15          dec  d
-2DE7: 11 23 15    ld   de,$1523
-2DEA: 10 15       djnz $2E01
-2DEC: 1E 24       ld   e,$24
-2DEE: 15          dec  d
-2DEF: 22 10 29    ld   ($2910),hl
-2DF2: 1F          rra
-2DF3: 25          dec  h
-2DF4: 22 10 1E    ld   ($1E10),hl
-2DF7: 11 1D 15    ld   de,$151D
-2DFA: FF          rst  $38
+2DE2: 0B 03
+2DE4: 20 1C 15 11 23 15 10 15 1E 24 15 22 10 29 1F 25
+2DF4: 22 10 1E 11 1D 15 FF
 2DFB: CD 10 03    call $DRAW_TILES_H
-2DFE: 0D          dec  c
-2DFF: 03          inc  bc
-2E00: 11 10 12    ld   de,$1210
-2E03: 10 13       djnz $2E18
-2E05: 10 14       djnz $2E1B
-2E07: 10 15       djnz $2E1E
-2E09: 10 16       djnz $2E21
-2E0B: 10 17       djnz $2E24
-2E0D: 10 18       djnz $2E27
-2E0F: 10 19       djnz $2E2A
-2E11: 10 1A       djnz $2E2D
-2E13: 10 1B       djnz $2E30
-2E15: 10 1C       djnz $2E33
-2E17: FF          rst  $38
+2DFE: 0D 03          inc  bc
+    ;; drawing the alphabet A-L
+2E00: 11 10 12 10 13 10 14 10 15 10 16 10 17 10 18 10 19
+2E11: 10 1A 10 1B 10 1C FF
 2E18: CD 10 03    call $DRAW_TILES_H
-2E1B: 0F          rrca
-2E1C: 03          inc  bc
-2E1D: 1D          dec  e
-2E1E: 10 1E       djnz $2E3E
-2E20: 10 1F       djnz $2E41
-2E22: 10 20       djnz $2E44
-2E24: 10 21       djnz $2E47
-2E26: 10 22       djnz $2E4A
-2E28: 10 23       djnz $2E4D
-2E2A: 10 24       djnz $2E50
-2E2C: 10 25       djnz $2E53
-2E2E: 10 26       djnz $2E56
-2E30: 10 27       djnz $2E59
-2E32: 10 28       djnz $2E5C
-2E34: FF          rst  $38
+2E1B: 0F 03
+    ;; drawing the alphabet M-X
+2E1D: 1D 10 1E 10 1F 10 20 10 21 10 22 10 23 10 24 10 25
+2E2E: 10 26 10 27 10 28 FF
 2E35: CD 10 03    call $DRAW_TILES_H
-2E38: 11 03 29    ld   de,$2903
-2E3B: 10 2A       djnz $2E67
-2E3D: 10 10       djnz $2E4F
-2E3F: 10 10       djnz $2E51
-2E41: 10 10       djnz $2E53
-2E43: 10 51       djnz $2E96
-2E45: 10 52       djnz $2E99
-2E47: 10 53       djnz $2E9C
-2E49: 10 10       djnz $2E5B
-2E4B: 10 10       djnz $2E5D
-2E4D: 10 58       djnz $2EA7
-2E4F: 59          ld   e,c
-2E50: 5A          ld   e,d
-2E51: 5B          ld   e,e
-2E52: FF          rst  $38
+2E38: 11 03
+    ;; Y,Z... characters
+2E3A: 29 10 2A 10 10 10 10 10 10 10 51 10 52 10 53 10 10
+2E4B: 10 10 10 58 59 5A 5B FF
 2E53: CD 10 03    call $DRAW_TILES_H
-2E56: 17          rla
-2E57: 0A          ld   a,(bc)
-2E58: 2B          dec  hl
-2E59: 2B          dec  hl
-2E5A: 2B          dec  hl
-2E5B: 2B          dec  hl
-2E5C: 2B          dec  hl
-2E5D: 2B          dec  hl
-2E5E: 2B          dec  hl
-2E5F: 2B          dec  hl
-2E60: 2B          dec  hl
-2E61: 2B          dec  hl
-2E62: FF          rst  $38
+2E56: 17 0A
+2E58: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 2E63: CD 50 24    call $DRAW_SCORE
 2E66: 3E 09       ld   a,$09
 2E68: 32 82 93    ld   ($9382),a
@@ -7953,7 +7888,7 @@ DRAW_TILES_V_COPY
 
 3C01: FF
 
-CUSTOM_SCREEN_LOGIC
+SCREEN_TILE_ANIMATIONS
 3C02: 3A 04 80    ld   a,($PLAYER_NUM)
 3C05: A7          and  a
 3C06: 20 05       jr   nz,$3C0D
@@ -7961,26 +7896,26 @@ CUSTOM_SCREEN_LOGIC
 3C0B: 18 03       jr   $3C10
 3C0D: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 3C10: FE 01       cp   $01
-3C12: 28 21       jr   z,$3C35  ; $SCR_TYPE_1
+3C12: 28 21       jr   z,$BUBBLE_LAVA
 3C14: FE 02       cp   $02
-3C16: 28 1D       jr   z,$3C35  ; $SCR_TYPE_1
+3C16: 28 1D       jr   z,$BUBBLE_LAVA
 3C18: FE 04       cp   $04
-3C1A: 28 19       jr   z,$3C35  ; $SCR_TYPE_1
+3C1A: 28 19       jr   z,$BUBBLE_LAVA
 3C1C: FE 08       cp   $08
-3C1E: 28 15       jr   z,$3C35  ; $SCR_TYPE_1
+3C1E: 28 15       jr   z,$BUBBLE_LAVA
 3C20: FE 0D       cp   $0D
-3C22: 28 11       jr   z,$3C35  ; $SCR_TYPE_1
+3C22: 28 11       jr   z,$BUBBLE_LAVA
 3C24: FE 0F       cp   $0F
-3C26: 28 0D       jr   z,$3C35  ; $SCR_TYPE_1
+3C26: 28 0D       jr   z,$BUBBLE_LAVA
 3C28: FE 12       cp   $12
-3C2A: 28 09       jr   z,$3C35  ; $SCR_TYPE_1
+3C2A: 28 09       jr   z,$BUBBLE_LAVA
 3C2C: FE 15       cp   $15
-3C2E: 28 48       jr   z,$3C78  ; $SCR_TYPE_2
+3C2E: 28 48       jr   z,$BUBBLE_LAVA_VAR
 3C30: FE 18       cp   $18
-3C32: 28 44       jr   z,$3C78  ; $SCR_TYPE_2
+3C32: 28 44       jr   z,$BUBBLE_LAVA_VAR
 3C34: C9          ret
 
-SCR_TYPE_1
+BUBBLE_LAVA
 3C35: 3A 4B 80    ld   a,($804B)
 3C38: 3C          inc  a
 3C39: FE 04       cp   $04
@@ -7988,48 +7923,35 @@ SCR_TYPE_1
 3C3D: AF          xor  a
 3C3E: 32 4B 80    ld   ($804B),a
 3C41: A7          and  a
-3C42: 20 0B       jr   nz,$3C4F
+3C42: 20 0B       jr   nz,$BUBBLE_LAVA_1
 3C44: CD 10 03    call $DRAW_TILES_H
-3C47: 1D          dec  e
-3C48: 0E 80       ld   c,$80
-3C4A: 80          add  a,b
-3C4B: 80          add  a,b
-3C4C: 80          add  a,b
-3C4D: FF          rst  $38
+3C47: 1D 0E
+3C49: 80 80 80 80 FF            ; red dash line
 3C4E: C9          ret
 
+BUBBLE_LAVA_1
 3C4F: FE 01       cp   $01
-3C51: 20 0B       jr   nz,$3C5E
+3C51: 20 0B       jr   nz,$BUBBLE_LAVA_2
 3C53: CD 10 03    call $DRAW_TILES_H
-3C56: 1D          dec  e
-3C57: 0E 85       ld   c,$85
-3C59: 81          add  a,c
-3C5A: 87          add  a,a
-3C5B: 81          add  a,c
-3C5C: FF          rst  $38
+3C56: 1D 0E
+3C58: 85 81 87 81 FF
 3C5D: C9          ret
 
+BUBBLE_LAVA_2
 3C5E: FE 02       cp   $02
-3C60: 20 0B       jr   nz,$3C6D
+3C60: 20 0B       jr   nz,$BUBBLE_LAVA_3
 3C62: CD 10 03    call $DRAW_TILES_H
-3C65: 1D          dec  e
-3C66: 0E 86       ld   c,$86
-3C68: 82          add  a,d
-3C69: 88          adc  a,b
-3C6A: 80          add  a,b
-3C6B: FF          rst  $38
+3C65: 1D 0E
+3C67: 86 82 88 80 FF
 3C6C: C9          ret
 
+BUBBLE_LAVA_3
 3C6D: CD 10 03    call $DRAW_TILES_H
-3C70: 1D          dec  e
-3C71: 0E 85       ld   c,$85
-3C73: 83          add  a,e
-3C74: 87          add  a,a
-3C75: 82          add  a,d
-3C76: FF          rst  $38
+3C70: 1D 0E
+3C72: 85 83 87 82 FF
 3C77: C9          ret
 
-SCR_TYPE_2
+BUBBLE_LAVA_VAR
 3C78: 3A 4B 80    ld   a,($804B)
 3C7B: 3C          inc  a
 3C7C: FE 04       cp   $04
@@ -8037,52 +7959,32 @@ SCR_TYPE_2
 3C80: AF          xor  a
 3C81: 32 4B 80    ld   ($804B),a
 3C84: A7          and  a
-3C85: 20 0C       jr   nz,$3C93
+3C85: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_1
 3C87: CD 10 03    call $DRAW_TILES_H
-
-    ;; lava animation data
-3C8A: 19 0F                     ;read by sub at $DRAW_TILES_H
-3C8C: 80
-3C8D: 80          add  a,b
-3C8E: 80          add  a,b
-3C8F: 80          add  a,b
-3C90: 80          add  a,b
-3C91: FF          rst  $38
+3C8A: 19 0F
+3C8D: 80 80 80 80 FF            ; Flat
 3C92: C9          ret
 
+BUBBLE_LAVA_VAR_1
 3C93: FE 01       cp   $01
-3C95: 20 0C       jr   nz,$3CA3
+3C95: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_2
 3C97: CD 10 03    call $DRAW_TILES_H
-3C9A: 19 0F                     ;read by sub at $DRAW_TILES_H
-3C9C: 85                        ; lava tile 1
-3C9D: 81          add  a,c
-3C9E: 84          add  a,h
-3C9F: 81          add  a,c
-3CA0: 87          add  a,a
-3CA1: FF          rst  $38
+3C9A: 19 0F
+3C9C: 85 81 84 81 87 FF
 3CA2: C9          ret
 
+BUBBLE_LAVA_VAR_2
 3CA3: FE 02       cp   $02
-3CA5: 20 0C       jr   nz,$3CB3
+3CA5: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_3
 3CA7: CD 10 03    call $DRAW_TILES_H
-
-3CAA: 19 0F                     ; read by sub at $DRAW_TILES_H
-3CAC: 86                        ; lava tile 2
-3CAD: 82          add  a,d
-3CAE: 88          adc  a,b
-3CAF: 86          add  a,(hl)
-3CB0: 82          add  a,d
-3CB1: FF          rst  $38
+3CAA: 19 0F
+3CAC: 86 82 88 86 82 FF
 3CB2: C9          ret
 
+BUBBLE_LAVA_VAR_3
 3CB3: CD 10 03    call $DRAW_TILES_H
-3CB6: 19 0F                     ;read by sub at $DRAW_TILES_H
-3CB8: 85
-3CB9: 83          add  a,e
-3CBA: 80          add  a,b
-3CBB: 83          add  a,e
-3CBC: 87          add  a,a
-3CBD: FF          rst  $38
+3CB6: 19 0F
+3CB9: 83 80 83 87 FF
 3CBE: C9          ret
 
 3CBF: FF          rst  $38
@@ -8188,7 +8090,7 @@ DO_CUTSCENE
 3D6C: 03          inc  bc         ;         |
 3D6D: 15          dec  d          ;         |
 3D6E: 20 F9       jr   nz,$3D69   ;        _|
-3D70: CD A0 3D    call $3DA0      ; draws (part?) of cutscene
+3D70: CD A0 3D    call $DRAW_CAGE_AND_SCENE
 3D73: 16 80       ld   d,$80      ; 80 x animate cutscene
 3D75: AF          xor  a          ;
 3D76: 32 2D 80    ld   ($DINO_COUNTER),a  ;
@@ -8208,8 +8110,9 @@ DO_CUTSCENE
 3D98: 32 2A 80    ld   ($SCREEN_NUM_P2),a ; player 2 screen
 3D9B: C3 00 10    jp   $BIG_RESET
 3D9E: C9          ret
-;;;
 3D9F: FF          rst  $38
+
+DRAW_CAGE_AND_SCENE             ; for cutscene
 3DA0: 21 18 92    ld   hl,$9218
 3DA3: 36 66       ld   (hl),$66
 3DA5: 23          inc  hl
@@ -8240,62 +8143,16 @@ DO_CUTSCENE
 3DD2: 32 35 81    ld   ($SCREEN_XOFF_COL+35),a
 3DD5: 32 37 81    ld   ($SCREEN_XOFF_COL+37),a
 3DD8: CD 10 03    call $DRAW_TILES_H
-3DDB: 1C          inc  e
-3DDC: 00          nop
-3DDD: 38 39       jr   c,$3E18
-3DDF: 3A 39 38    ld   a,($3839)
-3DE2: 39          add  hl,sp
-3DE3: 3C          inc  a
-3DE4: 3D          dec  a
-3DE5: 39          add  hl,sp
-3DE6: 3A 38 38    ld   a,($3838)
-3DE9: 3C          inc  a
-3DEA: 3C          inc  a
-3DEB: 3D          dec  a
-3DEC: 3C          inc  a
-3DED: 39          add  hl,sp
-3DEE: 3A 38 39    ld   a,($SET_ENEMY_1_F0_C8)
-3DF1: 38 39       jr   c,$3E2C
-3DF3: 3D          dec  a
-3DF4: 3C          inc  a
-3DF5: 39          add  hl,sp
-3DF6: 38 3A       jr   c,$3E32
-3DF8: 3D          dec  a
-3DF9: 3C          inc  a
-3DFA: 39          add  hl,sp
-3DFB: 39          add  hl,sp
-3DFC: 38 FF       jr   c,$3DFD
+3DDB: 1C 00                     ; Row of upward spikes
+3DDD: 38 39 3A 39 38 39 3C 3D 39 3A 38 38 3C 3C 3D 3C
+3DED: 39 3A 38 39 38 39 3D 3C 39 38 3A 3D 3C 39 39 38 FF
 3DFE: CD 10 03    call $DRAW_TILES_H
-3E01: 12          ld   (de),a
-3E02: 00          nop
-3E03: FE FD       cp   $FD
-3E05: FD          db   $fd
-3E06: FD          db   $fd
-3E07: FD          db   $fd
-3E08: FD          db   $fd
-3E09: FD          db   $fd
-3E0A: FD          db   $fd
-3E0B: FD          db   $fd
-3E0C: FD          db   $fd
-3E0D: FD          db   $fd
-3E0E: FD          db   $fd
-3E0F: FD          db   $fd
-3E10: FD          db   $fd
-3E11: FD          db   $fd
-3E12: FD          db   $fd
-3E13: FD          db   $fd
-3E14: FD          db   $fd
-3E15: FD          db   $fd
-3E16: FD          db   $fd
-3E17: FD          db   $fd
-3E18: FD          db   $fd
-3E19: FD          db   $fd
-3E1A: FD          db   $fd
-3E1B: FD          db   $fd
-3E1C: FD          db   $fd
-3E1D: FD          db   $fd
-3E1E: FC FF C9    call m,$C9FF
-3E21: FF          rst  $38
+3E01: 12 00                     ; real long platform
+3E03: FE FD FD FD FD FD FD FD FD FD FD FD FD FD FD FD
+3E13: FD FD FD FD FD FD FD FD FD FD FD FC FF
+3E20: C9          ret
+3E21: FF
+
 3E22: 3E 0C       ld   a,$0C
 3E24: 32 41 81    ld   ($PLAYER_FRAME),a
 3E27: 3E 0D       ld   a,$0D

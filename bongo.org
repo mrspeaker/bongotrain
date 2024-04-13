@@ -367,10 +367,273 @@ favour speed-run over careful: doesn't work in round 2
 fast round - can jump from second-to-bottom
 
 ---
-- what's that weird tiny "slowdown" right at the start?
-- maybe the "impossible 3 bird" run - need to time it so the first pickup is your bonus
+- what's that weird tiny "slowdown" right at the start? Lags for a split second
+- maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
   
 ---
 trav bug: die on screen one/two
+always 1/2 - some others, but can't do it consistently
+
+Never called after transition (until death):
+
+_ON_GROUND
+09F7: AF          xor  a        ; reset
+09F8: 32 11 80    ld   ($FALLING_TIMER),a
+
+wp 800F,1,w,,{ printf "Read @ %08X\n",wpaddr ; g }
+wpset 800F,1,w,,{ printf "w@%04X : %02X",wpaddr,wpdata ; g }
+
+Frame:
+07->0 into next frame
+00
+07->0 jump ok
+
+07->0 into next frame
+00
+07->4 ded ?
+
 ---
-q: what's that tiny delay lag right at the start?
+Weird sequencing of frames and timer. Is one on interrupt?
+
+w@8011 : 00
+w@8011 : 00
+w@800F : 07 <- jump
+w@800F : 06
+w@800F : 05
+w@800F : 04
+w@800F : 03
+w@800F : 02
+w@800F : 01
+w@800F : 00
+w@8011 : 10 <- fall timer set (in second screen?)
+w@800F : 00
+w@800F : 07
+w@8011 : 0F
+w@8011 : 0E
+w@800F : 06
+w@8011 : 0D
+w@8011 : 0C
+w@8011 : 0B
+w@8011 : 0A
+w@8011 : 09
+w@8011 : 08
+w@800F : 05
+w@8011 : 07
+w@8011 : 06
+w@8011 : 05
+w@8011 : 04
+w@8011 : 03
+w@8011 : 02
+w@800F : 04
+w@8011 : 01
+w@8011 : 00 <- fall timer expire (0xa40). ded.
+Stopped at breakpoint 1
+
+reads "jump up" phys ($960)
+
+
+
+ PLAYER_Y
+w@8143 : B8 <- on platform sc1
+w@8143 : AC <- jump
+w@8143 : A0
+w@8143 : 9A
+w@8143 : 9A
+w@8143 : A0
+w@8143 : AC
+w@8143 : B8 <- 7 ticks
+w@8143 : D0 <- ground level
+w@8143 : 00 <- reset
+w@8143 : D0 
+w@8143 : D2 <- into ground (normal, but why? SNAP_Y_TO_8 should fix it?)
+w@8143 : D4 <- +2? things go bad here. Should be D0 again
+w@8143 : C8 <- jumping (jumps 0C, but should be C4 here)
+w@8143 : CA ; +2?
+w@8143 : CC ; +2?
+w@8143 : CE ; +2?
+w@8143 : D0 <- snap back to ground
+w@8143 : D2 <- into ground
+w@8143 : D4
+w@8143 : C8  <- jumps up 0C
+w@8143 : CA ; +2
+w@8143 : CC
+w@8143 : CE 
+w@8143 : D0 <- snap back to ground
+w@8143 : D2 <- into ground
+w@8143 : D4
+w@8143 : CE <- jumping
+w@8143 : D0 <- snap back to ground
+w@8143 : D3 <- odd number! (into ground)
+w@8143 : D6
+w@8143 : D9
+w@8143 : E9 <- ded (by timer)
+User-initiated break
+
+
+
+non dead one (holding jump):
+w@8143 : B8 <- platform sc2
+w@8143 : AC <- jump
+w@8143 : A0
+w@8143 : 9A
+w@8143 : 9A
+w@8143 : A0
+w@8143 : AC
+w@8143 : B8 <- 7 ticks
+w@8143 : D0 <- reset to ground
+w@8143 : 00 <- screen transition
+w@8143 : D0 
+w@8143 : D2 <- in ground
+w@8143 : D0
+w@8143 : C4 <- normal jump (D0-C4=0C: first entry in phys table)
+w@8143 : B8
+w@8143 : B2
+w@8143 : B2
+w@8143 : B8
+w@8143 : C4
+w@8143 : D0
+w@8143 : D0
+
+
+
+
+normal one (not holiding jump)
+w@8143 : B8 <- on platform scr1
+w@8143 : AC <- jump
+w@8143 : A0
+w@8143 : 9A
+w@8143 : 9A
+w@8143 : A0
+w@8143 : AC
+w@8143 : B8 <- 7 ticks
+w@8143 : D0 <- ground
+w@8143 : 00
+w@8143 : D0
+w@8143 : D2 <- into ground (ok)
+w@8143 : D0 <- back to ground
+w@8143 : D0
+
+---
+
+
+
+
+Fail to die (held jump, but didn't glitch)
+w@8143 : B8 <- platform scr 1
+w@800F : 07 <- jump
+w@800F : 06
+w@8143 : AC
+w@800F : 05
+w@8143 : A0
+w@800F : 04
+w@8143 : 9A
+w@800F : 03
+w@8143 : 9A
+w@800F : 02
+w@8143 : A0
+w@800F : 01
+w@8143 : AC
+w@800F : 00
+w@8143 : B8 <- back to init Y
+w@8011 : 10 <- fall timer set
+w@8143 : D0 <- Y to new ground
+w@8143 : 00 <- screen reset
+w@8143 : D0 <- y pos ground
+w@800F : 00 <- jump idx is 0
+; no jump triggered in this "good" version
+w@8011 : 0F <- fall timer - 1
+w@8143 : D2
+w@8011 : 00 <- reset fall timer 
+w@8143 : D0
+w@8011 : 00 <- reset fall timer 
+w@8143 : D0
+w@800F : 07 <- Jump triggered
+w@800F : 06 <- phys
+w@8143 : C4
+w@800F : 05 <- phys
+w@8143 : B8
+w@800F : 04 <- phys
+w@8143 : B2
+w@800F : 03 <- phys
+w@800F : 04 <- phys what?!
+w@8143 : B2
+w@800F : 03 <- phys
+w@8143 : B2
+w@800F : 02 <- phys
+w@8143 : B8
+w@800F : 01 <- phys
+w@8143 : C4
+w@800F : 00<- phys done
+w@8143 : D0
+w@8011 : 00 <- reset fall timer
+
+
+---
+ok, looks like bug is jump triggerered whne 8011 fall timer is not 0
+
+and ded
+w@8143 : B8 <- platform scr 1
+w@800F : 07 <- jump
+w@800F : 06
+w@8143 : AC
+w@800F : 05
+w@8143 : A0
+w@800F : 04
+w@8143 : 9A
+w@800F : 03
+w@8143 : 9A
+w@800F : 02
+w@8143 : A0
+w@800F : 01
+w@8143 : AC
+w@800F : 00
+w@8143 : B8 <- back to init Y
+w@8011 : 10 <- fall timer set
+w@8143 : D0 <- Y to new ground
+w@8143 : 00 <- screen reset
+w@8143 : D0 <- Y pos gound
+w@800F : 00
+w@800F : 07 <- JUMP TRIGGERED!
+w@8011 : 0F <- fall timer - 1
+w@8143 : D2
+w@8011 : 0E <- oh noes, not reset - because (jump_idx & 0xc) > 0
+w@8143 : D4 <- +2 : going into ground, not upwards
+w@800F : 06
+w@8143 : C8 <- now some phys, -0C
+w@8011 : 0D
+w@8143 : CA <- but oh, +2 again
+w@8011 : 0C
+w@8143 : CC <- +2
+w@8011 : 0B
+w@8143 : CE <- +2
+w@8011 : 0A
+w@8143 : D0 <- +2
+w@8011 : 09
+w@8143 : D2 <- +2
+w@8011 : 08
+w@8143 : D4 <- +2
+w@800F : 05 <- phys tick
+w@8143 : C8 <- -0C 
+w@8011 : 07
+w@8143 : CA
+w@8011 : 06
+w@8143 : CC
+w@8011 : 05
+w@8143 : CE
+w@8011 : 04
+w@8143 : D0
+w@8011 : 03
+w@8143 : D2
+w@8011 : 02
+w@8143 : D4
+w@800F : 04 <- phys tick
+w@8143 : CE
+w@8011 : 01
+w@8143 : D0
+w@8011 : 00
+w@8143 : D3
+w@8143 : D6
+w@8143 : D9
+w@8143 : E9
+User-initiated break
+
