@@ -37,6 +37,7 @@
     _UNUSED_1      $801B  ; unused? Set once, never read
     SCORE_TO_ADD   $801D  ; amount to add to the current score
 
+    _              $801E  ; hmm, used with level_data_ptr a lot
     LEVEL_DATA_PTR $8020  ; screen data pointer (2 byte addr)
 
     DID_INIT       $8022  ; set after first init, not really used
@@ -2005,6 +2006,7 @@ ON_THE_SPOT_BONGO    ; animate on the spot (no left/right)
 
 0DA4: FF ...
 
+    ;; wat
 0DB0: 05 06 07 08 FF FF FF FF
 
 DRAW_BONGO
@@ -2595,15 +2597,17 @@ DRAW_BACKGROUND
 12D3: 1E 00
 12D5: FE FD FD FD FD FC FF      ; bottomleft platform
 12DC: CD B0 14    call $14B0
-12DF: 21 E0 92    ld   hl,$92E0
+12DF: 21 E0 92    ld   hl,$92E0 ; screen pos (6,0)
 12E2: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
-12E6: 16 17       ld   d,$17
-12E8: CD 28 13    call $1328
+12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
+_DRAW_COLUMN                    ; because first 6 are constant
+12E8: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
 12EB: 00          nop
 12EC: 00          nop
 12ED: 00          nop
 12EE: 15          dec  d
-12EF: 20 F7       jr   nz,$12E8
+12EF: 20 F7       jr   nz,$_DRAW_COLUMN
+    ;;
 12F1: 22 1E 80    ld   ($801E),hl
 12F4: CD 10 35    call $3510
 12F7: 21 50 0C    ld   hl,$0C50
@@ -2630,23 +2634,32 @@ DRAW_BACKGROUND
 131B: C9          ret
 131C: FF ...
 
-    ;;
+    ;; ix = level data
+    ;; hl = screen pos
+
+    ;; Level BG data is FF separated, then split on 00.
+    ;; Each row is a column of the screen, starting at col 6
+    ;; first byte of segment is the row #
+DRAW_SCREEN_COL_FROM_LEVEL_DATA
 1328: CD 68 17    call $1768
-132B: DD 7E 00    ld   a,(ix+$00)
+_LP
+132B: DD 7E 00    ld   a,(ix+$00) ; ix + 0 (always 3?)
 132E: E5          push hl
 132F: 85          add  a,l
 1330: 6F          ld   l,a
-1331: DD 23       inc  ix
+1331: DD 23       inc  ix       ; ix++
+_DRAW_CHAR
 1333: DD 7E 00    ld   a,(ix+$00)
-1336: FE FF       cp   $FF
-1338: 28 09       jr   z,$1343
-133A: A7          and  a
-133B: 28 14       jr   z,$1351
+1336: FE FF       cp   $FF        ; 0xff = EOL marker
+1338: 28 09       jr   z,$_DONE
+133A: A7          and  a          ; 0x00 = segment marker
+133B: 28 14       jr   z,$_NEXT_SEG
 133D: 77          ld   (hl),a
 133E: 23          inc  hl
-133F: DD 23       inc  ix
-1341: 18 F0       jr   $1333
-1343: DD 23       inc  ix
+133F: DD 23       inc  ix       ; ix++
+1341: 18 F0       jr   $_DRAW_CHAR
+_DONE
+1343: DD 23       inc  ix       ; ix++
 1345: E1          pop  hl
 1346: 01 E0 FF    ld   bc,$FFE0
 1349: 09          add  hl,bc
@@ -2655,11 +2668,12 @@ DRAW_BACKGROUND
 134D: C0          ret  nz
 134E: 26 93       ld   h,$93
 1350: C9          ret
-1351: DD 23       inc  ix
-1353: E1          pop  hl
-1354: 18 D5       jr   $132B
-1356: FF          rst  $38
-1357: FF          rst  $38
+__NEXT_SEG
+1351: DD 23       inc  ix       ; ix++
+1353: E1          pop  hl       ; reset screen pos
+1354: 18 D5       jr   $_LP
+
+1356: FF ..
 
     ;;
 DURING_TRANSITION_NEXT
@@ -2667,12 +2681,13 @@ DURING_TRANSITION_NEXT
 135B: 00          nop
 135C: CD B0 14    call $HMMM_IN_SCR_TRANSITION
 135F: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
-1363: 2A 1E 80    ld   hl,($801E)
-1366: 16 15       ld   d,$15
-1368: CD 28 13    call $1328
+1363: 2A 1E 80    ld   hl,($801E) ; must point to screen?
+1366: 16 15       ld   d,$15      ; 21 rows (why 21, not 23?)
+_LP
+1368: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
 136B: CD 00 13    call $1300
 136E: 15          dec  d
-136F: 20 F7       jr   nz,$1368
+136F: 20 F7       jr   nz,$_LP
 1371: DD 22 20 80 ld   ($LEVEL_DATA_PTR),ix
 1375: 22 1E 80    ld   ($801E),hl
 1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
@@ -2909,7 +2924,7 @@ HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 
 14F0: FF ...
 
-    ;; DATA... 54bytes, 2 bytes per screen
+    ;; Points to the addr of each screen's level data
 LEVEL_DATA_PTR_LOOKUP
 1500: B0 18 B0 18 40 21 B0 18
 1508: 10 1A 40 21 70 1E B0 18
@@ -3054,9 +3069,9 @@ ANIMATE_SPLASH_SCREEN
 1673: 20 ED       jr   nz,$1662
 1675: C9          ret
 
+1676: FF ...
 
-1676: FF          rst  $38
-1677: FF          rst  $38
+    ;; ?
 1678: E8          ret  pe
 1679: EC EE F0    call pe,$F0EE
 167C: E9          jp   (hl)
@@ -3180,11 +3195,12 @@ CHECK_DONE_SCREEN
 1769: 3E 03       ld   a,$03
 176B: 85          add  a,l
 176C: 6F          ld   l,a
-176D: 1E 1C       ld   e,$1C
-176F: 36 10       ld   (hl),$10
+176D: 1E 1C       ld   e,$1C    ;24 loops
+_LP
+176F: 36 10       ld   (hl),$10 ; $10 is blank tile?
 1771: 23          inc  hl
 1772: 1D          dec  e
-1773: 20 FA       jr   nz,$176F
+1773: 20 FA       jr   nz,$_LP
 1775: E1          pop  hl
 1776: C9          ret
 
@@ -3360,210 +3376,34 @@ RESET_XOFF_AND_COLS
 18A5: FF ...
 
     ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
-    ;; (all `n_n` screens)
-18B0: 03 41 00 09 FE 00 1E 39
-18B8: FF          rst  $38
-18B9: 03          inc  bc
-18BA: 43          ld   b,e
-18BB: 00          nop
-18BC: 09          add  hl,bc
-18BD: FD 45       ld   b,iyl
-18BF: 41          ld   b,c
-18C0: 00          nop
-18C1: 1B          dec  de
-18C2: FE 3B       cp   $3B
-18C4: 45          ld   b,l
-18C5: 45          ld   b,l
-18C6: FF          rst  $38
-18C7: 03          inc  bc
-18C8: 40          ld   b,b
-18C9: 00          nop
-18CA: 09          add  hl,bc
-18CB: FD          db   $fd
-18CC: 42          ld   b,d
-18CD: 00          nop
-18CE: 1B          dec  de
-18CF: FD          db   $fd
-18D0: 3F          ccf
-18D1: 3F          ccf
-18D2: 3B          dec  sp
-18D3: FF          rst  $38
-18D4: 03          inc  bc
-18D5: 43          ld   b,e
-18D6: 00          nop
-18D7: 09          add  hl,bc
-18D8: FC 41 00    call m,$0041
-18DB: 1B          dec  de
-18DC: FD          db   $fd
-18DD: 3B          dec  sp
-18DE: 3B          dec  sp
-18DF: 3F          ccf
-18E0: FF          rst  $38
-18E1: 03          inc  bc
-18E2: 42          ld   b,d
-18E3: 00          nop
-18E4: 1B          dec  de
-18E5: FD          db   $fd
-18E6: 3F          ccf
-18E7: 3B          dec  sp
-18E8: 3B          dec  sp
-18E9: FF          rst  $38
-18EA: 03          inc  bc
-18EB: 3F          ccf
-18EC: 00          nop
-18ED: 1B          dec  de
-18EE: FD          db   $fd
-18EF: 3F          ccf
-18F0: 3F          ccf
-18F1: 3B          dec  sp
-18F2: FF          rst  $38
-18F3: 03          inc  bc
-18F4: 3E 43       ld   a,$43
-18F6: 00          nop
-18F7: 1B          dec  de
-18F8: FD          db   $fd
-18F9: 3B          dec  sp
-18FA: 3F          ccf
-18FB: 3B          dec  sp
-18FC: FF          rst  $38
-18FD: 03          inc  bc
-18FE: 3F          ccf
-18FF: 40          ld   b,b
-1900: 00          nop
-1901: 1B          dec  de
-1902: FC 47 3B    call m,$3B47
-1905: 47          ld   b,a
-1906: FF          rst  $38
-1907: 03          inc  bc
-1908: 3B          dec  sp
-1909: 42          ld   b,d
-190A: 00          nop
-190B: 1D          dec  e
-190C: 3D          dec  a
-190D: 3F          ccf
-190E: FF          rst  $38
-190F: 03          inc  bc
-1910: 3B          dec  sp
-1911: 40          ld   b,b
-1912: 00          nop
-1913: 1D          dec  e
-1914: 3C          inc  a
-1915: 3E FF       ld   a,$FF
-1917: 03          inc  bc
-1918: 3F          ccf
-1919: 43          ld   b,e
-191A: 00          nop
-191B: 1D          dec  e
-191C: 3A 3F FF    ld   a,($FF3F)
-191F: 03          inc  bc
-1920: 3E 41       ld   a,$41
-1922: 00          nop
-1923: 1B          dec  de
-1924: FE 10       cp   $10
-1926: 3D          dec  a
-1927: 3E FF       ld   a,$FF
-1929: 03          inc  bc
-192A: 3B          dec  sp
-192B: 40          ld   b,b
-192C: 00          nop
-192D: 1B          dec  de
-192E: FD          db   $fd
-192F: 47          ld   b,a
-1930: 3E 47       ld   a,$47
-1932: FF          rst  $38
-1933: 03          inc  bc
-1934: 3F          ccf
-1935: 42          ld   b,d
-1936: 00          nop
-1937: 1B          dec  de
-1938: FD          db   $fd
-1939: 3B          dec  sp
-193A: 3B          dec  sp
-193B: 3B          dec  sp
-193C: FF          rst  $38
-193D: 03          inc  bc
-193E: 3E 00       ld   a,$00
-1940: 1B          dec  de
-1941: FD          db   $fd
-1942: 3E 3F       ld   a,$3F
-1944: 3F          ccf
-1945: FF          rst  $38
-1946: 03          inc  bc
-1947: 42          ld   b,d
-1948: 00          nop
-1949: 09          add  hl,bc
-194A: FE 00       cp   $00
-194C: 1B          dec  de
-194D: FD          db   $fd
-194E: 3F          ccf
-194F: 3B          dec  sp
-1950: 3E FF       ld   a,$FF
-1952: 03          inc  bc
-1953: 43          ld   b,e
-1954: 00          nop
-1955: 09          add  hl,bc
-1956: FD          db   $fd
-1957: 47          ld   b,a
-1958: 41          ld   b,c
-1959: 00          nop
-195A: 1B          dec  de
-195B: FD          db   $fd
-195C: 3B          dec  sp
-195D: 3E 3E       ld   a,$3E
-195F: FF          rst  $38
-1960: 03          inc  bc
-1961: 41          ld   b,c
-1962: 00          nop
-1963: 09          add  hl,bc
-1964: FD          db   $fd
-1965: 00          nop
-1966: 1B          dec  de
-1967: FC 3E 3B    call m,$3B3E
-196A: 3B          dec  sp
-196B: FF          rst  $38
-196C: 03          inc  bc
-196D: 42          ld   b,d
-196E: 00          nop
-196F: 09          add  hl,bc
-1970: FD          db   $fd
-1971: 00          nop
-1972: 1E FE       ld   e,$FE
-1974: FF          rst  $38
-1975: 03          inc  bc
-1976: 43          ld   b,e
-1977: 00          nop
-1978: 09          add  hl,bc
-1979: FD          db   $fd
-197A: 00          nop
-197B: 1E FD       ld   e,$FD
-197D: FF          rst  $38
-197E: 03          inc  bc
-197F: 42          ld   b,d
-1980: 00          nop
-1981: 09          add  hl,bc
-1982: FD          db   $fd
-1983: 00          nop
-1984: 1E FD       ld   e,$FD
-1986: FF          rst  $38
-1987: 03          inc  bc
-1988: 41          ld   b,c
-1989: 00          nop
-198A: 09          add  hl,bc
-198B: FD          db   $fd
-198C: 00          nop
-198D: 1E FD       ld   e,$FD
-198F: FF          rst  $38
-1990: 03          inc  bc
-1991: 40          ld   b,b
-1992: 00          nop
-1993: 09          add  hl,bc
-1994: FD          db   $fd
-1995: 00          nop
-1996: 1E FC       ld   e,$FC
-1998: FF          rst  $38
-1999: FF          rst  $38
-199A: FF          rst  $38
-199B: FF          rst  $38
+    ;; (all `n_n` screens).
+    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__n_n
+18B0: 03 41 00 09 FE 00 1E 39 FF
+18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
+18C7: 03 40 00 09 FD 42 00 1B FD 3F 3F 3B FF
+18D4: 03 43 00 09 FC 41 00 1B FD 3B 3B 3F FF
+18E1: 03 42 00 1B FD 3F 3B 3B FF
+18EA: 03 3F 00 1B FD 3F 3F 3B FF
+18F3: 03 3E 43 00 1B FD 3B 3F 3B FF
+18FD: 03 3F 40 00 1B FC 47 3B 47 FF
+1907: 03 3B 42 00 1D 3D 3F FF
+190F: 03 3B 40 00 1D 3C 3E FF
+1917: 03 3F 43 00 1D 3A 3F FF
+191F: 03 3E 41 00 1B FE 10 3D 3E FF
+1929: 03 3B 40 00 1B FD 47 3E 47 FF
+1933: 03 3F 42 00 1B FD 3B 3B 3B FF
+193D: 03 3E 00 1B FD 3E 3F 3F FF
+1946: 03 42 00 09 FE 00 1B FD 3F 3B 3E FF
+1952: 03 43 00 09 FD 47 41 00 1B FD 3B 3E 3E FF
+1960: 03 41 00 09 FD 00 1B FC 3E 3B 3B FF
+196C: 03 42 00 09 FD 00 1E FE FF
+1975: 03 43 00 09 FD 00 1E FD FF
+197E: 03 42 00 09 FD 00 1E FD FF
+1987: 03 41 00 09 FD 00 1E FD FF
+1990: 03 40 00 09 FD 00 1E FC FF
+
+1999: FF ...
 
 ;;; Skip level AFTER getting bonus
 BONUS_SKIP_SCREEN
@@ -3639,226 +3479,34 @@ CHECK_EXIT_STAGE_LEFT
 
     ;; Level data for screens 5, 10
     ;; (`/` screens)
-1A10: 03          inc  bc
-1A11: 3F          ccf
-1A12: 00          nop
-1A13: 1B          dec  de
-1A14: FE 30       cp   $30
-1A16: 31 3C FF    ld   sp,$FF3C
-1A19: 03          inc  bc
-1A1A: 3F          ccf
-1A1B: 3E 3B       ld   a,$3B
-1A1D: 40          ld   b,b
-1A1E: 00          nop
-1A1F: 1B          dec  de
-1A20: FC 10 3A    call m,$3A10
-1A23: 3F          ccf
-1A24: FF          rst  $38
-1A25: 03          inc  bc
-1A26: 3B          dec  sp
-1A27: 3B          dec  sp
-1A28: 3E 3F       ld   a,$3F
-1A2A: 42          ld   b,d
-1A2B: 00          nop
-1A2C: 1B          dec  de
-1A2D: 36 10       ld   (hl),$10
-1A2F: 3D          dec  a
-1A30: 3F          ccf
-1A31: FF          rst  $38
-1A32: 03          inc  bc
-1A33: 3F          ccf
-1A34: 3B          dec  sp
-1A35: 3F          ccf
-1A36: 3E 3B       ld   a,$3B
-1A38: 41          ld   b,c
-1A39: 00          nop
-1A3A: 18 FE       jr   $1A3A
-1A3C: 30 31       jr   nc,$1A6F
-1A3E: 10 3C       djnz $1A7C
-1A40: 3F          ccf
-1A41: 3E FF       ld   a,$FF
-1A43: 03          inc  bc
-1A44: 3F          ccf
-1A45: 3B          dec  sp
-1A46: 3E 3B       ld   a,$3B
-1A48: 3E 3F       ld   a,$3F
-1A4A: 40          ld   b,b
-1A4B: 00          nop
-1A4C: 18 FC       jr   $1A4A
-1A4E: 00          nop
-1A4F: 1D          dec  e
-1A50: 39          add  hl,sp
-1A51: 3E FF       ld   a,$FF
-1A53: 03          inc  bc
-1A54: 3B          dec  sp
-1A55: 3F          ccf
-1A56: 3B          dec  sp
-1A57: 3E 3B       ld   a,$3B
-1A59: 41          ld   b,c
-1A5A: 00          nop
-1A5B: 18 36       jr   $1A93
-1A5D: 10 10       djnz $1A6F
-1A5F: 3D          dec  a
-1A60: 3F          ccf
-1A61: 3E 3B       ld   a,$3B
-1A63: FF          rst  $38
-1A64: 03          inc  bc
-1A65: 3F          ccf
-1A66: 3B          dec  sp
-1A67: 3B          dec  sp
-1A68: 3B          dec  sp
-1A69: 00          nop
-1A6A: 15          dec  d
-1A6B: FE 30       cp   $30
-1A6D: 31 30 10    ld   sp,$1030
-1A70: 3A 3E 3B    ld   a,($3B3E)
-1A73: 3B          dec  sp
-1A74: 3F          ccf
-1A75: FF          rst  $38
-1A76: 03          inc  bc
-1A77: 3E 3E       ld   a,$3E
-1A79: 3B          dec  sp
-1A7A: 00          nop
-1A7B: 15          dec  d
-1A7C: FC 00 1A    call m,$1A00
-1A7F: 3C          inc  a
-1A80: 3F          ccf
-1A81: 3E 3E       ld   a,$3E
-1A83: 3F          ccf
-1A84: FF          rst  $38
-1A85: 03          inc  bc
-1A86: 3B          dec  sp
-1A87: 00          nop
-1A88: 15          dec  d
-1A89: 37          scf
-1A8A: 10 10       djnz $1A9C
-1A8C: 10 39       djnz $1AC7
-1A8E: 3E 3E       ld   a,$3E
-1A90: 3F          ccf
-1A91: 3B          dec  sp
-1A92: 3F          ccf
-1A93: FF          rst  $38
-1A94: 03          inc  bc
-1A95: 3E 42       ld   a,$42
-1A97: 00          nop
-1A98: 12          ld   (de),a
-1A99: FE 31       cp   $31
-1A9B: 30 31       jr   nc,$1ACE
-1A9D: 10 10       djnz $1AAF
-1A9F: 10 3A       djnz $1ADB
-1AA1: 3F          ccf
-1AA2: 3E 3B       ld   a,$3B
-1AA4: 3E 3F       ld   a,$3F
-1AA6: FF          rst  $38
-1AA7: 03          inc  bc
-1AA8: 3F          ccf
-1AA9: 41          ld   b,c
-1AAA: 00          nop
-1AAB: 12          ld   (de),a
-1AAC: FC 00 1A    call m,$1A00
-1AAF: 38 3E       jr   c,$1AEF
-1AB1: 3B          dec  sp
-1AB2: 3B          dec  sp
-1AB3: 3F          ccf
-1AB4: FF          rst  $38
-1AB5: 03          inc  bc
-1AB6: 3E 40       ld   a,$40
-1AB8: 00          nop
-1AB9: 12          ld   (de),a
-1ABA: 36 00       ld   (hl),$00
-1ABC: 1B          dec  de
-1ABD: 39          add  hl,sp
-1ABE: 3F          ccf
-1ABF: 3B          dec  sp
-1AC0: 3F          ccf
-1AC1: FF          rst  $38
-1AC2: 03          inc  bc
-1AC3: 42          ld   b,d
-1AC4: 00          nop
-1AC5: 0F          rrca
-1AC6: FE 30       cp   $30
-1AC8: 31 00 1B    ld   sp,$1B00
-1ACB: 3C          inc  a
-1ACC: 3F          ccf
-1ACD: 3E 3E       ld   a,$3E
-1ACF: FF          rst  $38
-1AD0: 03          inc  bc
-1AD1: 43          ld   b,e
-1AD2: 00          nop
-1AD3: 0F          rrca
-1AD4: FC 00 1C    call m,$1C00
-1AD7: 3E 3E       ld   a,$3E
-1AD9: 3B          dec  sp
-1ADA: FF          rst  $38
-1ADB: 03          inc  bc
-1ADC: 41          ld   b,c
-1ADD: 00          nop
-1ADE: 0F          rrca
-1ADF: 37          scf
-1AE0: 00          nop
-1AE1: 1D          dec  e
-1AE2: 3A 3B FF    ld   a,($FF3B)
-1AE5: 03          inc  bc
-1AE6: 42          ld   b,d
-1AE7: 00          nop
-1AE8: 0C          inc  c
-1AE9: FE 34       cp   $34
-1AEB: 35          dec  (hl)
-1AEC: 36 00       ld   (hl),$00
-1AEE: 1E 3C       ld   e,$3C
-1AF0: FF          rst  $38
-1AF1: 03          inc  bc
-1AF2: 41          ld   b,c
-1AF3: 00          nop
-1AF4: 0C          inc  c
-1AF5: FC 00 1E    call m,$1E00
-1AF8: 39          add  hl,sp
-1AF9: FF          rst  $38
-1AFA: 03          inc  bc
-1AFB: 40          ld   b,b
-1AFC: 00          nop
-1AFD: 0C          inc  c
-1AFE: 36 00       ld   (hl),$00
-1B00: 1E 3E       ld   e,$3E
-1B02: FF          rst  $38
-1B03: 03          inc  bc
-1B04: 42          ld   b,d
-1B05: 00          nop
-1B06: 09          add  hl,bc
-1B07: FE 00       cp   $00
-1B09: 1E FE       ld   e,$FE
-1B0B: FF          rst  $38
-1B0C: 03          inc  bc
-1B0D: 43          ld   b,e
-1B0E: 00          nop
-1B0F: 09          add  hl,bc
-1B10: FD          db   $fd
-1B11: 00          nop
-1B12: 1E FD       ld   e,$FD
-1B14: FF          rst  $38
-1B15: 03          inc  bc
-1B16: 42          ld   b,d
-1B17: 00          nop
-1B18: 09          add  hl,bc
-1B19: FD          db   $fd
-1B1A: 00          nop
-1B1B: 1E FD       ld   e,$FD
-1B1D: FF          rst  $38
-1B1E: 03          inc  bc
-1B1F: 41          ld   b,c
-1B20: 00          nop
-1B21: 09          add  hl,bc
-1B22: FD          db   $fd
-1B23: 00          nop
-1B24: 1E FD       ld   e,$FD
-1B26: FF          rst  $38
-1B27: 03          inc  bc
-1B28: 40          ld   b,b
-1B29: 00          nop
-1B2A: 09          add  hl,bc
-1B2B: FC 00 1E    call m,$1E00
-1B2E: FC FF 2A    call m,$2AFF
-1B31: 20 80       jr   nz,$1AB3
+    ;; See DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__STAIRS_UP
+1A10: 03 3F 00 1B FE 30 31 3C FF
+1A19: 03 3F 3E 3B 40 00 1B FC 10 3A 3F FF
+1A25: 03 3B 3B 3E 3F 42 00 1B 36 10 3D 3F FF
+1A32: 03 3F 3B 3F 3E 3B 41 00 18 FE 30 31 10 3C 3F 3E FF
+1A43: 03 3F 3B 3E 3B 3E 3F 40 00 18 FC 00 1D 39 3E FF
+1A53: 03 3B 3F 3B 3E 3B 41 00 18 36 10 10 3D 3F 3E 3B FF
+1A64: 03 3F 3B 3B 3B 00 15 FE 30 31 30 10 3A 3E 3B 3B 3F FF
+1A76: 03 3E 3E 3B 00 15 FC 00 1A 3C 3F 3E 3E 3F FF
+1A85: 03 3B 00 15 37 10 10 10 39 3E 3E 3F 3B 3F FF
+1A94: 03 3E 42 00 12 FE 31 30 31 10 10 10 3A 3F 3E 3B 3E 3F FF
+1AA7: 03 3F 41 00 12 FC 00 1A 38 3E 3B 3B 3F FF
+1AB5: 03 3E 40 00 12 36 00 1B 39 3F 3B 3F FF
+1AC2: 03 42 00 0F FE 30 31 00 1B 3C 3F 3E 3E FF
+1AD0: 03 43 00 0F FC 00 1C 3E 3E 3B FF
+1ADB: 03 41 00 0F 37 00 1D 3A 3B FF
+1AE5: 03 42 00 0C FE 34 35 36 00 1E 3C FF
+1AF1: 03 41 00 0C FC 00 1E 39 FF
+1AFA: 03 40 00 0C 36 00 1E 3E FF
+1B03: 03 42 00 09 FE 00 1E FE FF
+1B0C: 03 43 00 09 FD 00 1E FD FF
+1B15: 03 42 00 09 FD 00 1E FD FF
+1B1E: 03 41 00 09 FD 00 1E FD FF
+1B27: 03 40 00 09 FC 00 1E FC FF
+
+    ;; who calls?
+1B30: 2A 20 80    ld   hl,$LEVEL_DATA_PTR
 1B33: 01 14 00    ld   bc,$0014
 1B36: 09          add  hl,bc
 1B37: 22 20 80    ld   ($LEVEL_DATA_PTR),hl
@@ -3867,7 +3515,7 @@ CHECK_EXIT_STAGE_LEFT
 1B40: 09          add  hl,bc
 1B41: 22 1E 80    ld   ($801E),hl
 1B44: C9          ret
-1B45: FF FF FF
+1B45: FF ...
 
 CALL_DO_DEATH_SEQUENCE
 1B48: CD C0 0C    call $DO_DEATH_SEQUENCE
@@ -3875,6 +3523,7 @@ CALL_DO_DEATH_SEQUENCE
 1B4E: C9          ret
 1B4F: FF
 
+    ;; ?
 1B50: 3E 03       ld   a,$03
 1B52: 32 80 80    ld   ($8080),a
 1B55: CD 00 17    call $ADD_SCORE
@@ -3920,11 +3569,11 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BAB: 20 10       jr   nz,$1BBD
 1BAD: CD 10 03    call $DRAW_TILES_H
 1BB0: 10 0A
-1BB2: 20 1C 11 29 15 22 10 01 FF
+1BB2: 20 1C 11 29 15 22 10 01 FF ; PLAYER 1
 1BBB: 18 0E       jr   $1BCB
 1BBD: CD 10 03    call $DRAW_TILES_H
 1BC0: 10 0A
-1BC2: 20 1C 11 29 15 22 10 02 FF
+1BC2: 20 1C 11 29 15 22 10 02 FF ; PLAYER 2
 1BCB: CD 41 1C    call $1C41
 1BCE: C9          ret
 
@@ -4061,833 +3710,92 @@ DINO_COLLISION
 
     ;; Lvel data for screens: 16, 19, 27
     ;; (all `S` screens)
-1D00: 03          inc  bc
-1D01: 3B          dec  sp
-1D02: 3E 3F       ld   a,$3F
-1D04: 00          nop
-1D05: 0F          rrca
-1D06: FE 00       cp   $00
-1D08: 1B          dec  de
-1D09: FE 10       cp   $10
-1D0B: 3D          dec  a
-1D0C: 3E FF       ld   a,$FF
-1D0E: 03          inc  bc
-1D0F: 3E 3E       ld   a,$3E
-1D11: 3F          ccf
-1D12: 3E 00       ld   a,$00
-1D14: 0F          rrca
-1D15: FD          db   $fd
-1D16: 00          nop
-1D17: 1B          dec  de
-1D18: FD          db   $fd
-1D19: 10 3C       djnz $1D57
-1D1B: 3F          ccf
-1D1C: FF          rst  $38
-1D1D: 03          inc  bc
-1D1E: 3E 3B       ld   a,$3B
-1D20: 3B          dec  sp
-1D21: 3F          ccf
-1D22: 3B          dec  sp
-1D23: 00          nop
-1D24: 0F          rrca
-1D25: FD          db   $fd
-1D26: 00          nop
-1D27: 1B          dec  de
-1D28: FD          db   $fd
-1D29: 10 3A       djnz $1D65
-1D2B: 3B          dec  sp
-1D2C: FF          rst  $38
-1D2D: 03          inc  bc
-1D2E: 3B          dec  sp
-1D2F: 3E 3B       ld   a,$3B
-1D31: 3F          ccf
-1D32: 3F          ccf
-1D33: 41          ld   b,c
-1D34: 00          nop
-1D35: 0F          rrca
-1D36: FD          db   $fd
-1D37: 00          nop
-1D38: 1B          dec  de
-1D39: FD          db   $fd
-1D3A: 10 3C       djnz $1D78
-1D3C: 3B          dec  sp
-1D3D: FF          rst  $38
-1D3E: 03          inc  bc
-1D3F: 3B          dec  sp
-1D40: 3E 3F       ld   a,$3F
-1D42: 3B          dec  sp
-1D43: 00          nop
-1D44: 0F          rrca
-1D45: FC 00 19    call m,$1900
-1D48: 35          dec  (hl)
-1D49: 34          inc  (hl)
-1D4A: 3C          inc  a
-1D4B: 10 39       djnz $1D86
-1D4D: 3E FF       ld   a,$FF
-1D4F: 03          inc  bc
-1D50: 3F          ccf
-1D51: 3E 3B       ld   a,$3B
-1D53: 3E 00       ld   a,$00
-1D55: 0D          dec  c
-1D56: 36 31       ld   (hl),$31
-1D58: 00          nop
-1D59: 18 37       jr   $1D92
-1D5B: 10 10       djnz $1D6D
-1D5D: 10 3D       djnz $1D9C
-1D5F: 3F          ccf
-1D60: 3E FF       ld   a,$FF
-1D62: 03          inc  bc
-1D63: 3B          dec  sp
-1D64: 3B          dec  sp
-1D65: 40          ld   b,b
-1D66: 00          nop
-1D67: 0C          inc  c
-1D68: 33          inc  sp
-1D69: 00          nop
-1D6A: 12          ld   (de),a
-1D6B: FE 00       cp   $00
-1D6D: 18 FE       jr   $1D6D
-1D6F: 10 10       djnz $1D81
-1D71: 3C          inc  a
-1D72: 3E 3F       ld   a,$3F
-1D74: 3F          ccf
-1D75: FF          rst  $38
-1D76: 03          inc  bc
-1D77: 3E 40       ld   a,$40
-1D79: 00          nop
-1D7A: 0C          inc  c
-1D7B: FE 00       cp   $00
-1D7D: 12          ld   (de),a
-1D7E: FD          db   $fd
-1D7F: 00          nop
-1D80: 18 FD       jr   $1D7F
-1D82: 10 10       djnz $1D94
-1D84: 3D          dec  a
-1D85: 3B          dec  sp
-1D86: 3F          ccf
-1D87: 3B          dec  sp
-1D88: FF          rst  $38
-1D89: 03          inc  bc
-1D8A: 3F          ccf
-1D8B: 41          ld   b,c
-1D8C: 00          nop
-1D8D: 0C          inc  c
-1D8E: FD          db   $fd
-1D8F: 00          nop
-1D90: 12          ld   (de),a
-1D91: FD          db   $fd
-1D92: 00          nop
-1D93: 18 FD       jr   $1D92
-1D95: 10 3A       djnz $1DD1
-1D97: 3F          ccf
-1D98: 3F          ccf
-1D99: 3E 3B       ld   a,$3B
-1D9B: FF          rst  $38
-1D9C: 03          inc  bc
-1D9D: 3F          ccf
-1D9E: 40          ld   b,b
-1D9F: 00          nop
-1DA0: 0C          inc  c
-1DA1: FD          db   $fd
-1DA2: 00          nop
-1DA3: 12          ld   (de),a
-1DA4: FD          db   $fd
-1DA5: 00          nop
-1DA6: 18 FD       jr   $1DA5
-1DA8: 10 38       djnz $1DE2
-1DAA: 3E 3F       ld   a,$3F
-1DAC: 3E 3B       ld   a,$3B
-1DAE: FF          rst  $38
-1DAF: 03          inc  bc
-1DB0: 40          ld   b,b
-1DB1: 00          nop
-1DB2: 0C          inc  c
-1DB3: FD          db   $fd
-1DB4: 00          nop
-1DB5: 12          ld   (de),a
-1DB6: FD          db   $fd
-1DB7: 00          nop
-1DB8: 18 FD       jr   $1DB7
-1DBA: 10 10       djnz $1DCC
-1DBC: 3A 3B 3B    ld   a,($3B3B)
-1DBF: 3F          ccf
-1DC0: FF          rst  $38
-1DC1: 03          inc  bc
-1DC2: 42          ld   b,d
-1DC3: 00          nop
-1DC4: 0C          inc  c
-1DC5: FC 00 12    call m,$PLAYER_POS_UPDATE
-1DC8: FC 00 18    call m,$1800
-1DCB: FC 10 10    call m,$1010
-1DCE: 3A 3F 3E    ld   a,($3E3F)
-1DD1: 3B          dec  sp
-1DD2: FF          rst  $38
-1DD3: 03          inc  bc
-1DD4: 43          ld   b,e
-1DD5: 00          nop
-1DD6: 0A          ld   a,(bc)
-1DD7: 33          inc  sp
-1DD8: 31 00 17    ld   sp,$ADD_SCORE
-1DDB: 36 10       ld   (hl),$10
-1DDD: 10 3C       djnz $1E1B
-1DDF: 3F          ccf
-1DE0: 3B          dec  sp
-1DE1: 3B          dec  sp
-1DE2: 3E FF       ld   a,$FF
-1DE4: 03          inc  bc
-1DE5: 41          ld   b,c
-1DE6: 00          nop
-1DE7: 0A          ld   a,(bc)
-1DE8: 36 00       ld   (hl),$00
-1DEA: 16 36       ld   d,$36
-1DEC: 10 10       djnz $1DFE
-1DEE: 3D          dec  a
-1DEF: 3B          dec  sp
-1DF0: 3F          ccf
-1DF1: 3E 3B       ld   a,$3B
-1DF3: 3B          dec  sp
-1DF4: FF          rst  $38
-1DF5: 03          inc  bc
-1DF6: 43          ld   b,e
-1DF7: 00          nop
-1DF8: 09          add  hl,bc
-1DF9: FE 00       cp   $00
-1DFB: 15          dec  d
-1DFC: FE 10       cp   $10
-1DFE: 10 3A       djnz $1E3A
-1E00: 3E 3F       ld   a,$3F
-1E02: 3B          dec  sp
-1E03: 3F          ccf
-1E04: 3B          dec  sp
-1E05: 3F          ccf
-1E06: FF          rst  $38
-1E07: 03          inc  bc
-1E08: 42          ld   b,d
-1E09: 00          nop
-1E0A: 09          add  hl,bc
-1E0B: FD          db   $fd
-1E0C: 00          nop
-1E0D: 15          dec  d
-1E0E: FD          db   $fd
-1E0F: 10 10       djnz $1E21
-1E11: 10 10       djnz $1E23
-1E13: 3E 3B       ld   a,$3B
-1E15: 3F          ccf
-1E16: 3F          ccf
-1E17: 3E FF       ld   a,$FF
-1E19: 03          inc  bc
-1E1A: 41          ld   b,c
-1E1B: 00          nop
-1E1C: 09          add  hl,bc
-1E1D: FD          db   $fd
-1E1E: 00          nop
-1E1F: 15          dec  d
-1E20: FD          db   $fd
-1E21: 10 10       djnz $1E33
-1E23: 10 10       djnz $1E35
-1E25: 10 3A       djnz $1E61
-1E27: 3F          ccf
-1E28: 3B          dec  sp
-1E29: 3E FF       ld   a,$FF
-1E2B: 03          inc  bc
-1E2C: 40          ld   b,b
-1E2D: 00          nop
-1E2E: 09          add  hl,bc
-1E2F: FD          db   $fd
-1E30: 00          nop
-1E31: 15          dec  d
-1E32: FC 00 1E    call m,$1E00
-1E35: FD          db   $fd
-1E36: FF          rst  $38
-1E37: 03          inc  bc
-1E38: 42          ld   b,d
-1E39: 00          nop
-1E3A: 09          add  hl,bc
-1E3B: FD          db   $fd
-1E3C: 00          nop
-1E3D: 1E FE       ld   e,$FE
-1E3F: FF          rst  $38
-1E40: 03          inc  bc
-1E41: 43          ld   b,e
-1E42: 00          nop
-1E43: 09          add  hl,bc
-1E44: FD          db   $fd
-1E45: 00          nop
-1E46: 1E FD       ld   e,$FD
-1E48: FF          rst  $38
-1E49: 03          inc  bc
-1E4A: 42          ld   b,d
-1E4B: 00          nop
-1E4C: 09          add  hl,bc
-1E4D: FD          db   $fd
-1E4E: 00          nop
-1E4F: 1E FD       ld   e,$FD
-1E51: FF          rst  $38
-1E52: 03          inc  bc
-1E53: 41          ld   b,c
-1E54: 00          nop
-1E55: 09          add  hl,bc
-1E56: FD          db   $fd
-1E57: 00          nop
-1E58: 1E FD       ld   e,$FD
-1E5A: FF          rst  $38
-1E5B: 03          inc  bc
-1E5C: 40          ld   b,b
-1E5D: 00          nop
-1E5E: 09          add  hl,bc
-1E5F: FC 00 1E    call m,$1E00
-1E62: FC FF FF    call m,$FFFF
-1E65: FF          rst  $38
-1E66: FF          rst  $38
-1E67: FF          rst  $38
-1E68: FF          rst  $38
-1E69: FF          rst  $38
-1E6A: FF          rst  $38
-1E6B: FF          rst  $38
-1E6C: FF          rst  $38
-1E6D: FF          rst  $38
-1E6E: FF          rst  $38
-1E6F: FF          rst  $38
+    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__S
+1D00: 03 3B 3E 3F 00 0F FE 00 1B FE 10 3D 3E FF
+1D0E: 03 3E 3E 3F 3E 00 0F FD 00 1B FD 10 3C 3F FF
+1D1D: 03 3E 3B 3B 3F 3B 00 0F FD 00 1B FD 10 3A 3B FF
+1D2D: 03 3B 3E 3B 3F 3F 41 00 0F FD 00 1B FD 10 3C 3B FF
+1D3E: 03 3B 3E 3F 3B 00 0F FC 00 19 35 34 3C 10 39 3E FF
+1D4F: 03 3F 3E 3B 3E 00 0D 36 31 00 18 37 10 10 10 3D 3F 3E FF
+1D62: 03 3B 3B 40 00 0C 33 00 12 FE 00 18 FE 10 10 3C 3E 3F 3F FF
+1D76: 03 3E 40 00 0C FE 00 12 FD 00 18 FD 10 10 3D 3B 3F 3B FF
+1D89: 03 3F 41 00 0C FD 00 12 FD 00 18 FD 10 3A 3F 3F 3E 3B FF
+1D9C: 03 3F 40 00 0C FD 00 12 FD 00 18 FD 10 38 3E 3F 3E 3B FF
+1DAF: 03 40 00 0C FD 00 12 FD 00 18 FD 10 10 3A 3B 3B 3F FF
+1DC1: 03 42 00 0C FC 00 12 FC 00 18 FC 10 10 3A 3F 3E 3B FF
+1DD3: 03 43 00 0A 33 31 00 17 36 10 10 3C 3F 3B 3B 3E FF
+1DE4: 03 41 00 0A 36 00 16 36 10 10 3D 3B 3F 3E 3B 3B FF
+1DF5: 03 43 00 09 FE 00 15 FE 10 10 3A 3E 3F 3B 3F 3B 3F FF
+1E07: 03 42 00 09 FD 00 15 FD 10 10 10 10 3E 3B 3F 3F 3E FF
+1E19: 03 41 00 09 FD 00 15 FD 10 10 10 10 10 3A 3F 3B 3E FF
+1E2B: 03 40 00 09 FD 00 15 FC 00 1E FD FF
+1E37: 03 42 00 09 FD 00 1E FE FF
+1E40: 03 43 00 09 FD 00 1E FD FF
+1E49: 03 42 00 09 FD 00 1E FD FF
+1E52: 03 41 00 09 FD 00 1E FD FF
+1E5B: 03 40 00 09 FC 00 1E FC FF
+
+1E64: FF ...
 
     ;; Level data for screens 7, 12, 17, 20, 23, 26
     ;; (all `\` screens)
-1E70: 03          inc  bc
-1E71: 42          ld   b,d
-1E72: 00          nop
-1E73: 0A          ld   a,(bc)
-1E74: 30 32       jr   nc,$1EA8
-1E76: 00          nop
-1E77: 1D          dec  e
-1E78: 3C          inc  a
-1E79: 3F          ccf
-1E7A: FF          rst  $38
-1E7B: 03          inc  bc
-1E7C: 43          ld   b,e
-1E7D: 00          nop
-1E7E: 0C          inc  c
-1E7F: FE 00       cp   $00
-1E81: 1C          inc  e
-1E82: 3A 3B 3F    ld   a,($3F3B)
-1E85: FF          rst  $38
-1E86: 03          inc  bc
-1E87: 41          ld   b,c
-1E88: 00          nop
-1E89: 0C          inc  c
-1E8A: FC 00 19    call m,$1900
-1E8D: 38 3E       jr   c,$1ECD
-1E8F: 3B          dec  sp
-1E90: 3F          ccf
-1E91: 3F          ccf
-1E92: 3B          dec  sp
-1E93: FF          rst  $38
-1E94: 03          inc  bc
-1E95: 3B          dec  sp
-1E96: 40          ld   b,b
-1E97: 00          nop
-1E98: 0D          dec  c
-1E99: 31 32 00    ld   sp,$0032
-1E9C: 16 3A       ld   d,$3A
-1E9E: 3F          ccf
-1E9F: 3E 3B       ld   a,$3B
-1EA1: 3B          dec  sp
-1EA2: 3E 3F       ld   a,$3F
-1EA4: 3B          dec  sp
-1EA5: 3F          ccf
-1EA6: FF          rst  $38
-1EA7: 03          inc  bc
-1EA8: 3B          dec  sp
-1EA9: 00          nop
-1EAA: 0F          rrca
-1EAB: FE 00       cp   $00
-1EAD: 15          dec  d
-1EAE: 39          add  hl,sp
-1EAF: 3E 3E       ld   a,$3E
-1EB1: 3F          ccf
-1EB2: 3B          dec  sp
-1EB3: 3F          ccf
-1EB4: 3F          ccf
-1EB5: 3B          dec  sp
-1EB6: 3E 3F       ld   a,$3F
-1EB8: FF          rst  $38
-1EB9: 03          inc  bc
-1EBA: 3F          ccf
-1EBB: 40          ld   b,b
-1EBC: 00          nop
-1EBD: 0F          rrca
-1EBE: FC 00 14    call m,$1400
-1EC1: 38 3F       jr   c,$1F02
-1EC3: 3B          dec  sp
-1EC4: 3E 3B       ld   a,$3B
-1EC6: 3F          ccf
-1EC7: 3E 3B       ld   a,$3B
-1EC9: 3F          ccf
-1ECA: 3E 3E       ld   a,$3E
-1ECC: FF          rst  $38
-1ECD: 03          inc  bc
-1ECE: 3B          dec  sp
-1ECF: 3E 41       ld   a,$41
-1ED1: 00          nop
-1ED2: 10 30       djnz $1F04
-1ED4: 32 00 14    ld   ($1400),a
-1ED7: 3A 3B 3F    ld   a,($3F3B)
-1EDA: 3E 3F       ld   a,$3F
-1EDC: 3F          ccf
-1EDD: 3B          dec  sp
-1EDE: 3B          dec  sp
-1EDF: 3E 3F       ld   a,$3F
-1EE1: 3E FF       ld   a,$FF
-1EE3: 03          inc  bc
-1EE4: 3E 3F       ld   a,$3F
-1EE6: 3B          dec  sp
-1EE7: 3B          dec  sp
-1EE8: 40          ld   b,b
-1EE9: 00          nop
-1EEA: 12          ld   (de),a
-1EEB: FE 3F       cp   $3F
-1EED: 3F          ccf
-1EEE: 3B          dec  sp
-1EEF: 3E 3F       ld   a,$3F
-1EF1: 3E 3B       ld   a,$3B
-1EF3: 3B          dec  sp
-1EF4: 3E 3F       ld   a,$3F
-1EF6: 3E 3B       ld   a,$3B
-1EF8: FF          rst  $38
-1EF9: 03          inc  bc
-1EFA: 3B          dec  sp
-1EFB: 3F          ccf
-1EFC: 3F          ccf
-1EFD: 3E 40       ld   a,$40
-1EFF: 00          nop
-1F00: 12          ld   (de),a
-1F01: FD          db   $fd
-1F02: 3B          dec  sp
-1F03: 3F          ccf
-1F04: 3E 3B       ld   a,$3B
-1F06: 3E 3F       ld   a,$3F
-1F08: 3F          ccf
-1F09: 3B          dec  sp
-1F0A: 3B          dec  sp
-1F0B: 3F          ccf
-1F0C: 3E 3E       ld   a,$3E
-1F0E: FF          rst  $38
-1F0F: 03          inc  bc
-1F10: 3F          ccf
-1F11: 3F          ccf
-1F12: 3E 3B       ld   a,$3B
-1F14: 3B          dec  sp
-1F15: 00          nop
-1F16: 16 39       ld   d,$39
-1F18: 3B          dec  sp
-1F19: 3F          ccf
-1F1A: 3E 3F       ld   a,$3F
-1F1C: 3F          ccf
-1F1D: 3B          dec  sp
-1F1E: 3B          dec  sp
-1F1F: 3E FF       ld   a,$FF
-1F21: 03          inc  bc
-1F22: 3F          ccf
-1F23: 3B          dec  sp
-1F24: 3B          dec  sp
-1F25: 3E 40       ld   a,$40
-1F27: 00          nop
-1F28: 15          dec  d
-1F29: FE 3B       cp   $3B
-1F2B: 3E 3F       ld   a,$3F
-1F2D: 3B          dec  sp
-1F2E: 3E 3F       ld   a,$3F
-1F30: 3B          dec  sp
-1F31: 3E 3F       ld   a,$3F
-1F33: FF          rst  $38
-1F34: 03          inc  bc
-1F35: 3B          dec  sp
-1F36: 3F          ccf
-1F37: 3E 3E       ld   a,$3E
-1F39: 3B          dec  sp
-1F3A: 41          ld   b,c
-1F3B: 00          nop
-1F3C: 15          dec  d
-1F3D: FC 3E 3B    call m,$3B3E
-1F40: 3F          ccf
-1F41: 3E 3B       ld   a,$3B
-1F43: 3F          ccf
-1F44: 3E 3B       ld   a,$3B
-1F46: 3F          ccf
-1F47: FF          rst  $38
-1F48: 03          inc  bc
-1F49: 3F          ccf
-1F4A: 3E 3E       ld   a,$3E
-1F4C: 3F          ccf
-1F4D: 3F          ccf
-1F4E: 00          nop
-1F4F: 19          add  hl,de
-1F50: 3A 3E 3F    ld   a,($3F3E)
-1F53: 3B          dec  sp
-1F54: 3F          ccf
-1F55: 3B          dec  sp
-1F56: FF          rst  $38
-1F57: 03          inc  bc
-1F58: 3F          ccf
-1F59: 3E 3F       ld   a,$3F
-1F5B: 3B          dec  sp
-1F5C: 40          ld   b,b
-1F5D: 00          nop
-1F5E: 18 FE       jr   $1F5E
-1F60: 3B          dec  sp
-1F61: 3E 3F       ld   a,$3F
-1F63: 3F          ccf
-1F64: 3E 3B       ld   a,$3B
-1F66: FF          rst  $38
-1F67: 03          inc  bc
-1F68: 3F          ccf
-1F69: 3E 3E       ld   a,$3E
-1F6B: 3B          dec  sp
-1F6C: 3F          ccf
-1F6D: 40          ld   b,b
-1F6E: 00          nop
-1F6F: 18 FC       jr   $1F6D
-1F71: 3E 3B       ld   a,$3B
-1F73: 3E 3B       ld   a,$3B
-1F75: 3E 3F       ld   a,$3F
-1F77: FF          rst  $38
-1F78: 03          inc  bc
-1F79: 3E 3B       ld   a,$3B
-1F7B: 3B          dec  sp
-1F7C: 41          ld   b,c
-1F7D: 00          nop
-1F7E: 1C          inc  e
-1F7F: 38 3F       jr   c,$1FC0
-1F81: 3F          ccf
-1F82: FF          rst  $38
-1F83: 03          inc  bc
-1F84: 3F          ccf
-1F85: 3E 42       ld   a,$42
-1F87: 00          nop
-1F88: 1B          dec  de
-1F89: FE 3E       cp   $3E
-1F8B: 3B          dec  sp
-1F8C: 3B          dec  sp
-1F8D: FF          rst  $38
-1F8E: 03          inc  bc
-1F8F: 3F          ccf
-1F90: 40          ld   b,b
-1F91: 00          nop
-1F92: 1B          dec  de
-1F93: FC 3B 3E    call m,$3E3B
-1F96: 3F          ccf
-1F97: FF          rst  $38
-1F98: 03          inc  bc
-1F99: 42          ld   b,d
-1F9A: 00          nop
-1F9B: 09          add  hl,bc
-1F9C: FE 00       cp   $00
-1F9E: 1E FE       ld   e,$FE
-1FA0: FF          rst  $38
-1FA1: 03          inc  bc
-1FA2: 43          ld   b,e
-1FA3: 00          nop
-1FA4: 09          add  hl,bc
-1FA5: FD          db   $fd
-1FA6: 00          nop
-1FA7: 1E FD       ld   e,$FD
-1FA9: FF          rst  $38
-1FAA: 03          inc  bc
-1FAB: 42          ld   b,d
-1FAC: 00          nop
-1FAD: 09          add  hl,bc
-1FAE: FD          db   $fd
-1FAF: 00          nop
-1FB0: 1E FD       ld   e,$FD
-1FB2: FF          rst  $38
-1FB3: 03          inc  bc
-1FB4: 41          ld   b,c
-1FB5: 00          nop
-1FB6: 09          add  hl,bc
-1FB7: FD          db   $fd
-1FB8: 00          nop
-1FB9: 1E FD       ld   e,$FD
-1FBB: FF          rst  $38
-1FBC: 03          inc  bc
-1FBD: 40          ld   b,b
-1FBE: 00          nop
-1FBF: 09          add  hl,bc
-1FC0: FC 00 1E    call m,$1E00
-1FC3: FC FF FF    call m,$FFFF
-1FC6: FF          rst  $38
-1FC7: FF          rst  $38
-1FC8: FF          rst  $38
-1FC9: FF          rst  $38
-1FCA: FF          rst  $38
-1FCB: FF          rst  $38
-1FCC: FF          rst  $38
-1FCD: FF          rst  $38
-1FCE: FF          rst  $38
-1FCF: FF          rst  $38
-1FD0: FF          rst  $38
-1FD1: FF          rst  $38
-1FD2: FF          rst  $38
-1FD3: FF          rst  $38
-1FD4: FF          rst  $38
-1FD5: FF          rst  $38
-1FD6: FF          rst  $38
-1FD7: FF          rst  $38
-1FD8: FF          rst  $38
-1FD9: FF          rst  $38
-1FDA: FF          rst  $38
-1FDB: FF          rst  $38
-1FDC: FF          rst  $38
-1FDD: FF          rst  $38
-1FDE: FF          rst  $38
-1FDF: FF          rst  $38
+    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__STAIRS_DOWN
+1E70: 03 42 00 0A 30 32 00 1D 3C 3F FF
+1E7B: 03 43 00 0C FE 00 1C 3A 3B 3F FF
+1E86: 03 41 00 0C FC 00 19 38 3E 3B 3F 3F 3B FF
+1E94: 03 3B 40 00 0D 31 32 00 16 3A 3F 3E 3B 3B 3E 3F 3B 3F FF
+1EA7: 03 3B 00 0F FE 00 15 39 3E 3E 3F 3B 3F 3F 3B 3E 3F FF
+1EB9: 03 3F 40 00 0F FC 00 14 38 3F 3B 3E 3B 3F 3E 3B 3F 3E 3E FF
+1ECD: 03 3B 3E 41 00 10 30 32 00 14 3A 3B 3F 3E 3F 3F 3B 3B 3E 3F 3E FF
+1EE3: 03 3E 3F 3B 3B 40 00 12 FE 3F 3F 3B 3E 3F 3E 3B 3B 3E 3F 3E 3B FF
+1EF9: 03 3B 3F 3F 3E 40 00 12 FD 3B 3F 3E 3B 3E 3F 3F 3B 3B 3F 3E 3E FF
+1F0F: 03 3F 3F 3E 3B 3B 00 16 39 3B 3F 3E 3F 3F 3B 3B 3E FF
+1F21: 03 3F 3B 3B 3E 40 00 15 FE 3B 3E 3F 3B 3E 3F 3B 3E 3F FF
+1F34: 03 3B 3F 3E 3E 3B 41 00 15 FC 3E 3B 3F 3E 3B 3F 3E 3B 3F FF
+1F48: 03 3F 3E 3E 3F 3F 00 19 3A 3E 3F 3B 3F 3B FF
+1F57: 03 3F 3E 3F 3B 40 00 18 FE 3B 3E 3F 3F 3E 3B FF
+1F67: 03 3F 3E 3E 3B 3F 40 00 18 FC 3E 3B 3E 3B 3E 3F FF
+1F78: 03 3E 3B 3B 41 00 1C 38 3F 3F FF
+1F83: 03 3F 3E 42 00 1B FE 3E 3B 3B FF
+1F8E: 03 3F 40 00 1B FC 3B 3E 3F FF
+1F98: 03 42 00 09 FE 00 1E FE FF
+1FA1: 03 43 00 09 FD 00 1E FD FF
+1FAA: 03 42 00 09 FD 00 1E FD FF
+1FB3: 03 41 00 09 FD 00 1E FD FF
+1FBC: 03 40 00 09 FC 00 1E FC FF
+
+1FC5: FF ...
 
     ;; Level data for screens 21, 24
     ;; (all `S_S` screens)
-1FE0: 03          inc  bc
-1FE1: 42          ld   b,d
-1FE2: 00          nop
-1FE3: 1D          dec  e
-1FE4: 3D          dec  a
-1FE5: 3B          dec  sp
-1FE6: FF          rst  $38
-1FE7: 03          inc  bc
-1FE8: 41          ld   b,c
-1FE9: 00          nop
-1FEA: 0F          rrca
-1FEB: FE 00       cp   $00
-1FED: 1B          dec  de
-1FEE: FE 3F       cp   $3F
-1FF0: 3E 3B       ld   a,$3B
-1FF2: FF          rst  $38
-1FF3: 03          inc  bc
-1FF4: 40          ld   b,b
-1FF5: 00          nop
-1FF6: 0F          rrca
-1FF7: FD          db   $fd
-1FF8: 00          nop
-1FF9: 1B          dec  de
-1FFA: FD          db   $fd
-1FFB: 3B          dec  sp
-1FFC: 3E 3F       ld   a,$3F
-1FFE: FF          rst  $38
-1FFF: 03          inc  bc
-2000: 3F          ccf
-2001: 43          ld   b,e
-2002: 00          nop
-2003: 0F          rrca
-2004: FC 00 1B    call m,$1B00
-2007: FC 3F 3E    call m,$3E3F
-200A: 3B          dec  sp
-200B: FF          rst  $38
-200C: 03          inc  bc
-200D: 3E 3B       ld   a,$3B
-200F: 41          ld   b,c
-2010: 00          nop
-2011: 0E 36       ld   c,$36
-2013: 10 32       djnz $2047
-2015: 00          nop
-2016: 1B          dec  de
-2017: 38 3B       jr   c,$2054
-2019: 3F          ccf
-201A: 3E FF       ld   a,$FF
-201C: 03          inc  bc
-201D: 3B          dec  sp
-201E: 3E 3E       ld   a,$3E
-2020: 40          ld   b,b
-2021: 00          nop
-2022: 0D          dec  c
-2023: 36 10       ld   (hl),$10
-2025: 10 10       djnz $2037
-2027: 32 00 1A    ld   ($1A00),a
-202A: 3D          dec  a
-202B: 3B          dec  sp
-202C: 3B          dec  sp
-202D: 3F          ccf
-202E: 3F          ccf
-202F: FF          rst  $38
-2030: 03          inc  bc
-2031: 3B          dec  sp
-2032: 3E 3E       ld   a,$3E
-2034: 40          ld   b,b
-2035: 00          nop
-2036: 0C          inc  c
-2037: FE 00       cp   $00
-2039: 12          ld   (de),a
-203A: FE 00       cp   $00
-203C: 18 FE       jr   $203C
-203E: 3E 3F       ld   a,$3F
-2040: 3B          dec  sp
-2041: 3B          dec  sp
-2042: 3E 3F       ld   a,$3F
-2044: FF          rst  $38
-2045: 03          inc  bc
-2046: 3F          ccf
-2047: 3E 3B       ld   a,$3B
-2049: 00          nop
-204A: 0C          inc  c
-204B: FD          db   $fd
-204C: 00          nop
-204D: 12          ld   (de),a
-204E: FD          db   $fd
-204F: 00          nop
-2050: 18 FD       jr   $204F
-2052: 3F          ccf
-2053: 3E 3B       ld   a,$3B
-2055: 3F          ccf
-2056: 3E 3B       ld   a,$3B
-2058: FF          rst  $38
-2059: 03          inc  bc
-205A: 3E 3B       ld   a,$3B
-205C: 41          ld   b,c
-205D: 00          nop
-205E: 0C          inc  c
-205F: FC 00 12    call m,$PLAYER_POS_UPDATE
-2062: FC 00 18    call m,$1800
-2065: FC 3E 3F    call m,$3F3E
-2068: 3E 3F       ld   a,$3F
-206A: 3B          dec  sp
-206B: 3F          ccf
-206C: FF          rst  $38
-206D: 03          inc  bc
-206E: 3F          ccf
-206F: 42          ld   b,d
-2070: 00          nop
-2071: 19          add  hl,de
-2072: 3C          inc  a
-2073: 3F          ccf
-2074: 3E 3B       ld   a,$3B
-2076: 3B          dec  sp
-2077: 3F          ccf
-2078: FF          rst  $38
-2079: 03          inc  bc
-207A: 3B          dec  sp
-207B: 43          ld   b,e
-207C: 00          nop
-207D: 19          add  hl,de
-207E: 3A 3E 3F    ld   a,($3F3E)
-2081: 3E 3F       ld   a,$3F
-2083: 3E FF       ld   a,$FF
-2085: 03          inc  bc
-2086: 3B          dec  sp
-2087: 42          ld   b,d
-2088: 00          nop
-2089: 19          add  hl,de
-208A: 3C          inc  a
-208B: 3B          dec  sp
-208C: 3B          dec  sp
-208D: 3E 3B       ld   a,$3B
-208F: 3B          dec  sp
-2090: FF          rst  $38
-2091: 03          inc  bc
-2092: 3F          ccf
-2093: 3F          ccf
-2094: 41          ld   b,c
-2095: 00          nop
-2096: 19          add  hl,de
-2097: 3C          inc  a
-2098: 3F          ccf
-2099: 3E 3F       ld   a,$3F
-209B: 3B          dec  sp
-209C: 3E FF       ld   a,$FF
-209E: 03          inc  bc
-209F: 3E 43       ld   a,$43
-20A1: 00          nop
-20A2: 1A          ld   a,(de)
-20A3: 3E 3F       ld   a,$3F
-20A5: 3F          ccf
-20A6: 3E 3B       ld   a,$3B
-20A8: FF          rst  $38
-20A9: 03          inc  bc
-20AA: 3B          dec  sp
-20AB: 3B          dec  sp
-20AC: 40          ld   b,b
-20AD: 00          nop
-20AE: 0C          inc  c
-20AF: FE 00       cp   $00
-20B1: 12          ld   (de),a
-20B2: FE 00       cp   $00
-20B4: 18 FE       jr   $20B4
-20B6: 3E 3F       ld   a,$3F
-20B8: 3B          dec  sp
-20B9: 3B          dec  sp
-20BA: 3F          ccf
-20BB: 3E FF       ld   a,$FF
-20BD: 03          inc  bc
-20BE: 3F          ccf
-20BF: 00          nop
-20C0: 0C          inc  c
-20C1: FD          db   $fd
-20C2: 00          nop
-20C3: 12          ld   (de),a
-20C4: FD          db   $fd
-20C5: 00          nop
-20C6: 18 FD       jr   $20C5
-20C8: 3E 3E       ld   a,$3E
-20CA: 3F          ccf
-20CB: 3B          dec  sp
-20CC: 3F          ccf
-20CD: 3B          dec  sp
-20CE: FF          rst  $38
-20CF: 03          inc  bc
-20D0: 40          ld   b,b
-20D1: 00          nop
-20D2: 0C          inc  c
-20D3: FC 00 12    call m,$PLAYER_POS_UPDATE
-20D6: FC 00 18    call m,$1800
-20D9: FC 3F 3E    call m,$3E3F
-20DC: 3B          dec  sp
-20DD: 3B          dec  sp
-20DE: 3E 3F       ld   a,$3F
-20E0: FF          rst  $38
-20E1: 03          inc  bc
-20E2: 42          ld   b,d
-20E3: 00          nop
-20E4: 0B          dec  bc
-20E5: 36 00       ld   (hl),$00
-20E7: 13          inc  de
-20E8: 32 00 19    ld   ($1900),a
-20EB: 30 31       jr   nc,$211E
-20ED: 31 30 30    ld   sp,$3030
-20F0: FE FF       cp   $FF
-20F2: 03          inc  bc
-20F3: 43          ld   b,e
-20F4: 00          nop
-20F5: 0A          ld   a,(bc)
-20F6: 36 00       ld   (hl),$00
-20F8: 14          inc  d
-20F9: 32 00 1E    ld   ($1E00),a
-20FC: FD          db   $fd
-20FD: FF          rst  $38
-20FE: 03          inc  bc
-20FF: 42          ld   b,d
-2100: 00          nop
-2101: 09          add  hl,bc
-2102: FE 00       cp   $00
-2104: 15          dec  d
-2105: FE 00       cp   $00
-2107: 1E FD       ld   e,$FD
-2109: FF          rst  $38
-210A: 03          inc  bc
-210B: 41          ld   b,c
-210C: 00          nop
-210D: 09          add  hl,bc
-210E: FD          db   $fd
-210F: 00          nop
-2110: 15          dec  d
-2111: FD          db   $fd
-2112: 00          nop
-2113: 1E FD       ld   e,$FD
-2115: FF          rst  $38
-2116: 03          inc  bc
-2117: 40          ld   b,b
-2118: 00          nop
-2119: 09          add  hl,bc
-211A: FC 00 15    call m,$1500
-211D: FC 00 1E    call m,$1E00
-2120: FC FF FF    call m,$FFFF
-2123: FF          rst  $38
-2124: FF          rst  $38
-2125: FF          rst  $38
-2126: FF          rst  $38
-2127: FF          rst  $38
+    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__S_S
+1FE0: 03 42 00 1D 3D 3B FF
+1FE7: 03 41 00 0F FE 00 1B FE 3F 3E 3B FF
+1FF3: 03 40 00 0F FD 00 1B FD 3B 3E 3F FF
+1FFF: 03 3F 43 00 0F FC 00 1B FC 3F 3E 3B FF
+200C: 03 3E 3B 41 00 0E 36 10 32 00 1B 38 3B 3F 3E FF
+201C: 03 3B 3E 3E 40 00 0D 36 10 10 10 32 00 1A 3D 3B 3B 3F 3F FF
+2030: 03 3B 3E 3E 40 00 0C FE 00 12 FE 00 18 FE 3E 3F 3B 3B 3E 3F FF
+2045: 03 3F 3E 3B 00 0C FD 00 12 FD 00 18 FD 3F 3E 3B 3F 3E 3B FF
+2059: 03 3E 3B 41 00 0C FC 00 12 FC 00 18 FC 3E 3F 3E 3F 3B 3F FF
+206D: 03 3F 42 00 19 3C 3F 3E 3B 3B 3F FF
+2079: 03 3B 43 00 19 3A 3E 3F 3E 3F 3E FF
+2085: 03 3B 42 00 19 3C 3B 3B 3E 3B 3B FF
+2091: 03 3F 3F 41 00 19 3C 3F 3E 3F 3B 3E FF
+209E: 03 3E 43 00 1A 3E 3F 3F 3E 3B FF
+20A9: 03 3B 3B 40 00 0C FE 00 12 FE 00 18 FE 3E 3F 3B 3B 3F 3E FF
+20BD: 03 3F 00 0C FD 00 12 FD 00 18 FD 3E 3E 3F 3B 3F 3B FF
+20CF: 03 40 00 0C FC 00 12 FC 00 18 FC 3F 3E 3B 3B 3E FF
+20E1: 03 42 00 0B 36 00 13 32 00 19 30 31 31 30 30 FE FF
+20F2: 03 43 00 0A 36 00 14 32 00 1E FD FF
+20FE: 03 42 00 09 FE 00 15 FE 00 1E FD FF
+210A: 03 41 00 09 FD 00 15 FD 00 1E FD FF
+2116: 03 40 00 09 FC 00 15 FC 00 1E FC FF
+
+2122: FF ...
 
     ;;
 2128: CD A0 13    call $WAIT_VBLANK
@@ -4901,278 +3809,31 @@ DINO_COLLISION
 
     ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
     ;; (all `nTn` and `W` levels)
-2140: 03 40 00 0A 48 00 1E 39
-2148: FF          rst  $38
-2149: 03          inc  bc
-214A: 41          ld   b,c
-214B: 00          nop
-214C: 0B          dec  bc
-214D: 48          ld   c,b
-214E: 00          nop
-214F: 1D          dec  e
-2150: 3A 3B FF    ld   a,($FF3B)
-2153: 03          inc  bc
-2154: 3F          ccf
-2155: 46          ld   b,(hl)
-2156: 46          ld   b,(hl)
-2157: 46          ld   b,(hl)
-2158: 46          ld   b,(hl)
-2159: 46          ld   b,(hl)
-215A: 46          ld   b,(hl)
-215B: 46          ld   b,(hl)
-215C: 46          ld   b,(hl)
-215D: FA 00 1B    jp   m,$1B00
-2160: FE 3E       cp   $3E
-2162: 3F          ccf
-2163: 3E FF       ld   a,$FF
-2165: 03          inc  bc
-2166: 3E 40       ld   a,$40
-2168: 44          ld   b,h
-2169: 44          ld   b,h
-216A: 44          ld   b,h
-216B: 44          ld   b,h
-216C: 44          ld   b,h
-216D: 44          ld   b,h
-216E: 44          ld   b,h
-216F: F8          ret  m
-2170: 00          nop
-2171: 1B          dec  de
-2172: FD          db   $fd
-2173: 3B          dec  sp
-2174: 3F          ccf
-2175: 3E FF       ld   a,$FF
-2177: 03          inc  bc
-2178: 42          ld   b,d
-2179: 00          nop
-217A: 0D          dec  c
-217B: 48          ld   c,b
-217C: 00          nop
-217D: 1B          dec  de
-217E: FC 3A 3B    call m,$3B3A
-2181: 3B          dec  sp
-2182: FF          rst  $38
-2183: 03          inc  bc
-2184: 3B          dec  sp
-2185: 3B          dec  sp
-2186: 41          ld   b,c
-2187: 00          nop
-2188: 0E 48       ld   c,$48
-218A: 00          nop
-218B: 1B          dec  de
-218C: 3C          inc  a
-218D: 3B          dec  sp
-218E: 3E 3E       ld   a,$3E
-2190: FF          rst  $38
-2191: 03          inc  bc
-2192: 3B          dec  sp
-2193: 3E 00       ld   a,$00
-2195: 0F          rrca
-2196: 48          ld   c,b
-2197: 00          nop
-2198: 1B          dec  de
-2199: 3A 3E 3F    ld   a,($3F3E)
-219C: 3F          ccf
-219D: FF          rst  $38
-219E: 03          inc  bc
-219F: 3F          ccf
-21A0: 3F          ccf
-21A1: 40          ld   b,b
-21A2: 46          ld   b,(hl)
-21A3: 46          ld   b,(hl)
-21A4: 46          ld   b,(hl)
-21A5: 46          ld   b,(hl)
-21A6: 46          ld   b,(hl)
-21A7: 46          ld   b,(hl)
-21A8: 46          ld   b,(hl)
-21A9: 46          ld   b,(hl)
-21AA: 46          ld   b,(hl)
-21AB: FA 00 18    jp   m,$1800
-21AE: FE 10       cp   $10
-21B0: 10 39       djnz $21EB
-21B2: 3B          dec  sp
-21B3: 3F          ccf
-21B4: 3F          ccf
-21B5: FF          rst  $38
-21B6: 03          inc  bc
-21B7: 3E 3B       ld   a,$3B
-21B9: 3B          dec  sp
-21BA: 41          ld   b,c
-21BB: 44          ld   b,h
-21BC: 44          ld   b,h
-21BD: 44          ld   b,h
-21BE: 44          ld   b,h
-21BF: 44          ld   b,h
-21C0: 44          ld   b,h
-21C1: 44          ld   b,h
-21C2: 44          ld   b,h
-21C3: F8          ret  m
-21C4: 00          nop
-21C5: 18 FD       jr   $21C4
-21C7: 3F          ccf
-21C8: 3E 3B       ld   a,$3B
-21CA: 3F          ccf
-21CB: 3E 3B       ld   a,$3B
-21CD: FF          rst  $38
-21CE: 03          inc  bc
-21CF: 3F          ccf
-21D0: 3B          dec  sp
-21D1: 3E 40       ld   a,$40
-21D3: 00          nop
-21D4: 0F          rrca
-21D5: 4A          ld   c,d
-21D6: 00          nop
-21D7: 18 FC       jr   $21D5
-21D9: 3F          ccf
-21DA: 3F          ccf
-21DB: 3E 3E       ld   a,$3E
-21DD: 3B          dec  sp
-21DE: 3E FF       ld   a,$FF
-21E0: 03          inc  bc
-21E1: 3B          dec  sp
-21E2: 3E 43       ld   a,$43
-21E4: 00          nop
-21E5: 0F          rrca
-21E6: 4A          ld   c,d
-21E7: 00          nop
-21E8: 1B          dec  de
-21E9: 3C          inc  a
-21EA: 3E 3F       ld   a,$3F
-21EC: 3B          dec  sp
-21ED: FF          rst  $38
-21EE: 03          inc  bc
-21EF: 3F          ccf
-21F0: 41          ld   b,c
-21F1: 46          ld   b,(hl)
-21F2: 46          ld   b,(hl)
-21F3: 46          ld   b,(hl)
-21F4: 46          ld   b,(hl)
-21F5: 46          ld   b,(hl)
-21F6: 46          ld   b,(hl)
-21F7: 46          ld   b,(hl)
-21F8: 46          ld   b,(hl)
-21F9: 46          ld   b,(hl)
-21FA: 46          ld   b,(hl)
-21FB: FA 00 1B    jp   m,$1B00
-21FE: 3C          inc  a
-21FF: 3B          dec  sp
-2200: 3F          ccf
-2201: 3E FF       ld   a,$FF
-2203: 03          inc  bc
-2204: 40          ld   b,b
-2205: 44          ld   b,h
-2206: 44          ld   b,h
-2207: 44          ld   b,h
-2208: 44          ld   b,h
-2209: 44          ld   b,h
-220A: 44          ld   b,h
-220B: 44          ld   b,h
-220C: 44          ld   b,h
-220D: 44          ld   b,h
-220E: 44          ld   b,h
-220F: 44          ld   b,h
-2210: F8          ret  m
-2211: 00          nop
-2212: 1C          inc  e
-2213: 39          add  hl,sp
-2214: 3E 3F       ld   a,$3F
-2216: FF          rst  $38
-2217: 03          inc  bc
-2218: 42          ld   b,d
-2219: 00          nop
-221A: 0F          rrca
-221B: 49          ld   c,c
-221C: 00          nop
-221D: 1C          inc  e
-221E: 3C          inc  a
-221F: 3B          dec  sp
-2220: 3B          dec  sp
-2221: FF          rst  $38
-2222: 03          inc  bc
-2223: 41          ld   b,c
-2224: 00          nop
-2225: 0E 49       ld   c,$49
-2227: 00          nop
-2228: 1B          dec  de
-2229: FE 3F       cp   $3F
-222B: 3E 3B       ld   a,$3B
-222D: FF          rst  $38
-222E: 03          inc  bc
-222F: 43          ld   b,e
-2230: 00          nop
-2231: 0D          dec  c
-2232: 49          ld   c,c
-2233: 00          nop
-2234: 1B          dec  de
-2235: FC 3E 3F    call m,$3F3E
-2238: 3B          dec  sp
-2239: FF          rst  $38
-223A: 03          inc  bc
-223B: 3F          ccf
-223C: 41          ld   b,c
-223D: 46          ld   b,(hl)
-223E: 46          ld   b,(hl)
-223F: 46          ld   b,(hl)
-2240: 46          ld   b,(hl)
-2241: 46          ld   b,(hl)
-2242: 46          ld   b,(hl)
-2243: 46          ld   b,(hl)
-2244: FA 00 1C    jp   m,$1C00
-2247: 39          add  hl,sp
-2248: 3E 3B       ld   a,$3B
-224A: FF          rst  $38
-224B: 03          inc  bc
-224C: 40          ld   b,b
-224D: 44          ld   b,h
-224E: 44          ld   b,h
-224F: 44          ld   b,h
-2250: 44          ld   b,h
-2251: 44          ld   b,h
-2252: 44          ld   b,h
-2253: 44          ld   b,h
-2254: 44          ld   b,h
-2255: F8          ret  m
-2256: 00          nop
-2257: 1D          dec  e
-2258: 3C          inc  a
-2259: 3F          ccf
-225A: FF          rst  $38
-225B: 03          inc  bc
-225C: 42          ld   b,d
-225D: 00          nop
-225E: 0B          dec  bc
-225F: 49          ld   c,c
-2260: 00          nop
-2261: 1E 3C       ld   e,$3C
-2263: FF          rst  $38
-2264: 03          inc  bc
-2265: 43          ld   b,e
-2266: 00          nop
-2267: 0A          ld   a,(bc)
-2268: 49          ld   c,c
-2269: 00          nop
-226A: 1E FE       ld   e,$FE
-226C: FF          rst  $38
-226D: 03          inc  bc
-226E: 42          ld   b,d
-226F: 00          nop
-2270: 09          add  hl,bc
-2271: FE 00       cp   $00
-2273: 1E FD       ld   e,$FD
-2275: FF          rst  $38
-2276: 03          inc  bc
-2277: 41          ld   b,c
-2278: 00          nop
-2279: 09          add  hl,bc
-227A: FD          db   $fd
-227B: 00          nop
-227C: 1E FD       ld   e,$FD
-227E: FF          rst  $38
-227F: 03          inc  bc
-2280: 40          ld   b,b
-2281: 00          nop
-2282: 09          add  hl,bc
-2283: FC 00 1E    call m,$1E00
-2286: FC FF
+    ;; See DRAW_SCREEN_COL_FROM_LEVEL_DATA
+LEVEL_BG__nTn
+2140: 03 40 00 0A 48 00 1E 39 FF
+2149: 03 41 00 0B 48 00 1D 3A 3B FF
+2153: 03 3F 46 46 46 46 46 46 46 46 FA 00 1B FE 3E 3F 3E FF
+2165: 03 3E 40 44 44 44 44 44 44 44 F8 00 1B FD 3B 3F 3E FF
+2177: 03 42 00 0D 48 00 1B FC 3A 3B 3B FF
+2183: 03 3B 3B 41 00 0E 48 00 1B 3C 3B 3E 3E FF
+2191: 03 3B 3E 00 0F 48 00 1B 3A 3E 3F 3F FF
+219E: 03 3F 3F 40 46 46 46 46 46 46 46 46 46 FA 00 18 FE 10 10 39 3B 3F 3F FF
+21B6: 03 3E 3B 3B 41 44 44 44 44 44 44 44 44 F8 00 18 FD 3F 3E 3B 3F 3E 3B FF
+21CE: 03 3F 3B 3E 40 00 0F 4A 00 18 FC 3F 3F 3E 3E 3B 3E FF
+21E0: 03 3B 3E 43 00 0F 4A 00 1B 3C 3E 3F 3B FF
+21EE: 03 3F 41 46 46 46 46 46 46 46 46 46 46 FA 00 1B 3C 3B 3F 3E FF
+2203: 03 40 44 44 44 44 44 44 44 44 44 44 44 F8 00 1C 39 3E 3F FF
+2217: 03 42 00 0F 49 00 1C 3C 3B 3B FF
+2222: 03 41 00 0E 49 00 1B FE 3F 3E 3B FF
+222E: 03 43 00 0D 49 00 1B FC 3E 3F 3B FF
+223A: 03 3F 41 46 46 46 46 46 46 46 FA 00 1C 39 3E 3B FF
+224B: 03 40 44 44 44 44 44 44 44 44 F8 00 1D 3C 3F FF
+225B: 03 42 00 0B 49 00 1E 3C FF
+2264: 03 43 00 0A 49 00 1E FE FF
+226D: 03 42 00 09 FE 00 1E FD FF
+2276: 03 41 00 09 FD 00 1E FD FF
+227F: 03 40 00 09 FC 00 1E FC FF
 
 WRITE_TO_0_AND_1
 2288: 3E 07       ld   a,$07
@@ -5303,8 +3964,8 @@ DINO_PATH_LOOKUP
 2360: 00 27
 2362: 70 27
 2364: 00 28 ; (screen 27)
-2366: 00 00 00 00 00 00 00 00 00 00
 
+2366: 00 ...
 2370: FF ...
 
     ;; Nodes for dino to follow: 25 nodes,

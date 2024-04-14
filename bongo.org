@@ -1,6 +1,5 @@
-* blerg
-hacking away at a wr.
-
+* Bongo
+Welcom to bongo.
 
 * Mame debugging
 
@@ -80,156 +79,8 @@ cheatundo
 29F5: AF          xor  a
 29F6: 32 60 80    ld   ($BONUSES),a
 
-* TG
-
-https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
-
-- frameskip set to 0 and "draw all frames"
-- must show dip settings before and after.
-
-  - aspect ration is 224x768 - but this is some internal ratio (from Galaxian).
-    to get it to save at native:
- mame bongo -snapsize 224x256
- - f12 snapshot.
-   shft-f12 record mni?
-   ctrl-shift-f12 record avi
-   records to /snap
-
- record inp file:
- mame bongo -record bongorecord
- records to /inp
-playback inp:
-mame bongo -playback bongorecor
- 
- 
--nvram_directory NUL
-
- You can use -wavwrite to record audio in WAV format.
-
-You can use -mngwrite to record video in MNG format.
-
-You can use -aviwrite to record audio and video in uncompressed AVI format. 
-
-
--iv 1 on playback lets you "Del" to see dips and speed up playback?
-
-
-0.263W (mame0263-706-g35e85bbfe63)%
-
-
-----------
-Submitters should use MAME version 183 or higher, preferably 183 or 220.
-
-Submitters should name their inp and zip file in the following manner:
-
-xxx_yyy_score_zzz
-
-Example:
-
-elf_bosco_588800_w183.inp inp
-elf_bosco_588800_w183 zip file
-so name the inp the same as the zip
-
-xxx your initials
-yyy rom name
-zzz version of wolfmame
-_separator 
-
------------
-
-Well, I spent a bunch of time on the weekend reverse engineering bongo source code. (I reckon I'd be world champion now if I had have just played the game!) 
-https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm
- 
-I'm going through and commenting the source, and replacing memory addresses with labels. Haven't found too much interesting stuff yet, but a couple of things:
- 
-Pickup tile collision: has to be 4 pixels from the left of the player and 24px down to trigger collision. That's why it's so hard to pick up the bonus when it's on a ledge.
- 
-Also, bonuses are capped at 40k for sure.
- 
-Here's the pickup lookup table for each screen (up to 3 pickups per screen maximum): so, easy to modify for a level editor.
-
---- TIME SPEED RUN
-And I found this funny thing: there was meant to be a timer that showed under the score - but it was removed by returning from the draw function. Damn it, we could have had speed-runner mode too! In my improved lua script, I removed the return instruction so now it draws the time:
-
-Looks like it was half-baked: on transition, flashes white for a couple of frames. Disappears on the end screen (where you'd want to compare it to other runs), and doesn't show at all on the hiscore entry or display.
-
-----
-
-I also figured out you get more points if you jump off a ledge before the end of a screen. Like, if you walk off the end of screen 1, you get 2090 points, but if you jump off the ledge you get 2210 points. I was always jumping just to show-boat, but turns out it's optimal strategy
-
-Yeah, I watched BAZZA (BARRA? BAGGA?)'s run - they jump EVERY screen end (but it's not necessary unless there's an ledge... pffft, amateur)
----
-Mini-tip: in the "jump up the stairs" level - you know it's hard to get the crown (you have to carefully tap until you get it)? Now I just go to the next stair up, and then drop back down. Bit less stressfull, and even works when the blue meanie guy is there.
-
-I played about 4 times around - it looks like it's "impossible" on about the 4th time where there is the "1 bird left/2 birds right" level. You can't wait for the bird, because the dino is too quick. It might be possible to be frame-perfect and jump between the two birds... but damn, I couldn't do it.
-
-The only thing that seems to change is how long the dino takes to start
-
-It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
-
-Can jump from one-step-higher in second round
-
------
-    ;; Oooh, mystery function - commented out.
-    ;; Think it was going to place Bongo on the
-    ;; bottom right for levels where player is
-    ;; up top.
-MOVE_BONGO_REDACTED
-0D40: C9          ret           ; just rets.
-0D41: 3A 48 81    ld   a,($BONGO_X)
-0D44: 67          ld   h,a
-0D45: 32 4B 81    ld   ($BONGO_Y),a
-0D48: C6 10       add  a,$10
-
-
----
-UPDATE_FALLING_ROCKS
-1680: 3A 04 80    ld   a,($PLAYER_NUM)
-
-round 1 vs round 2+
-
-----
-HOw the speeds work:
-
-SPEED_UP_FOR_NEXT_ROUND
-4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
-4EE3: A7          and  a
-4EE4: 20 05       jr   nz,$4EEB
-4EE6: 21 5B 80    ld   hl,$SPEED_DELAY_P1
-4EE9: 18 03       jr   $4EEE
-4EEB: 21 5C 80    ld   hl,$SPEED_DELAY_P2
-4EEE: 7E          ld   a,(hl)
-4EEF: FE 1F       cp   $ROUND1_SPEED
-4EF1: 20 03       jr   nz,$4EF6
-4EF3: 36 10       ld   (hl),$ROUND2_SPEED ; round 2 = $10
-4EF5: C9          ret
-4EF6: FE 10       cp   $ROUND2_SPEED
-4EF8: 20 03       jr   nz,$4EFD
-4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
-4EFC: C9          ret
-4EFD: C3 1C 50    jp   $501C    ; round 4+ = get 2 faster each time!
-501C: 3D          dec  a
-501D: 3D          dec  a
-501E: 77          ld   (hl),a
-
-----------
-
-cool to see them tinkering with game design stuff
-
-    ;; ANOTHER commented out one!
-    ;; This stops a player jumping up through a platform
-    ;; from underneath it. Probably more realistic, but
-    ;; smart move on the devs part to remove it it - it sucks!
-PREVENT_CLOUD_JUMP_REDACTED
-1290: C9          ret
-1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-
-----
-
-
-mini "bug" 8011 "falling timer' continues over to next screen - but you're on the ground, so next frame it resets. But, I reckon if you could time your fall so you got out of the screen when teh timer was 1, you'd die on the first frame of the next screen...
-
 * mame bongo
+** hardware
 inputs:
 https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/src/mame/galaxian/galaxian.cpp#L4663
 
@@ -266,7 +117,7 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
 
     ---
 
-    Interesting AABB algo
+** Interesting AABB algo
 
    1. subs positions and widht, checks carry.
     2. if no hit -might be to the left so ADDS double width... if carry, hit on other side
@@ -291,9 +142,27 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
   for dino, much bigger collision area:
   x: sub $18, add $30
   y: sub $28, add $50
-    
+
+
+  ----
+** level data layout
+
+  https://www.youtube.com/shorts/tD6xj4vwGZ0
+
+      ;; Level BG data is FF separated, then split on 00.
+    ;; Each row is a column of the screen, starting at col 6
+    ;; first byte of segment is the row #
+
+    eg:
+18B0: 03 41 00 09 FE 00 1E 39 FF
+18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
+18C7: 03 40 00 09 FD 42 00 1B FD 3F 3F 3B FF
+18D4: 03 43 00 09 FC 41 00 1B FD 3B 3B 3F FF
+
+Hadn't notices all levels have same first 6 columns!
+
 --------------
-level design
+** level design
 
 actually pretty good!
 intro the level, no danger - just jump,
@@ -306,7 +175,24 @@ awesome cut scene... but weirdly, no bonus.
 33 pickups: 5 full sets of bonuses, max bonus = 10 + 20 + 30 + 40 + 40 = 140k
 ~60k for screens, + 140k for bonus  = ~200k max for one round.
 
+level 8 and 13 are the same level (different pickup!)
+
+ledge on blue meaninies - important later
+
+levels lead up and down consistently: pro tip, careful getting bonuses at the bottom - forget to look up at the birds on the next level.
+
+No bonus for catching dino. how cool is that? Also, dino screen is lowest point scoring: no bonuses to pickup, can't get full move bonus
+
 ----
+sneaky timing - hard to master
+
+3s and 6s... plus offset by 1
+inc
+inc
+inc
+---
+
+** Level types
 
 7 types of level
 #+BEGIN_SRC
@@ -351,21 +237,7 @@ n_n, nTn, /,^^,\, S, Sc
 (bonuses: 6)
 #+END_SRC
 
-level 8 and 13 are the same level (different pickup!)
-
-ledge on blue meaninies - important later
-
-levels lead up and down consistently: pro tip, careful getting bonuses at the bottom - forget to look up at the birds on the next level.
-
-No bonus for catching dino. how cool is that? Also, dino screen is lowest point scoring: no bonuses to pickup, can't get full move bonus
-
-----
-3s and 6s... plus offset by 1
-inc
-inc
-inc
----
-pro tips:
+** Pro tips:
 
 Safety stair pickup (e)
 Fast rock leap (t)
@@ -382,6 +254,8 @@ fast round - can jump from second-to-bottom stair
 - maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
   
 ---
+** Trav bug
+
 trav bug: die on screen one/two
 always 1/2 - some others, but can't do it consistently
 
@@ -650,8 +524,7 @@ w@8143 : D9
 w@8143 : E9
 User-initiated break
 
-
---- theories
+***  theories
 Bug seems to be that falling_timer is not reset on screen transition.
 But to be an issue, a JUMP_TRIGGERED has to happen before GROUND_CHECK clears the falling_timer.
 
@@ -672,3 +545,157 @@ Why the inconsistency? Always triggers on level 1->2, but more random on other s
 
     is the player Australian? Spanish? Wearing high-heels? Indiana Jones (Raiders was 1981).
     Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?
+
+* TG
+
+https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
+
+- frameskip set to 0 and "draw all frames"
+- must show dip settings before and after.
+
+  - aspect ration is 224x768 - but this is some internal ratio (from Galaxian).
+    to get it to save at native:
+ mame bongo -snapsize 224x256
+ - f12 snapshot.
+   shft-f12 record mni?
+   ctrl-shift-f12 record avi
+   records to /snap
+
+ record inp file:
+ mame bongo -record bongorecord
+ records to /inp
+playback inp:
+mame bongo -playback bongorecor
+ 
+ 
+-nvram_directory NUL
+
+ You can use -wavwrite to record audio in WAV format.
+
+You can use -mngwrite to record video in MNG format.
+
+You can use -aviwrite to record audio and video in uncompressed AVI format. 
+
+
+-iv 1 on playback lets you "Del" to see dips and speed up playback?
+
+
+0.263W (mame0263-706-g35e85bbfe63)%
+
+
+----------
+Submitters should use MAME version 183 or higher, preferably 183 or 220.
+
+Submitters should name their inp and zip file in the following manner:
+
+xxx_yyy_score_zzz
+
+Example:
+
+elf_bosco_588800_w183.inp inp
+elf_bosco_588800_w183 zip file
+so name the inp the same as the zip
+
+xxx your initials
+yyy rom name
+zzz version of wolfmame
+_separator 
+
+-----------
+
+Well, I spent a bunch of time on the weekend reverse engineering bongo source code. (I reckon I'd be world champion now if I had have just played the game!) 
+https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm
+ 
+I'm going through and commenting the source, and replacing memory addresses with labels. Haven't found too much interesting stuff yet, but a couple of things:
+ 
+Pickup tile collision: has to be 4 pixels from the left of the player and 24px down to trigger collision. That's why it's so hard to pick up the bonus when it's on a ledge.
+ 
+Also, bonuses are capped at 40k for sure.
+ 
+Here's the pickup lookup table for each screen (up to 3 pickups per screen maximum): so, easy to modify for a level editor.
+
+--- TIME SPEED RUN
+And I found this funny thing: there was meant to be a timer that showed under the score - but it was removed by returning from the draw function. Damn it, we could have had speed-runner mode too! In my improved lua script, I removed the return instruction so now it draws the time:
+
+Looks like it was half-baked: on transition, flashes white for a couple of frames. Disappears on the end screen (where you'd want to compare it to other runs), and doesn't show at all on the hiscore entry or display.
+
+----
+
+I also figured out you get more points if you jump off a ledge before the end of a screen. Like, if you walk off the end of screen 1, you get 2090 points, but if you jump off the ledge you get 2210 points. I was always jumping just to show-boat, but turns out it's optimal strategy
+
+Yeah, I watched BAZZA (BARRA? BAGGA?)'s run - they jump EVERY screen end (but it's not necessary unless there's an ledge... pffft, amateur)
+---
+Mini-tip: in the "jump up the stairs" level - you know it's hard to get the crown (you have to carefully tap until you get it)? Now I just go to the next stair up, and then drop back down. Bit less stressfull, and even works when the blue meanie guy is there.
+
+I played about 4 times around - it looks like it's "impossible" on about the 4th time where there is the "1 bird left/2 birds right" level. You can't wait for the bird, because the dino is too quick. It might be possible to be frame-perfect and jump between the two birds... but damn, I couldn't do it.
+
+The only thing that seems to change is how long the dino takes to start
+
+It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
+
+Can jump from one-step-higher in second round
+
+-----
+    ;; Oooh, mystery function - commented out.
+    ;; Think it was going to place Bongo on the
+    ;; bottom right for levels where player is
+    ;; up top.
+MOVE_BONGO_REDACTED
+0D40: C9          ret           ; just rets.
+0D41: 3A 48 81    ld   a,($BONGO_X)
+0D44: 67          ld   h,a
+0D45: 32 4B 81    ld   ($BONGO_Y),a
+0D48: C6 10       add  a,$10
+
+
+---
+UPDATE_FALLING_ROCKS
+1680: 3A 04 80    ld   a,($PLAYER_NUM)
+
+round 1 vs round 2+
+
+----
+HOw the speeds work:
+
+SPEED_UP_FOR_NEXT_ROUND
+4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
+4EE3: A7          and  a
+4EE4: 20 05       jr   nz,$4EEB
+4EE6: 21 5B 80    ld   hl,$SPEED_DELAY_P1
+4EE9: 18 03       jr   $4EEE
+4EEB: 21 5C 80    ld   hl,$SPEED_DELAY_P2
+4EEE: 7E          ld   a,(hl)
+4EEF: FE 1F       cp   $ROUND1_SPEED
+4EF1: 20 03       jr   nz,$4EF6
+4EF3: 36 10       ld   (hl),$ROUND2_SPEED ; round 2 = $10
+4EF5: C9          ret
+4EF6: FE 10       cp   $ROUND2_SPEED
+4EF8: 20 03       jr   nz,$4EFD
+4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
+4EFC: C9          ret
+4EFD: C3 1C 50    jp   $501C    ; round 4+ = get 2 faster each time!
+501C: 3D          dec  a
+501D: 3D          dec  a
+501E: 77          ld   (hl),a
+
+----------
+
+cool to see them tinkering with game design stuff
+
+    ;; ANOTHER commented out one!
+    ;; This stops a player jumping up through a platform
+    ;; from underneath it. Probably more realistic, but
+    ;; smart move on the devs part to remove it it - it sucks!
+PREVENT_CLOUD_JUMP_REDACTED
+1290: C9          ret
+1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
+
+----
+
+
+mini "bug" 8011 "falling timer' continues over to next screen - but you're on the ground, so next frame it resets. But, I reckon if you could time your fall so you got out of the screen when teh timer was 1, you'd die on the first frame of the next screen...
+    
+* blerg
+hacking away at a wr.
+
+    

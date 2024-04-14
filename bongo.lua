@@ -1,16 +1,16 @@
 -- Bongo Training Montage --
 
 start_screen = 1 -- used if not looping
-loop_screens = {} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
+loop_screens = {16} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
-round_two = false -- start in round two
+round_two = true -- start in round two
 
 infinite_lives = true
 disable_round_speed_up = true -- don't get faster after catching dino
 skip_cutscene = true -- don't show the cutscene
-disable_dino = true   -- no pesky dino... but now you can't catch him
+disable_dino = false   -- no pesky dino... but now you can't catch him
 fast_death = false    -- restart super fast after death (oops, messes with dino!)
 
 -- Removed features I found in the code
@@ -22,6 +22,9 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 mem = manager.machine.devices[":maincpu"].spaces["program"]
 
 -- mem:write_direct_u8(0x069D, 0x20); -- autojump lol
+mem:write_direct_u8(0x1d00, 0x0c);
+mem:write_direct_u8(0x1d01, 0xfe);
+mem:write_direct_u8(0x1d02, 0x10);
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
