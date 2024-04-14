@@ -37,8 +37,8 @@
     _UNUSED_1      $801B  ; unused? Set once, never read
     SCORE_TO_ADD   $801D  ; amount to add to the current score
 
-    _              $801E  ; hmm, used with level_data_ptr a lot
-    LEVEL_DATA_PTR $8020  ; screen data pointer (2 byte addr)
+    SCREEN_RAM_PTR $801E  ; maybe it's where to start drawing bg?
+    LEVEL_BG_PTR $8020  ; screen data pointer (2 byte addr)
 
     DID_INIT       $8022  ; set after first init, not really used
     BONGO_ANIM_TIMER $8023 ; [0,1,2] updated every 8 ticks
@@ -201,7 +201,7 @@ SOFT_RESET
 000C: C3 A0 14    jp   $CLEAR_SCREEN
 
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
-0012: CD 00 3F    call $DELAY_N_4E90
+0012: CD 00 3F    call $DELAY_83_LOAD_A_VAL_WEIRD
 0015: CD 48 00    call $INIT_SCREEN
 0018: CD 88 22    call $WRITE_TO_0_AND_1
 001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
@@ -231,9 +231,9 @@ INIT_SCREEN
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
 004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-0051: CD 10 03    call $DRAW_TILES_H ; data next 2 lines
-0054: 09 00                           ; scr pos x / y
-0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; tiles
+0051: CD 10 03    call $DRAW_TILES_H
+0054: 09 00
+0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; CREDIT FAULT
 0063: 18 E3       jr   $INIT_SCREEN
 0065: FF          rst  $38
 
@@ -356,9 +356,11 @@ DRAW_ONE_OR_TWO_PLAYER
 0174: FF ...
 
     ;; called a lot (via... CALL_HL_PLUS_4K)
+    ;; why? Why not just jump?
+    ;; Is there a max jump distance or something?
 DO_CALL_HL_PLUS_4K
 0180: C5          push bc
-0181: 01 00 40    ld   bc,$INT_HANDLER
+0181: 01 00 40    ld   bc,$4000 ;
 0184: 09          add  hl,bc
 0185: C1          pop  bc
 0186: E9          jp   (hl)
@@ -623,7 +625,7 @@ SETUP_MORE
 
 RESET_ENTS_ALL
 0370: CD 70 14    call $CALL_RESET_ENTS
-0373: 21 20 15    ld   hl,$1520
+0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
 0376: CD E3 01    call $CALL_HL_PLUS_4K
 0379: 21 20 0E    ld   hl,$0E20
 037C: CD E3 01    call $CALL_HL_PLUS_4K
@@ -1293,7 +1295,7 @@ DRAW_SCREEN
 0840: E5          push hl
 0841: D9          exx
 0842: E1          pop  hl
-0843: 54          ld   d,h
+0843: 54          ld   d,h      ; de = hl
 0844: 5D          ld   e,l
 0845: 21 40 90    ld   hl,$START_OF_TILES
 0848: C1          pop  bc
@@ -1317,20 +1319,22 @@ DRAW_SCREEN
 085F: 19          add  hl,de
 0860: 19          add  hl,de
 0861: 19          add  hl,de
-0862: D1          pop  de
+0862: D1          pop  de       ; ret ptr
 0863: DD 21 2C 80 ld   ix,$802C
 0867: DD 36 00 20 ld   (ix+$00),$20
-086B: 1A          ld   a,(de)
+_LP
+086B: 1A          ld   a,(de)   ; ret
 086C: 77          ld   (hl),a
-086D: 13          inc  de
+086D: 13          inc  de       ; ret + 1
 086E: 01 E0 FF    ld   bc,$FFE0
 0871: DD 35 00    dec  (ix+$00)
 0874: AF          xor  a
 0875: DD BE 00    cp   (ix+$00)
-0878: 28 06       jr   z,$0880
+0878: 28 06       jr   z,$_DONE
 087A: 09          add  hl,bc
 087B: 3A 00 B8    ld   a,($WATCHDOG)
-087E: 18 EB       jr   $086B
+087E: 18 EB       jr   $_LP
+_DONE
 0880: D9          exx
 0881: C9          ret
 0882: FF ...
@@ -2191,6 +2195,7 @@ BONGO_RUN_WHEN_PLAYER_CLOSE
 0F86: 00          nop
 0F87: 00          nop
 
+DRAW_BORDER_1
     ;;  intro inside border top
 0F88: CD 10 03    call $DRAW_TILES_H
 0F8B: 02 02
@@ -2201,32 +2206,18 @@ BONGO_RUN_WHEN_PLAYER_CLOSE
 0FA9: 02 03
 0FAB: E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6
 0FBB: E6 E6 E6 E6 E6 E6 E6 E6 FF
-0FC4: C3 D6 1B    jp   $1BD6
+0FC4: C3 D6 1B    jp   $DRAW_BORDER_1_B
 0FC7: FF ...
 
 0FD1: 0F          rrca
 0FD2: FF ...
 0FDD: 0F          rrca
-0FDE: FF          rst  $38
-0FDF: FF          rst  $38
-0FE0: 10 10       djnz $0FF2
-0FE2: 10 10       djnz $0FF4
-0FE4: 20 1C       jr   nz,$1002
-0FE6: 01 10 10    ld   bc,$1010
-0FE9: 10 10       djnz $0FFB
-0FEB: 18 19       jr   $1006
-0FED: 17          rla
-0FEE: 18 2B       jr   $101B
-0FF0: 23          inc  hl
-0FF1: 13          inc  de
-0FF2: 1F          rra
-0FF3: 22 15 10    ld   ($1015),hl
-0FF6: 10 10       djnz $1008
-0FF8: 10 20       djnz $101A
-0FFA: 1C          inc  e
-0FFB: 02          ld   (bc),a
-0FFC: 10 10       djnz $100E
-0FFE: 10 FF       djnz $0FFF
+0FDE: FF ...
+
+HEADER_TEXT_DATA
+0FE0: 10 10 10 10 20 1C 01 10 10 10 10 ; PL1
+0FEB: 18 19 17 18 2B 23 13 1F 22 15 10 ; HIGH-SCORE
+0FF6: 10 10 10 20 1C 02 10 10 10 FF    ; PL2
 
 ;;; =========================================
     ;; Reset then run main loop.
@@ -2246,7 +2237,7 @@ BIG_RESET
 101D: 32 30 80    ld   ($PLAYER_MAX_X),a
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
 1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-1026: 21 E0 0F    ld   hl,$0FE0
+1026: 21 E0 0F    ld   hl,$HEADER_TEXT_DATA ; loaded by DRAW_SCREEN
 1029: CD 40 08    call $DRAW_SCREEN
 102C: 00          nop
 102D: 00          nop
@@ -2598,7 +2589,7 @@ DRAW_BACKGROUND
 12D5: FE FD FD FD FD FC FF      ; bottomleft platform
 12DC: CD B0 14    call $14B0
 12DF: 21 E0 92    ld   hl,$92E0 ; screen pos (6,0)
-12E2: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
+12E2: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
 _DRAW_COLUMN                    ; because first 6 are constant
 12E8: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
@@ -2607,12 +2598,15 @@ _DRAW_COLUMN                    ; because first 6 are constant
 12ED: 00          nop
 12EE: 15          dec  d
 12EF: 20 F7       jr   nz,$_DRAW_COLUMN
-    ;;
-12F1: 22 1E 80    ld   ($801E),hl
-12F4: CD 10 35    call $3510
+
+    ;; how do i get here?
+RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
+12F1: 22 1E 80    ld   ($SCREEN_PTR),hl ; hl = 9000 when hits here on death
+12F4: CD 10 35    call $RESET_ENEMIES
+    ;; calls $4c50: ADD_MOVE_SCORE
 12F7: 21 50 0C    ld   hl,$0C50
 12FA: CD E3 01    call $CALL_HL_PLUS_4K
-12FD: C3 10 3F    jp   $3F10
+12FD: C3 10 3F    jp   $DRAW_BOTTOM_ROW_NUMBERS
     ;;
 1300: 1E 04       ld   e,$04
 1302: E5          push hl
@@ -2680,16 +2674,16 @@ DURING_TRANSITION_NEXT
 1358: CD B8 13    call $BONGO_RUNS_OFF_SCREEN
 135B: 00          nop
 135C: CD B0 14    call $HMMM_IN_SCR_TRANSITION
-135F: DD 2A 20 80 ld   ix,($LEVEL_DATA_PTR)
-1363: 2A 1E 80    ld   hl,($801E) ; must point to screen?
+135F: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
+1363: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR) ; must point to screen?
 1366: 16 15       ld   d,$15      ; 21 rows (why 21, not 23?)
 _LP
 1368: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
 136B: CD 00 13    call $1300
 136E: 15          dec  d
 136F: 20 F7       jr   nz,$_LP
-1371: DD 22 20 80 ld   ($LEVEL_DATA_PTR),ix
-1375: 22 1E 80    ld   ($801E),hl
+1371: DD 22 20 80 ld   ($LEVEL_BG_PTR),ix
+1375: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl ; hl = 9160 on transition (e on HIGH-SCORE)
 1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
 137B: CD B8 12    call $DRAW_BACKGROUND
 137E: AF          xor  a
@@ -2901,7 +2895,7 @@ HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 14C4: 3A 29 80    ld   a,($SCREEN_NUM)
 14C7: 18 03       jr   $14CC
 14C9: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-14CC: 21 00 15    ld   hl,$LEVEL_DATA_PTR_LOOKUP
+14CC: 21 00 15    ld   hl,$LEVEL_BG_PTR_LOOKUP
 14CF: 06 00       ld   b,$00
 14D1: 3D          dec  a        ; scr# - 1
 14D2: 4F          ld   c,a
@@ -2910,7 +2904,7 @@ HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 14D6: 4E          ld   c,(hl)
 14D7: 23          inc  hl
 14D8: 46          ld   b,(hl)
-14D9: ED 43 20 80 ld   ($LEVEL_DATA_PTR),bc
+14D9: ED 43 20 80 ld   ($LEVEL_BG_PTR),bc
 14DD: C9          ret
 14DE: FF ..
 
@@ -2925,7 +2919,7 @@ HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 14F0: FF ...
 
     ;; Points to the addr of each screen's level data
-LEVEL_DATA_PTR_LOOKUP
+LEVEL_BG_PTR_LOOKUP
 1500: B0 18 B0 18 40 21 B0 18
 1508: 10 1A 40 21 70 1E B0 18
 1510: 40 21 10 1A 40 21 70 1E
@@ -3009,7 +3003,7 @@ ANIMATE_SPLASH_PICKUPS
 
 ATTRACT_BONUS_SCREEN
 15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
-15D3: CD 88 0F    call $0F88
+15D3: CD 88 0F    call $DRAW_BORDER_1
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15D9: 3E 8C       ld   a,$8C
 15DB: 32 08 93    ld   ($9308),a
@@ -3045,12 +3039,12 @@ ATTRACT_BONUS_SCREEN
 1643: 21 94 14    ld   hl,$1494
 1646: CD E3 01    call $CALL_HL_PLUS_4K
 1649: C9          ret
-164A: FF          rst  $38
+164A: FF
+
 164B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $DRAW_SCREEN
-1654: 00          nop
-1655: 00          nop
+1654: 00 00                     ; data
 1656: CD 50 24    call $DRAW_SCORE
 1659: C9          ret
 165A: FF ...
@@ -3269,6 +3263,7 @@ RESET_DINO
 
 17CB: FF ...
 
+DRAW_BONUS_BOX
 17D0: CD 10 03    call $DRAW_TILES_H
 17D3: 0A 00
 17D5: B8 B4 B5 B6 B7 FF
@@ -3505,15 +3500,15 @@ LEVEL_BG__STAIRS_UP
 1B1E: 03 41 00 09 FD 00 1E FD FF
 1B27: 03 40 00 09 FC 00 1E FC FF
 
-    ;; who calls?
-1B30: 2A 20 80    ld   hl,$LEVEL_DATA_PTR
-1B33: 01 14 00    ld   bc,$0014
+    ;; who calls? Can't see it triggered in debugger
+1B30: 2A 20 80    ld   hl,$LEVEL_BG_PTR
+1B33: 01 14 00    ld   bc,$0014 ; add 20 bytes to bg_ptr
 1B36: 09          add  hl,bc
-1B37: 22 20 80    ld   ($LEVEL_DATA_PTR),hl
-1B3A: 2A 1E 80    ld   hl,($801E)
-1B3D: 01 14 00    ld   bc,$0014
+1B37: 22 20 80    ld   ($LEVEL_BG_PTR),hl
+1B3A: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR)
+1B3D: 01 14 00    ld   bc,$0014 ; add 20 bytes to SCREEN_RAM_PTR
 1B40: 09          add  hl,bc
-1B41: 22 1E 80    ld   ($801E),hl
+1B41: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl
 1B44: C9          ret
 1B45: FF ...
 
@@ -3561,8 +3556,7 @@ INIT_SCORE_AND_SCREEN_ONCE
 1B99: CD A0 03    call $DRAW_LIVES
 1B9C: 21 E0 0F    ld   hl,$0FE0
 1B9F: CD 40 08    call $DRAW_SCREEN
-1BA2: 00          nop
-1BA3: 00          nop
+1BA2: 00 00                     ; data
 1BA4: CD 50 24    call $DRAW_SCORE
 1BA7: 3A 04 80    ld   a,($PLAYER_NUM)
 1BAA: A7          and  a
@@ -3581,12 +3575,14 @@ INIT_SCORE_AND_SCREEN_ONCE
 1BD1: 32 86 80    ld   ($8086),a
 1BD4: C9          ret
 
-1BD5: FF          rst  $38
+1BD5: FF
+
+DRAW_BORDER_1_B
 1BD6: CD 10 03    call $DRAW_TILES_H
 1BD9: 1B 02
 1BDB: E2 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3
 1BEB: E3 E3 E3 E3 E3 E3 E3 E4 FF
-1BF4: C3 D8 1C    jp   $1CD8
+1BF4: C3 D8 1C    jp   $DRAW_BORDER_1_C
 
 1BF7: FF ...
 
@@ -3701,6 +3697,7 @@ DINO_COLLISION
 
 1CD6: FF ..
 
+DRAW_BORDER_1_C
 1CD8: CD D8 3B    call $DRAW_TILES_V_COPY
 1CDB: 19 03
 1CDD: E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1
@@ -4094,6 +4091,7 @@ DELAY_60_VBLANKS
 24E8: C9          ret
 24E9: FF ...
 
+DELAY_8_PLAY_SOUND
 24EC: C5          push bc
 24ED: 06 08       ld   b,$08
 24EF: C5          push bc
@@ -4373,15 +4371,15 @@ MOVE_DINO_X
 
     ;;
 2901: 21 00 02    ld   hl,$0200
-2904: CD E3 01    call $CALL_HL_PLUS_4K
+2904: CD E3 01    call $CALL_HL_PLUS_4K ; $4200: sfx something
 2907: CD 10 11    call $MYSTERY_8066_FN
-290A: 21 20 02    ld   hl,$POST_DEATH_RESET
+290A: 21 20 02    ld   hl,$0220 ; $4220 = SFX_SUMFIN_1
 290D: CD E3 01    call $CALL_HL_PLUS_4K
-2910: 21 40 02    ld   hl,$0240
+2910: 21 40 02    ld   hl,$0240 ; $4240 = SFX_SUMFIN_2
 2913: CD E3 01    call $CALL_HL_PLUS_4K
 2916: CD 10 11    call $MYSTERY_8066_FN
 2919: 21 40 08    ld   hl,$DRAW_SCREEN
-291C: 18 22       jr   $CALL_MYSTERY_8066_FN
+291C: 18 22       jr   $CALL_HL_PL_4K_AND_MYSTERY_8066_FN
 
 291E: FF FF
 
@@ -4403,8 +4401,8 @@ SET_DINO_DIR
 
 2935: FF ...
 
-CALL_MYSTERY_8066_FN
-2940: CD E3 01    call $CALL_HL_PLUS_4K
+CALL_HL_PL_4K_AND_MYSTERY_8066_FN
+2940: CD E3 01    call $CALL_HL_PLUS_4K ; hl = DRAW_SCREEN
 2943: CD 10 11    call $MYSTERY_8066_FN
 2946: C9          ret
 
@@ -4468,7 +4466,7 @@ GOT_A_BONUS
 29DB: C5          push bc
 29DC: CD 00 17    call $ADD_SCORE
 29DF: C1          pop  bc
-29E0: CD EC 24    call $24EC
+29E0: CD EC 24    call $DELAY_8_PLAY_SOUND
 29E3: 10 F1       djnz $29D6
 29E5: 0D          dec  c
 29E6: 20 E9       jr   nz,$29D1
@@ -4862,7 +4860,7 @@ P2_GOT_HISCORE
 
 ENTER_HISCORE_SCREEN
 2D88: F5          push af
-2D89: 21 E8 16    ld   hl,$16E8
+2D89: 21 E8 16    ld   hl,$16E8 ; 56e8 = $SFX_RESET_A_BUNCH
 2D8C: CD E3 01    call $CALL_HL_PLUS_4K
 2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
@@ -5737,8 +5735,9 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3500: FF ...
 
     ;;  reset a bunch of thing to 255
+RESET_ENEMIES
 3510: 3E FF       ld   a,$FF
-3512: 32 36 80    ld   ($8036),a
+3512: 32 36 80    ld   ($ROCK_FALL_TIMER),a
 3515: 32 38 80    ld   ($8038),a
 3518: 32 3A 80    ld   ($803A),a
 351B: 32 3C 80    ld   ($803C),a
@@ -5753,6 +5752,8 @@ ENEMY_LOOKUP                     ; (maybe... or all ents?)
 3531: 32 3F 80    ld   ($803F),a
 3534: 32 41 80    ld   ($8041),a
 3537: C9          ret
+
+    ;;
 3538: CD 38 32    call $3238
 353B: CD 60 32    call $3260
 353E: CD 28 2C    call $2C28
@@ -6123,6 +6124,7 @@ CHECK_BUTTONS_FOR_SOMETHING
 
 38DF: FF          rst  $38
 
+DRAW_BONUS_BOX_B
 38E0: CD 10 03    call $DRAW_TILES_H
 38E3: 0A 00
 38E5: E0 DC DD DE DF FF
@@ -6888,15 +6890,17 @@ END_CUTSCENE
 
 3EF8: FF ...
 
-DELAY_N_4E90
+DELAY_83_LOAD_A_VAL_WEIRD
 3F00: CD 60 14    call $DELAY_83
-3F03: 21 90 0E    ld   hl,$0E90
+3F03: 21 90 0E    ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
+                                ; seems to do nothing
 3F06: CD E3 01    call $CALL_HL_PLUS_4K
 3F09: C9          ret
 
 3F0A: FF ...
 
 ;;; Probably the level tiles at the bottom of the screen
+DRAW_BOTTOM_ROW_NUMBERS
 3F10: CD 10 03    call $DRAW_TILES_H
 3F13: 1F          rra
 3F14: 00          nop
@@ -6939,75 +6943,36 @@ DELAY_N_4E90
 
 3F64: FF FF
 
+DRAW_JETSOFT
 3F66: CD 10 03    call $DRAW_TILES_H
-    ;; data again.. how is it used? must be by $DRAW_TILES_H!
-3F69: 0C          inc  c
-3F6A: 0A          ld   a,(bc)
-3F6B: 1A          ld   a,(de)
-3F6C: 15          dec  d
-3F6D: 24          inc  h
-3F6E: 23          inc  hl
-3F6F: 1F          rra
-3F70: 16 24       ld   d,$24
-3F72: FF          rst  $38
+3F69: 0C 0A
+3F6B: 1A 15 24 23 1F 16 24 FF   ; JETSOFT
 3F73: C9          ret
 
+DRAW_PROUDLY_PRESENTS
 3F74: CD 10 03    call $DRAW_TILES_H
-3F77: 14          inc  d
-3F78: 07          rlca
-3F79: 20 22       jr   nz,$3F9D
-3F7B: 1F          rra
-3F7C: 25          dec  h
-3F7D: 14          inc  d
-3F7E: 1C          inc  e
-3F7F: 29          add  hl,hl
-3F80: 10 20       djnz $3FA2
-3F82: 22 15 23    ld   ($2315),hl
-3F85: 15          dec  d
-3F86: 1E 24       ld   e,$24
-3F88: FF          rst  $38
+3F77: 14 07                     ; PROUDLY PRESENTS
+3F79: 20 22 1F 25 14 1C 29 10 20 22 15 23 15 1E 24 FF
 3F89: C9          ret
 
 3F8A: FF FF
 
+DRAW_COPYRIGHT
 3F8C: CD 10 03    call $DRAW_TILES_H
-3F8F: 10 04       djnz $3F95
-3F91: 8B          adc  a,e
-3F92: 01 09 08    ld   bc,$0809
-3F95: 03          inc  bc
-3F96: FF          rst  $38
+3F8F: 10 04
+3F91: 8B 01 09 08 03 FF         ; (c) 1983
 3F97: CD 10 03    call $DRAW_TILES_H
-3F9A: 12          ld   (de),a
-3F9B: 04          inc  b
-3F9C: 1A          ld   a,(de)
-3F9D: 15          dec  d
-3F9E: 24          inc  h
-3F9F: 23          inc  hl
-3FA0: 1F          rra
-3FA1: 16 24       ld   d,$24
-3FA3: FF          rst  $38
+3F9A: 12 04
+3F9C: 1A 15 24 23 1F 16 24 FF   ; JETSOFT
 3FA4: C9          ret
 
 3FA5: FF ...
 
+DRAW_BLANKS
 3FA8: CD 10 03    call $DRAW_TILES_H
-3FAB: 1F          rra
-3FAC: 00          nop
-3FAD: 10 10       djnz $3FBF
-3FAF: 10 10       djnz $3FC1
-3FB1: 10 10       djnz $3FC3
-3FB3: 10 10       djnz $3FC5
-3FB5: 10 10       djnz $3FC7
-3FB7: 10 10       djnz $3FC9
-3FB9: 10 10       djnz $3FCB
-3FBB: 10 10       djnz $3FCD
-3FBD: 10 10       djnz $3FCF
-3FBF: 10 10       djnz $3FD1
-3FC1: 10 10       djnz $3FD3
-3FC3: 10 10       djnz $3FD5
-3FC5: 10 10       djnz $3FD7
-3FC7: 10 10       djnz $3FD9
-3FC9: FF          rst  $38
+3FAB: 1F 00      ; Whole bunch of spaces
+3FAD: 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
+3FBD: 10 10 10 10 10 10 10 10 10 10 10 10 FF
 3FCA: C9          ret
 3FCB: FF ...
 
@@ -7017,18 +6982,20 @@ DELAY_N_4E90
 3FD3: 00          nop
 3FD4: 00          nop
 
-3FD5: CD D0 17    call $17D0
-3FD8: CD EC 24    call $24EC
-3FDB: CD E0 38    call $38E0
-3FDE: CD EC 24    call $24EC
-3FE1: CD D0 17    call $17D0
-3FE4: CD EC 24    call $24EC
-3FE7: CD E0 38    call $38E0
-3FEA: CD EC 24    call $24EC
-3FED: CD D0 17    call $17D0
-3FF0: CD EC 24    call $24EC
-3FF3: CD E0 38    call $38E0
-3FF6: CD EC 24    call $24EC
+    ;; (how called?)
+DO_BONUS_FLASHING
+3FD5: CD D0 17    call $DRAW_BONUS_BOX
+3FD8: CD EC 24    call $DELAY_8_PLAY_SOUND
+3FDB: CD E0 38    call $DRAW_BONUS_BOX_B
+3FDE: CD EC 24    call $DELAY_8_PLAY_SOUND
+3FE1: CD D0 17    call $DRAW_BONUS_BOX
+3FE4: CD EC 24    call $DELAY_8_PLAY_SOUND
+3FE7: CD E0 38    call $DRAW_BONUS_BOX_B
+3FEA: CD EC 24    call $DELAY_8_PLAY_SOUND
+3FED: CD D0 17    call $DRAW_BONUS_BOX
+3FF0: CD EC 24    call $DELAY_8_PLAY_SOUND
+3FF3: CD E0 38    call $DRAW_BONUS_BOX_B
+3FF6: CD EC 24    call $DELAY_8_PLAY_SOUND
 3FF9: C9          ret
 
 3FFA: FF ...
@@ -7111,6 +7078,7 @@ ADD_MOVE_SCORE
 
 407E: FF ...
 
+    ;;
 4080: DD 7E 05    ld   a,(ix+$05)
 4083: A7          and  a
 4084: 28 05       jr   z,$408B
@@ -7293,8 +7261,9 @@ RELATED_TO_MYSTERY_8066
 41AC: DD 77 05    ld   (ix+$05),a
 41AF: C9          ret
 
-;;; does... something, then calls hit bonus
-HIT_BONUS_PRE
+    ;; I reckon this is the tiles that say the points
+    ;; Changes the tiles, then calls $HIT_BONUS
+HIT_BONUS_DRAW_POINTS
 41B0: 47          ld   b,a      ; adds bonus score
 41B1: 3A 1D 80    ld   a,($SCORE_TO_ADD)
 41B4: 80          add  a,b
@@ -7324,6 +7293,7 @@ HIT_BONUS_PRE
 
 41E1: FF FF
 
+    ;; How do i get here?... is this data? Weird load
 41E3: 3A 00 41    ld   a,($4100)
 41E6: 01 E3 01    ld   bc,$CALL_HL_PLUS_4K
 41E9: C5          push bc
@@ -7347,7 +7317,8 @@ HIT_BONUS_PRE
 
 41FE: FF FF
 
-4200: DD 21 A0 82 ld   ix,$82A0
+    ;;
+4200: DD 21 A0 82 ld   ix,$82A0 ;
 4204: DD 7E 04    ld   a,(ix+$04)
 4207: A7          and  a
 4208: 28 08       jr   z,$4212
@@ -7363,6 +7334,7 @@ HIT_BONUS_PRE
 
 421C: FF ...
 
+SFX_SUMFIN_1
 4220: DD 21 A8 82 ld   ix,$82A8
 4224: DD 7E 04    ld   a,(ix+$04)
 4227: A7          and  a
@@ -7380,6 +7352,7 @@ HIT_BONUS_PRE
 
 423C: FF ..
 
+SFX_SUMFIN_2
 4240: DD 21 B0 82 ld   ix,$82B0
 4244: DD 7E 04    ld   a,(ix+$04)
 4247: A7          and  a
@@ -7409,25 +7382,25 @@ PICKUP_TILE_COLLISION
 426D: 20 08       jr   nz,$4277
 426F: 3E 20       ld   a,$20    ; 200 bonus
 4271: 36 10       ld   (hl),$TILE_BLANK
-4273: CD B0 41    call $HIT_BONUS_PRE
+4273: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4276: C9          ret
 4277: FE 8D       cp   $TILE_PIK_CROSSA
 4279: 20 08       jr   nz,$4283
 427B: 3E 40       ld   a,$40    ; 400 bonus
 427D: 36 10       ld   (hl),$TILE_BLANK
-427F: CD B0 41    call $HIT_BONUS_PRE
+427F: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4282: C9          ret
 4283: FE 8E       cp   $TILE_PIK_RINGA
 4285: 20 08       jr   nz,$428F
 4287: 3E 60       ld   a,$60    ; 600 bonus
 4289: 36 10       ld   (hl),$TILE_BLANK
-428B: CD B0 41    call $HIT_BONUS_PRE
+428B: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 428E: C9          ret
 428F: FE 8F       cp   $TILE_PIK_VASEA
 4291: C0          ret  nz
 4292: 3E A0       ld   a,$A0    ; 1000 bonus
 4294: 36 10       ld   (hl),$TILE_BLANK
-4296: CD B0 41    call $HIT_BONUS_PRE
+4296: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4299: C9          ret
 
 ;;;
@@ -7759,16 +7732,20 @@ SFX_03 ; Pickup bling
 4563: CD 20 43    call $SFX_SOMETHING
 4566: C9          ret
 
-4567: FF          rst  $38
+4567: FF ...
+
 4568: 3E 8D       ld   a,$8D
 456A: 32 1A 91    ld   ($911A),a
 456D: C9          ret
-456E: FF          rst  $38
-456F: FF          rst  $38
+
+456E: FF ...
+
 4570: 3E 8C       ld   a,$8C
 4572: 32 B1 91    ld   ($91B1),a
 4575: C9          ret
-4576: FF          rst  $38
+
+4576: FF
+
 4577: 3E 8E       ld   a,$8E
 4579: 32 CB 90    ld   ($90CB),a
 457C: CD 70 40    call $4070
@@ -7835,6 +7812,8 @@ SFX_06 ; cutscene dance start
 45E3: CD 60 43    call $4360
 45E6: C9          ret
 45E7: FF          rst  $38
+
+    ;;
 45E8: 3E 8D       ld   a,$8D
 45EA: 32 5A 91    ld   ($915A),a
 45ED: C9          ret
@@ -7932,6 +7911,7 @@ ADD_A_TO_RET_ADDR
 
 46B7: FF ...
 
+ZERO_OUT_SOME_SFX
 46C0: 21 B8 82    ld   hl,$82B8
 46C3: 06 18       ld   b,$18
 46C5: 36 00       ld   (hl),$00
@@ -7943,7 +7923,7 @@ ADD_A_TO_RET_ADDR
 
     ;; gets here on death and re-spawn
 CLEAR_SFX_1
-46D0: CD C0 46    call $46C0
+46D0: CD C0 46    call $ZERO_OUT_SOME_SFX
 46D3: 3A 42 80    ld   a,($CH1_SFX)
 46D6: CD 30 47    call $4730
 46D9: DD 21 B8 82 ld   ix,$82B8
@@ -8145,6 +8125,7 @@ SFX_QUEUER
 486B: FF ...
 
 ;;; called from PLAY_SFX...
+ZERO_OUT_SOME_SFX_2
 4870: 21 E8 82    ld   hl,$82E8
 4873: 06 18       ld   b,$18
 4875: 36 00       ld   (hl),$00
@@ -8174,7 +8155,7 @@ MORE_SFX_SOMETHING
 489A: FF FF
 
 PLAY_SFX
-489C: CD 70 48    call $4870
+489C: CD 70 48    call $ZERO_OUT_SOME_SFX_2
 489F: 3A 44 80    ld   a,($SFX_ID)
 48A2: CD 30 47    call $4730
 48A5: DD 21 E8 82 ld   ix,$82E8
@@ -8225,6 +8206,7 @@ SHADOW_ADD_A_TO_RET_2            ; duplicate routine
 4908: C9          ret
 4909: FF ...
 
+ZERO_OUT_SOME_SFX_3
 4910: 21 D0 82    ld   hl,$82D0
 4913: 06 18       ld   b,$18
 4915: 36 00       ld   (hl),$00
@@ -8234,7 +8216,7 @@ SHADOW_ADD_A_TO_RET_2            ; duplicate routine
 491B: FF ...
 
 CLEAR_SFX_2
-4920: CD 10 49    call $4910
+4920: CD 10 49    call $ZERO_OUT_SOME_SFX_3
 4923: 3A 43 80    ld   a,($CH2_SFX)
 4926: CD 30 47    call $4730
 4929: DD 21 D0 82 ld   ix,$82D0
@@ -8746,6 +8728,7 @@ TBL_4
 4C4E: FF          rst  $38
 4C4F: FF          rst  $38
 
+
 4C50: CD 84 44    call $4484    ; draw something on cage screen
 4C53: 3A 04 80    ld   a,($PLAYER_NUM)
 4C56: A7          and  a
@@ -8757,6 +8740,7 @@ TBL_4
 4C62: 87          add  a,a
 4C63: 87          add  a,a
 4C64: CD 00 49    call $SHADOW_ADD_A_TO_RET_2
+    ;; One per screen
 4C67: CD E3 4C    call $4CE3
 4C6A: C9          ret
 4C6B: CD E8 45    call $45E8
@@ -8817,18 +8801,8 @@ TBL_4
 4CD4: 00          nop
 4CD5: 00          nop
 4CD6: C9          ret
-4CD7: FF          rst  $38
-4CD8: FF          rst  $38
-4CD9: FF          rst  $38
-4CDA: FF          rst  $38
-4CDB: FF          rst  $38
-4CDC: FF          rst  $38
-4CDD: FF          rst  $38
-4CDE: FF          rst  $38
-4CDF: FF          rst  $38
-4CE0: FF          rst  $38
-4CE1: FF          rst  $38
-4CE2: FF          rst  $38
+4CD7: FF ...
+
 4CE3: 3E 8C       ld   a,$8C
 4CE5: 32 5A 91    ld   ($915A),a
 4CE8: C9          ret
@@ -9016,10 +8990,11 @@ DONE_CAGED_DINO
 
 4E1D: FF ...
 
-4E20: CD 80 4E    call $4E80
-4E23: CD 81 5C    call $JMP_HL
+ATTRACT_SPLASH_BONGO
+4E20: CD 80 4E    call $DRAW_BORDER_HL_EQ_JETSOFT
+4E23: CD 81 5C    call $JMP_HL  ; hl = $DRAW_JETSOFT
 4E26: CD A8 5A    call $FLASH_BORDER
-4E29: 21 74 3F    ld   hl,$3F74
+4E29: 21 74 3F    ld   hl,$DRAW_PROUDLY_PRESENTS
 4E2C: CD 81 5C    call $JMP_HL
 4E2F: CD A8 5A    call $FLASH_BORDER
 4E32: 21 4B 16    ld   hl,$164B
@@ -9029,7 +9004,7 @@ DONE_CAGED_DINO
 4E3D: 32 2A 80    ld   ($SCREEN_NUM_P2),a
 4E40: 21 B8 12    ld   hl,$DRAW_BACKGROUND
 4E43: CD 81 5C    call $JMP_HL
-4E46: 21 A8 3F    ld   hl,$3FA8
+4E46: 21 A8 3F    ld   hl,$DRAW_BLANKS
 4E49: CD 81 5C    call $JMP_HL
 4E4C: 21 48 92    ld   hl,$9248
 4E4F: 06 A0       ld   b,$A0
@@ -9051,7 +9026,7 @@ DONE_CAGED_DINO
 4E65: CD D4 4E    call $4ED4
 4E68: 0D          dec  c
 4E69: 20 E8       jr   nz,$4E53
-4E6B: 21 8C 3F    ld   hl,$3F8C
+4E6B: 21 8C 3F    ld   hl,$DRAW_COPYRIGHT
 4E6E: CD 81 5C    call $JMP_HL
 4E71: C3 E2 52    jp   $52E2
 4E74: FF          rst  $38
@@ -9061,12 +9036,18 @@ DONE_CAGED_DINO
 4E7B: F1          pop  af
 4E7C: 21 C9 91    ld   hl,$91C9
 4E7F: C9          ret
-4E80: 21 88 0F    ld   hl,$0F88
+
+DRAW_BORDER_AND_JETSOFT
+4E80: 21 88 0F    ld   hl,$DRAW_BORDER_1
 4E83: CD 81 5C    call $JMP_HL
-4E86: 21 66 3F    ld   hl,$3F66
+4E86: 21 66 3F    ld   hl,$DRAW_JETSOFT
 4E89: C9          ret
 4E8A: FF ...
 
+    ;; This totally does nothing but waste some
+    ;; cycles right? A reg is not even used after
+    ;; Maybe it was nopped out?
+LOAD_A_VAL_REALLY_WEIRD
 4E90: 3E F9       ld   a,$F9
 4E92: 00          nop
 4E93: 00          nop
@@ -9968,6 +9949,9 @@ CALL_ATTRACT_BONUS_SCREEN
 551D: FF          rst  $38
 551E: FF          rst  $38
 551F: FF          rst  $38
+
+    ;; mabye sfx?
+RESET_SFX_SOMETHING_1
 5520: AF          xor  a
 5521: 32 46 80    ld   ($8046),a
 5524: 3A A5 82    ld   a,($82A5)
@@ -10097,7 +10081,7 @@ _LP_1
 55FA: C3 02 A1    jp   $A102
 55FD: 02          ld   (bc),a
 55FE: C3 02 FF    jp   $FF02
-5601: FF ...
+5601: FF FF FF FF
 5604: 00          nop
 5605: 02          ld   (bc),a
 5606: FF          rst  $38
@@ -10272,7 +10256,7 @@ _LP_1
 56CF: 09          add  hl,bc
 56D0: 3E 01       ld   a,$01
 56D2: CD D8 5A    call $5AD8
-56D5: 21 88 0F    ld   hl,$0F88
+56D5: 21 88 0F    ld   hl,$DRAW_BORDER_1
 56D8: CD 81 4C    call $4C81
 56DB: C9          ret
 56DC: FF          rst  $38
@@ -10284,14 +10268,16 @@ _LP_1
 56E2: 16 A0       ld   d,$A0
 56E4: 18 22       jr   $5708
 56E6: 16 FF       ld   d,$FF
-56E8: CD C0 46    call $46C0
-56EB: CD 70 48    call $4870
-56EE: CD 10 49    call $4910
-56F1: CD 20 55    call $5520
+
+    ;;
+SFX_RESET_A_BUNCH
+56E8: CD C0 46    call $ZERO_OUT_SOME_SFX
+56EB: CD 70 48    call $ZERO_OUT_SOME_SFX_2
+56EE: CD 10 49    call $ZERO_OUT_SOME_SFX_3
+56F1: CD 20 55    call $RESET_SFX_SOMETHING_1
 56F4: C9          ret
-56F5: FF          rst  $38
-56F6: FF          rst  $38
-56F7: FF          rst  $38
+56F5: FF ...
+
 56F8: 12          ld   (de),a
 56F9: 01 0E 01    ld   bc,$010E
 56FC: 12          ld   (de),a
@@ -10417,7 +10403,7 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 57C0: C3 F0 5A    jp   $DRAW_EXTRA_BONUS_SCREEN
     ;;
 57C3: CD 81 5C    call $JMP_HL
-57C6: 21 88 0F    ld   hl,$0F88
+57C6: 21 88 0F    ld   hl,$DRAW_BORDER_1
 57C9: CD 81 5C    call $JMP_HL
 57CC: CD 70 55    call $DRAW_TILES_H_COPY
 57CF: 08 08
@@ -10685,7 +10671,7 @@ FLASH_BORDER
 DRAW_EXTRA_BONUS_SCREEN
 5AF0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
 5AF3: CD 81 5C    call $JMP_HL
-5AF6: 21 88 0F    ld   hl,$0F88
+5AF6: 21 88 0F    ld   hl,$DRAW_BORDER_1
 5AF9: CD 81 5C    call $JMP_HL
 5AFC: CD E6 5A    call $5AE6
 5AFF: CD 70 55    call $DRAW_TILES_H_COPY
