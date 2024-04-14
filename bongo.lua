@@ -1,7 +1,7 @@
 -- Bongo Training Montage --
 
 start_screen = 1 -- used if not looping
-loop_screens = {} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
+loop_screens = {27} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens

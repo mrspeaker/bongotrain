@@ -152,6 +152,7 @@
     SCREEN_WIDTH    $E0  ; 224
     SCR_TILE_W      $1a  ; 26 columns
     SCR_TILE_H      $1c  ; 28 rows
+    NUM_SCREENS     $1B  ; 27 screens
 
     ROUND1_SPEED    $1f
     ROUND2_SPEED    $10
@@ -165,7 +166,7 @@
     TILE_R          $22
     TILE_HYPHEN     $2B
 
-    TILE_SOLID      $F8
+    TILE_CAGE       $74
     TILE_CROWN_PIKA $8C ; alt crown
     TILE_PIK_CROSSA $8D ;
     TILE_PIK_RINGA  $8E
@@ -176,9 +177,11 @@
     TILE_PIK_VASE   $9F
     TILE_LVL_01     $C0
 
-    TILE_PLATFORM_L $FE
-    TILE_PLATFORM_C $FD
+    ;; > $F8 is a platform
+    TILE_SOLID      $F8 ; high-wire platform R
     TILE_PLATFORM_R $FC
+    TILE_PLATFORM_C $FD
+    TILE_PLATFORM_L $FE
 
 ;;; hardware
 
@@ -2327,18 +2330,14 @@ SET_TICK_MOD_3_AND_ADD_SCORE
 10E9: 32 00 80    ld   ($TICK_MOD_3),a
 10EC: CB 27       sla  a        ; (tick % 3) * 4
 10EE: CB 27       sla  a
-10F0: CD 90 13    call $SHADOW_ADD_A_TO_RET
+10F0: CD 90 13    call $JUMP_REL_A ; do one of the three funcs
+_ADD_SCORE
 10F3: CD 00 17    call $ADD_SCORE
 10F6: C9          ret
-
-;;; um, nothing calls 10f7 - must come from interrupt
-;;; (via $SHADOW_ADD_A_TO_RET somehow I reckon)
-EXTRA_LIFE_HANDLER
+_EXTRA_LIFE
 10F7: CD 70 10    call $EXTRA_LIFE
 10FA: C9          ret
-
-;;;  or 10fb! - done in an interrupt?
-DINO_COLLISION_HANDLER
+_DINO_COLLISION
 10FB: CD 18 25    call $TEST_THEN_DINO_COLLISION
 10FE: C9          ret
 
@@ -2390,10 +2389,9 @@ UPDATE_SCREEN_TILE_ANIMATIONS
 1139: 32 01 80    ld   ($TICK_MOD_6),a
 113C: CB 27       sla  a
 113E: CB 27       sla  a
-1140: CD 90 13    call $SHADOW_ADD_A_TO_RET
+1140: CD 90 13    call $JUMP_REL_A ; anims one-in6-times
 1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS
 1146: C9          ret
-
 1147: 00          nop
 1148: 00          nop
 1149: 00          nop
@@ -2442,7 +2440,7 @@ UPDATE_EVERYTHING
 11A3: CD 70 0E    call $BONGO_ANIMATE_PER_SCREEN
 11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
 11A9: CD BA 04    call $CHECK_DINO_TIMER
-11AC: CD 50 2B    call $SHADOW_HL_PLUSEQ_4_TIMES_SCR ; why?
+11AC: CD 50 2B    call $UPDATE_ENEMIES
 11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $CALL_HL_PLUS_4K
@@ -2696,10 +2694,8 @@ _LP
 
 138F: FF
 
-;;; What's this? Interrupt something?
-;;; goes shadow regs, pops ret addr from stack, adds A, re-pushes it
-;;; Does shenanigans: hl2 calls functions that aren't otherwise called
-SHADOW_ADD_A_TO_RET
+    ;; "jump relative A": dispatches to address based on A
+JUMP_REL_A
 1390: D9          exx
 1391: E1          pop  hl       ; stack RET pointer
 1392: 06 00       ld   b,$00
@@ -2707,12 +2703,12 @@ SHADOW_ADD_A_TO_RET
 1395: 09          add  hl,bc
 1396: E5          push hl
 1397: D9          exx
-1398: C9          ret           ; so returns to RET+A?
+1398: C9          ret           ; sets PC to RET + A
 
 1399: FF ...
 
 
-;;; Looks important. VBLANK?!
+;;; Looks important. VBLANK?
 WAIT_VBLANK
 13A0: 06 00       ld   b,$00
 13A2: 3E 01       ld   a,$01
@@ -4561,8 +4557,8 @@ DRAW_BONUS_STATE
 2B3F: C9          ret
 2B40: FF ...
 
-;;;
-SHADOW_HL_PLUSEQ_4_TIMES_SCR
+    ;; Run enemy update subs, based on current screen
+UPDATE_ENEMIES
 2B50: 3A 04 80    ld   a,($PLAYER_NUM)
 2B53: A7          and  a
 2B54: 20 05       jr   nz,$2B5B
@@ -4572,100 +4568,99 @@ SHADOW_HL_PLUSEQ_4_TIMES_SCR
 2B5E: 3D          dec  a        ; scr#-1
 2B5F: CB 27       sla  a        ; * 2
 2B61: CB 27       sla  a        ; * 2
-2B63: CD 90 13    call $SHADOW_ADD_A_TO_RET
-2B66: 00          nop
+2B63: CD 90 13    call $JUMP_REL_A
+2B66: 00          nop           ; scr 1
 2B67: 00          nop
 2B68: 00          nop
 2B69: C9          ret
-
-    ;; some kind of dispatcher - this are subs
-2B6A: CD 48 2C    call $2C48
+2B6A: CD 48 2C    call $ENEMY_PATTERN_SCR_2
 2B6D: C9          ret
-2B6E: 00          nop
+2B6E: 00          nop           ;scr 3
 2B6F: 00          nop
 2B70: 00          nop
 2B71: C9          ret
-2B72: CD 58 2C    call $2C58
+2B72: CD 58 2C    call $ENEMY_PATTERN_SCR_4
 2B75: C9          ret
-2B76: 00          nop
+2B76: 00          nop           ; scr 5
 2B77: 00          nop
 2B78: 00          nop
 2B79: C9          ret
-2B7A: 00          nop
+2B7A: 00          nop           ; scr 6
 2B7B: 00          nop
 2B7C: 00          nop
 2B7D: C9          ret
-2B7E: 00          nop
+2B7E: 00          nop           ; scr 7
 2B7F: 00          nop
 2B80: 00          nop
 2B81: C9          ret
-2B82: CD 98 2C    call $2C98
+2B82: CD 98 2C    call $ENEMY_PATTERN_SCR_8
 2B85: C9          ret
-2B86: CD 68 31    call $3168
+2B86: CD 68 31    call $ENEMY_PATTERN_SCR_9
 2B89: C9          ret
-2B8A: CD F0 2B    call $2BF0
+2B8A: CD F0 2B    call $ENEMY_PATTERN_SCR_10
 2B8D: C9          ret
-2B8E: CD 98 33    call $3398
+2B8E: CD 98 33    call $3398    ; scr 11
 2B91: C9          ret
-2B92: CD 70 34    call $3470
+2B92: CD 70 34    call $3470    ; scr 12
 2B95: C9          ret
-2B96: CD 38 35    call $3538
+2B96: CD 38 35    call $3538    ; scr 13
 2B99: C9          ret
-2B9A: CD B8 35    call $35B8
+2B9A: CD B8 35    call $35B8    ; scr 14
 2B9D: C9          ret
-2B9E: CD 58 36    call $3658
+2B9E: CD 58 36    call $3658    ; scr 15
 2BA1: C9          ret
-2BA2: 00          nop
+2BA2: 00          nop           ; scr 16
 2BA3: 00          nop
 2BA4: 00          nop
 2BA5: C9          ret
-2BA6: CD 70 36    call $3670
+2BA6: CD 70 36    call $3670    ; scr 17
 2BA9: C9          ret
-2BAA: CD D0 36    call $36D0
+2BAA: CD D0 36    call $36D0    ; scr 18
 2BAD: C9          ret
-2BAE: CD 60 37    call $3760
+2BAE: CD 60 37    call $3760    ; scr 19
 2BB1: C9          ret
-2BB2: CD E8 37    call $37E8
+2BB2: CD E8 37    call $37E8    ; scr 20
 2BB5: C9          ret
-2BB6: 00          nop
+2BB6: 00          nop           ; scr 21
 2BB7: 00          nop
 2BB8: 00          nop
 2BB9: C9          ret
-2BBA: CD 08 38    call $3808
+2BBA: CD 08 38    call $3808    ; scr 22
 2BBD: C9          ret
-2BBE: CD 68 38    call $3868
+2BBE: CD 68 38    call $3868    ; scr 23
 2BC1: C9          ret
-2BC2: CD 68 3B    call $3B68
+2BC2: CD 68 3B    call $3B68    ; scr 24
 2BC5: C9          ret
-2BC6: CD 88 38    call $3888
+2BC6: CD 88 38    call $3888    ; scr 25
 2BC9: C9          ret
-2BCA: CD 18 39    call $3918
+2BCA: CD 18 39    call $3918    ; scr 26
 2BCD: C9          ret
-2BCE: CD 88 38    call $3888
+2BCE: CD 88 38    call $3888    ; scr 27
 2BD1: C9          ret
-2BD2: 00          nop
+2BD2: 00          nop           ; scr ?
 2BD3: 00          nop
 2BD4: 00          nop
 2BD5: C9          ret
-2BD6: 00          nop
+2BD6: 00          nop           ; scr ?
 2BD7: 00          nop
 2BD8: 00          nop
 2BD9: C9          ret
-2BDA: 00          nop
+2BDA: 00          nop           ; scr ?
 2BDB: 00          nop
 2BDC: 00          nop
 2BDD: C9          ret
-2BDE: 00          nop
+2BDE: 00          nop           ; scr ?
 2BDF: 00          nop
 2BE0: 00          nop
 2BE1: C9          ret
-2BE2: 00          nop
+2BE2: 00          nop           ; scr ? (32)
 2BE3: 00          nop
 2BE4: 00          nop
 2BE5: C9          ret
 
 2BE6: FF ...
 
+ENEMY_PATTERN_SCR_10
 2BF0: CD D0 32    call $32D0
 2BF3: CD F0 32    call $32F0
 2BF6: C9          ret
@@ -4704,14 +4699,16 @@ ROCK_FALL_1
 
 2C40: FF ...
 
+ENEMY_PATTERN_SCR_2
 2C48: CD 28 2C    call $ROCK_FALL_1
-2C4B: CD 40 31    call $3140
+2C4B: CD 40 31    call $UPDATE_ENEMY_1
 2C4E: C9          ret
 
 2C4F: FF ...
 
-2C58: CD 28 2C    call $2C28
-2C5B: CD 40 31    call $3140
+ENEMY_PATTERN_SCR_4
+2C58: CD 28 2C    call $ROCK_FALL_1
+2C5B: CD 40 31    call $UPDATE_ENEMY_1
 2C5E: CD 38 32    call $3238
 2C61: CD 60 32    call $3260
 2C64: C9          ret
@@ -4736,8 +4733,9 @@ ROCK_FALL_1
 
 2C8E: FF ...
 
-2C98: CD 28 2C    call $2C28
-2C9B: CD 40 31    call $3140
+ENEMY_PATTERN_SCR_8
+2C98: CD 28 2C    call $ROCK_FALL_1
+2C9B: CD 40 31    call $UPDATE_ENEMY_1
 2C9E: CD 38 32    call $3238
 2CA1: CD 60 32    call $3260
 2CA4: CD 70 35    call $3570
@@ -4756,7 +4754,7 @@ ROCK_FALL_1
 2CBF: E6 07       and  $07      ; & 0000 0111
 2CC1: CB 27       sla  a        ; * 4
 2CC3: CB 27       sla  a
-2CC5: CD 90 13    call $SHADOW_ADD_A_TO_RET
+2CC5: CD 90 13    call $JUMP_REL_A
 2CC8: 00          nop
 2CC9: 00          nop
 2CCA: 00          nop
@@ -5254,7 +5252,9 @@ SET_HISCORE_TEXT
 313D: E1          pop  hl
 313E: C9          ret
 313F: FF          rst  $38
-   ; load rock pos (reset rock pos?)
+
+    ;; load rock pos (reset rock pos?)
+UPDATE_ENEMY_1
 3140: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 3143: A7          and  a
 3144: C8          ret  z        ; enemy not alive, return
@@ -5264,7 +5264,6 @@ SET_HISCORE_TEXT
 3148: 20 01       jr   nz,$314B
 314A: AF          xor  a
 314B: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-
 314E: 21 80 31    ld   hl,$ENEMY_LOOKUP
 3151: CB 27       sla  a
 3153: 85          add  a,l
@@ -5278,13 +5277,15 @@ SET_HISCORE_TEXT
 
 315F: FF ...
 
-3168: CD 28 2C    call $2C28
-316B: CD 40 31    call $3140
+    ;; looks the same as 1?
+ENEMY_PATTERN_SCR_9
+3168: CD 28 2C    call $ROCK_FALL_1
+316B: CD 40 31    call $UPDATE_ENEMY_1
 316E: C9          ret
 
 316F: FF ...
 
-ENEMY_LOOKUP                     ; (maybe... or all ents?)
+ENEMY_LOOKUP
 3180: 00 00
 3182: 1D          dec  e
 3183: 52          ld   d,d
@@ -5757,7 +5758,7 @@ RESET_ENEMIES
 3538: CD 38 32    call $3238
 353B: CD 60 32    call $3260
 353E: CD 28 2C    call $2C28
-3541: CD 40 31    call $3140
+3541: CD 40 31    call $UPDATE_ENEMY_1
 3547: CD 90 35    call $3590
 354A: C9          ret
 354B: FF ...
@@ -5814,7 +5815,7 @@ RESET_ENEMIES
 35B8: CD 70 35    call $3570
 35BB: CD 90 35    call $3590
 35BE: CD 28 2C    call $2C28
-35C1: CD 40 31    call $3140
+35C1: CD 40 31    call $UPDATE_ENEMY_1
 35C4: C9          ret
 35C5: FF ...
 
@@ -5936,7 +5937,7 @@ CHECK_BUTTONS_FOR_SOMETHING
 36D6: CD 38 32    call $3238
 36D9: CD 60 32    call $3260
 36DC: CD 28 2C    call $2C28
-36DF: CD 40 31    call $3140
+36DF: CD 40 31    call $UPDATE_ENEMY_1
 36E2: C9          ret
 36E3: FF ...
 
@@ -7608,16 +7609,16 @@ SFX_SYNTH_SETTINGS
 
 447B: FF ...
 
-;;; (draw?) Something when on Cage screen
+DRAW_CAGE_TOP
 4484: 3A 04 80    ld   a,($PLAYER_NUM)
 4487: A7          and  a
 4488: 20 05       jr   nz,$448F
 448A: 3A 29 80    ld   a,($SCREEN_NUM)
 448D: 18 03       jr   $4492
 448F: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-4492: FE 1B       cp   $1B      ; are we on screen 27?
-4494: C0          ret  nz       ; Nope, leave.
-4495: 3E 74       ld   a,$74
+4492: FE 1B       cp   $NUM_SCREENS  ; are we on screen 27?
+4494: C0          ret  nz            ; Nope, leave.
+4495: 3E 74       ld   a,$TILE_CAGE
 4497: 32 A9 91    ld   ($91A9),a
 449A: 3C          inc  a
 449B: 32 AA 91    ld   ($91AA),a
@@ -7637,7 +7638,8 @@ SFX_SYNTH_SETTINGS
 44B7: 32 8B 91    ld   ($918B),a
 44BA: 3C          inc  a
 44BB: 32 8C 91    ld   ($918C),a
-44BE: 18 24       jr   $44E4
+44BE: 18 24       jr   $_MORE_CAGE
+    ;; looks like data: 2byte coords
 44C0: 10 01       djnz $44C3
 44C2: 12          ld   (de),a
 44C3: 03          inc  bc
@@ -7659,6 +7661,7 @@ SFX_SYNTH_SETTINGS
 44DF: 01 00 03    ld   bc,$0300
 44E2: FF          rst  $38
 44E3: FF          rst  $38
+_MORE_CAGE
 44E4: 3C          inc  a
 44E5: 32 89 91    ld   ($9189),a
 44E8: 3C          inc  a
@@ -8195,7 +8198,7 @@ PLAY_SFX
 
 48FE: FF ...
 
-SHADOW_ADD_A_TO_RET_2            ; duplicate routine
+JUMP_REL_A_COPY   ; duplicate routine
 4900: D9          exx
 4901: E1          pop  hl
 4902: 06 00       ld   b,$00
@@ -8729,17 +8732,17 @@ TBL_4
 4C4F: FF          rst  $38
 
 
-4C50: CD 84 44    call $4484    ; draw something on cage screen
+4C50: CD 84 44    call $DRAW_CAGE_TOP
 4C53: 3A 04 80    ld   a,($PLAYER_NUM)
 4C56: A7          and  a
 4C57: 28 05       jr   z,$4C5E
 4C59: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 4C5C: 18 03       jr   $4C61
 4C5E: 3A 29 80    ld   a,($SCREEN_NUM)
-4C61: 3D          dec  a
-4C62: 87          add  a,a
-4C63: 87          add  a,a
-4C64: CD 00 49    call $SHADOW_ADD_A_TO_RET_2
+4C61: 3D          dec  a        ; scr - 1
+4C62: 87          add  a,a      ;
+4C63: 87          add  a,a      ; * 3
+4C64: CD 00 49    call $JUMP_REL_A_COPY
     ;; One per screen
 4C67: CD E3 4C    call $4CE3
 4C6A: C9          ret
@@ -9067,7 +9070,7 @@ LOAD_A_VAL_REALLY_WEIRD
 4EA4: C9          ret
 
 4EA5: 78          ld   a,b
-4EA6: CD 00 49    call $SHADOW_ADD_A_TO_RET_2
+4EA6: CD 00 49    call $JUMP_REL_A_2
 4EA9: FF          rst  $38
 4EAA: FF          rst  $38
 4EAB: FF          rst  $38
