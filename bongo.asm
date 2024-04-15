@@ -53,10 +53,10 @@
     DINO_DIR       $802E  ; 01 = right, ff = left
 
     PLAYER_MAX_X   $8030  ; furthest x pos (used for move score)
-    PLAYER_UMM     $8031  ; ???
+    IS_2_PLAYERS   $8031  ; 1=2p, 0=1p mode (not used much)
     LIVES          $8032
     LIVES_P2       $8033
-    IS_PLAYING     $8034  ; attract mode = 0, 1P = 1, 2P = 2
+    NUM_PLAYERS    $8034  ; attract mode = 0, 1P = 1, 2P = 2
     CREDITS_UMM    $8035  ; something to do with credits
 
     ROCK_FALL_TIMER $8036 ; resets falling pos of rock
@@ -253,7 +253,7 @@ NMI_LOOP
 0067: 32 01 B0    ld   ($INT_ENABLE),a
 006A: 3A 00 B8    ld   a,($WATCHDOG)
 006D: CD C0 00    call $NMI_INT_HANDLER
-0070: 3A 34 80    ld   a,($IS_PLAYING)
+0070: 3A 34 80    ld   a,($NUM_PLAYERS)
 0073: A7          and  a
 0074: 20 03       jr   nz,$0079
 0076: CD 90 01    call $DID_PLAYER_PRESS_START
@@ -286,7 +286,7 @@ _PLAY_SPLASH
 00AE: CD D0 00    call $ATTRACT_PRESS_P1_SCREEN
 00B1: 18 03       jr   $00B6
 00B3: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
-00B6: 3A 34 80    ld   a,($IS_PLAYING)
+00B6: 3A 34 80    ld   a,($NUM_PLAYERS)
 00B9: A7          and  a
 00BA: C2 E7 01    jp   nz,$RESET_A_BUNCH
 00BD: 18 E5       jr   $00A4
@@ -385,7 +385,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 019A: 28 11       jr   z,$01AD
 019C: CD 60 14    call $DELAY_83
 019F: 3E 01       ld   a,$01    ; start the game, 1 player
-01A1: 32 34 80    ld   ($IS_PLAYING),a
+01A1: 32 34 80    ld   ($NUM_PLAYERS),a
 01A4: 3A 03 83    ld   a,($CREDITS) ; use a credit
 01A7: 3D          dec  a
 01A8: 27          daa
@@ -399,7 +399,7 @@ DID_PLAYER_PRESS_START ; Did player start the game?
 01B7: C8          ret  z
 01B8: CD 60 14    call $DELAY_83
 01BB: 3E 02       ld   a,$02    ; start the game, 2 player
-01BD: 32 34 80    ld   ($IS_PLAYING),a
+01BD: 32 34 80    ld   ($NUM_PLAYERS),a
 01C0: 3A 03 83    ld   a,($CREDITS)
 01C3: 3D          dec  a
 01C4: 27          daa
@@ -436,12 +436,12 @@ RESET_A_BUNCH
 01F7: C6 02       add  a,$02
 01F9: 32 32 80    ld   ($LIVES),a
 01FC: 32 33 80    ld   ($LIVES_P2),a
-01FF: 3A 34 80    ld   a,($IS_PLAYING)
-0202: 3D          dec  a        ; is playing - 1?
-0203: 32 31 80    ld   ($PLAYER_UMM),a
+01FF: 3A 34 80    ld   a,($NUM_PLAYERS)
+0202: 3D          dec  a
+0203: 32 31 80    ld   ($IS_2_PLAYERS),a ; 0 = 1P, 1 = 2P
 0206: 3E 01       ld   a,$01
 0208: 32 04 80    ld   ($PLAYER_NUM),a
-020B: 3A 31 80    ld   a,($PLAYER_UMM)
+020B: 3A 31 80    ld   a,($IS_2_PLAYERS)
 020E: A7          and  a
 020F: 20 04       jr   nz,$0215
 0211: AF          xor  a
@@ -697,7 +697,7 @@ DRAW_LIVES
 03E7: FF
     
 03E8: AF          xor  a
-03E9: 32 34 80    ld   ($IS_PLAYING),a
+03E9: 32 34 80    ld   ($NUM_PLAYERS),a
 03EC: 32 35 80    ld   ($CREDITS_UMM),a
 03EF: C3 93 00    jp   $0093
 
@@ -910,7 +910,7 @@ _SETUP_2 ;looks like SETUP - no one calls it?
 0580: CD 48 03    call $SETUP_MORE
 0583: CD 80 30    call $SET_HISCORE_TEXT
 0586: CD A0 13    call $WAIT_VBLANK
-0589: 3A 34 80    ld   a,($IS_PLAYING)
+0589: 3A 34 80    ld   a,($NUM_PLAYERS)
 058C: A7          and  a
 058D: 20 1C       jr   nz,$05AB
 058F: 3A 03 83    ld   a,($CREDITS)
@@ -3139,7 +3139,7 @@ DRAW_BONUS
 
     ;; Adds whatever is in 801d
 ADD_SCORE
-1700: 3A 34 80    ld   a,($IS_PLAYING)
+1700: 3A 34 80    ld   a,($NUM_PLAYERS)
 1703: A7          and  a
 1704: C8          ret  z
 1705: 3A 04 80    ld   a,($PLAYER_NUM)
@@ -3546,15 +3546,18 @@ CALL_DO_DEATH_SEQUENCE
 1B73: FF ...
 
 INIT_SCORE_AND_SCREEN_ONCE
-1B80: 3A 31 80    ld   a,($PLAYER_UMM)
+1B80: 3A 31 80    ld   a,($IS_2_PLAYERS)
 1B83: A7          and  a
-1B84: 20 0B       jr   nz,$1B91
+1B84: 20 0B       jr   nz,$_BOTH
+_2_PLAYERS
 1B86: 3A 22 80    ld   a,($DID_INIT) ; $8022 never used anywhere else
 1B89: A7          and  a
-1B8A: 28 01       jr   z,$1B8D
-1B8C: C9          ret           ; don't reinit?
+1B8A: 28 01       jr   z,$_DID_INIT
+1B8C: C9          ret           ; p2 hasn't inited?
+_DID_INIT
 1B8D: 3C          inc  a
 1B8E: 32 22 80    ld   ($DID_INIT),a ; (except here)
+_BOTH
 1B91: CD 00 17    call $ADD_SCORE
 1B94: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 
@@ -6479,6 +6482,7 @@ SET_ENEMY_3_90_C0
 3B7E: E1          pop  hl
 3B7F: C9          ret
 
+    ;; interesting algorithm for collision detection!
 PLAYER_ENEMY_COLLISION
     ;; Check X
 3B80: FD 7E 00    ld   a,(iy+$00) ; points to enemy X
@@ -7980,7 +7984,7 @@ CLEAR_SFX_1
 46E5: FF ...
 
     ;;
-46E8: 3A 34 80    ld   a,($IS_PLAYING)
+46E8: 3A 34 80    ld   a,($NUM_PLAYERS)
 46EB: A7          and  a
 46EC: C8          ret  z
 46ED: 3A 04 80    ld   a,($PLAYER_NUM)
