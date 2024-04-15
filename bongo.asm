@@ -5824,6 +5824,7 @@ SET_ENEMY_FR_AND_Y
 35C4: C9          ret
 35C5: FF ...
 
+INIT_ENEMY_3_Y_BC
 35D0: 3E 10       ld   a,$10
 35D2: 32 5C 81    ld   ($ENEMY_3_X),a
 35D5: 3E A3       ld   a,$A3
@@ -5837,6 +5838,9 @@ SET_ENEMY_FR_AND_Y
 35E9: C9          ret
 35EA: FF ...
 
+    ;; Is this weird? Looks like it inits enemy 3,
+    ;; any time x < 5?
+RESET_ENEMY_3_IF_X_LT_5
 35F0: 3A 5C 81    ld   a,($ENEMY_3_X)
 35F3: A7          and  a
 35F4: 28 0F       jr   z,$3605
@@ -5848,7 +5852,7 @@ SET_ENEMY_FR_AND_Y
 3600: 28 03       jr   z,$3605
 3602: FE 04       cp   $04
 3604: C0          ret  nz
-3605: CD D0 35    call $35D0
+3605: CD D0 35    call $INIT_ENEMY_3_Y_BC
 3608: C9          ret
 3609: FF ...
 
@@ -5893,7 +5897,7 @@ CHECK_BUTTONS_FOR_SOMETHING
 3656: C1          pop  bc
 3657: C9          ret
 
-3658: CD F0 35    call $35F0
+3658: CD F0 35    call $RESET_ENEMY_3_IF_X_LT_5
 365B: CD 10 36    call $UPDATE_ENEMY_3
 365E: CD 38 32    call $3238
 3661: CD 60 32    call $3260
