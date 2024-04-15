@@ -5288,6 +5288,7 @@ ENEMY_PATTERN_SCR_9
 
 316F: FF ...
 
+    ;; frame, Y pos
 ENEMY_LOOKUP
 3180: 00 00
 3182: 1D          dec  e
@@ -5762,7 +5763,7 @@ RESET_ENEMIES
 353B: CD 60 32    call $3260
 353E: CD 28 2C    call $2C28
 3541: CD 40 31    call $UPDATE_ENEMY_1
-3547: CD 90 35    call $3590
+3547: CD 90 35    call $SET_ENEMY_FR_AND_Y
 354A: C9          ret
 354B: FF ...
 
@@ -5795,6 +5796,7 @@ RESET_ENEMIES
 
 3588: FF ...
 
+SET_ENEMY_FR_AND_Y
 3590: 3A 3F 80    ld   a,($803F)
 3593: A7          and  a
 3594: C8          ret  z
