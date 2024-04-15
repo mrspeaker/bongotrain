@@ -3529,7 +3529,7 @@ CALL_DO_DEATH_SEQUENCE
 1B6A: 3C          inc  a
 1B6B: 27          daa
 1B6C: 77          ld   (hl),a
-1B6D: CD B0 2C    call $2CB0
+1B6D: CD B0 2C    call $NOPPED_OUT_DISPATCH ; calls nothing based on screen
 1B70: C3 00 10    jp   $BIG_RESET
 
 1B73: FF ...
@@ -4744,6 +4744,8 @@ ENEMY_PATTERN_SCR_8
 
 2CAB: FF ...
 
+    ;; wonder what this was for? No paths call anything
+NOPPED_OUT_DISPATCH
 2CB0: 3A 04 80    ld   a,($PLAYER_NUM)
 2CB3: A7          and  a
 2CB4: 20 05       jr   nz,$2CBB
@@ -4755,6 +4757,7 @@ ENEMY_PATTERN_SCR_8
 2CC1: CB 27       sla  a        ; * 4
 2CC3: CB 27       sla  a
 2CC5: CD 90 13    call $JUMP_REL_A
+    ;; all nops, no calls...
 2CC8: 00          nop
 2CC9: 00          nop
 2CCA: 00          nop
