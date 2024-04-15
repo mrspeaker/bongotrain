@@ -69,6 +69,11 @@
     CH2_SFX        $8043  ; SFX channel 2
     SFX_ID         $8044  ; queued sound effect ID to play
 
+    1UP_SCR_POS    $804C  ; I reckon its where the 1up bonus text is on screen
+    1UP_SCR_POS_2  $804E  ; ... but not used I reckon,
+    1UP_SCR_POS_3  $804F  ; ... as they decided not to clear the text
+
+    1UP_TIMER      $8050  ; This is never read- but looks like was going to remove 1up text
     IS_HIT_CAGE    $8051  ; did player trigger cage?
     SPEED_DELAY_P1 $805b  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
     SPEED_DELAY_P2 $805c  ; ...until dead. Smaller delay = faster dino/rock fall
@@ -182,6 +187,8 @@
     TILE_PLATFORM_R $FC
     TILE_PLATFORM_C $FD
     TILE_PLATFORM_L $FE
+
+    SCR_LINE_PREV   $FFE0       ; -32 = previous screen line
 
 ;;; hardware
 
@@ -1329,7 +1336,7 @@ _LP
 086B: 1A          ld   a,(de)   ; ret
 086C: 77          ld   (hl),a
 086D: 13          inc  de       ; ret + 1
-086E: 01 E0 FF    ld   bc,$FFE0
+086E: 01 E0 FF    ld   bc,$SCR_LINE_PREV
 0871: DD 35 00    dec  (ix+$00)
 0874: AF          xor  a
 0875: DD BE 00    cp   (ix+$00)
@@ -1889,7 +1896,7 @@ DO_DEATH_SEQUENCE
 0CC2: 32 42 80    ld   ($CH1_SFX),a
 0CC5: 32 65 80    ld   ($SFX_PREV),a
 0CC8: CD A0 0B    call $RESET_DINO_COUNTER
-0CCB: CD 14 0D    call $0D14
+0CCB: CD 14 0D    call $_HMM
 0CCE: CD A0 0C    call $DELAY_8_VBLANKS
 0CD1: 3E 26       ld   a,$26
 0CD3: 32 41 81    ld   ($PLAYER_FRAME),a
@@ -1912,13 +1919,15 @@ DO_DEATH_SEQUENCE
 0D01: D6 10       sub  $10
 0D03: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D06: 16 28       ld   d,$28
+_LP
 0D08: CD B0 0C    call $BONGO_JUMP_ON_PLAYER_DEATH
 0D0B: 3A 5F 81    ld   a,($ENEMY_3_Y)
 0D0E: 3D          dec  a
 0D0F: 3D          dec  a
 0D10: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D13: 15          dec  d
-0D14: 20 F2       jr   nz,$0D08
+_HMM
+0D14: 20 F2       jr   nz,$_LP
 0D16: C9          ret
 
     ;; called?
@@ -1972,7 +1981,7 @@ MOVE_BONGO_REDACTED
 0D59: FF ...
 
 JUMP_BONGO
-0D60: CD 40 0D    call $MOVE_BONGO_REDACTED
+0D60: CD 40 0D    call $MOVE_BONGO_REDACTED ; also called from UPDATE_EVERYTHING
 0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
 0D66: A7          and  a
 0D67: C8          ret  z
@@ -2276,12 +2285,13 @@ EXTRA_LIFE
 1070: 3A 04 80    ld   a,($PLAYER_NUM)
 1073: A7          and  a
 1074: 20 04       jr   nz,$107A
-1076: CD 80 10    call $1080    ; p1
+1076: CD 80 10    call $_P1_EXTRA_LIFE
 1079: C9          ret
-107A: CD A8 10    call $10A8    ; p2
+107A: CD A8 10    call $_P2_EXTRA_LIFE
 107D: C9          ret
 107E: FF FF
     ;; P1 extra life
+_P1_EXTRA_LIFE
 1080: 3A 70 80    ld   a,($EXTRA_GOT_P1)
 1083: A7          and  a
 1084: C0          ret  nz
@@ -2301,6 +2311,7 @@ EXTRA_LIFE
 10A1: C9          ret
 10A2: FF ...
     ;; P2 extra life
+_P1_EXTRA_LIFE
 10A8: 3A 71 80    ld   a,($EXTRA_GOT_P2)
 10AB: A7          and  a
 10AC: C0          ret  nz
@@ -2387,32 +2398,32 @@ UPDATE_SCREEN_TILE_ANIMATIONS
 1136: 20 01       jr   nz,$1139
 1138: AF          xor  a
 1139: 32 01 80    ld   ($TICK_MOD_6),a
-113C: CB 27       sla  a
-113E: CB 27       sla  a
+113C: CB 27       sla  a        ; tick * 2
+113E: CB 27       sla  a        ; tick * 4
 1140: CD 90 13    call $JUMP_REL_A ; anims one-in6-times
-1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS
+1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS ; a = 0
 1146: C9          ret
-1147: 00          nop
+1147: 00          nop           ; a = 1
 1148: 00          nop
 1149: 00          nop
 114A: C9          ret
-114B: 00          nop
+114B: 00          nop           ; a = 2
 114C: 00          nop
 114D: 00          nop
 114E: C9          ret
-114F: 00          nop
+114F: 00          nop           ; a = 3
 1150: 00          nop
 1151: 00          nop
 1152: C9          ret
-1153: 00          nop
+1153: 00          nop           ; a = 4
 1154: 00          nop
 1155: 00          nop
 1156: C9          ret
-1157: 00          nop
+1157: 00          nop           ; a = 5
 1158: 00          nop
 1159: 00          nop
 115A: C9          ret
-115B: 00          nop
+115B: 00          nop           ; a = 6
 115C: 00          nop
 115D: 00          nop
 115E: C9          ret
@@ -2443,7 +2454,7 @@ UPDATE_EVERYTHING
 11AC: CD 50 2B    call $UPDATE_ENEMIES
 11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
-11B5: CD E3 01    call $CALL_HL_PLUS_4K
+11B5: CD E3 01    call $CALL_HL_PLUS_4K ; $UPDATE_EVERYTHING_MORE
 11B8: C9          ret
     
 11B9: FF ...
@@ -2653,7 +2664,7 @@ _DRAW_CHAR
 _DONE
 1343: DD 23       inc  ix       ; ix++
 1345: E1          pop  hl
-1346: 01 E0 FF    ld   bc,$FFE0
+1346: 01 E0 FF    ld   bc,$SCR_LINE_PREV
 1349: 09          add  hl,bc
 134A: 7C          ld   a,h
 134B: FE 8F       cp   $8F
@@ -4972,7 +4983,7 @@ ENTER_HISCORE_SCREEN
 2EF5: 7E          ld   a,(hl)
 2EF6: 23          inc  hl
 2EF7: FD 77 00    ld   (iy+$00),a
-2EFA: 11 E0 FF    ld   de,$FFE0
+2EFA: 11 E0 FF    ld   de,$SCR_LINE_PREV
 2EFD: FD 19       add  iy,de
 2EFF: C9          ret
 
@@ -5004,7 +5015,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 2F3A: 28 02       jr   z,$2F3E
 2F3C: E1          pop  hl
 2F3D: C9          ret
-2F3E: 11 E0 FF    ld   de,$FFE0
+2F3E: 11 E0 FF    ld   de,$SCR_LINE_PREV
 2F41: FD 19       add  iy,de
 2F43: E1          pop  hl
 2F44: C9          ret
@@ -6833,32 +6844,39 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 3E44: C9          ret
 3E45: FF ...
 
+DELAY_2_B
 3E50: 1E 01       ld   e,$01
+_LP
 3E52: D5          push de
 3E53: DD E5       push ix
 3E55: CD A0 13    call $WAIT_VBLANK
 3E58: DD E1       pop  ix
 3E5A: D1          pop  de
 3E5B: 1D          dec  e
-3E5C: 20 F4       jr   nz,$3E52
+3E5C: 20 F4       jr   nz,$_LP
 3E5E: C9          ret
-3E5F: FF          rst  $38
+
+3E5F: FF
+
+CUTSCENE_JUMP_UP_AND_DOWN
 3E60: DD 21 40 81 ld   ix,$PLAYER_X
-3E64: CD 50 3E    call $3E50
+3E64: CD 50 3E    call $DELAY_2_B
 3E67: 16 08       ld   d,$08
+_LP_1
 3E69: DD 35 03    dec  (ix+$03)
 3E6C: DD 35 07    dec  (ix+$07)
 3E6F: DD 35 0B    dec  (ix+$0b)
-3E72: CD 50 3E    call $3E50
+3E72: CD 50 3E    call $DELAY_2_B
 3E75: 15          dec  d
-3E76: 20 F1       jr   nz,$3E69
+3E76: 20 F1       jr   nz,$_LP_1
 3E78: 16 08       ld   d,$08
+_LP_2
 3E7A: DD 34 03    inc  (ix+$03)
 3E7D: DD 34 07    inc  (ix+$07)
 3E80: DD 34 0B    inc  (ix+$0b)
-3E83: CD 50 3E    call $3E50
+3E83: CD 50 3E    call $DELAY_2_B
 3E86: 15          dec  d
-3E87: 20 F1       jr   nz,$3E7A
+3E87: 20 F1       jr   nz,$_LP_2
 3E89: C9          ret
 
 3E8A: FF ...
@@ -6883,9 +6901,9 @@ END_CUTSCENE
 3ECE: 23          inc  hl
 3ECF: 36 80       ld   (hl),$80
 3ED1: CD E0 3C    call $3CE0    ; dino appears
-3ED4: CD 60 3E    call $3E60    ; jump up and down
-3ED7: CD 60 3E    call $3E60    ; jump up and down
-3EDA: CD 60 3E    call $3E60    ; jump up and down
+3ED4: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
+3ED7: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
+3EDA: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
 3EDD: 80          add  a,b
 3EDE: CD 22 3E    call $3E22    ; run to the right
 3EE1: C9          ret
@@ -6920,33 +6938,38 @@ DRAW_BOTTOM_ROW_NUMBERS
 3F2D: D8 D9 DA
 3F30: FF
 
+    ;; called?
 3F31: 3A 04 80    ld   a,($PLAYER_NUM)
 3F34: A7          and  a
 3F35: 20 05       jr   nz,$3F3C
 3F37: 3A 29 80    ld   a,($SCREEN_NUM)
 3F3A: 18 03       jr   $3F3F
-3F3C: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
+3F3C: 3A 2A 80    ld   a,($SCREEN_NUM_P2) ; a = scr
 3F3F: 21 BF 93    ld   hl,$93BF
-3F42: CD 55 3F    call $3F55
+_LP
+3F42: CD 55 3F    call $DELAY_2_VBLANK
 3F45: 3D          dec  a
-3F46: 28 08       jr   z,$3F50
+3F46: 28 08       jr   z,$_DONE
 3F48: 36 DB       ld   (hl),$DB
-3F4A: 01 E0 FF    ld   bc,$FFE0
+3F4A: 01 E0 FF    ld   bc,$SCR_LINE_PREV
 3F4D: 09          add  hl,bc
-3F4E: 18 F2       jr   $3F42
+3F4E: 18 F2       jr   $_LP
+_DONE
 3F50: CD D0 2A    call $DRAW_BONUS_STATE
 3F53: C9          ret
 
 3F54: FF
 
+DELAY_2_VBLANK
 3F55: F5          push af
 3F56: E5          push hl
 3F57: 1E 01       ld   e,$01
+_LP
 3F59: D5          push de
 3F5A: CD A0 13    call $WAIT_VBLANK
 3F5D: D1          pop  de
 3F5E: 1D          dec  e
-3F5F: 20 F8       jr   nz,$3F59
+3F5F: 20 F8       jr   nz,$_LP
 3F61: E1          pop  hl
 3F62: F1          pop  af
 3F63: C9          ret
@@ -7028,9 +7051,11 @@ INT_HANDLER
 
 401B: FF ...
 
+    ;; Looks like more general updates
+UPDATE_EVERYTHING_MORE
 4020: CD 50 40    call $ADD_MOVE_SCORE
 4023: CD 58 42    call $PICKUP_TILE_COLLISION
-4026: CD E0 42    call $42E0
+4026: CD E0 42    call $1UP_TIMER_COUNTDOWN
 4029: CD 74 4D    call $END_SCREEN_LOGIC
 402C: CD 20 50    call $ANIMATE_ALL_PICKUPS
 402F: C9          ret
@@ -7282,9 +7307,9 @@ HIT_BONUS_DRAW_POINTS
 41B9: 2B          dec  hl
 41BA: 2B          dec  hl
 41BB: 2B          dec  hl
-41BC: 22 4C 80    ld   ($804C),hl
+41BC: 22 4C 80    ld   ($1UP_SCR_POS),hl
 41BF: 7E          ld   a,(hl)
-41C0: 32 4E 80    ld   ($804E),a
+41C0: 32 4E 80    ld   ($1UP_SCR_POS_2),a
 41C3: 3E 90       ld   a,$90
 41C5: CB 38       srl  b
 41C7: CB 38       srl  b
@@ -7292,13 +7317,13 @@ HIT_BONUS_DRAW_POINTS
 41CB: CB 38       srl  b
 41CD: 80          add  a,b
 41CE: 77          ld   (hl),a
-41CF: 11 E0 FF    ld   de,$FFE0
+41CF: 11 E0 FF    ld   de,$SCR_LINE_PREV
 41D2: 19          add  hl,de
 41D3: 7E          ld   a,(hl)
-41D4: 32 4F 80    ld   ($804F),a
+41D4: 32 4F 80    ld   ($1UP_SCR_POS_3),a
 41D7: 36 9B       ld   (hl),$9B
-41D9: 3E 40       ld   a,$40
-41DB: 32 50 80    ld   ($8050),a
+41D9: 3E 40       ld   a,$40    ; 64 countdown. Never read.
+41DB: 32 50 80    ld   ($1UP_TIMER),a
 41DE: C3 F4 40    jp   $HIT_BONUS
 
 41E1: FF FF
@@ -7331,10 +7356,11 @@ HIT_BONUS_DRAW_POINTS
 4200: DD 21 A0 82 ld   ix,$82A0 ;
 4204: DD 7E 04    ld   a,(ix+$04)
 4207: A7          and  a
-4208: 28 08       jr   z,$4212
+4208: 28 08       jr   z,$I
 420A: CD 40 41    call $SET_SYNTH_SETTINGS
 420D: DD 36 04 00 ld   (ix+$04),$00
 4211: C9          ret
+_I
 4212: CD 80 40    call $4080
 4215: C9          ret
 
@@ -7348,11 +7374,11 @@ SFX_SUMFIN_1
 4220: DD 21 A8 82 ld   ix,$82A8
 4224: DD 7E 04    ld   a,(ix+$04)
 4227: A7          and  a
-4228: 28 08       jr   z,$4232
+4228: 28 08       jr   z,$I
 422A: CD 80 41    call $RELATED_TO_MYSTERY_8066
 422D: DD 36 04 00 ld   (ix+$04),$00
 4231: C9          ret
-
+_I
 4232: CD C0 40    call $40C0
 4235: C9          ret
 
@@ -7366,11 +7392,11 @@ SFX_SUMFIN_2
 4240: DD 21 B0 82 ld   ix,$82B0
 4244: DD 7E 04    ld   a,(ix+$04)
 4247: A7          and  a
-4248: 28 08       jr   z,$4252
-424A: CD B0 42    call $42B0
+4248: 28 08       jr   z,$_I
+424A: CD B0 42    call $RELATED_TO_MYSTERY_8066_2
 424D: DD 36 04 00 ld   (ix+$04),$00
 4251: C9          ret
-
+_I
 4252: CD 00 41    call $4100
 4255: C9          ret
 
@@ -7419,7 +7445,7 @@ PICKUP_TILE_COLLISION
 429F: C9          ret
 42A0: 3E 8E       ld   a,$TILE_PIK_RINGA
 42A2: 32 CB 90    ld   ($90CB),a
-42A5: CD 02 36    call $3602    ; <- that looks od. Weird jump
+42A5: CD 02 36    call $3602    ; <- that looks od. Weird jump to middle of code
 42A8: C9          ret
 
 42A9: FF ...
@@ -7451,26 +7477,33 @@ RELATED_TO_MYSTERY_8066_2
 42DC: DD 77 05    ld   (ix+$05),a
 42DF: C9          ret
 
-42E0: 3A 50 80    ld   a,($8050)
+    ;; My theory: the bonus-points text that appears
+    ;; when you get a pickup, was supposed to disappear after 64 frames
+    ;; but they gave up. That's my theory.
+1UP_TIMER_COUNTDOWN
+42E0: 3A 50 80    ld   a,($1UP_TIMER)
 42E3: A7          and  a
 42E4: C8          ret  z
 42E5: 3D          dec  a
-42E6: 32 50 80    ld   ($8050),a
+42E6: 32 50 80    ld   ($1UP_TIMER),a
 42E9: A7          and  a
 42EA: C9          ret
 
-42EB: 2A 4C 80    ld   hl,($804C)
-42EE: 3E 10       ld   a,$10
+    ;; never called, cause my theory above...
+BLANK_OUT_1UP_TEXT
+42EB: 2A 4C 80    ld   hl,($1UP_SCR_POS)
+42EE: 3E 10       ld   a,$TILE_BLANK
 42F0: 00          nop
 42F1: 77          ld   (hl),a
-42F2: 11 E0 FF    ld   de,$FFE0
+42F2: 11 E0 FF    ld   de,$SCR_LINE_PREV ; -32 (next line up screen)
 42F5: 19          add  hl,de
-42F6: 3E 10       ld   a,$10
+42F6: 3E 10       ld   a,$TILE_BLANK
 42F8: 00          nop
 42F9: 77          ld   (hl),a
 42FA: C9          ret
 42FB: FF ...
 
+    ;; data?
 4300: F0          ret  p
 4301: 70          ld   (hl),b
 4302: B0          or   b
