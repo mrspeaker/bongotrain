@@ -183,8 +183,10 @@ levels lead up and down consistently: pro tip, careful getting bonuses at the bo
 
 No bonus for catching dino. how cool is that? Also, dino screen is lowest point scoring: no bonuses to pickup, can't get full move bonus
 
+First 6 columns of every screen is the same.
+
 ----
-sneaky timing - easy to learn, hard (impossible?) to master... it's own handrolled collision - distinct feel, infuriating, but you always blame yourself.
+sneaky timing - easy to learn, hard (impossible?) to master... it's own handrolled collision - distinct feel, infuriating, but learnable and then you always blame yourself.
 
 3s and 6s... plus offset by 1
 inc
