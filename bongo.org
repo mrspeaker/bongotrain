@@ -709,7 +709,27 @@ hacking away at a wr.
 
 
     -------------------
+ROM_START( bongo )
+	ROM_REGION( 0x6000, "maincpu", 0 )
+	ROM_LOAD( "bg1.bin",    0x0000, 0x1000, CRC(de9a8ec6) SHA1(b5ee99b26d1a39e31b643ad0f5723ee8e364023e) )
+	ROM_LOAD( "bg2.bin",    0x1000, 0x1000, CRC(a19da662) SHA1(a2674392d489c5e5eeb9abc51572a37cc6045220) )
+	ROM_LOAD( "bg3.bin",    0x2000, 0x1000, CRC(9f6f2150) SHA1(26a1f872686ddddcdb690d7b826ba26c20cdec35) )
+	ROM_LOAD( "bg4.bin",    0x3000, 0x1000, CRC(f80372d2) SHA1(078e2c8b947103c168c0c85430f8ebc9d09f8ba7) )
+	ROM_LOAD( "bg5.bin",    0x4000, 0x1000, CRC(fc92eade) SHA1(f4012a1c4631388a3e8109a8381bc4084ddc8757) )
+	ROM_LOAD( "bg6.bin",    0x5000, 0x1000, CRC(561d9e5d) SHA1(68d7fab3cfb5b3360fe8064c70bf21bb1341032f) )
 
+	ROM_REGION( 0x2000, "gfx1", 0 )
+	ROM_LOAD( "b-h.bin",    0x0000, 0x1000, CRC(fc79d103) SHA1(dac1152221ebdc4cd9bf353b4cc5d45021ca5d9e) )
+	ROM_LOAD( "b-k.bin",    0x1000, 0x1000, CRC(94d17bf3) SHA1(2a70968249946de52c5a4cfabafbbf4ecda844a8) )
+
+	ROM_REGION( 0x0020, "proms", 0 )
+	ROM_LOAD( "b-clr.bin",  0x0000, 0x0020, CRC(c4761ada) SHA1(067d12b2d3635ffa6337ed234ba42717447bea00) )
+ROM_END
+
+
+// Larger romspace, interrupt enable moved
+GAME( 198?, thepitm,     thepit,   thepitm,    thepitm,    galaxian_state, init_mooncrsu,   ROT90,  "bootleg (KZH)", "The Pit (bootleg on Moon Quasar hardware)", MACHINE_SUPPORTS_SAVE ) // on an original MQ-2FJ PCB, even if the memory map appears closer to Moon Cresta
+GAME( 1983, bongo,       0,        bongo,      bongo,      galaxian_state, init_kong,       ROT90,  "Jetsoft",       "Bongo", MACHINE_SUPPORTS_SAVE )
 
     static INPUT_PORTS_START( bongo )
 	PORT_START("IN0")
@@ -825,3 +845,19 @@ void galaxian_state::mooncrst_map_base(address_map &map)
 	map(0xb007, 0xb007).mirror(0x07f8).w(FUNC(galaxian_state::galaxian_flip_screen_y_w));
 	map(0xb800, 0xb800).mirror(0x07ff).r("watchdog", FUNC(watchdog_timer_device::reset_r));
 }
+
+
+'bongo'
+
+  - IN0 bit 1 is supposed to be COIN2 (see coinage routine at 0x0288), but
+    there is a test on it at 0x0082 (in NMI routine) which jumps to 0xc003
+    (unmapped memory) if it pressed (HIGH).
+  - IN0 bit 7 is tested on startup (code at 0x0048) in combination with bits 0 and 1
+    (which are supposed to be COIN1 and COIN2). If all of them are pressed (HIGH),
+    the game displays a "CREDIT FAULT" message then jumps back to 0x0048.
+  - IN0 bit 4 and IN1 bit 4 should have been IPT_JOYSTICK_DOWN (Upright and Cocktail)
+    but their status is discarded with 3 'NOP' instructions at 0x06ca.
+  - IN0 bit 7 and IN0 bit 6 should have been IPT_BUTTON1 (Upright and Cocktail)
+    but their status is discarded with 3 'NOP' instructions at 0x06d1.
+  - IN2 is read via code at 0x2426, but its contents is directly overwritten
+    with value read from DSW (AY port A) via code at 0x3647.
