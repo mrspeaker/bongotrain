@@ -365,10 +365,10 @@ DRAW_ONE_OR_TWO_PLAYER
 0173: C9          ret
 0174: FF ...
 
-    ;; called a lot (via... CALL_HL_PLUS_4K)
+    ;; called a lot (via... JMP_HL_PLUS_4K)
     ;; why? Why not just jump?
     ;; Is there a max jump distance or something?
-DO_CALL_HL_PLUS_4K
+DO_JMP_HL_PLUS_4K
 0180: C5          push bc
 0181: 01 00 40    ld   bc,$4000 ;
 0184: 09          add  hl,bc
@@ -421,8 +421,8 @@ COPY_PORTS_TO_BUTTONS
 01E2: C9          ret
 
     ;;
-CALL_HL_PLUS_4K
-01E3: C3 80 01    jp   $DO_CALL_HL_PLUS_4K
+JMP_HL_PLUS_4K
+01E3: C3 80 01    jp   $DO_JMP_HL_PLUS_4K
 01E6: C9          ret
 
 RESET_A_BUNCH
@@ -636,13 +636,13 @@ SETUP_MORE
 RESET_ENTS_ALL
 0370: CD 70 14    call $CALL_RESET_ENTS
 0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
-0376: CD E3 01    call $CALL_HL_PLUS_4K
+0376: CD E3 01    call $JMP_HL_PLUS_4K
 0379: 21 20 0E    ld   hl,$0E20
-037C: CD E3 01    call $CALL_HL_PLUS_4K
+037C: CD E3 01    call $JMP_HL_PLUS_4K
 037F: 21 C0 17    ld   hl,$RESET_DINO
-0382: CD E3 01    call $CALL_HL_PLUS_4K
+0382: CD E3 01    call $JMP_HL_PLUS_4K
 0385: 21 A0 15    ld   hl,$15A0
-0388: CD E3 01    call $CALL_HL_PLUS_4K
+0388: CD E3 01    call $JMP_HL_PLUS_4K
 038B: 00          nop
 038C: 00          nop
 038D: 00          nop
@@ -720,7 +720,7 @@ SET_COLOR_ROW_3                 ; dunno what row.
 
 OUT_OF_LIVES
 0410: 21 E8 16    ld   hl,$16E8
-0413: CD E3 01    call $CALL_HL_PLUS_4K
+0413: CD E3 01    call $JMP_HL_PLUS_4K
 0416: CD E0 24    call $DELAY_60_VBLANKS
 0419: CD 30 04    call $CHECK_IF_HISCORE
 041C: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
@@ -2454,7 +2454,7 @@ UPDATE_EVERYTHING
 11AC: CD 50 2B    call $UPDATE_ENEMIES
 11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
 11B2: 21 20 00    ld   hl,$0020
-11B5: CD E3 01    call $CALL_HL_PLUS_4K ; $UPDATE_EVERYTHING_MORE
+11B5: CD E3 01    call $JMP_HL_PLUS_4K ; $UPDATE_EVERYTHING_MORE
 11B8: C9          ret
     
 11B9: FF ...
@@ -2614,7 +2614,7 @@ RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
 12F4: CD 10 35    call $RESET_ENEMIES
     ;; calls $4c50: ADD_MOVE_SCORE
 12F7: 21 50 0C    ld   hl,$0C50
-12FA: CD E3 01    call $CALL_HL_PLUS_4K
+12FA: CD E3 01    call $JMP_HL_PLUS_4K
 12FD: C3 10 3F    jp   $DRAW_BOTTOM_ROW_NUMBERS
     ;;
 1300: 1E 04       ld   e,$04
@@ -2644,7 +2644,7 @@ RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
     ;; Each row is a column of the screen, starting at col 6
     ;; first byte of segment is the row #
 DRAW_SCREEN_COL_FROM_LEVEL_DATA
-1328: CD 68 17    call $1768
+1328: CD 68 17    call $CLEAR_24_TILES_SOMEWHERE
 _LP
 132B: DD 7E 00    ld   a,(ix+$00) ; ix + 0 (always 3?)
 132E: E5          push hl
@@ -2891,7 +2891,7 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 
 HMMM_IN_SCR_TRANSITION          ; no, in normal play too
 14B0: 21 E8 06    ld   hl,$06E8
-14B3: CD E3 01    call $CALL_HL_PLUS_4K
+14B3: CD E3 01    call $JMP_HL_PLUS_4K
 14B6: CD C8 3B    call $RESET_XOFFS
     ;; set init player pos
 14B9: 3E 20       ld   a,$20
@@ -3003,7 +3003,7 @@ ANIMATE_SPLASH_PICKUPS
 15C3: FF          rst  $38
 15C4: D5          push de
 15C5: 21 A8 1B    ld   hl,$1BA8
-15C8: CD E3 01    call $CALL_HL_PLUS_4K
+15C8: CD E3 01    call $JMP_HL_PLUS_4K
 15CB: D1          pop  de
 15CC: C9          ret
 15CD: FF ...
@@ -3044,7 +3044,7 @@ ATTRACT_BONUS_SCREEN
 163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1640: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1643: 21 94 14    ld   hl,$1494
-1646: CD E3 01    call $CALL_HL_PLUS_4K
+1646: CD E3 01    call $JMP_HL_PLUS_4K
 1649: C9          ret
 164A: FF
 
@@ -3191,14 +3191,15 @@ CHECK_DONE_SCREEN
 1764: CD 78 17    call $TRANSITION_TO_NEXT_SCREEN    ; jump to next csreen
 1767: C9          ret
 
-;;;
+    ;;
+CLEAR_24_TILES_SOMEWHERE
 1768: E5          push hl
 1769: 3E 03       ld   a,$03
 176B: 85          add  a,l
 176C: 6F          ld   l,a
 176D: 1E 1C       ld   e,$1C    ;24 loops
 _LP
-176F: 36 10       ld   (hl),$10 ; $10 is blank tile?
+176F: 36 10       ld   (hl),$TILE_BLANK
 1771: 23          inc  hl
 1772: 1D          dec  e
 1773: 20 FA       jr   nz,$_LP
@@ -4381,15 +4382,15 @@ MOVE_DINO_X
 
     ;;
 2901: 21 00 02    ld   hl,$0200
-2904: CD E3 01    call $CALL_HL_PLUS_4K ; $4200: sfx something
+2904: CD E3 01    call $JMP_HL_PLUS_4K ; $4200: sfx something
 2907: CD 10 11    call $MYSTERY_8066_FN
 290A: 21 20 02    ld   hl,$0220 ; $4220 = SFX_SUMFIN_1
-290D: CD E3 01    call $CALL_HL_PLUS_4K
+290D: CD E3 01    call $JMP_HL_PLUS_4K
 2910: 21 40 02    ld   hl,$0240 ; $4240 = SFX_SUMFIN_2
-2913: CD E3 01    call $CALL_HL_PLUS_4K
+2913: CD E3 01    call $JMP_HL_PLUS_4K
 2916: CD 10 11    call $MYSTERY_8066_FN
 2919: 21 40 08    ld   hl,$DRAW_SCREEN
-291C: 18 22       jr   $CALL_HL_PL_4K_AND_MYSTERY_8066_FN
+291C: 18 22       jr   $JMP_HL_PL_4K_AND_MYSTERY_8066_FN
 
 291E: FF FF
 
@@ -4411,8 +4412,8 @@ SET_DINO_DIR
 
 2935: FF ...
 
-CALL_HL_PL_4K_AND_MYSTERY_8066_FN
-2940: CD E3 01    call $CALL_HL_PLUS_4K ; hl = DRAW_SCREEN
+JMP_HL_PL_4K_AND_MYSTERY_8066_FN
+2940: CD E3 01    call $JMP_HL_PLUS_4K ; hl = DRAW_SCREEN
 2943: CD 10 11    call $MYSTERY_8066_FN
 2946: C9          ret
 
@@ -4876,7 +4877,7 @@ P2_GOT_HISCORE
 ENTER_HISCORE_SCREEN
 2D88: F5          push af
 2D89: 21 E8 16    ld   hl,$16E8 ; 56e8 = $SFX_RESET_A_BUNCH
-2D8C: CD E3 01    call $CALL_HL_PLUS_4K
+2D8C: CD E3 01    call $JMP_HL_PLUS_4K
 2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
@@ -6926,7 +6927,7 @@ DELAY_83_LOAD_A_VAL_WEIRD
 3F00: CD 60 14    call $DELAY_83
 3F03: 21 90 0E    ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
                                 ; seems to do nothing
-3F06: CD E3 01    call $CALL_HL_PLUS_4K
+3F06: CD E3 01    call $JMP_HL_PLUS_4K
 3F09: C9          ret
 
 3F0A: FF ...
@@ -7334,7 +7335,7 @@ HIT_BONUS_DRAW_POINTS
 
     ;; How do i get here?... is this data? Weird load
 41E3: 3A 00 41    ld   a,($4100)
-41E6: 01 E3 01    ld   bc,$CALL_HL_PLUS_4K
+41E6: 01 E3 01    ld   bc,$JMP_HL_PLUS_4K
 41E9: C5          push bc
 41EA: E5          push hl
 41EB: C9          ret
@@ -7974,7 +7975,7 @@ ZERO_OUT_SOME_SFX
 CLEAR_SFX_1
 46D0: CD C0 46    call $ZERO_OUT_SOME_SFX
 46D3: 3A 42 80    ld   a,($CH1_SFX)
-46D6: CD 30 47    call $4730
+46D6: CD 30 47    call $POINT_HL_TO_SFX_DATA
 46D9: DD 21 B8 82 ld   ix,$82B8
 46DD: CD 90 47    call $4790
 46E0: AF          xor  a
@@ -8011,48 +8012,45 @@ CLEAR_SFX_1
 4721: 0D          dec  c
 4722: FF ...
 
-;;;
-4730: CB 27       sla  a
+    ;;
+POINT_HL_TO_SFX_DATA
+4730: CB 27       sla  a ; sfx id * 4
 4732: CB 27       sla  a
 4734: CD B0 46    call $ADD_A_TO_RET_ADDR
-4737: 00          nop
+_SFX_DATA_LOOKUP
+4737: 00          nop ; sfx 0?
 4738: 00          nop
 4739: 00          nop
 473A: C9          ret
-;;;
-
-    ;; some kind of address lookup table
-;;;  format of dst is: byte, three lots of "addr lo, addr hi"
-;;;  some addr seems to point to another addr?
-473B: 21 00 5D    ld   hl,$TBL_2
+473B: 21 00 5D    ld   hl,$SFX_1_DATA
 473E: C9          ret
-473F: 21 46 4C    ld   hl,$TBL_4
+473F: 21 46 4C    ld   hl,$SFX_2_DATA
 4742: C9          ret
-4743: 21 53 50    ld   hl,$TBL_1
+4743: 21 53 50    ld   hl,$SFX_3_DATA
 4746: C9          ret
-4747: 21 BC 50    ld   hl,$50BC
+4747: 21 BC 50    ld   hl,$SFX_4_DATA
 474A: C9          ret
-474B: 21 EC 50    ld   hl,$50EC
+474B: 21 EC 50    ld   hl,$SFX_5_DATA
 474E: C9          ret
-474F: 21 9A 51    ld   hl,$519A
+474F: 21 9A 51    ld   hl,$SFX_6_DATA
 4752: C9          ret
-4753: 21 EA 51    ld   hl,$51EA
+4753: 21 EA 51    ld   hl,$SFX_7_DATA
 4756: C9          ret
-4757: 21 14 55    ld   hl,$5514
+4757: 21 14 55    ld   hl,$SFX_8_DATA
 475A: C9          ret
-475B: 21 70 57    ld   hl,$5770
+475B: 21 70 57    ld   hl,$SFX_9_DATA
 475E: C9          ret
-475F: 21 60 55    ld   hl,$5560
+475F: 21 60 55    ld   hl,$SFX_10_DATA
 4762: C9          ret
-4763: 21 EA 5D    ld   hl,$5DEA
+4763: 21 EA 5D    ld   hl,$SFX_11_DATA
 4766: C9          ret
-4767: 21 88 5E    ld   hl,$5E88
+4767: 21 88 5E    ld   hl,$SFX_12_DATA
 476A: C9          ret
-476B: 21 30 5F    ld   hl,$5F30
+476B: 21 30 5F    ld   hl,$SFX_13_DATA
 476E: C9          ret
-476F: 21 78 5F    ld   hl,$5F78
+476F: 21 78 5F    ld   hl,$SFX_14_DATA
 4772: C9          ret
-4773: 21 40 4B    ld   hl,$TBL_3
+4773: 21 40 4B    ld   hl,$SFX_15_DATA
 4776: C9          ret
 4777: 21 00 00    ld   hl,$0000
 477A: C9          ret
@@ -8062,15 +8060,10 @@ CLEAR_SFX_1
 4782: C9          ret
 4783: 21 00 00    ld   hl,$0000
 4786: C9          ret
-4787: FF          rst  $38
-4788: FF          rst  $38
-4789: FF          rst  $38
-478A: FF          rst  $38
-478B: FF          rst  $38
-478C: FF          rst  $38
-478D: FF          rst  $38
-478E: FF          rst  $38
-478F: FF          rst  $38
+4787: FF ...
+
+    ;; hl = sfx data
+DO_SOMETHING_WITH_SFX_DATA
 4790: 00          nop
 4791: 00          nop
 4792: 00          nop
@@ -8206,7 +8199,7 @@ MORE_SFX_SOMETHING
 PLAY_SFX
 489C: CD 70 48    call $ZERO_OUT_SOME_SFX_2
 489F: 3A 44 80    ld   a,($SFX_ID)
-48A2: CD 30 47    call $4730
+48A2: CD 30 47    call $POINT_HL_TO_SFX_DATA
 48A5: DD 21 E8 82 ld   ix,$82E8
 48A9: CD 90 47    call $4790
 48AC: AF          xor  a
@@ -8267,9 +8260,9 @@ ZERO_OUT_SOME_SFX_3
 CLEAR_SFX_2
 4920: CD 10 49    call $ZERO_OUT_SOME_SFX_3
 4923: 3A 43 80    ld   a,($CH2_SFX)
-4926: CD 30 47    call $4730
+4926: CD 30 47    call $POINT_HL_TO_SFX_DATA
 4929: DD 21 D0 82 ld   ix,$82D0
-492D: CD 90 47    call $4790
+492D: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
 4930: AF          xor  a
 4931: 32 43 80    ld   ($CH2_SFX),a
 4934: C9          ret
@@ -8421,9 +8414,7 @@ CALL_ADD_A_TO_RET_ADDR
 4A1B: 3E 0E       ld   a,$0E
 4A1D: C9          ret
 4A1E: 00          nop
-
 4A1F: FF          rst  $38
-
 4A20: 15          dec  d
 4A21: 01 17 01    ld   bc,$0117
 4A24: 19          add  hl,de
@@ -8646,19 +8637,11 @@ CALL_ADD_A_TO_RET_ADDR
 4B3E: FF          rst  $38
 4B3F: FF          rst  $38
 
-TBL_3
-4B40: 03
-4B41: 32 4B
-4B43: 36 4B
-4B45: 36 4B
+SFX_15_DATA
+4B40: 03 32 4B 36 4B 36 4B FF
+4B48: 00 01 FF FF FF FF FF FF
 
-4B47: FF          rst  $38
-4B48: 00          nop
-4B49: 01 FF FF    ld   bc,$FFFF
-4B4C: FF          rst  $38
-4B4D: FF          rst  $38
-4B4E: FF          rst  $38
-4B4F: FF          rst  $38
+    ;;
 4B50: 21 40 81    ld   hl,$PLAYER_X
 4B53: 36 85       ld   (hl),$85
 4B55: 23          inc  hl
@@ -8767,7 +8750,7 @@ TBL_3
 4C44: FF          rst  $38
 4C45: FF          rst  $38
 
-TBL_4
+SFX_2_DATA
 4C46: 03
 4C47: 36 4C
 4C49: 3E 4C
@@ -9224,6 +9207,7 @@ ANIMATE_PICKUPS
 501A: 23          inc  hl
 501B: C9          ret
 
+    ;; Decrease the speed timer further each round
 EVEN_MORE_FASTER_DINO
 501C: 3D          dec  a
 501D: 3D          dec  a
@@ -9263,21 +9247,19 @@ ANIMATE_ALL_PICKUPS
 504E: CD 00 50    call $ANIMATE_PICKUPS
 5051: C9          ret
 
-5052: FF          rst  $38
+5052: FF
 
-TBL_1
+SFX_3_DATA
 5053: 03
 5054: 84 50
 5056: 90 50
 5058: 8C 50
-
 505A: FF          rst  $38
 505B: FF          rst  $38
 505C: FF          rst  $38
 505D: FF          rst  $38
 505E: FF          rst  $38
 505F: FF          rst  $38
-
 5060: 0C          inc  c
 5061: 01 0E 01    ld   bc,$010E
 5064: 10 01       djnz $5067
@@ -9300,7 +9282,6 @@ TBL_1
 507F: 01 1F 03    ld   bc,$031F
 5082: FF          rst  $38
 5083: FF          rst  $38
-
 5084: 02 02
 5086: 0F          rrca
 5087: 10 60       djnz $50E9
@@ -9344,6 +9325,8 @@ TBL_1
 50B8: 94          sub  h
 50B9: 10 FF       djnz $50BA
 50BB: FF          rst  $38
+
+SFX_4_DATA
 50BC: 03          inc  bc
 50BD: B0          or   b
 50BE: 50          ld   d,b
@@ -9377,6 +9360,8 @@ TBL_1
 50E7: 01 00 01    ld   bc,$0100
 50EA: FF          rst  $38
 50EB: FF          rst  $38
+
+SFX_5_DATA
 50EC: 03          inc  bc
 50ED: F4 50 F4    call p,$F450
 50F0: 51          ld   d,c
@@ -9483,6 +9468,8 @@ TBL_1
 5197: FF          rst  $38
 5198: FF          rst  $38
 5199: FF          rst  $38
+
+SFX_6_DATA
 519A: 02          ld   (bc),a
 519B: 82          add  a,d
 519C: 51          ld   d,c
@@ -9543,6 +9530,8 @@ TBL_1
 51E7: 51          ld   d,c
 51E8: FF          rst  $38
 51E9: FF          rst  $38
+
+SFX_7_DATA
 51EA: 03          inc  bc
 51EB: DA 51 E6    jp   c,$E651
 51EE: 51          ld   d,c
@@ -9986,6 +9975,8 @@ CALL_ATTRACT_BONUS_SCREEN
 5511: 55          ld   d,l
 5512: FF          rst  $38
 5513: FF          rst  $38
+
+SFX_8_DATA
 5514: 03          inc  bc
 5515: 04          inc  b
 5516: 55          ld   d,l
@@ -10043,6 +10034,8 @@ RESET_SFX_SOMETHING_1
 555D: 55          ld   d,l
 555E: FF          rst  $38
 555F: FF          rst  $38
+
+SFX_10_DATA
 5560: 03          inc  bc
 5561: 58          ld   e,b
 5562: 55          ld   d,l
@@ -10402,6 +10395,8 @@ SFX_RESET_A_BUNCH
 576D: 57          ld   d,a
 576E: FF          rst  $38
 576F: FF          rst  $38
+
+SFX_9_DATA
 5770: 02          ld   (bc),a
 5771: 60          ld   h,b
 5772: 57          ld   d,a
@@ -10960,18 +10955,10 @@ JMP_HL
 5CFE: FF          rst  $38
 5CFF: FF          rst  $38
 
-TBL_2
-5D00: 02
-5D01: 08 5D
-5D03: 14 5D
-5D05: 14 5D
+SFX_1_DATA
+5D00: 02 08 5D 14 5D 14 5D FF
+5D08: 01 08 0E 00 86 5C EE 03
 
-5D07: FF          rst  $38
-5D08: 01 08 0E    ld   bc,$0E08
-5D0B: 00          nop
-5D0C: 86          add  a,(hl)
-5D0D: 5C          ld   e,h
-5D0E: EE 03       xor  $03
 5D10: FF          rst  $38
 5D11: FF          rst  $38
 5D12: FF          rst  $38
@@ -11115,6 +11102,8 @@ TBL_2
 5DE6: EE 07       xor  $07
 5DE8: FF          rst  $38
 5DE9: FF          rst  $38
+
+SFX_11_DATA
 5DEA: 03          inc  bc
 5DEB: D0          ret  nc
 5DEC: 5D          ld   e,l
@@ -11207,6 +11196,8 @@ TBL_2
 5E85: FF          rst  $38
 5E86: FF          rst  $38
 5E87: FF          rst  $38
+
+SFX_12_DATA
 5E88: 03          inc  bc
 5E89: 75          ld   (hl),l
 5E8A: 5E          ld   e,(hl)
@@ -11310,6 +11301,8 @@ TBL_2
 5F2D: FF          rst  $38
 5F2E: FF          rst  $38
 5F2F: FF          rst  $38
+
+SFX_13_DATA
 5F30: 03          inc  bc
 5F31: 24          inc  h
 5F32: 5F          ld   e,a
@@ -11363,6 +11356,8 @@ TBL_2
 5F75: FF          rst  $38
 5F76: FF          rst  $38
 5F77: FF          rst  $38
+
+SFX_14_DATA
 5F78: 03          inc  bc
 5F79: 90          sub  b
 5F7A: 5F          ld   e,a
