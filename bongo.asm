@@ -7068,6 +7068,9 @@ UPDATE_EVERYTHING_MORE
 4030: C9          ret
 4031: FF ...
 
+    ;; What the heck is $c000?
+    ;; How is this called? RESET_VECTOR is 0x38, this
+    ;; is 4k higher... coincidence?
 4038: 21 00 C0    ld   hl,$C000
 403B: CD 81 5C    call $JMP_HL
 403E: C9          ret
