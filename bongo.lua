@@ -1,17 +1,18 @@
 -- Bongo Training Montage --
 
-start_screen = 1 -- used if not looping
-loop_screens = {27} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
+start_screen = 8 -- used if not looping
+loop_screens = {} --{14,13,18,13,18,13,10,13,14,18,24,25,27} --{13,14,17,18,24,25,27} -- if you want to practise levels, eg:
 -- {}: no looping
 -- {14}: repeat screen 14 over and over (screens are 1 to 27)
 -- {14, 18, 26}: repeat a sequence of screens
-round_two = true -- start in round two
+round = 2 -- starting round
 
 infinite_lives = true
 disable_round_speed_up = true -- don't get faster after catching dino
-skip_cutscene = false -- don't show the cutscene
+skip_cutscene = false  -- don't show the cutscene
 disable_dino = false   -- no pesky dino... but now you can't catch him
 fast_death = false    -- restart super fast after death (oops, messes with dino!)
+clear_score = true    -- reset score to 0 on death and new screen
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -21,11 +22,24 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 
 mem = manager.machine.devices[":maincpu"].spaces["program"]
 
+function poke(addr, bytes)
+   for i = 1, #bytes do
+      mem:write_u8(addr + (i - 1), bytes[i])
+   end
+end
+
+function poke_rom(addr, bytes)
+   for i = 1, #bytes do
+      mem:write_direct_u8(addr + (i - 1), bytes[i])
+   end
+end
+
 -- mem:write_direct_u8(0x069D, 0x20); -- autojump lol
+
 mem:write_direct_u8(0x1d00, 0x0c); -- extra platform on S lol
-mem:write_direct_u8(0x1d01, 0xfe);
-mem:write_direct_u8(0x1d02, 0x10);
-mem:write_direct_u8(0x1d03, 0x10);
+mem:write_direct_u8(0x1d01, 0xfe); -- platform
+mem:write_direct_u8(0x1d02, 0x10); -- remove dirt
+mem:write_direct_u8(0x1d03, 0x10); -- remove dirt
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -39,9 +53,10 @@ end
 
 if skip_cutscene == true then
    --0xc3 0x8B 0x3D
-   mem:write_direct_u8(0x3D48+0, 0xC3); -- jp
-   mem:write_direct_u8(0x3D48+1, 0x8B); -- jp
-   mem:write_direct_u8(0x3D48+2, 0x3D); -- jp
+   --mem:write_direct_u8(0x3D48+0, 0xC3); -- jp
+   --mem:write_direct_u8(0x3D48+1, 0x8B); -- jp
+   --mem:write_direct_u8(0x3D48+2, 0x3D); -- jp
+   poke_rom(0x3d48, {0xC3, 0x8B, 0x3D});
 end
 
 if alt_bongo_place == true then
@@ -71,9 +86,17 @@ loop_idx = 0
 screen_addr = 0x8029
 lives_addr = 0x8032
 tap1 = mem:install_write_tap(screen_addr, lives_addr, "writes", function(offset, data)
-   -- infinite lives
-   if infinite_lives == true and offset == lives_addr and data < 3 then
-      return 3
+   -- lives stuff
+   if offset == lives_addr then
+      -- clear score on death
+      if clear_score == true then
+         poke(0x8014, {0, 0, 0});
+      end
+
+      -- infinite lives
+      if infinite_lives == true and data < 3 then
+         return 3
+      end
    end
 
    -- loop screens
@@ -83,8 +106,11 @@ tap1 = mem:install_write_tap(screen_addr, lives_addr, "writes", function(offset,
          started = true
          -- go to round 2 if requested
          local SPEED_DELAY_P1 = 0x805b
-         if round_two == true and mem:read_u8(SPEED_DELAY_P1) == 0x1f then
-            mem:write_u8(SPEED_DELAY_P1, 0x10) -- round2 speed
+         if round > 1 and mem:read_u8(SPEED_DELAY_P1) == 0x1f then
+            local speeds = { 0x1f, 0x10, 0xd, 0xb, 9, 7, 5, 3 }
+            mem:write_u8(SPEED_DELAY_P1, speeds[round]) -- round2 speed
+            --mem:write_direct_u8(0x16b0, 0x2)
+            --mem:write_direct_u8(0x16bc, 0x1)
          end
 
          if loop_len == 0 then
@@ -97,7 +123,13 @@ tap1 = mem:install_write_tap(screen_addr, lives_addr, "writes", function(offset,
          loop_idx = (loop_idx + 1) % loop_len
          return next
       end
+
+      if clear_score == true then
+         -- reset score on screen change
+         writes(0x8014, {0, 0, 0});
+      end
    end
+
 end)
 
 -- Change bg
