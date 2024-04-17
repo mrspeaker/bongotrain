@@ -757,6 +757,37 @@ ROM_START( bongo )
 	ROM_LOAD( "b-clr.bin",  0x0000, 0x0020, CRC(c4761ada) SHA1(067d12b2d3635ffa6337ed234ba42717447bea00) )
 ROM_END
 
+----
+** Rom hack
+
+If you are hacking and changing ROM contents a lot, it's a pain to keep updating the hashes. Instead of specifying the CRC() and SHA1(), you can use NO_DUMP:
+    ROM_LOAD( "robotron.sbc", 0x0f000, 0x1000, NO_DUMP )
+When you start MAME, it will give a warning, but if you type OK, you can proceed.
+
+MAME
+
+The built-in debugger in MAME makes it an excellent tool when hacking video games. I use it all the time on code changes for the Williams games. It's easier to debug code under MAME before burning EPROMs for the real game.
+
+One issue is that the latest version of MAME will not allow you to run a patched ROM image - you get an error message that a file is missing. You can fix this by compiling MAME yourself and patching the hashes for the files you edit. The file src\mame\drivers\williams.c has a line for each ROM file for each game:
+
+ROM_LOAD( "robotron.sba", 0x0d000, 0x1000, CRC(13797024) SHA1(d426a50e75dabe936de643c83a548da5e399331c) )
+
+This tells the file name to load, where to put it in memory, how big it is, and what the CRC and SHA1 hashes of the file are. It is these hashes that are used to verify the ROM images. If they are incorrect, the game won't run, so you have to patch the hashes after modifying the ROM images.
+
+This page gives the CRC and SHA1 for any file.
+
+For instance, for the Robotron shot-in-the-corner bug fix, you need to patch 2 files and modify the code to the following:
+ROM_LOAD( "robotron.sbb", 0x0e000, 0x1000, CRC(e83a2eda) SHA1(4A62FCD2F91DFB609C3D2C300BD9E6CB60EDF52E) )
+ROM_LOAD( "robotron.sb5", 0x14000, 0x1000, CRC(827cb5c9) SHA1(1732D16CD88E0662F1CFFCE1AEDA5C8AA8C31338) )
+
+If you don't want to do the work to compile MAME (it's not that hard), you can hex-edit the executable file mame.exe, search for the lines, and modify them.
+
+If you are hacking and changing ROM contents a lot, it's a pain to keep updating the hashes. Instead of specifying the CRC() and SHA1(), you can use NO_DUMP:
+ROM_LOAD( "robotron.sbc", 0x0f000, 0x1000, NO_DUMP )
+
+When you start MAME, it will give a warning, but if you type OK, you can proceed.
+
+---
 
 // Larger romspace, interrupt enable moved
 GAME( 198?, thepitm,     thepit,   thepitm,    thepitm,    galaxian_state, init_mooncrsu,   ROT90,  "bootleg (KZH)", "The Pit (bootleg on Moon Quasar hardware)", MACHINE_SUPPORTS_SAVE ) // on an original MQ-2FJ PCB, even if the memory map appears closer to Moon Cresta

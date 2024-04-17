@@ -3983,7 +3983,7 @@ DINO_PATH_LOOKUP
 2370: FF ...
 
     ;; Nodes for dino to follow: 25 nodes,
-    ;; four bytes per node: [ x, y, ?, ? ]
+    ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_1
 2378: 18 E0 00 00 1C E0 01 00
 2380: 20 E0 02 00 28 E0 03 00
@@ -4140,24 +4140,29 @@ TEST_THEN_DINO_COLLISION
 
 2522: FF ...
 
-2538: 11 16 00    ld   de,$0016
+    ;; who calls?
+DRAW_D4_EVERYWHERE
+2538: 11 16 00    ld   de,$0016 ; +22 each outer loop?
 253B: 0E 20       ld   c,$20
-253D: 21 10 90    ld   hl,$9010
+253D: 21 10 90    ld   hl,$9000+10
+_J                              ; 32 loops
 2540: 06 0A       ld   b,$0A
-2542: 36 D4       ld   (hl),$D4
+_I                              ; 10 loops
+2542: 36 D4       ld   (hl),$D4 ; draw. What's a D4?
 2544: 23          inc  hl
 2545: 05          dec  b
-2546: 20 FA       jr   nz,$2542
+2546: 20 FA       jr   nz,$_I
 2548: 19          add  hl,de
 2549: 0D          dec  c
 254A: C8          ret  z
-254B: 18 F3       jr   $2540
-254D: FF          rst  $38
-254E: FF          rst  $38
-254F: FF          rst  $38
+254B: 18 F3       jr   $J
+254D: FF ...
+
+    ;; who calls?
+DRAWING_LOTSA_STUFF
 2550: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
 2553: CD A0 13    call $WAIT_VBLANK
-2556: 21 40 90    ld   hl,$9040
+2556: 21 40 90    ld   hl,$START_OF_TILES
 2559: 1E 79       ld   e,$79
 255B: CD 88 25    call $2588
 255E: 21 A0 93    ld   hl,$93A0
@@ -4168,14 +4173,17 @@ TEST_THEN_DINO_COLLISION
 256D: CD 98 25    call $2598
 2570: 16 10       ld   d,$10
 2572: 21 61 90    ld   hl,$9061
+_LP
 2575: CD A8 25    call $25A8
 2578: CD C0 25    call $25C0
 257B: CD D0 25    call $25D0
 257E: CD E8 25    call $25E8
 2581: 15          dec  d
-2582: 20 F1       jr   nz,$2575
+2582: 20 F1       jr   nz,$_LP
 2584: CD 80 14    call $CLEAR_SCREEN
 2587: C9          ret
+
+    ;;
 2588: 73          ld   (hl),e
 2589: 2C          inc  l
 258A: 7D          ld   a,l
@@ -4191,11 +4199,8 @@ TEST_THEN_DINO_COLLISION
 259E: FE 94       cp   $94
 25A0: C8          ret  z
 25A1: 18 F5       jr   $2598
-25A3: FF          rst  $38
-25A4: FF          rst  $38
-25A5: FF          rst  $38
-25A6: FF          rst  $38
-25A7: FF          rst  $38
+25A3: FF ...
+
 25A8: CD A0 13    call $WAIT_VBLANK
 25AB: 73          ld   (hl),e
 25AC: 01 20 00    ld   bc,$0020
@@ -4239,7 +4244,7 @@ TEST_THEN_DINO_COLLISION
 25F3: FF ...
 
     ;; Nodes for dino to follow: 31 nodes,
-    ;; four bytes per node: [ x, y, ?, ? ]
+    ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_2
 2600: 18 E0 00 00 1C E0 01 00
 2608: 20 E0 02 00 28 E0 03 00
@@ -4260,7 +4265,7 @@ DINO_PATH_2
 2674: FF ...
 
     ;; Nodes for dino to follow: 27 nodes,
-    ;; four bytes per node: [ x, y, ?, ? ]
+    ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_3
 2680: 18 E0 00 00 20 E0 01 00
 2688: 28 E0 02 00 30 D0 04 00
@@ -4280,7 +4285,7 @@ DINO_PATH_3
 26EC: FF ...
 
     ;; Nodes for dino to follow: 24 nodes,
-    ;; four bytes per node: [ x, y, ?, ? ]
+    ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_4
 2700: 18 38 00 00 20 38 01 00
 2708: 28 38 02 00 30 38 03 00
@@ -4298,7 +4303,7 @@ DINO_PATH_4
 2760: FF ...
 
     ;; Nodes for dino to follow: 24 nodes,
-    ;; four bytes per node: [ x, y, ?, ? ]
+    ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_5
 2770: 18 38 00 00 20 38 01 00
 2778: 28 38 02 00 30 38 03 00
@@ -4334,9 +4339,11 @@ SET_PLAYER_Y_LEVEL_START
 27FB: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 27FE: C9          ret
 ;;;
-27FF: FF          rst  $38
+27FF: FF
 
-DINO_PATH_6 ;DATA lookup table x/y/?/?
+    ;; Nodes for dino to follow
+    ;; four bytes per node: [ x, y, fr, _ ]
+DINO_PATH_6
 2800: 18 E0 00 00 20 E0 01 00
 28xx: 28 E0 02 00 30 D0 04 00
 28xx: 38 D0 05 00 40 B8 05 00
@@ -4499,7 +4506,9 @@ GOT_A_BONUS
 29FC: CD 9C 19    call $BONUS_SKIP_SCREEN
 29FF: C9          ret
 
-DINO_PATH_7 ;DATA lookup table x/y/?/?
+    ;; Nodes for dino to follow
+    ;; four bytes per node: [ x, y, fr, _ ]
+DINO_PATH_7
 2A00: 18 E0 00 00 20 E0 01 00
 2A08: 28 E0 02 00 30 E0 03 00
 2A10: 38 D0 04 00 40 C0 05 00

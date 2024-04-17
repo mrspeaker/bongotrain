@@ -19,15 +19,15 @@ show_timers = true -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
 alt_bongo_place = false -- I think was supposed to put guy on the ground for highwire levels
 
---------------------------------
+-----------------------------------
 -- Bongo world map
--- 01:  n_n  n_n  nTn   /    W
+-- 01:  n_n  n_n  nTn  n_n   /   W
 -- 07:   \   n_n  nTn   /    W
 -- 12:   \   n_n  nTn  n_n   S
 -- 17:   \   n_n   S    \   S_S
 -- 22:   W    \   S_S
 -- 25:   W    \    S
---------------------------------
+-----------------------------------
 
 function dump(o)
    if type(o) == 'table' then
