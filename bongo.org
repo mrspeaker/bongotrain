@@ -242,20 +242,33 @@ n_n, nTn, /,^^,\, S, Sc
 
 ** Pro tips:
 
-Safety stair pickup (e)
-Fast rock leap (t)
-Jump from ledge will get more bonus... not flat ground
-Can wait on platform to get more points if will skip above
-Can jump over bonus, go to end, come back for more points (if skip)
+Safety stair pickup (e) - go up stair past pickup, drop back down.
+Fast rock leap (t) - in round 2, sneakily get pickup under rock, then back, thne jump over the rock as it falls
+moving bonus:
+-- Jump from ledge will get more bonus... not flat ground
+-- Can wait on moving platform to get more points if will skip above
+-- Can jump over bonus, go to end, come back for more points (if skip)
+-- Extreme: on S, can jump out right side of screen and then come back to get some extra points
+
 collision is left 12px - can overlap birds heading at you
 bonus resets on round change - don't sweat end-level deaths
 favour speed-run over careful: doesn't work in round 2
 fast round - can jump from second-to-bottom stair
 
----
 - what's that weird tiny "slowdown" right at the start? Lags for a split second
 - maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
-  
+
+--- advanced 
+on highwire levels, pauses for a few frames before falling to platform
+
+can make it IN FRONT of the highwire birds: only way to beat faster levels (eg, 3 bird level on 4, but requires very precise timing. I thought it was impossible, but did it! Need to find the new "impossible level".
+
+Blue meanies: as dino gets faster - can't wait - have to jump over the first one.
+This mean you miss the pickup: but it IS possible (not too hard) to jump back and get the pickup, then sneak under the second blue meanie. (works for round 4 - round 5 it can work but is much tricker: need to grab the pickup and then jump from the second-to-bottom platform... timing is harrrd)
+
+---
+
+
 ---
 ** Trav bug
 
@@ -697,9 +710,7 @@ PREVENT_CLOUD_JUMP_REDACTED
 
 
 mini "bug" 8011 "falling timer' continues over to next screen - but you're on the ground, so next frame it resets. But, I reckon if you could time your fall so you got out of the screen when teh timer was 1, you'd die on the first frame of the next screen...
-    
-* blerg
-hacking away at a wr.
+
 
     
 ---    ;; My theory: the bonus-points text that appears
@@ -707,7 +718,14 @@ hacking away at a wr.
     ;; but they gave up. That's my theory.
 
 
+    
+    
+* blerg
+hacking away at a wr.
 
+- 0.188: Map Bongo jump as a button and not as up direction [Angelo Salese].
+
+* hw
     -------------------
 ROM_START( bongo )
 	ROM_REGION( 0x6000, "maincpu", 0 )
