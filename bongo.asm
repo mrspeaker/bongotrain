@@ -2590,6 +2590,7 @@ PREVENT_CLOUD_JUMP_REDACTED
 12AA: FF ...
 
 DRAW_BACKGROUND
+    ;; draw first 6 columns
 12B8: CD 10 03    call $DRAW_TILES_H
 12BB: 03 00
 12BD: 40 42 43 42 41 40 FF      ; downward spikes
@@ -2599,7 +2600,7 @@ DRAW_BACKGROUND
 12D0: CD 10 03    call $DRAW_TILES_H
 12D3: 1E 00
 12D5: FE FD FD FD FD FC FF      ; bottomleft platform
-12DC: CD B0 14    call $14B0
+12DC: CD B0 14    call $SCREEN_RESET
 12DF: 21 E0 92    ld   hl,$92E0 ; screen pos (6,0)
 12E2: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
@@ -2685,7 +2686,7 @@ __NEXT_SEG
 DURING_TRANSITION_NEXT
 1358: CD B8 13    call $BONGO_RUNS_OFF_SCREEN
 135B: 00          nop
-135C: CD B0 14    call $HMMM_IN_SCR_TRANSITION
+135C: CD B0 14    call $SCREEN_RESET
 135F: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 1363: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR) ; must point to screen?
 1366: 16 15       ld   d,$15      ; 21 rows (why 21, not 23?)
@@ -2892,7 +2893,7 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14AB: C3 0F 00    jp   $000F
 14AE: FF FF
 
-HMMM_IN_SCR_TRANSITION          ; no, in normal play too
+SCREEN_RESET
 14B0: 21 E8 06    ld   hl,$06E8
 14B3: CD E3 01    call $JMP_HL_PLUS_4K
 14B6: CD C8 3B    call $RESET_XOFFS
@@ -10094,8 +10095,9 @@ _LP_1
 558E: 0A          ld   a,(bc)   ; each character until 0xff
 558F: 03          inc  bc
 5590: FE FF       cp   $FF
-5592: 20 02       jr   nz,$5596
+5592: 20 02       jr   nz,$_DONE
 5594: C5          push bc
+_DONE
 5595: C9          ret
 5596: 77          ld   (hl),a   ; writes to screen loc
 5597: 16 FF       ld   d,$FF
