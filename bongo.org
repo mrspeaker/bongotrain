@@ -284,6 +284,8 @@ Dino cage
 trav bug: die on screen one/two
 always 1/2 - some others, but can't do it consistently
 
+! You can see similar beviour if you hit your head on a tile then fall down - it "stutters" downwards
+
 Never called after transition (until death):
 
 _ON_GROUND
@@ -601,6 +603,10 @@ You can use -aviwrite to record audio and video in uncompressed AVI format.
 
 
 -iv 1 on playback lets you "Del" to see dips and speed up playback?
+
+---
+
+ ./mame bongo -playback 2023-04-16-370190 -aviwrite bongovid.avi -snapsize 224x256 -exit_after_playback
 
 
 0.263W (mame0263-706-g35e85bbfe63)%
