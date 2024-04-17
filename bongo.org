@@ -261,10 +261,19 @@ fast round - can jump from second-to-bottom stair
 --- advanced 
 on highwire levels, pauses for a few frames before falling to platform
 
+- front-side the birds!
 can make it IN FRONT of the highwire birds: only way to beat faster levels (eg, 3 bird level on 4, but requires very precise timing. I thought it was impossible, but did it! Need to find the new "impossible level".
 
 Blue meanies: as dino gets faster - can't wait - have to jump over the first one.
 This mean you miss the pickup: but it IS possible (not too hard) to jump back and get the pickup, then sneak under the second blue meanie. (works for round 4 - round 5 it can work but is much tricker: need to grab the pickup and then jump from the second-to-bottom platform... timing is harrrd)
+
+Dino cage
+1. Wait until dino goes up to middle platform, then go in front of two birds. Wait until front bird is close then spring.
+2. Wait until birds pass, jump up then jump OVER the first bird (in between the birds). Run along with the birds and jump just as it's safe to not hit your head on the top bird.
+   ... up to at least round 5 is possible. Need to write them down to memorise:
+3.
+4.
+5.
 
 ---
 
@@ -550,7 +559,6 @@ Or, if not NMI issue: it's DO_JUMP_PHYSICS: only runs once every 6 frames (in ro
 
 Why the inconsistency? Always triggers on level 1->2, but more random on other screens. Should be random everywhere?
 
-
 * lore
    ;; - We decided "Bongo" is actually name of the lil' jumpy
     ;;   guy in the corner of the screen, not the player.
@@ -563,7 +571,6 @@ Why the inconsistency? Always triggers on level 1->2, but more random on other s
     Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?
 
 * TG
-
 https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
 
 - frameskip set to 0 and "draw all frames"

@@ -202,6 +202,8 @@
     INT_ENABLE      $b001 ; interrupt enable
     WATCHDOG        $b800 ; main timer?
 
+;;; ============ START OF BG1.BIN =============
+
 SOFT_RESET
 0000: A2          and  d
 0001: 32 01 B0    ld   ($INT_ENABLE),a
@@ -2231,7 +2233,8 @@ HEADER_TEXT_DATA
 0FEB: 18 19 17 18 2B 23 13 1F 22 15 10 ; HIGH-SCORE
 0FF6: 10 10 10 20 1C 02 10 10 10 FF    ; PL2
 
-;;; =========================================
+;;; === END OF BG1.BIN, START OF BG2.BIN =======
+
     ;; Reset then run main loop.
     ;; Happens after death and new round
 BIG_RESET
@@ -3783,7 +3786,9 @@ LEVEL_BG__S_S
 1FE0: 03 42 00 1D 3D 3B FF
 1FE7: 03 41 00 0F FE 00 1B FE 3F 3E 3B FF
 1FF3: 03 40 00 0F FD 00 1B FD 3B 3E 3F FF
-1FFF: 03 3F 43 00 0F FC 00 1B FC 3F 3E 3B FF
+1FFF: 03        ; ...to be continued...
+;;; ======END OF BG2.BIN, START OF BG3.BIN ===========
+2000: 3F 43 00 0F FC 00 1B FC 3F 3E 3B FF
 200C: 03 3E 3B 41 00 0E 36 10 32 00 1B 38 3B 3F 3E FF
 201C: 03 3B 3E 3E 40 00 0D 36 10 10 10 32 00 1A 3D 3B 3B 3F 3F FF
 2030: 03 3B 3E 3E 40 00 0C FE 00 12 FE 00 18 FE 3E 3F 3B 3B 3E 3F FF
@@ -5116,6 +5121,7 @@ COPY_HISCORE_NAME_TO_SCREEN
 2FFB: 3A D7 91    ld   a,($91D7)
 2FFE: 23          inc  hl
 2FFF: 77          ld   (hl),a
+;;; === END OF BG3.BIN, START OF BG4.BIN ======
 3000: 3A B7 91    ld   a,($91B7)
 3003: 23          inc  hl
 3004: 77          ld   (hl),a
@@ -7037,6 +7043,8 @@ DO_BONUS_FLASHING
 3FF9: C9          ret
 
 3FFA: FF ...
+
+;;; === END OF BG4.BIN, START OF BG5.BIN ======
 
 INT_HANDLER
 4000: AF          xor  a
@@ -9187,6 +9195,8 @@ PICKUPS_LOOKUP
 4FFC: 00 00
 
 4FFE: FF FF
+
+;;; === END OF BG5.BIN, START OF BG6.BIN ======
 
 ANIMATE_PICKUPS
 5000: 46          ld   b,(hl)
@@ -11393,3 +11403,6 @@ SFX_14_DATA
 5F9F: 4B          ld   c,e
 5FA0: 06 4B       ld   b,$4B
 5FA2: EE 0B       xor  $0B
+5FA4: FF ..                     ; to 0x5fff
+
+;;; ======= END OF BG6.BIN ======
