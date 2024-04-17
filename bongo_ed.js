@@ -20,7 +20,7 @@
         for (let col = 0; col < 8; col++) {
             let v = 0;
             for (let row = 0; row < 8; row++) {
-                v += tile[row] & (1 << col);
+                v += (tile[row] & (1 << (7 - col))) >> (7 - row);
             }
 
             out.push(v);
@@ -35,7 +35,7 @@
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-h.bin");
-    const tiles1 = chunk(bytes1, 8).map(flip_v); //.map(flip_h);
+    const tiles1 = chunk(bytes1, 8).map(flip_v).map(flip_h);
     const tiles2 = chunk(bytes2, 8).map(flip_v); //.map(flip_h);
 
     let tiles = tiles1;
