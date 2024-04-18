@@ -242,7 +242,7 @@ INIT_SCREEN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
-004E: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+004E: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 0051: CD 10 03    call $DRAW_TILES_H
 0054: 09 00
 0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; CREDIT FAULT
@@ -278,7 +278,7 @@ SETUP_BEFORE_PLAYING
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
 009C: CD 70 03    call $RESET_ENTS_ALL
-009F: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+009F: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 00A2: 18 EF       jr   $0093
 _PLAY_SPLASH
 00A4: CD A0 13    call $WAIT_VBLANK
@@ -297,7 +297,7 @@ _PLAY_SPLASH
 NMI_INT_HANDLER
 00C0: D9          exx
 00C1: CD 88 02    call $COINAGE_ROUTINE
-00C4: CD 50 15    call $COPY_XOFFS_COL_SPRITES_TO_SCREEN
+00C4: CD 50 15    call $COPY_XOFFS_AND_COLS_TO_SCREEN
 00C7: CD 60 29    call $SAVE_IX_AND_?
 00CA: CD D0 01    call $COPY_PORTS_TO_BUTTONS
 00CD: D9          exx
@@ -618,7 +618,7 @@ SETUP_MORE
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
-034B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+034B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 034E: 21 00 80    ld   hl,$8000
 0351: 36 00       ld   (hl),$00
 0353: 2C          inc  l
@@ -657,7 +657,7 @@ RESET_ENTS_ALL
 0395: FF ...
 
 DRAW_LIVES
-03A0: CD 08 04    call $SET_COLOR_ROW_3
+03A0: CD 08 04    call $SET_LIVES_ROW_COLOR
 03A3: 3A 32 80    ld   a,($LIVES)
 03A6: A7          and  a
 03A7: 47          ld   b,a
@@ -713,7 +713,7 @@ DRAW_LIVES
 
 0401: FF ...
 
-SET_COLOR_ROW_3                 ; dunno what row.
+SET_LIVES_ROW_COLOR
 0408: 3E 01       ld   a,$01
 040A: 32 05 81    ld   ($SCREEN_XOFF_COL+5),a
 040D: C9          ret
@@ -725,7 +725,7 @@ OUT_OF_LIVES
 0413: CD E3 01    call $JMP_HL_PLUS_4K
 0416: CD E0 24    call $DELAY_60_VBLANKS
 0419: CD 30 04    call $CHECK_IF_HISCORE
-041C: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+041C: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
@@ -919,7 +919,7 @@ _SETUP_2 ;looks like SETUP - no one calls it?
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $RESET_ENTS_ALL
-0598: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+0598: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 059B: 18 E9       jr   $0586
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
@@ -1684,7 +1684,7 @@ SET_LEVEL_PLATFORM_XOFFS
 0AF1: 23          inc  hl
 0AF2: 15          dec  d
 0AF3: 20 F9       jr   nz,$0AEE
-0AF5: CD 98 18    call $RESET_XOFF_AND_COLS
+0AF5: CD 98 18    call $RESET_XOFFS
 0AF8: C9          ret
     
 0AF9: FF ...
@@ -2251,7 +2251,7 @@ BIG_RESET
 101B: 3E 20       ld   a,$20
 101D: 32 30 80    ld   ($PLAYER_MAX_X),a
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
-1023: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+1023: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 1026: 21 E0 0F    ld   hl,$HEADER_TEXT_DATA ; loaded by DRAW_SCREEN
 1029: CD 40 08    call $DRAW_SCREEN
 102C: 00          nop
@@ -2605,7 +2605,7 @@ DRAW_BACKGROUND
 12E2: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
 _DRAW_COLUMN                    ; because first 6 are constant
-12E8: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
+12E8: CD 28 13    call $DRAW_SCREEN_FROM_LEVEL_DATA
 12EB: 00          nop
 12EC: 00          nop
 12ED: 00          nop
@@ -2647,7 +2647,7 @@ RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
     ;; Level BG data is FF separated, then split on 00.
     ;; Each row is a column of the screen, starting at col 6
     ;; first byte of segment is the row #
-DRAW_SCREEN_COL_FROM_LEVEL_DATA
+DRAW_SCREEN_FROM_LEVEL_DATA
 1328: CD 68 17    call $CLEAR_24_TILES_SOMEWHERE
 _LP
 132B: DD 7E 00    ld   a,(ix+$00) ; ix + 0 (always 3?)
@@ -2691,7 +2691,7 @@ DURING_TRANSITION_NEXT
 1363: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR) ; must point to screen?
 1366: 16 15       ld   d,$15      ; 21 rows (why 21, not 23?)
 _LP
-1368: CD 28 13    call $DRAW_SCREEN_COL_FROM_LEVEL_DATA
+1368: CD 28 13    call $DRAW_SCREEN_FROM_LEVEL_DATA
 136B: CD 00 13    call $1300
 136E: 15          dec  d
 136F: 20 F7       jr   nz,$_LP
@@ -2704,7 +2704,7 @@ _LP
 1382: 32 03 80    ld   ($8003),a
 1385: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
 1388: CD B8 0D    call $DRAW_BONGO
-138B: CD 08 04    call $SET_COLOR_ROW_3
+138B: CD 08 04    call $SET_LIVES_ROW_COLOR
 138E: C9          ret
 
 138F: FF
@@ -2842,8 +2842,8 @@ DELAY_83                        ; maybe a delay?
 146F: FF
 
     ;; lotsa calls here
-CALL_RESET_SCREEN_META_AND_SPRITES
-1470: CD 90 14    call $RESET_SCREEN_META_AND_SPRITES
+CALL_RESET_XOFF_AND_COLS
+1470: CD 90 14    call $RESET_XOFF_AND_COLS
 
 1473: 00          nop
 1474: 00          nop
@@ -2873,12 +2873,12 @@ CLEAR_SCREEN
 148F: FF
 
     ;; Lotsa calls here (via $1470)
-RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
+RESET_XOFF_AND_COLS     ; sets 128 locations to 0
 1490: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 1493: 36 00       ld   (hl),$00
-1495: 23          inc  hl
+1495: 23          inc  hl       ; ld (hl),$01 inc hl
 1496: 7D          ld   a,l
-1497: FE 80       cp   $80      ; 128
+1497: FE 80       cp   $80      ; 128 ;81
 1499: 20 F8       jr   nz,$1493
 149B: C9          ret
 
@@ -2894,9 +2894,9 @@ RESET_SCREEN_META_AND_SPRITES     ; sets 128 locations to 0
 14AE: FF FF
 
 SCREEN_RESET
-14B0: 21 E8 06    ld   hl,$06E8
+14B0: 21 E8 06    ld   hl,$PLAY_TUNE_FOR_CUR_SCREEN-$4000
 14B3: CD E3 01    call $JMP_HL_PLUS_4K
-14B6: CD C8 3B    call $RESET_XOFFS
+14B6: CD C8 3B    call $COPY_XOFFS
     ;; set init player pos
 14B9: 3E 20       ld   a,$20
 14BB: 32 30 80    ld   ($PLAYER_MAX_X),a
@@ -2941,7 +2941,7 @@ LEVEL_BG_PTR_LOOKUP
 1536: 00 ...
 153C: FF ...
 
-COPY_XOFFS_COL_SPRITES_TO_SCREEN
+COPY_XOFFS_AND_COLS_TO_SCREEN
 1550: E5          push hl
 1551: C5          push bc
 1552: D5          push de
@@ -3013,7 +3013,7 @@ ANIMATE_SPLASH_PICKUPS
 15CD: FF ...
 
 ATTRACT_BONUS_SCREEN
-15D0: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+15D0: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 15D3: CD 88 0F    call $DRAW_BORDER_1
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15D9: 3E 8C       ld   a,$8C
@@ -3052,7 +3052,7 @@ ATTRACT_BONUS_SCREEN
 1649: C9          ret
 164A: FF
 
-164B: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+164B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $DRAW_SCREEN
 1654: 00 00                     ; data
@@ -3371,7 +3371,7 @@ INIT_PLAYER_POS_FOR_SCREEN
 188F: 00          nop
 1890: FF ...
 
-RESET_XOFF_AND_COLS
+RESET_XOFFS
 1898: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 189B: 36 00       ld   (hl),$00
 189D: 23          inc  hl
@@ -3384,7 +3384,7 @@ RESET_XOFF_AND_COLS
 
     ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
     ;; (all `n_n` screens).
-    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__n_n
 18B0: 03 41 00 09 FE 00 1E 39 FF
 18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
@@ -3447,18 +3447,18 @@ CLEAR_SCR_TO_BLANKS
 19D5: 00          nop
 19D6: 00          nop
 19D7: 00          nop
-CLEAR_SCREEN_XOFF_COL           ; Again? dupe sub
+_CLEAR_XOFF_COL   ; Same code as $RESET_XOFF_AND_COLS
 19D8: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 19DB: 36 00       ld   (hl),$00
 19DD: 23          inc  hl
 19DE: 7D          ld   a,l
 19DF: FE 80       cp   $80
 19E1: 20 F8       jr   nz,$19DB
+_DONE
 19E3: CD A0 13    call $WAIT_VBLANK
 19E6: C9          ret
 
 19E7: FF ...
-
 
 CHECK_FALL_OFF_BOTTOM_SCR
 19F0: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
@@ -3486,7 +3486,7 @@ CHECK_EXIT_STAGE_LEFT
 
     ;; Level data for screens 5, 10
     ;; (`/` screens)
-    ;; See DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__STAIRS_UP
 1A10: 03 3F 00 1B FE 30 31 3C FF
 1A19: 03 3F 3E 3B 40 00 1B FC 10 3A 3F FF
@@ -3564,7 +3564,7 @@ _DID_INIT
 1B8E: 32 22 80    ld   ($DID_INIT),a ; (except here)
 _BOTH
 1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+1B94: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 
 1B97: 00          nop
 1B98: 00          nop
@@ -3722,7 +3722,7 @@ DRAW_BORDER_1_C
 
     ;; Lvel data for screens: 16, 19, 27
     ;; (all `S` screens)
-    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__S
 1D00: 03 3B 3E 3F 00 0F FE 00 1B FE 10 3D 3E FF
 1D0E: 03 3E 3E 3F 3E 00 0F FD 00 1B FD 10 3C 3F FF
@@ -3752,7 +3752,7 @@ LEVEL_BG__S
 
     ;; Level data for screens 7, 12, 17, 20, 23, 26
     ;; (all `\` screens)
-    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__STAIRS_DOWN
 1E70: 03 42 00 0A 30 32 00 1D 3C 3F FF
 1E7B: 03 43 00 0C FE 00 1C 3A 3B 3F FF
@@ -3782,7 +3782,7 @@ LEVEL_BG__STAIRS_DOWN
 
     ;; Level data for screens 21, 24
     ;; (all `S_S` screens)
-    ;; See by DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__S_S
 1FE0: 03 42 00 1D 3D 3B FF
 1FE7: 03 41 00 0F FE 00 1B FE 3F 3E 3B FF
@@ -3816,14 +3816,14 @@ LEVEL_BG__S_S
 212B: 3A 03 83    ld   a,($CREDITS)
 212E: A7          and  a
 212F: C8          ret  z
-2130: CD 90 14    call $RESET_SCREEN_META_AND_SPRITES
+2130: CD 90 14    call $RESET_XOFF_AND_COLS
 2133: C3 A4 00    jp   $_PLAY_SPLASH
     ;;
 2136: FF ...
 
     ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
     ;; (all `nTn` and `W` levels)
-    ;; See DRAW_SCREEN_COL_FROM_LEVEL_DATA
+    ;; See DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__nTn
 2140: 03 40 00 0A 48 00 1E 39 FF
 2149: 03 41 00 0B 48 00 1D 3A 3B FF
@@ -4160,7 +4160,7 @@ _I                              ; 10 loops
 
     ;; who calls?
 DRAWING_LOTSA_STUFF
-2550: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+2550: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$START_OF_TILES
 2559: 1E 79       ld   e,$79
@@ -4896,7 +4896,7 @@ ENTER_HISCORE_SCREEN
 2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
-2D95: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+2D95: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
@@ -5107,7 +5107,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 
 2FD5: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 2FD8: CD E0 24    call $DELAY_60_VBLANKS
-2FDB: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+2FDB: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
@@ -6537,7 +6537,7 @@ PLAYER_ENEMIES_COLLISION
 3BC1: C9          ret
 3BC2: FF ...
 
-RESET_XOFFS                     ;(or colors?)
+COPY_XOFFS
 3BC8: 21 08 81    ld   hl,$SCREEN_XOFF_COL+8
 3BCB: 3A 06 81    ld   a,($SCREEN_XOFF_COL+6)
 3BCE: 77          ld   (hl),a
@@ -6767,7 +6767,7 @@ DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($CH1_SFX),a
 3D4D: 32 65 80    ld   ($SFX_PREV),a
-3D50: CD 70 14    call $CALL_RESET_SCREEN_META_AND_SPRITES
+3D50: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $DRAW_SCREEN
 3D59: 00 00                     ; params to DRAW_SCREEN
@@ -6829,7 +6829,7 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 3DC5: 36 6C       ld   (hl),$6C
 3DC7: 23          inc  hl
 3DC8: 36 6D       ld   (hl),$6D
-3DCA: 3E 02       ld   a,$02
+3DCA: 3E 02       ld   a,$02    ; red
 3DCC: 32 31 81    ld   ($SCREEN_XOFF_COL+31),a
 3DCF: 32 33 81    ld   ($SCREEN_XOFF_COL+33),a
 3DD2: 32 35 81    ld   ($SCREEN_XOFF_COL+35),a
@@ -8005,7 +8005,7 @@ CLEAR_SFX_1
 
 46E5: FF ...
 
-    ;;
+PLAY_TUNE_FOR_CUR_SCREEN
 46E8: 3A 34 80    ld   a,($NUM_PLAYERS)
 46EB: A7          and  a
 46EC: C8          ret  z
@@ -8018,7 +8018,7 @@ CLEAR_SFX_1
 46FB: 3D          dec  a        ; scr - 1
 46FC: 87          add  a,a      ; ...
 46FD: 87          add  a,a      ; * 3
-46FE: CD B0 49    call $CALL_ADD_A_TO_RET_ADDR
+46FE: CD B0 49    call $GET_SCREEN_TUNE_SFX_ID
 4701: 47          ld   b,a
 4702: 3A 65 80    ld   a,($SFX_PREV)
 4705: B8          cp   b
@@ -8228,12 +8228,13 @@ PLAY_SFX
 48B0: C9          ret
 48B1: FF          rst  $38
 
+MUTLI_FLASH_BORDER
 48B2: CD 50 4B    call $4B50
 48B5: CD A8 5A    call $FLASH_BORDER
 48B8: CD A8 5A    call $FLASH_BORDER
 48BB: CD A8 5A    call $FLASH_BORDER
 48BE: CD A8 5A    call $FLASH_BORDER
-48C1: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
+48C1: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $FLASH_BORDER
 48CA: C9          ret
@@ -8350,11 +8351,11 @@ CLEAR_SFX_2
 49A1: C9          ret
 49A2: FF ...
 
-    ;;
-CALL_ADD_A_TO_RET_ADDR
+    ;; set the sfx value for the new screen
+    ;; a contains offset of sfx to play for screen
+GET_SCREEN_TUNE_SFX_ID
 49B0: CD B0 46    call $ADD_A_TO_RET_ADDR
-    ;; Is this code or data? 27 cases...
-49B3: 3E 0E       ld   a,$0E
+49B3: 3E 0E       ld   a,$0E    ; scr 1
 49B5: C9          ret
 49B6: 00          nop
 49B7: 3E 0E       ld   a,$0E
@@ -8414,7 +8415,7 @@ CALL_ADD_A_TO_RET_ADDR
 49FF: 3E 0D       ld   a,$0D
 4A01: C9          ret
 4A02: 00          nop
-4A03: 3E 0C       ld   a,$0C
+4A03: 3E 0C       ld   a,$0C    ; scr 21: best tune
 4A05: C9          ret
 4A06: 00          nop
 4A07: 3E 0C       ld   a,$0C
@@ -8435,7 +8436,8 @@ CALL_ADD_A_TO_RET_ADDR
 4A1B: 3E 0E       ld   a,$0E
 4A1D: C9          ret
 4A1E: 00          nop
-4A1F: FF          rst  $38
+4A1F: FF
+
 4A20: 15          dec  d
 4A21: 01 17 01    ld   bc,$0117
 4A24: 19          add  hl,de
@@ -8883,7 +8885,7 @@ SFX_2_DATA
 4D07: FF
 
 DRAW_CAGE_TILES
-4D08: CD 60 4D    call $BLANK_OUT_3_TILES
+4D08: CD 60 4D    call $RESET_3_ROW_XOFFS
 4D0B: E5          push hl
 4D0C: 2B          dec  hl
 4D0D: 36 10       ld   (hl),$10
@@ -8940,7 +8942,7 @@ TRIGGER_CAGE_FALL
 
 4D5F: FF
 
-BLANK_OUT_3_TILES               ; which ones?
+RESET_3_ROW_XOFFS               ; which ones?
 4D60: AF          xor  a
 4D61: 32 26 81    ld   ($SCREEN_XOFF_COL+26),a
 4D64: 32 28 81    ld   ($SCREEN_XOFF_COL+28),a
@@ -10116,25 +10118,28 @@ _DONE
 
 559E: FF ...
 
-55A0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
+CHASED_BY_A_DINO_SCREEN
+55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
 55A3: CD 81 5C    call $JMP_HL
-55A6: CD D0 56    call $56D0
+55A6: CD D0 56    call $DRAW_BUGGY_BORDER
 55A9: 00          nop
 55AA: 00          nop
 55AB: 00          nop
 55AC: CD A8 5A    call $FLASH_BORDER
 55AF: CD 70 55    call $DRAW_TILES_H_COPY
 55B2: 08 0B
-55B4: 12 15 27 11 22 15 FF
+55B4: 12 15 27 11 22 15 FF      ; BEWARE
 55BB: CD A8 5A    call $FLASH_BORDER
 55BE: CD 70 55    call $DRAW_TILES_H_COPY
 55C1: 0C 05
-55C3: 29 1F 25 22 10 12 15 19 1E 17 10 18 23 15 14 FF
+    ;; YOUR BEING CHASED
+55C3: 29 1F 25 22 10 12 15 19 1E 17 10 13 18 11 23 15 14 FF
 55D5: CD A8 5A    call $FLASH_BORDER
 55D8: CD 70 55    call $DRAW_TILES_H_COPY
 55DB: 10 07
+    ;; BY A DINOSAUR (classic!)
 55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
-55EB: C3 B2 48    jp   $48B2
+55EB: C3 B2 48    jp   $MUTLI_FLASH_BORDER
 
 55EE: FF ...
 
@@ -10320,15 +10325,25 @@ _DONE
 56CB: 16 50       ld   d,$50
 56CD: 16 EE       ld   d,$EE
 56CF: 09          add  hl,bc
+
+DRAW_BUGGY_BORDER
 56D0: 3E 01       ld   a,$01
-56D2: CD D8 5A    call $5AD8
+56D2: CD D8 5A    call $SET_ROW_COLORS
 56D5: 21 88 0F    ld   hl,$DRAW_BORDER_1
-56D8: CD 81 4C    call $4C81
+    ;; THIS IS A BUG! It's supposed to call draw_border
+    ;; to put the inner rounded border on the beautiful
+    ;; "YOUR BEING CHASED BY A DINO" screen, but the typo
+    ;; Jumps to middle of nowhere, that happens to be
+    ;; ... 0x40 (ld b,b), 0xC9 (ret). Phew, does nothing...
+    ;; It's supposed to be: call $5C81 (JMP_HL)
+    ;;
+    ;; (err, did they call everything by hand without labels?!)
+56D8: CD 81 4C    call $4C81    ; bad jump, no inner border for us :(
 56DB: C9          ret
-56DC: FF          rst  $38
-56DD: FF          rst  $38
-56DE: FF          rst  $38
-56DF: FF          rst  $38
+
+56DC: FF ...
+
+    ;; ???
 56E0: 03          inc  bc
 56E1: C0          ret  nz
 56E2: 16 A0       ld   d,$A0
@@ -10719,6 +10734,7 @@ FLASH_BORDER
 5AD4: C9          ret
 5AD5: FF ...
 
+SET_ROW_COLORS
 5AD8: 47          ld   b,a
 5AD9: 21 01 81    ld   hl,$SCREEN_XOFF_COL+1 ;col for row 1
 5ADC: 70          ld   (hl),b
@@ -10731,17 +10747,18 @@ FLASH_BORDER
 
 5AE5: FF
 
+SET_SCREEN_COLOR_TO_4
 5AE6: 3E 04       ld   a,$04
-5AE8: CD D8 5A    call $5AD8
+5AE8: CD D8 5A    call $SET_ROW_COLORS
 5AEB: C9          ret
 5AEC: FF ...
 
 DRAW_EXTRA_BONUS_SCREEN
-5AF0: 21 70 14    ld   hl,$CALL_RESET_SCREEN_META_AND_SPRITES
+5AF0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$DRAW_BORDER_1
 5AF9: CD 81 5C    call $JMP_HL
-5AFC: CD E6 5A    call $5AE6
+5AFC: CD E6 5A    call $SET_SCREEN_COLS_TO_4
 5AFF: CD 70 55    call $DRAW_TILES_H_COPY
 5B02: 08 08
     ;; EXTRA BONUS

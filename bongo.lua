@@ -14,6 +14,9 @@ disable_dino = false   -- no pesky dino... but also now you can't catch him
 fast_death = false    -- restart super fast after death (oops, messes with dino!)
 clear_score = true    -- reset score to 0 on death and new screen
 
+theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
+technicolor = false -- randomize theme every death
+
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
@@ -55,7 +58,6 @@ dump(gfx.spaces)
 dump(manager.machine.devices)
 print("odon");
 
-
 -------------- Helpers -------------
 
 function poke(addr, bytes)
@@ -80,6 +82,22 @@ end
 
 -- poke_rom(0x069D, 0x20); -- autojump lol
 poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
+--poke_rom(0x1494,0x1) -- mmm, blue
+--poke_rom(0x19dc,0x2) -- mmm, blue
+--
+poke_rom(0x56da,0x5c) -- bugfix: draws inner border on YOUR BEING scrren
+
+-- colorised 7 is best
+function set_theme(col)
+   -- change screen colors (resets xoffs and cols seperately)
+   -- adds an extra: `ld (hl), $col, inc hl`
+   poke_rom(0x1496,{ 0x36,col,0x23,0x7D,0xFE,0x80,0x20,0xF5,0xC9 })
+   -- the routine above was duplicated, so just call instead.
+   poke_rom(0x19d8,{0xCD,0x90,0x14,0,0,0,0,0,0,0,0})
+   -- bottom row color
+   poke_rom(0x1047,col)
+   poke_rom(0x179B,col)
+end
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -115,6 +133,10 @@ if disable_dino == true then
    poke_rom(0x22FE, 0xC9); -- ret from timer start check
 end
 
+if theme ~= 0 then
+   set_theme(theme)
+end
+
 ------------- RAM hacks -------------
 
 started = false
@@ -126,6 +148,9 @@ tap1 = mem:install_write_tap(lives_addr, lives_addr, "writes", function(offset, 
    -- clear score on death
    if clear_score == true then
       poke(0x8014, {0, 0, 0});
+      if technicolor == true then
+         set_theme(math.random(16))
+      end
    end
 
    -- infinite lives

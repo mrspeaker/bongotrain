@@ -261,6 +261,8 @@ fast round - can jump from second-to-bottom stair
 --- advanced 
 on highwire levels, pauses for a few frames before falling to platform
 
+-- fast fall technique - hit edge of platform
+
 - front-side the birds!
 can make it IN FRONT of the highwire birds: only way to beat faster levels (eg, 3 bird level on 4, but requires very precise timing. I thought it was impossible, but did it! Need to find the new "impossible level".
 
@@ -737,6 +739,10 @@ mini "bug" 8011 "falling timer' continues over to next screen - but you're on th
 hacking away at a wr.
 
 - 0.188: Map Bongo jump as a button and not as up direction [Angelo Salese].
+
+tas:1.25M!  https://tasvideos.org/6443S
+
+found a bug: inner border
 
 * hw
     -------------------
