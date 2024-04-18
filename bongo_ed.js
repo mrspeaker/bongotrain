@@ -17,14 +17,16 @@
     const flip_v = (tile) => tile.toReversed();
     const flip_h = (tile) => {
         const out = [];
-        for (let col = 0; col < 8; col++) {
+        for (let col = 7; col >= 0; col--) {
             let v = 0;
+            const mask = 1 << col; // 128, 64, 32, 16, 8, 4, 2, 1;
             for (let row = 0; row < 8; row++) {
-                v += (tile[row] & (1 << (7 - col))) >> (7 - row);
+                const shr = 7 - row; // 7,6,5,4,3,2,1,0
+                v |= (tile[row] & mask) >> shr;
             }
-
             out.push(v);
         }
+        //console.log(tile, out);
         return out;
     };
 
@@ -35,15 +37,12 @@
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-h.bin");
-    const tiles1 = chunk(bytes1, 8).map(flip_v).map(flip_h);
+    const tiles1 = chunk(bytes1, 8).map(flip_v); //.map(flip_h);
     const tiles2 = chunk(bytes2, 8).map(flip_v); //.map(flip_h);
 
     let tiles = tiles1;
 
-    const drawTile = (t, x, y) => {
-        const tile = tiles[t];
-        if (!tile) return;
-
+    const drawTile = (tile, x, y) => {
         for (let j = 0; j < 8; j++) {
             const byte = tile[j];
             for (let i = 0; i < 8; i++) {
@@ -60,7 +59,9 @@
 
     const tw = 32;
     const th = 16;
-
+    drawTile(tiles1[4], 0, 0);
+    drawTile(flip_h(tiles1[4]), 0, 8);
+    /*
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             drawTile(j * tw + i, i * 8, j * 8);
@@ -71,6 +72,6 @@
         for (let i = 0; i < tw; i++) {
             drawTile(j * tw + i, i * 8, (j + 16) * 8);
         }
-    }
+    }*/
     ctx.putImageData(pix, 0, 0);
 })();

@@ -5,7 +5,7 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 5 -- starting round
+round = 3 -- starting round
 
 infinite_lives = true
 disable_round_speed_up = true -- don't get faster after catching dino
@@ -29,7 +29,32 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 -- 25:   W    \    S
 --------------------------------
 
-mem = manager.machine.devices[":maincpu"].spaces["program"]
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+
+cpu = manager.machine.devices[":maincpu"]
+mem = cpu.spaces["program"]
+gfx = manager.machine.devices[":gfxdecode"]
+for tag, device in pairs(manager.machine.devices) do print(tag) end
+
+--for k, v in pairs(mem.state) do print(k) end
+--pal = manager.machine.devices[":gfxdecode"]
+print("daf?")
+dump(gfx.spaces)
+dump(manager.machine.devices)
+print("odon");
+
 
 -------------- Helpers -------------
 
