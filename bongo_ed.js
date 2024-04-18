@@ -49,7 +49,7 @@
                     pix.data[off + 0] += r;
                     pix.data[off + 1] += g;
                     pix.data[off + 2] += b;
-                    pix.data[off + 3] += 100;
+                    pix.data[off + 3] += (255 / 2) | 0;
                 }
             }
         }
@@ -57,17 +57,13 @@
 
     const tw = 32;
     const th = 16;
-    const t = tiles1[1 * tw + 15];
-    const t2 = tiles2[1 * tw + 15];
-    drawTile(t, 8, 16);
-    drawTile(t2, 17, 16);
-
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
             drawTile(rot90(tiles1[t]), i * 8, j * 8, 100, 0, 0);
-            drawTile(rot90(tiles2[t]), i * 8, j * 8, 0, 100, 0);
+            drawTile(rot90(tiles2[t]), i * 8, j * 8 + th * 0, 0, 100, 0);
         }
     }
+
     ctx.putImageData(pix, 0, 0);
 })();
