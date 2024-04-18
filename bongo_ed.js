@@ -1,3 +1,5 @@
+import { search_str } from "./search_str.js";
+
 (async () => {
     const getRomBytes = (rom) =>
         fetch(`./romgo/${rom}`)
@@ -60,49 +62,16 @@
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
-            drawTile(rot90(tiles1[t]), i * 8, j * 8, 100, 0, 0);
-            drawTile(rot90(tiles2[t]), i * 8, j * 8 + th * 0, 0, 100, 0);
+            drawTile(rot90(tiles1[t]), i * 9, j * 9, 100, 0, 0);
+            drawTile(rot90(tiles2[t]), i * 9, j * 9, 0, 100, 0);
         }
     }
 
     ctx.putImageData(pix, 0, 0);
 
+    // Hunting in bin files for strings...
     const fetches = [1, 2, 3, 4, 5, 6].map((v) => getRomBytes(`bg${v}.bin`));
-    const get_words = (bytes) => {
-        const all = bytes.reduce(
-            (ac, el) => {
-                const isAlpha = el >= 16 && el < 16 + 26;
-                if (ac.inWord) {
-                    if (!isAlpha) {
-                        ac.words.push([...ac.word]);
-                        ac.word.length = 0;
-                        ac.inWord = false;
-                        return ac;
-                    } else {
-                        ac.word.push(el);
-                        return ac;
-                    }
-                } else if (isAlpha) {
-                    ac.inWord = true;
-                    ac.word.push(el);
-                }
-                return ac;
-            },
-            { inWord: false, word: [], words: [] },
-        ).words;
-
-        return all
-            .filter((w) => w.length > 2)
-            .map((w) =>
-                w.map((v) =>
-                    v === 16 ? " " : String.fromCharCode(v - 16 + 64),
-                ),
-            )
-            .flat()
-            .join("");
-    };
-
     Promise.all(fetches)
-        .then((b) => b.map(get_words))
+        .then((b) => b.map(search_str))
         .then(console.log);
 })();
