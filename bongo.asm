@@ -10525,7 +10525,7 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 586C: CD B0 4E    call $4EB0
 586F: C9          ret
 
-    ;; what's this data eh?
+    ;; what's this data eh? Looks similar to $5c00
 5870: A2 01 A2 01 A2 01 A2 01
 5878: B2 01 B2 01 B2 01 B2 01
 5880: C2 01 C2 01 C2 01 C2 01
@@ -10791,52 +10791,19 @@ _BORDER_1_2
 5BFE: C9          ret
 5BFF: FF
 
-;; what is this again? The other "what is this " is the same
+    ;; Looks similar format to 5870
 5C00: 15 01 15 01 15 01 1A 03
 5C08: 1E 02 15 01 15 01 15 01
 5C10: 01 1A 03 1E 02 15 01 15
-5C17: 01    ld   bc,$0115
-5C18: 15          dec  d
-5C19: 01 1A 01    ld   bc,$011A
-5C1C: 21 01 21    ld   hl,$2101
-5C1F: 01 21 01    ld   bc,$0121
-5C22: 21 03 23    ld   hl,$2303
-5C25: 01 1E 01    ld   bc,$011E
-5C28: 1C          inc  e
-5C29: 04          inc  b
-5C2A: 15          dec  d
-5C2B: 01 15 01    ld   bc,$0115
-5C2E: 15          dec  d
-5C2F: 01 19 03    ld   bc,$0319
-5C32: 1C          inc  e
-5C33: 02          ld   (bc),a
-5C34: 15          dec  d
-5C35: 01 15 01    ld   bc,$0115
-5C38: 15          dec  d
-5C39: 01 19 03    ld   bc,$0319
-5C3C: 1C          inc  e
-5C3D: 02          ld   (bc),a
-5C3E: 15          dec  d
-5C3F: 01 15 01    ld   bc,$0115
-5C42: 15          dec  d
-5C43: 01 15 01    ld   bc,$0115
-5C46: 21 01 21    ld   hl,$2101
-5C49: 01 21 01    ld   bc,$0121
-5C4C: 21 02 23    ld   hl,$2302
-5C4F: 01 1E 02    ld   bc,$021E
-5C52: 1A          ld   a,(de)
-5C53: 04          inc  b
-5C54: FF          rst  $38
-5C55: FF          rst  $38
-5C56: FF          rst  $38
-5C57: FF          rst  $38
-5C58: FF          rst  $38
-5C59: FF          rst  $38
-5C5A: FF          rst  $38
-5C5B: FF          rst  $38
-5C5C: FF          rst  $38
-5C5D: FF          rst  $38
-5C5E: FF          rst  $38
+5C17: 01 15 01 1A 01 21 01 21
+5C1F: 01 21 01 21 03 23 01 1E
+5C27: 01 1C 04 15 01 15 01 15
+5C2F: 01 19 03 1C 02 15 01 15
+5C37: 01 15 01 19 03 1C 02 15
+5C3F: 01 15 01 15 01 15 01 21
+5C47: 01 21 01 21 01 21 02 23
+5C4F: 01 1E 02 1A 04 FF FF FF
+5C57: FF FF FF FF FF FF FF FF
 5C5F: FF          rst  $38
 5C60: 62          ld   h,d
 5C61: 5C          ld   e,h
