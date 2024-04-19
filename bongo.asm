@@ -1898,7 +1898,7 @@ DO_DEATH_SEQUENCE
 0CC2: 32 42 80    ld   ($CH1_SFX),a
 0CC5: 32 65 80    ld   ($SFX_PREV),a
 0CC8: CD A0 0B    call $RESET_DINO_COUNTER
-0CCB: CD 14 0D    call $_HMM
+0CCB: CD 14 0D    call $_DONE_IF_ZERO
 0CCE: CD A0 0C    call $DELAY_8_VBLANKS
 0CD1: 3E 26       ld   a,$26
 0CD3: 32 41 81    ld   ($PLAYER_FRAME),a
@@ -1928,7 +1928,7 @@ _LP
 0D0F: 3D          dec  a
 0D10: 32 5F 81    ld   ($ENEMY_3_Y),a
 0D13: 15          dec  d
-_HMM
+_DONE_IF_ZERO
 0D14: 20 F2       jr   nz,$_LP
 0D16: C9          ret
 

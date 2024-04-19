@@ -1,18 +1,18 @@
--- Bongo Training Montage --
 
-start_screen = 8 -- screen number (1-27), if not looping
+start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 3 -- starting round
+round = 2 -- starting round
 
 infinite_lives = true
-disable_round_speed_up = true -- don't get faster after catching dino
+disable_round_speed_up = false -- don't get faster after catching dino
 skip_cutscene = false  -- don't show the cutscene
 disable_dino = false   -- no pesky dino... but also now you can't catch him
-fast_death = false    -- restart super fast after death (oops, messes with dino!)
-clear_score = true    -- reset score to 0 on death and new screen
+fast_wipe = true  -- don't do slow transition to next screen
+fast_death = true    -- restart super fast after death
+clear_score = false    -- reset score to 0 on death and new screen
 
 theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
@@ -53,10 +53,8 @@ for tag, device in pairs(manager.machine.devices) do print(tag) end
 
 --for k, v in pairs(mem.state) do print(k) end
 --pal = manager.machine.devices[":gfxdecode"]
-print("daf?")
 dump(gfx.spaces)
 dump(manager.machine.devices)
-print("odon");
 
 -------------- Helpers -------------
 
@@ -102,6 +100,10 @@ end
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    poke_rom(0x0CCB, {0xC9,0,0}); -- return after dino reset
+end
+
+if fast_wipe == true then
+   poke_rom(0x1358, {0x18,0x1b+3,0})
 end
 
 if disable_round_speed_up == true then
