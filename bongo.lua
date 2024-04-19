@@ -101,8 +101,7 @@ end
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
-   poke_rom(0x0CC0, 0xC9); -- return early
-   poke_rom(0x0CC1, 0x00); -- nop out orignal
+   poke_rom(0x0CCB, {0xC9,0,0}); -- return after dino reset
 end
 
 if disable_round_speed_up == true then
