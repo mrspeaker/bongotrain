@@ -10525,66 +10525,19 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 586C: CD B0 4E    call $4EB0
 586F: C9          ret
 
-    ;;
-5870: A2          and  d
-5871: 01 A2 01    ld   bc,$01A2
-5874: A2          and  d
-5875: 01 A2 01    ld   bc,$01A2
-5878: B2          or   d
-5879: 01 B2 01    ld   bc,$01B2
-587C: B2          or   d
-587D: 01 B2 01    ld   bc,$01B2
-5880: C2 01 C2    jp   nz,$C201
-5883: 01 C2 01    ld   bc,$01C2
-5886: C2 01 D2    jp   nz,$D201
-5889: 01 D2 01    ld   bc,$01D2
-588C: D2 01 D2    jp   nc,$D201
-588F: 01 FF FF    ld   bc,$FFFF
-5892: FF          rst  $38
-5893: FF          rst  $38
-5894: FF          rst  $38
-5895: FF          rst  $38
-5896: FF          rst  $38
-5897: FF          rst  $38
-5898: FF          rst  $38
-5899: FF          rst  $38
-589A: FF          rst  $38
-589B: FF          rst  $38
-589C: FF          rst  $38
-589D: FF          rst  $38
-589E: FF          rst  $38
-589F: FF          rst  $38
-58A0: 0C          inc  c
-58A1: 16 78       ld   d,$78
-58A3: 16 78       ld   d,$78
-58A5: 16 96       ld   d,$96
-58A7: 16 96       ld   d,$96
-58A9: 16 EE       ld   d,$EE
-58AB: 09          add  hl,bc
-58AC: FF          rst  $38
-58AD: FF          rst  $38
-58AE: FF          rst  $38
-58AF: FF          rst  $38
-58B0: A1          and  c
-58B1: 02          ld   (bc),a
-58B2: C3 02 A1    jp   $A102
-58B5: 02          ld   (bc),a
-58B6: C3 02 A1    jp   $A102
-58B9: 02          ld   (bc),a
-58BA: C3 02 A1    jp   $A102
-58BD: 02          ld   (bc),a
-58BE: C3 02 A0    jp   $A002
-58C1: 02          ld   (bc),a
-58C2: D3 01       out  ($01),a
-58C4: D3 01       out  ($01),a
-58C6: D3 01       out  ($01),a
-58C8: D3 01       out  ($01),a
-58CA: FF          rst  $38
-58CB: FF          rst  $38
-58CC: FF          rst  $38
-58CD: FF          rst  $38
-58CE: FF          rst  $38
-58CF: FF          rst  $38
+    ;; what's this data eh?
+5870: A2 01 A2 01 A2 01 A2 01
+5878: B2 01 B2 01 B2 01 B2 01
+5880: C2 01 C2 01 C2 01 C2 01
+5888: D2 01 D2 01 D2 01 D2 01
+5890: FF FF FF FF FF FF FF FF
+5898: FF FF FF FF FF FF FF FF
+58A0: 0C 16 78 16 78 16 96 16
+58A8: 96 16 EE 09 FF FF FF FF
+58B0: A1 02 C3 02 A1 02 C3 02
+58B8: A1 02 C3 02 A1 02 C3 02
+58C0: A0 02 D3 01 D3 01 D3 01
+58C8: D3 01 FF FF FF FF FF FF
 
     ;; bytes after the call are:
     ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -10814,6 +10767,7 @@ _BORDER_1_2
 
 5BC7: FF
 
+    ;;
 5BC8: 3E F2       ld   a,$F2
 5BCA: 32 F8 91    ld   ($91F8),a
 5BCD: CD A8 5A    call $FLASH_BORDER
@@ -10835,19 +10789,13 @@ _BORDER_1_2
 5BF8: CD A8 5A    call $FLASH_BORDER
 5BFB: CD A8 5A    call $FLASH_BORDER
 5BFE: C9          ret
-5BFF: FF          rst  $38
-5C00: 15          dec  d
-5C01: 01 15 01    ld   bc,$0115
-5C04: 15          dec  d
-5C05: 01 1A 03    ld   bc,$031A
-5C08: 1E 02       ld   e,$02
-5C0A: 15          dec  d
-5C0B: 01 15 01    ld   bc,$0115
-5C0E: 15          dec  d
-5C0F: 01 1A 03    ld   bc,$031A
-5C12: 1E 02       ld   e,$02
-5C14: 15          dec  d
-5C15: 01 15 01    ld   bc,$0115
+5BFF: FF
+
+;; what is this again? The other "what is this " is the same
+5C00: 15 01 15 01 15 01 1A 03
+5C08: 1E 02 15 01 15 01 15 01
+5C10: 01 1A 03 1E 02 15 01 15
+5C17: 01    ld   bc,$0115
 5C18: 15          dec  d
 5C19: 01 1A 01    ld   bc,$011A
 5C1C: 21 01 21    ld   hl,$2101
