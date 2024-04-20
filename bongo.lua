@@ -9,7 +9,7 @@ round = 2 -- starting round
 infinite_lives = true
 disable_round_speed_up = false -- don't get faster after catching dino
 skip_cutscene = false  -- don't show the cutscene
-disable_dino = false   -- no pesky dino... but also now you can't catch him
+disable_dino = true   -- no pesky dino... but also now you can't catch him
 fast_wipe = true  -- don't do slow transition to next screen
 fast_death = true    -- restart super fast after death
 clear_score = false    -- reset score to 0 on death and new screen
@@ -84,6 +84,16 @@ poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
 --poke_rom(0x19dc,0x2) -- mmm, blue
 --
 poke_rom(0x56da,0x5c) -- bugfix: draws inner border on YOUR BEING scrren
+--1100
+local fr = 0x2c
+--poke_rom(0x608,{fr,fr+2,fr,fr+2,fr,fr+2,fr,fr+2});--,0x3,0x5})
+poke_rom(0x63A,{0x3e,fr, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
+poke_rom(0x67a,{0x3e,fr+0x80, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
+poke_rom(0x1819,{0x3e,fr, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
+poke_rom(0x7b5,fr)
+poke_rom(0x7d5,fr)
+poke_rom(0x8d5,fr)
+poke_rom(0x9de,{0,0,0})
 
 -- colorised 7 is best
 function set_theme(col)
@@ -94,6 +104,7 @@ function set_theme(col)
    poke_rom(0x19d8,{0xCD,0x90,0x14,0,0,0,0,0,0,0,0})
    -- bottom row color
    poke_rom(0x1047,col)
+   poke_rom(0x179B,col)
    poke_rom(0x179B,col)
 end
 

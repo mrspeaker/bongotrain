@@ -977,7 +977,7 @@ NORMALIZE_INPUT
     
 05FF: FF ...
 
-PLAYER_FRAME_DATA               ; whats this anim?
+PLAYER_FRAME_DATA_WALK_RIGHT
 0608: 0C 0E 10 0E 0C 12 14 12
 0610: FF FF FF FF FF FF FF FF
 
@@ -986,7 +986,7 @@ PLAYER_MOVE_RIGHT
 061B: 3C          inc  a
 061C: E6 07       and  $07      ; 0111
 061E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
-0621: 21 08 06    ld   hl,$PLAYER_FRAME_DATA
+0621: 21 08 06    ld   hl,$PLAYER_FRAME_DATA_WALK_RIGHT
 0624: 85          add  a,l
 0625: 6F          ld   l,a
 0626: 7E          ld   a,(hl)
@@ -994,7 +994,7 @@ PLAYER_MOVE_RIGHT
 062A: 3C          inc  a
 062B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 062E: 3A 40 81    ld   a,($PLAYER_X)
-0631: 3C          inc  a
+0631: 3C          inc  a        ; move right 3px.
 0632: 3C          inc  a
 0633: 3C          inc  a
 0634: 32 40 81    ld   ($PLAYER_X),a
@@ -1006,7 +1006,7 @@ PLAYER_MOVE_RIGHT
     
 063E: FF ...
 
-PLAYER_FRAME_DATA_2             ;what's this anim?
+PLAYER_FRAME_DATA_WALK_LEFT
 0648: 8C 8E 90 8E 8C 92 94 92
 0650: FF FF FF FF FF FF FF FF
 
@@ -1015,7 +1015,7 @@ PLAYER_MOVE_LEFT
 065B: 3C          inc  a
 065C: E6 07       and  $07
 065E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
-0661: 21 48 06    ld   hl,$PLAYER_FRAME_DATA_2
+0661: 21 48 06    ld   hl,$PLAYER_FRAME_DATA_WALK_LEFT
 0664: 85          add  a,l
 0665: 6F          ld   l,a
 0666: 7E          ld   a,(hl)
@@ -1023,7 +1023,7 @@ PLAYER_MOVE_LEFT
 066A: 3C          inc  a
 066B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 066E: 3A 40 81    ld   a,($PLAYER_X)
-0671: 3D          dec  a
+0671: 3D          dec  a        ; move left 3px
 0672: 3D          dec  a
 0673: 3D          dec  a
 0674: 32 40 81    ld   ($PLAYER_X),a
@@ -1507,7 +1507,7 @@ GROUND_CHECK
     
 09B4: FF ...
 
-CHECK_IF_LANDED_ON_GROUND
+CHECK_IF_LANDED_ON_GROUND       ; only when big fall?
 09C0: 3A 12 80    ld   a,($PLAYER_DIED)
 09C3: A7          and  a
 09C4: C0          ret  nz       ; dead, get out
@@ -1522,9 +1522,9 @@ CHECK_IF_LANDED_ON_GROUND
 09D3: AF          xor  a        ; clear jump_tbl_idx
 09D4: 32 0F 80    ld   ($JUMP_TBL_IDX),a
 09D7: 3A 41 81    ld   a,($PLAYER_FRAME)
-09DA: E6 80       and  $80
-09DC: C6 0C       add  a,$0C
-09DE: 32 41 81    ld   ($PLAYER_FRAME),a
+09DA: E6 80       and  $80      ; set/clear face-left bit
+09DC: C6 0C       add  a,$0C    ; reset to first frame
+09DE: 32 41 81    ld   ($PLAYER_FRAME),a ;
 09E1: 3C          inc  a
 09E2: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
 09E5: C9          ret
@@ -6722,6 +6722,7 @@ BUBBLE_LAVA_VAR_3
 
 3CED: FF ...
 
+    ;; gotta be cutscene related? Bongo, player, and dino...
 3D00: 3C          inc  a
 3D01: 3D          dec  a
 3D02: 06 01       ld   b,$01
@@ -6845,6 +6846,7 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 3E20: C9          ret
 3E21: FF
 
+    ;; called when?
 3E22: 3E 0C       ld   a,$0C
 3E24: 32 41 81    ld   ($PLAYER_FRAME),a
 3E27: 3E 0D       ld   a,$0D
@@ -9927,7 +9929,7 @@ CALL_ATTRACT_BONUS_SCREEN
 5494: 21 40 81    ld   hl,$PLAYER_X
 5497: 36 07       ld   (hl),$07 ; x
 5499: 23          inc  hl
-549A: 36 2D       ld   (hl),$2D ; frame
+549A: 36 2D       ld   (hl),$2D ; frame ; 2d is dino?
 549C: 23          inc  hl
 549D: 36 12       ld   (hl),$12 ; colr
 549F: 23          inc  hl
