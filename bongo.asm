@@ -533,7 +533,7 @@ COINAGE_ROUTINE
 02C1: 3E 07       ld   a,$07
 02C3: 32 06 83    ld   ($8306),a
 02C6: 3A F1 83    ld   a,($INPUT_BUTTONS)
-02C9: CB 77       bit  6,a
+02C9: CB 77       bit  6,a ; added credit
 02CB: 28 16       jr   z,$02E3
 02CD: 3A 05 83    ld   a,($8305)
 02D0: A7          and  a
@@ -3047,7 +3047,7 @@ ATTRACT_BONUS_SCREEN
 163A: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 1640: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1643: 21 94 14    ld   hl,$1494
+1643: 21 94 14    ld   hl,$1494 ; $ATTRACT_CATCH_DINO
 1646: CD E3 01    call $JMP_HL_PLUS_4K
 1649: C9          ret
 164A: FF
@@ -9655,6 +9655,7 @@ MORE_SFX_SOMETHING?
 5290: C9          ret
 5291: FF ...
 
+    ;; attract something?
 52A0: DD E5       push ix
 52A2: E1          pop  hl
 52A3: 7D          ld   a,l
@@ -9693,13 +9694,13 @@ MORE_SFX_SOMETHING?
 52E1: FF          rst  $38
 52E2: CD B0 4E    call $4EB0
 52E5: 21 40 81    ld   hl,$PLAYER_X
-52E8: 36 D8       ld   (hl),$D8
+52E8: 36 D8       ld   (hl),$D8 ; x
 52EA: 23          inc  hl
-52EB: 36 8D       ld   (hl),$8D
+52EB: 36 8D       ld   (hl),$8D ; frame
 52ED: 23          inc  hl
-52EE: 36 11       ld   (hl),$11
+52EE: 36 11       ld   (hl),$11 ; color
 52F0: 23          inc  hl
-52F1: 36 E0       ld   (hl),$E0
+52F1: 36 E0       ld   (hl),$E0 ; y
 52F3: 23          inc  hl
 52F4: 36 D8       ld   (hl),$D8
 52F6: 23          inc  hl
@@ -9875,7 +9876,8 @@ CALL_ATTRACT_BONUS_SCREEN
 542E: C9          ret
 
 542F: FF
-    ;;
+
+ATTRACT_CAGE_FALLS_ON_DINO
 5430: 21 24 92    ld   hl,$9224
 5433: CD 08 4D    call $DRAW_CAGE_TILES
 5436: E5          push hl
@@ -9896,11 +9898,12 @@ CALL_ATTRACT_BONUS_SCREEN
 
 544E: FF ...
 
-5450: DD 21 40 81 ld   ix,$PLAYER_X
+ATTRACT_DINO_RUNS_ALONG_GROUND
+5450: DD 21 40 81 ld   ix,$PLAYER_X ; this is a dino on attract screen
 5454: 3E 79       ld   a,$79
 5456: DD BE 00    cp   (ix+$00)
 5459: C8          ret  z
-545A: DD 34 00    inc  (ix+$00)
+545A: DD 34 00    inc  (ix+$00) ; dino runs along ground
 545D: DD 34 04    inc  (ix+$04)
 5460: 3A 12 83    ld   a,($TICK_NUM)
 5463: E6 03       and  $03
@@ -9926,7 +9929,9 @@ CALL_ATTRACT_BONUS_SCREEN
 5490: 00          nop
 5491: 18 BD       jr   $5450
 5493: FF          rst  $38
-5494: 21 40 81    ld   hl,$PLAYER_X
+
+ATTRACT_CATCH_DINO
+5494: 21 40 81    ld   hl,$PLAYER_X ; oi! You made the player a dinosaur!
 5497: 36 07       ld   (hl),$07 ; x
 5499: 23          inc  hl
 549A: 36 2D       ld   (hl),$2D ; frame ; 2d is dino?
@@ -9944,10 +9949,10 @@ CALL_ATTRACT_BONUS_SCREEN
 54AC: 36 CF       ld   (hl),$CF ; y legs
 54AE: 21 24 92    ld   hl,$9224
 54B1: CD 08 4D    call $DRAW_CAGE_TILES
-54B4: CD 50 54    call $5450
+54B4: CD 50 54    call $ATTRACT_DINO_RUNS_ALONG_GROUND
 54B7: CD D8 54    call $54D8
-54BA: CD 30 54    call $5430
-54BD: CD D8 54    call $54D8
+54BA: CD 30 54    call $ATTRACT_CAGE_FALLS_ON_DINO
+54BD: CD D8 54    call $ATTRACT_DINO_CAGE_INVERT
 54C0: C9          ret
 
 54C1: FF
@@ -9964,6 +9969,7 @@ CALL_ATTRACT_BONUS_SCREEN
 
 54D6: FF
 
+ATTRACT_DINO_CAGE_INVERT
 54D8: 1E 20       ld   e,$20
 54DA: D5          push de
 54DB: CD C2 54    call $54C2

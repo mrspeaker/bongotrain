@@ -4,18 +4,19 @@ loop_screens = {} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 4 -- starting round
 
 infinite_lives = true
 disable_round_speed_up = false -- don't get faster after catching dino
 skip_cutscene = false  -- don't show the cutscene
-disable_dino = true   -- no pesky dino... but also now you can't catch him
+disable_dino = false   -- no pesky dino... but also now you can't catch him
 fast_wipe = true  -- don't do slow transition to next screen
 fast_death = true    -- restart super fast after death
-clear_score = false    -- reset score to 0 on death and new screen
+clear_score = true    -- reset score to 0 on death and new screen
 
 theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
+head_style = 1 -- 0 = normal, 1 = dance, 2 = dino
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -80,20 +81,10 @@ end
 
 -- poke_rom(0x069D, 0x20); -- autojump lol
 poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
---poke_rom(0x1494,0x1) -- mmm, blue
---poke_rom(0x19dc,0x2) -- mmm, blue
+--poke_rom(0x1494,0x1)
+--poke_rom(0x19dc,0x2)
 --
-poke_rom(0x56da,0x5c) -- bugfix: draws inner border on YOUR BEING scrren
---1100
-local fr = 0x2c
---poke_rom(0x608,{fr,fr+2,fr,fr+2,fr,fr+2,fr,fr+2});--,0x3,0x5})
-poke_rom(0x63A,{0x3e,fr, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
-poke_rom(0x67a,{0x3e,fr+0x80, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
-poke_rom(0x1819,{0x3e,fr, 0x32,0x41,0x81,0xc9 })-- some free bytes at the end of func!
-poke_rom(0x7b5,fr)
-poke_rom(0x7d5,fr)
-poke_rom(0x8d5,fr)
-poke_rom(0x9de,{0,0,0})
+
 
 -- colorised 7 is best
 function set_theme(col)
@@ -107,6 +98,33 @@ function set_theme(col)
    poke_rom(0x179B,col)
    poke_rom(0x179B,col)
 end
+
+function on_game_start()
+   started = false -- triggered below
+end
+
+if head_style > 0 then
+   local fr = 0x2c --dino head
+   if head_style == 1 then fr = fr + 18 end -- dance head
+   local fl = fr + 0x80
+   local jump_fr = fr + 2
+   if head_style == 1 then jump_fr = fr -4 end -- dance head
+
+   poke_rom(0x63A,{0x3e,fr, 0x32,0x41,0x81,0xc9 }) -- player_move_right
+   poke_rom(0x67a,{0x3e,fl, 0x32,0x41,0x81,0xc9 })  -- player_move_left
+   poke_rom(0x1819,{0x3e,fr, 0x32,0x41,0x81,0xc9 }) -- reset_player
+   poke_rom(0x7d5,fr) -- trigger_jump_left
+   poke_rom(0x7b5,fl) -- trigger_jump_right
+   poke_rom(0x8d5,jump_fr) -- trigger_jump_straight_up
+   poke_rom(0x9de,{0,0,0}) -- check_if_landed reset
+   poke_rom(0x6FA,{0,0,0}) -- player_physics frame set
+end
+
+
+-- bugfix: draws inner border on YOUR BEING CHASED screen
+poke_rom(0x56da,0x5c)
+-- typography fix: align 1000 bonus better
+poke_rom(0x162d,0x0f)
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -160,9 +178,10 @@ tap1 = mem:install_write_tap(lives_addr, lives_addr, "writes", function(offset, 
    -- clear score on death
    if clear_score == true then
       poke(0x8014, {0, 0, 0});
-      if technicolor == true then
-         set_theme(math.random(16))
-      end
+   end
+
+   if technicolor == true then
+      set_theme(math.random(16))
    end
 
    -- infinite lives
@@ -236,4 +255,16 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
         poke(0x8140, 0xe0);
      end
    end
+end)
+
+-- Fire "on_game_start" event player uses up a credit
+credit_addr = 0x8303
+credits = 0
+tap5 = mem:install_write_tap(credit_addr, credit_addr, "writes", function(offset, data)
+  -- figure out when hit start
+  if data == credits - 1 then
+     -- we started
+     on_game_start()
+  end
+  credits = data
 end)
