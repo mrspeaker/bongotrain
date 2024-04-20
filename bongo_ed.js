@@ -39,31 +39,66 @@ import { search_str } from "./search_str.js";
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-k.bin");
-    const tiles1 = chunk(bytes1, 8);
-    const tiles2 = chunk(bytes2, 8);
+    const tiles1 = chunk(bytes1, 8).map(rot90);
+    const tiles2 = chunk(bytes2, 8).map(rot90);
+    // smoosh tiles 1 and 2 bytes into an array of pixel values (0-3)
+    const tiles = tiles1.map((t, i) =>
+        t.map((byte1, j) => {
+            const px = [];
+            const byte2 = tiles2[i][j];
+            for (let k = 0; k < 8; k++) {
+                const mask = 1 << (7 - k);
+                const b1 = !!(byte1 & mask);
+                const b2 = !!(byte2 & mask);
+                // 4bits-per-pixel
+                px.push((b1 << 1) | b2);
+            }
+            return px;
+        }),
+    );
 
-    const drawTile = (tile, x, y, r = 0, g = 0, b = 0) => {
+    const drawTile = (tile, x, y) => {
         for (let j = 0; j < 8; j++) {
             const row = tile[j];
             for (let i = 0; i < 8; i++) {
-                if (row & (1 << (7 - i))) {
-                    const off = (y * w + j * w + x + i) * 4;
-                    pix.data[off + 0] += r;
-                    pix.data[off + 1] += g;
-                    pix.data[off + 2] += b;
-                    pix.data[off + 3] += (255 / 2) | 0;
-                }
+                const p = row[i];
+                if (p === 0) continue;
+                const off = (y * w + j * w + x + i) * 4;
+                pix.data[off + 0] += cols[p - 1].r;
+                pix.data[off + 1] += cols[p - 1].g;
+                pix.data[off + 2] += cols[p - 1].b;
+                pix.data[off + 3] += 255;
             }
         }
     };
 
+    const cols = [
+        { r: 0, g: 155, b: 0 },
+        { r: 255, g: 0, b: 0 },
+        { r: 255, g: 255, b: 255 },
+    ];
+
     const tw = 32;
-    const th = 16;
+    const th = 8;
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
-            drawTile(rot90(tiles1[t]), i * 9, j * 9, 100, 0, 0);
-            drawTile(rot90(tiles2[t]), i * 9, j * 9, 0, 100, 0);
+            drawTile(tiles[t], i * 9, j * 9, cols);
+        }
+    }
+
+    const drawSpr = (spr, x, y, cols) => {
+        const off = 256 + spr * 4;
+        drawTile(tiles[off], x + 8, y, cols);
+        drawTile(tiles[off + 1], x + 8, y + 8, cols);
+        drawTile(tiles[off + 2], x, y, cols);
+        drawTile(tiles[off + 3], x, y + 8, cols);
+    };
+
+    let yo = 64 + 8;
+    for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < 16; i++) {
+            drawSpr(j * 16 + i, i * 16, j * 16 + yo);
         }
     }
 
