@@ -345,7 +345,7 @@ ATTRACT_PRESS_P1_SCREEN
 0137: 3A 03 83    ld   a,($CREDITS)
 013A: 32 35 80    ld   ($CREDITS_UMM),a
 013D: C9          ret
-    
+
 013E: FF FF
 
     ;;
@@ -498,7 +498,7 @@ POST_DEATH_RESET
 0279: 3E 03       ld   a,$03
 027B: 32 33 80    ld   ($LIVES_P2),a
 027E: C3 00 10    jp   $BIG_RESET
-    
+
 0281: FF ...
 
 COINAGE_ROUTINE
@@ -572,7 +572,7 @@ COINAGE_ROUTINE
 0307: AF          xor  a
 0308: 32 05 83    ld   ($8305),a
 030B: C9          ret
-    
+
 030C: FF ...
 
     ;; draw sequence of tiles at (y, x)
@@ -632,7 +632,7 @@ SETUP_MORE
 0362: 3E 01       ld   a,$01
 0364: 32 90 80    ld   ($8090),a
 0367: C3 83 05    jp   $0583
-    
+
 036A: FF ...
 
 RESET_ENTS_ALL
@@ -649,9 +649,9 @@ RESET_ENTS_ALL
 038C: 00          nop
 038D: 00          nop
 038E: C9          ret
-    
+
 038F: FF
-    
+
 0390: CD A0 13    call $WAIT_VBLANK
 0393: 18 FB       jr   $0390
 0395: FF ...
@@ -695,9 +695,9 @@ DRAW_LIVES
 03E2: C8          ret  z
 03E3: 32 A2 91    ld   ($91A2),a
 03E6: C9          ret
-    
+
 03E7: FF
-    
+
 03E8: AF          xor  a
 03E9: 32 34 80    ld   ($NUM_PLAYERS),a
 03EC: 32 35 80    ld   ($CREDITS_UMM),a
@@ -717,7 +717,7 @@ SET_LIVES_ROW_COLOR
 0408: 3E 01       ld   a,$01
 040A: 32 05 81    ld   ($SCREEN_XOFF_COL+5),a
 040D: C9          ret
-    
+
 040E: FF FF
 
 OUT_OF_LIVES
@@ -729,7 +729,7 @@ OUT_OF_LIVES
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
-    
+
 0426: FF ...
 
 CHECK_IF_HISCORE
@@ -764,7 +764,7 @@ CHECK_IF_HISCORE_P1
 0465: 99          sbc  a,c
 0466: DC E0 04    call c,$HISCORE_FOR_P1
 0469: C9          ret
-    
+
 046A: FF ...
 
 CHECK_IF_HISCORE_P2
@@ -800,7 +800,7 @@ CHECK_IF_HISCORE_P2
 04B5: 0D          dec  c
 04B6: 20 FA       jr   nz,$04B2
 04B8: C9          ret
-    
+
 04B9: FF
 
 ;; count up timer - every SPEED_DELAY ticks
@@ -823,7 +823,7 @@ CHECK_DINO_TIMER
 04D8: C0          ret  nz
 04D9: CD F0 22    call $DINO_PATHFIND_NOPSLIDE
 04DC: C9          ret
-    
+
 04DD: FF ...
 
 HISCORE_FOR_P1
@@ -835,7 +835,7 @@ HISCORE_FOR_P1
 04EF: 32 02 83    ld   ($HISCORE+2),a
 04F2: E1          pop  hl       ; hmm
 04F3: C9          ret
-    
+
 04F4: FF ...
 
 HISCORE_FOR_P2
@@ -847,7 +847,7 @@ HISCORE_FOR_P2
 050F: 32 02 83    ld   ($HISCORE+2),a
 0512: E1          pop  hl       ; hmm
 0513: C9          ret
-    
+
 0514: FF ...
 
     ;; This looks suspicious. 25 bytes written
@@ -905,7 +905,7 @@ HISCORE_FOR_P2
 0563: 36 30       ld   (hl),$30
 0565: CD 88 08    call $CLEAR_JUMP_BUTTON
 0568: C9          ret
-    
+
 0569: FF ...
 
 _SETUP_2 ;looks like SETUP - no one calls it?
@@ -941,7 +941,7 @@ _SETUP_2 ;looks like SETUP - no one calls it?
 05C6: E1          pop  hl
 05C7: E1          pop  hl
 05C8: C9          ret
-    
+
 05C9: FF ...
 
     ;; could this ben not P1/P2, but "player" vs "ai" (like
@@ -974,7 +974,7 @@ NORMALIZE_INPUT
 05FA: 80          add  a,b
 05FB: 32 0E 80    ld   ($CONTROLSN),a
 05FE: C9          ret
-    
+
 05FF: FF ...
 
 PLAYER_FRAME_DATA_WALK_RIGHT
@@ -1003,7 +1003,7 @@ PLAYER_MOVE_RIGHT
 063B: 00          nop
 063C: 00          nop
 063D: C9          ret
-    
+
 063E: FF ...
 
 PLAYER_FRAME_DATA_WALK_LEFT
@@ -1032,7 +1032,7 @@ PLAYER_MOVE_LEFT
 067B: 00          nop
 067C: 00          nop
 067D: C9          ret
-    
+
 067E: FF ...
 
 PLAYER_INPUT
@@ -1092,7 +1092,7 @@ PLAYER_PHYSICS
 06D9: 00          nop
 06DA: 00          nop
 06DB: 00          nop
-06DC: 00          nop    
+06DC: 00          nop
 06DD: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
 06E0: 3D          dec  a        ; idx - 1
 06E1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
@@ -1130,7 +1130,7 @@ SET_UNUSED_804A_49
 0718: 32 49 80    ld   ($8049),a
 071B: F1          pop  af
 071C: C9          ret
-    
+
 071D: FF          rst  $38
 071E: FF          rst  $38
 071F: FF          rst  $38
@@ -1198,7 +1198,7 @@ TRIGGER_JUMP_RIGHT
 07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; already jumping, leave
 07A8: A7          and  a
 07A9: C0          ret  nz       ;
-07AA: CD 88 09    call $GROUND_CHECK 
+07AA: CD 88 09    call $GROUND_CHECK
 07AD: A7          and  a
 07AE: C8          ret  z
 07AF: 3E 07       ld   a,$07
@@ -1380,7 +1380,7 @@ INIT_PLAYER_SPRITE
 08B0: 36 DE       ld   (hl),$DE ; y legs
 08B2: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
 08B5: C9          ret
-    
+
 08B6: FF ...
 
 TRIGGER_JUMP_STRAIGHT_UP
@@ -1398,7 +1398,7 @@ TRIGGER_JUMP_STRAIGHT_UP
 08D4: 3E 17       ld   a,$17
 08D6: 32 41 81    ld   ($PLAYER_FRAME),a
 08D9: C3 30 09    jp   $FACE_BACKWARDS_AND_PLAY_JUMP_SFX
-    
+
 08DC: FF ...
 
 MOVE_BONGO_RIGHT
@@ -1424,7 +1424,7 @@ MOVE_BONGO_RIGHT
 090D: 3C          inc  a
 090E: 32 48 81    ld   ($BONGO_X),a
 0911: C9          ret
-    
+
 0912: FF ...
 
 BONGO_LOOKUP3
@@ -1438,7 +1438,7 @@ FACE_BACKWARDS_AND_PLAY_JUMP_SFX
 0935: 3E 04       ld   a,$04
 0937: 32 43 80    ld   ($CH2_SFX),a
 093A: C9          ret
-    
+
 093B: FF ...
 
     ;; jumping straight up
@@ -1474,7 +1474,7 @@ GET_TILE_ADDR_FROM_XY
 097D: 85          add  a,l
 097E: 6F          ld   l,a
 097F: C9          ret
-    
+
 0980: FF ...
 
 ;;; ground check?
@@ -1504,7 +1504,7 @@ GROUND_CHECK
 09B0: C9          ret
 09B1: 3E 01       ld   a,$01
 09B3: C9          ret
-    
+
 09B4: FF ...
 
 CHECK_IF_LANDED_ON_GROUND       ; only when big fall?
@@ -1543,7 +1543,7 @@ _ON_GROUND
 09F8: 32 11 80    ld   ($FALLING_TIMER),a
 09FB: CD 68 0A    call $SNAP_Y_TO_8
 09FE: C9          ret
-    
+
 09FF: FF ...
 
 MOVE_BONGO_LEFT
@@ -1605,7 +1605,7 @@ ADD_GRAVITY_AND_CHECK_BIG_FALL
 0A58: C6 10       add  a,$10
 0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A5D: C9          ret
-    
+
 0A5E: FF ...
 
 SNAP_Y_TO_8
@@ -1615,7 +1615,7 @@ SNAP_Y_TO_8
 0A70: C6 10       add  a,$10
 0A72: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 0A75: C9          ret
-    
+
 0A76: FF ...
 
 CHECK_HEAD_HIT_TILE
@@ -1644,7 +1644,7 @@ CHECK_HEAD_HIT_TILE
 0AAA: C0          ret  nz
 0AAB: CD B8 0A    call $FALL_UNDER_A_LEDGE
 0AAE: C9          ret
-    
+
 0AAF: FF ...
 
 FALL_UNDER_A_LEDGE
@@ -1658,7 +1658,7 @@ FALL_UNDER_A_LEDGE
 0AC6: CD A0 13    call $WAIT_VBLANK
 0AC9: CD A0 13    call $WAIT_VBLANK
 0ACC: C9          ret
-    
+
 0ACD: FF FF FF
 
 SET_LEVEL_PLATFORM_XOFFS
@@ -1686,7 +1686,7 @@ SET_LEVEL_PLATFORM_XOFFS
 0AF3: 20 F9       jr   nz,$0AEE
 0AF5: CD 98 18    call $RESET_XOFFS
 0AF8: C9          ret
-    
+
 0AF9: FF ...
 
 ;;; platform data? nah. 2 bytes per screen
@@ -1757,7 +1757,7 @@ MOVING_PLATFORMS
 0BFA: 15          dec  d
 0BFB: 20 BD       jr   nz,$0BBA
 0BFD: C9          ret
-    
+
 0BFE: FF ...
 
 0C10: 00          nop
@@ -1872,7 +1872,7 @@ _LOOP
 0C92: 32 12 80    ld   ($PLAYER_DIED),a ; clear died
 0C95: CD 20 02    call $POST_DEATH_RESET
 0C98: C9          ret
-    
+
 0C99: FF ...
 
 DELAY_8_VBLANKS
@@ -2459,7 +2459,7 @@ UPDATE_EVERYTHING
 11B2: 21 20 00    ld   hl,$0020
 11B5: CD E3 01    call $JMP_HL_PLUS_4K ; $UPDATE_EVERYTHING_MORE
 11B8: C9          ret
-    
+
 11B9: FF ...
 
 11C0: 3A 58 81    ld   a,($ENEMY_2_X)
@@ -2530,7 +2530,7 @@ PLAYER_POS_UPDATE
 123A: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 123D: 32 02 80    ld   ($PL_Y_LEGS_COPY),a
 1240: C9          ret
-    
+
 1241: FF ...
 
 ;;; only called from PREVENT_CLOUD_JUMP_REDACTED
@@ -4831,7 +4831,7 @@ NOPPED_OUT_DISPATCH
 2CEF: C9          ret
 
 2CF0: FF ...
-    
+
     ;; HiScore somthing
 2D00: 21 00 83    ld   hl,$HISCORE
 2D03: 3A 14 80    ld   a,($P1_SCORE)
@@ -4861,7 +4861,7 @@ NOPPED_OUT_DISPATCH
 2D32: 20 E6       jr   nz,$2D1A
 2D34: CD 58 2D    call $2D58    ; p2 got hiscore
 2D37: C3 E8 03    jp   $03E8
-    
+
 2D3A: FF ...
 
 P1_GOT_HISCORE
@@ -4887,7 +4887,7 @@ P2_GOT_HISCORE
 2D70: 3E 02       ld   a,$02
 2D72: CD 88 2D    call $ENTER_HISCORE_SCREEN
 2D75: C9          ret
-    
+
 2D76: FF ...
 
 ENTER_HISCORE_SCREEN
