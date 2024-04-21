@@ -1,26 +1,29 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
 
-start_screen = 1 -- screen number (1-27), if not looping
-loop_screens = {} -- if you want to practise levels, eg:
+start_screen = 8 -- screen number (1-27), if not looping
+loop_screens = {13,14,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 1 -- starting round
+round = 2 -- starting round
 
+-- Serious bizness
 infinite_lives = true
-disable_round_speed_up = true -- don't get faster after catching dino
-skip_cutscene = true  -- don't show the cutscene
+fast_death = true    -- restart super fast after death
+fast_wipe = true  -- don't do slow transition to next screen
 disable_dino = false   -- no pesky dino... but also now you can't catch him
-fast_wipe = false  -- don't do slow transition to next screen
-fast_death = false    -- restart super fast after death
-clear_score = false    -- reset score to 0 on death and new screen
+disable_round_speed_up = true -- don't get faster after catching dino
+no_bonuses = true    -- don't skip screen on bonus
+skip_cutscene = true  -- don't show the cutscene
+clear_score = true -- reset score to 0 on death and new screen
 
+-- Non-so-serious binzness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
 
-extra_s_platform = false -- testing. Adds a way to escape dino on S levels
+extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
                      -- doesn't kill you.
 
@@ -51,17 +54,16 @@ function dump(o)
       return tostring(o)
    end
 end
-
+function print_pairs(o)
+   for tag, device in pairs(o) do print(tag) end
+end
 
 cpu = manager.machine.devices[":maincpu"]
 mem = cpu.spaces["program"]
 gfx = manager.machine.devices[":gfxdecode"]
-for tag, device in pairs(manager.machine.devices) do print(tag) end
 
---for k, v in pairs(mem.state) do print(k) end
---pal = manager.machine.devices[":gfxdecode"]
-dump(gfx.spaces)
-dump(manager.machine.devices)
+print_pairs(manager.machine.devices)
+print(dump(gfx.spaces))
 
 -------------- Helpers -------------
 
@@ -83,6 +85,10 @@ function peek(addr)
    return mem:read_u8(addr)
 end
 
+function on_game_start()
+   started = false -- triggered below
+end
+
 ------------- ROM hacks -------------
 
 -- poke_rom(0x069D, 0x20); -- autojump lol
@@ -94,11 +100,6 @@ end
 --poke_rom(0x8a2,8)
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
-
-
-function on_game_start()
-   started = false -- triggered below
-end
 
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
@@ -145,6 +146,8 @@ if head_style > 0 then
    poke_rom(0x6FA,{0,0,0}) -- player_physics frame set
 end
 
+----------- bug fixes -------------
+
 -- bugfix: draws inner border on YOUR BEING CHASED screen
 poke_rom(0x56da,0x5c)
 -- bugfix: the pointy stair-down platform
@@ -155,6 +158,8 @@ poke_rom(0x162d,0x0f)
 if fix_jump_bug == true then
    do_jump_bug_fix()
 end
+
+------------- settings -------------
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -173,6 +178,12 @@ if skip_cutscene == true then
    --poke_rom(0x3d48, {0xC3, 0x88, 0x3D});
    --xor a; ld (dino_counter),a ; jp $3d88 ("goto screen")
    poke_rom(0x3d48, {0xAF, 0x32, 0x2d, 0x80, 0xC3, 0x88, 0x3D});
+end
+
+if no_bonuses == true then
+   local GOT_A_BONUS = 0x29c0
+   poke_rom(GOT_A_BONUS,{0xc3, 0xf5, 0x29}) -- jump to end of sub
+   poke_rom(0x29FC,{0,0,0}) -- but don't skip screen
 end
 
 if alt_bongo_place == true then

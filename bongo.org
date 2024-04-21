@@ -281,6 +281,13 @@ Dino cage
 
 
 ---
+
+
+tas:1.25M!  https://tasvideos.org/6443S
+
+found a bug: inner border
+
+
 ** Trav bug
 
 trav bug: die on screen one/two
@@ -738,14 +745,16 @@ mini "bug" 8011 "falling timer' continues over to next screen - but you're on th
 * blerg
 hacking away at a wr.
 
+- not really into games... never finish them. like making and hacking - so what if did both at the same time?!
+- improve knowldeeg of code = better scores.
+
+- holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
+  
+* hw
+
 - 0.188: Map Bongo jump as a button and not as up direction [Angelo Salese].
 
-tas:1.25M!  https://tasvideos.org/6443S
-
-found a bug: inner border
-
-* hw
-    -------------------
+-------------------
 ROM_START( bongo )
 	ROM_REGION( 0x6000, "maincpu", 0 )
 	ROM_LOAD( "bg1.bin",    0x0000, 0x1000, CRC(de9a8ec6) SHA1(b5ee99b26d1a39e31b643ad0f5723ee8e364023e) )
