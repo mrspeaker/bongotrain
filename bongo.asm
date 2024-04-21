@@ -242,7 +242,7 @@ INIT_SCREEN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
-004E: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+004E: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 0051: CD 10 03    call $DRAW_TILES_H
 0054: 09 00
 0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; CREDIT FAULT
@@ -278,7 +278,7 @@ SETUP_BEFORE_PLAYING
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
 009C: CD 70 03    call $RESET_ENTS_ALL
-009F: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+009F: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 00A2: 18 EF       jr   $0093
 _PLAY_SPLASH
 00A4: CD A0 13    call $WAIT_VBLANK
@@ -618,7 +618,7 @@ SETUP_MORE
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
-034B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+034B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 034E: 21 00 80    ld   hl,$8000
 0351: 36 00       ld   (hl),$00
 0353: 2C          inc  l
@@ -725,7 +725,7 @@ OUT_OF_LIVES
 0413: CD E3 01    call $JMP_HL_PLUS_4K
 0416: CD E0 24    call $DELAY_60_VBLANKS
 0419: CD 30 04    call $CHECK_IF_HISCORE
-041C: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+041C: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $2D00
@@ -919,7 +919,7 @@ _SETUP_2 ;looks like SETUP - no one calls it?
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $RESET_ENTS_ALL
-0598: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+0598: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 059B: 18 E9       jr   $0586
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
@@ -1363,21 +1363,21 @@ CLEAR_JUMP_BUTTON
 
 INIT_PLAYER_SPRITE
 0898: 21 40 81    ld   hl,$PLAYER_X
-089B: 36 10       ld   (hl),$10
+089B: 36 10       ld   (hl),$10 ; x
 089D: 23          inc  hl
-089E: 36 0C       ld   (hl),$0C
+089E: 36 0C       ld   (hl),$0C ; frame
 08A0: 23          inc  hl
-08A1: 36 12       ld   (hl),$12
+08A1: 36 12       ld   (hl),$12 ; color
 08A3: 23          inc  hl
-08A4: 36 CE       ld   (hl),$CE
+08A4: 36 CE       ld   (hl),$CE ; y
 08A6: 23          inc  hl
-08A7: 36 10       ld   (hl),$10
+08A7: 36 10       ld   (hl),$10 ; x legs
 08A9: 23          inc  hl
-08AA: 36 0D       ld   (hl),$0D
+08AA: 36 0D       ld   (hl),$0D ; frame legs
 08AC: 23          inc  hl
-08AD: 36 12       ld   (hl),$12
+08AD: 36 12       ld   (hl),$12 ; color legs
 08AF: 23          inc  hl
-08B0: 36 DE       ld   (hl),$DE
+08B0: 36 DE       ld   (hl),$DE ; y legs
 08B2: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
 08B5: C9          ret
     
@@ -2251,7 +2251,7 @@ BIG_RESET
 101B: 3E 20       ld   a,$20
 101D: 32 30 80    ld   ($PLAYER_MAX_X),a
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
-1023: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+1023: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 1026: 21 E0 0F    ld   hl,$HEADER_TEXT_DATA ; loaded by DRAW_SCREEN
 1029: CD 40 08    call $DRAW_SCREEN
 102C: 00          nop
@@ -2605,7 +2605,7 @@ DRAW_BACKGROUND
 12E2: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
 _DRAW_COLUMN                    ; because first 6 are constant
-12E8: CD 28 13    call $DRAW_SCREEN_FROM_LEVEL_DATA
+12E8: CD 28 13    call $DRAW_SCREEN_COLUMN_FROM_LEVEL_DATA
 12EB: 00          nop
 12EC: 00          nop
 12ED: 00          nop
@@ -2647,8 +2647,8 @@ RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
     ;; Level BG data is FF separated, then split on 00.
     ;; Each row is a column of the screen, starting at col 6
     ;; first byte of segment is the row #
-DRAW_SCREEN_FROM_LEVEL_DATA
-1328: CD 68 17    call $CLEAR_24_TILES_SOMEWHERE
+DRAW_SCREEN_COLUMN_FROM_LEVEL_DATA
+1328: CD 68 17    call $CLEAR_COLUMN_OF_TILES
 _LP
 132B: DD 7E 00    ld   a,(ix+$00) ; ix + 0 (always 3?)
 132E: E5          push hl
@@ -2842,8 +2842,8 @@ DELAY_83                        ; maybe a delay?
 146F: FF
 
     ;; lotsa calls here
-CALL_RESET_XOFF_AND_COLS
-1470: CD 90 14    call $RESET_XOFF_AND_COLS
+CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+1470: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES
 
 1473: 00          nop
 1474: 00          nop
@@ -2873,12 +2873,12 @@ CLEAR_SCREEN
 148F: FF
 
     ;; Lotsa calls here (via $1470)
-RESET_XOFF_AND_COLS     ; sets 128 locations to 0
+RESET_XOFF_AND_COLS_AND_SPRITES     ; sets 128 locations to 0
 1490: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 1493: 36 00       ld   (hl),$00
-1495: 23          inc  hl       ; ld (hl),$01 inc hl
+1495: 23          inc  hl
 1496: 7D          ld   a,l
-1497: FE 80       cp   $80      ; 128 ;81
+1497: FE 80       cp   $80      ; 128
 1499: 20 F8       jr   nz,$1493
 149B: C9          ret
 
@@ -2922,9 +2922,9 @@ SCREEN_RESET
 14E0: 3A 15 83    ld   a,($TICK_MOD_FAST) ; faster in round 2
 14E3: E6 03       and  $03
 14E5: C0          ret  nz
-14E6: CD 50 3A    call $3A50
-14E9: CD 88 3A    call $3A88
-14EC: CD C0 3A    call $3AC0
+14E6: CD 50 3A    call $ENEMY_1_RESET
+14E9: CD 88 3A    call $ENEMY_2_RESET
+14EC: CD C0 3A    call $ENEMY_3_RESET
 14EF: C9          ret
 
 14F0: FF ...
@@ -3013,7 +3013,7 @@ ANIMATE_SPLASH_PICKUPS
 15CD: FF ...
 
 ATTRACT_BONUS_SCREEN
-15D0: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+15D0: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 15D3: CD 88 0F    call $DRAW_BORDER_1
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15D9: 3E 8C       ld   a,$8C
@@ -3052,7 +3052,8 @@ ATTRACT_BONUS_SCREEN
 1649: C9          ret
 164A: FF
 
-164B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+CLEAR_AND_DRAW_SCREEN
+164B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $DRAW_SCREEN
 1654: 00 00                     ; data
@@ -3196,7 +3197,7 @@ CHECK_DONE_SCREEN
 1767: C9          ret
 
     ;;
-CLEAR_24_TILES_SOMEWHERE
+CLEAR_COLUMN_OF_TILES
 1768: E5          push hl
 1769: 3E 03       ld   a,$03
 176B: 85          add  a,l
@@ -3447,7 +3448,7 @@ CLEAR_SCR_TO_BLANKS
 19D5: 00          nop
 19D6: 00          nop
 19D7: 00          nop
-_CLEAR_XOFF_COL   ; Same code as $RESET_XOFF_AND_COLS
+_CLEAR_XOFF_COL_SPR   ; Same code as $RESET_XOFF_AND_COLS_AND_SPRITES
 19D8: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 19DB: 36 00       ld   (hl),$00
 19DD: 23          inc  hl
@@ -3564,7 +3565,7 @@ _DID_INIT
 1B8E: 32 22 80    ld   ($DID_INIT),a ; (except here)
 _BOTH
 1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+1B94: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 
 1B97: 00          nop
 1B98: 00          nop
@@ -3811,12 +3812,12 @@ LEVEL_BG__S_S
 
 2122: FF ...
 
-    ;;
+WAIT_FOR_START_BUTTON
 2128: CD A0 13    call $WAIT_VBLANK
 212B: 3A 03 83    ld   a,($CREDITS)
 212E: A7          and  a
 212F: C8          ret  z
-2130: CD 90 14    call $RESET_XOFF_AND_COLS
+2130: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES
 2133: C3 A4 00    jp   $_PLAY_SPLASH
     ;;
 2136: FF ...
@@ -4160,7 +4161,7 @@ _I                              ; 10 loops
 
     ;; who calls?
 DRAWING_LOTSA_STUFF
-2550: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+2550: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$START_OF_TILES
 2559: 1E 79       ld   e,$79
@@ -4896,7 +4897,7 @@ ENTER_HISCORE_SCREEN
 2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
-2D95: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+2D95: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
@@ -5107,7 +5108,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 
 2FD5: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 2FD8: CD E0 24    call $DELAY_60_VBLANKS
-2FDB: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+2FDB: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
@@ -6321,6 +6322,8 @@ SET_ENEMY_3_F0_68
 
 3A4A: FF ...
 
+    ;;
+ENEMY_1_RESET
 3A50: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 3A53: A7          and  a
 3A54: C8          ret  z
@@ -6349,8 +6352,10 @@ SET_ENEMY_3_F0_68
 3A81: 3E 36       ld   a,$36
 3A83: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3A86: C9          ret
-3A87: FF          rst  $38
+3A87: FF
 
+    ;;
+ENEMY_2_RESET
 3A88: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
 3A8B: A7          and  a
 3A8C: C8          ret  z
@@ -6380,7 +6385,9 @@ SET_ENEMY_3_F0_68
 3ABB: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3ABE: C9          ret
 3ABF: FF          rst  $38
+
     ;; enemy 3
+ENEMY_3_RESET
 3AC0: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
 3AC3: A7          and  a
 3AC4: C8          ret  z
@@ -6768,7 +6775,7 @@ DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($CH1_SFX),a
 3D4D: 32 65 80    ld   ($SFX_PREV),a
-3D50: CD 70 14    call $CALL_RESET_XOFF_AND_COLS
+3D50: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $DRAW_SCREEN
 3D59: 00 00                     ; params to DRAW_SCREEN
@@ -8230,13 +8237,13 @@ PLAY_SFX
 48B0: C9          ret
 48B1: FF          rst  $38
 
-MUTLI_FLASH_BORDER
-48B2: CD 50 4B    call $4B50
+ATTRACK_YOUR_BEING_CHASED_FLASH
+48B2: CD 50 4B    call $YOUR_BEING_CHASED_DINO_SPRITE
 48B5: CD A8 5A    call $FLASH_BORDER
 48B8: CD A8 5A    call $FLASH_BORDER
 48BB: CD A8 5A    call $FLASH_BORDER
 48BE: CD A8 5A    call $FLASH_BORDER
-48C1: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
+48C1: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $FLASH_BORDER
 48CA: C9          ret
@@ -8667,22 +8674,23 @@ SFX_15_DATA
 4B48: 00 01 FF FF FF FF FF FF
 
     ;;
+YOUR_BEING_CHASED_DINO_SPRITE
 4B50: 21 40 81    ld   hl,$PLAYER_X
-4B53: 36 85       ld   (hl),$85
+4B53: 36 85       ld   (hl),$85 ; x
 4B55: 23          inc  hl
-4B56: 36 2C       ld   (hl),$2C
+4B56: 36 2C       ld   (hl),$2C ; frame
 4B58: 23          inc  hl
-4B59: 36 12       ld   (hl),$12
+4B59: 36 12       ld   (hl),$12 ; color
 4B5B: 23          inc  hl
-4B5C: 36 90       ld   (hl),$90
+4B5C: 36 90       ld   (hl),$90 ; y
 4B5E: 23          inc  hl
-4B5F: 36 7E       ld   (hl),$7E
+4B5F: 36 7E       ld   (hl),$7E ; x legs
 4B61: 23          inc  hl
-4B62: 36 30       ld   (hl),$30
+4B62: 36 30       ld   (hl),$30 ; frame legs
 4B64: 23          inc  hl
-4B65: 36 12       ld   (hl),$12
+4B65: 36 12       ld   (hl),$12 ; color legs
 4B67: 23          inc  hl
-4B68: 36 A0       ld   (hl),$A0
+4B68: 36 A0       ld   (hl),$A0 ; y legs
 4B6A: 23          inc  hl
 4B6B: C9          ret
 4B6C: FF ...
@@ -9054,7 +9062,7 @@ ATTRACT_SPLASH_BONGO
 4E29: 21 74 3F    ld   hl,$DRAW_PROUDLY_PRESENTS
 4E2C: CD 81 5C    call $JMP_HL
 4E2F: CD A8 5A    call $FLASH_BORDER
-4E32: 21 4B 16    ld   hl,$164B
+4E32: 21 4B 16    ld   hl,$CLEAR_AND_DRAW_SCREEN
 4E35: CD 81 5C    call $JMP_HL
 4E38: 3E 07       ld   a,$07
 4E3A: 32 29 80    ld   ($SCREEN_NUM),a
@@ -9133,19 +9141,21 @@ LOAD_A_VAL_REALLY_WEIRD
 4EAE: FF          rst  $38
 4EAF: FF          rst  $38
 
-    ;; some kind of effect? on splash screen something
-4EB0: CD C2 4E    call $4EC2
-4EB3: CD C2 4E    call $4EC2
-4EB6: CD C2 4E    call $4EC2
-4EB9: CD C2 4E    call $4EC2
+    ;; on splash screen something... wait a bunch
+WAIT_60_FOR_START_BUTTON
+4EB0: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
+4EB3: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
+4EB6: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
+4EB9: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
 4EBC: C9          ret
 4EBD: FF ...
 
+WAIT_15_FOR_START_BUTTON
 4EC2: 16 0E       ld   d,$0E
 4EC4: E5          push hl
 4EC5: C5          push bc
 4EC6: D5          push de
-4EC7: 21 28 21    ld   hl,$2128
+4EC7: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 4ECA: CD 81 5C    call $JMP_HL
 4ECD: D1          pop  de
 4ECE: C1          pop  bc
@@ -9153,8 +9163,10 @@ LOAD_A_VAL_REALLY_WEIRD
 4ED0: 15          dec  d
 4ED1: 20 F1       jr   nz,$4EC4
 4ED3: C9          ret
-4ED4: CD C2 4E    call $4EC2
-4ED7: CD C2 4E    call $4EC2
+
+    ;; what 30 for start
+4ED4: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
+4ED7: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
 4EDA: C9          ret
 
 4EDB: FF ...
@@ -9692,7 +9704,9 @@ MORE_SFX_SOMETHING?
 52DD: DD 7E 10    ld   a,(ix+$10)
 52E0: C9          ret
 52E1: FF          rst  $38
-52E2: CD B0 4E    call $4EB0
+
+    ;;
+52E2: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
 52E5: 21 40 81    ld   hl,$PLAYER_X
 52E8: 36 D8       ld   (hl),$D8 ; x
 52EA: 23          inc  hl
@@ -9702,18 +9716,18 @@ MORE_SFX_SOMETHING?
 52F0: 23          inc  hl
 52F1: 36 E0       ld   (hl),$E0 ; y
 52F3: 23          inc  hl
-52F4: 36 D8       ld   (hl),$D8
+52F4: 36 D8       ld   (hl),$D8 ; x legs
 52F6: 23          inc  hl
-52F7: 36 8D       ld   (hl),$8D
+52F7: 36 8D       ld   (hl),$8D ; frame legs
 52F9: 23          inc  hl
-52FA: 36 11       ld   (hl),$11
+52FA: 36 11       ld   (hl),$11 ; color legs
 52FC: 23          inc  hl
-52FD: 36 F0       ld   (hl),$F0
+52FD: 36 F0       ld   (hl),$F0 ; y legs
 52FF: 1E 06       ld   e,$06
 5301: CD 28 53    call $5328
 5304: 1D          dec  e
 5305: 20 FA       jr   nz,$5301
-5307: 21 48 81    ld   hl,$BONGO_X
+5307: 21 48 81    ld   hl,$BONGO_X ; using bongo - but it shows dino
 530A: 36 20       ld   (hl),$20
 530C: 23          inc  hl
 530D: 36 2D       ld   (hl),$2D
@@ -10127,7 +10141,7 @@ _DONE
 559E: FF ...
 
 CHASED_BY_A_DINO_SCREEN
-55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
+55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
 55A6: CD D0 56    call $DRAW_BUGGY_BORDER
 55A9: 00          nop
@@ -10147,7 +10161,7 @@ CHASED_BY_A_DINO_SCREEN
 55DB: 10 07
     ;; BY A DINOSAUR (classic!)
 55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
-55EB: C3 B2 48    jp   $MUTLI_FLASH_BORDER
+55EB: C3 B2 48    jp   $ATTRACK_YOUR_BEING_CHASED_FLASH
 
 55EE: FF ...
 
@@ -10715,7 +10729,7 @@ SET_SCREEN_COLOR_TO_4
 5AEC: FF ...
 
 DRAW_EXTRA_BONUS_SCREEN
-5AF0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS
+5AF0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$DRAW_BORDER_1
 5AF9: CD 81 5C    call $JMP_HL

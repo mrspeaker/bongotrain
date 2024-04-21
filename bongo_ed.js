@@ -88,15 +88,15 @@ import { search_str } from "./search_str.js";
     }
 
     const drawSpr = (spr, x, y, cols) => {
-        const off = 256 + spr * 4;
+        const off = 0 + spr * 4;
         drawTile(tiles[off], x + 8, y, cols);
         drawTile(tiles[off + 1], x + 8, y + 8, cols);
         drawTile(tiles[off + 2], x, y, cols);
         drawTile(tiles[off + 3], x, y + 8, cols);
     };
 
-    let yo = 64 + 8;
-    for (let j = 0; j < 4; j++) {
+    let yo = 78;
+    for (let j = 0; j < 8; j++) {
         for (let i = 0; i < 16; i++) {
             drawSpr(j * 16 + i, i * 16, j * 16 + yo);
         }
