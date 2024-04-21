@@ -6810,7 +6810,7 @@ DO_CUTSCENE
 3D98: 32 2A 80    ld   ($SCREEN_NUM_P2),a ; player 2 screen
 3D9B: C3 00 10    jp   $BIG_RESET
 3D9E: C9          ret
-3D9F: FF          rst  $38
+3D9F: FF
 
 DRAW_CAGE_AND_SCENE             ; for cutscene
 3DA0: 21 18 92    ld   hl,$9218

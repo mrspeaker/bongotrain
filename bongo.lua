@@ -1,22 +1,24 @@
 
-start_screen = 8 -- screen number (1-27), if not looping
-loop_screens = {} -- if you want to practise levels, eg:
+start_screen = 2 -- screen number (1-27), if not looping
+loop_screens = {27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
 round = 2 -- starting round
 
 infinite_lives = true
-disable_round_speed_up = false -- don't get faster after catching dino
-skip_cutscene = false  -- don't show the cutscene
+disable_round_speed_up = true -- don't get faster after catching dino
+skip_cutscene = true  -- don't show the cutscene
 disable_dino = false   -- no pesky dino... but also now you can't catch him
 fast_wipe = true  -- don't do slow transition to next screen
 fast_death = true    -- restart super fast after death
 clear_score = false    -- reset score to 0 on death and new screen
 
-theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
+theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 2 -- 0 = normal, 1 = dance, 2 = dino
+head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
+
+extra_s_platform = false -- testing. Adds a way to escape dino on S levels
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -80,7 +82,6 @@ end
 ------------- ROM hacks -------------
 
 -- poke_rom(0x069D, 0x20); -- autojump lol
-poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
 --poke_rom(0x1494,0x1)
 --poke_rom(0x19dc,0x2)
 --
@@ -127,10 +128,10 @@ end
 
 -- bugfix: draws inner border on YOUR BEING CHASED screen
 poke_rom(0x56da,0x5c)
+-- bugfix: the pointy stair-down platform
+poke_rom(0x1f01,0xfc)
 -- typography fix: align 1000 bonus better
 poke_rom(0x162d,0x0f)
--- fix the pointy stair-down platform
-poke_rom(0x1f01,0xfc)
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -146,8 +147,9 @@ if disable_round_speed_up == true then
 end
 
 if skip_cutscene == true then
-   --0xc3 0x8B 0x3D
-   poke_rom(0x3d48, {0xC3, 0x8B, 0x3D});
+   --poke_rom(0x3d48, {0xC3, 0x88, 0x3D});
+   --xor a; ld (dino_counter),a ; jp $3d88 ("goto screen")
+   poke_rom(0x3d48, {0xAF, 0x32, 0x2d, 0x80, 0xC3, 0x88, 0x3D});
 end
 
 if alt_bongo_place == true then
@@ -167,6 +169,10 @@ end
 
 if disable_dino == true then
    poke_rom(0x22FE, 0xC9); -- ret from timer start check
+end
+
+if extra_s_platform == true then
+   poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
 end
 
 if theme ~= 0 then
