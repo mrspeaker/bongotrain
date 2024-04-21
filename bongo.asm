@@ -636,7 +636,7 @@ SETUP_MORE
 036A: FF ...
 
 RESET_ENTS_ALL
-0370: CD 70 14    call $CALL_RESET_ENTS
+0370: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
 0376: CD E3 01    call $JMP_HL_PLUS_4K
 0379: 21 20 0E    ld   hl,$0E20
@@ -2917,8 +2917,9 @@ SCREEN_RESET
 14D8: 46          ld   b,(hl)
 14D9: ED 43 20 80 ld   ($LEVEL_BG_PTR),bc
 14DD: C9          ret
-14DE: FF ..
+14DE: FF FF
 
+RESET_ENEMIES_2
 14E0: 3A 15 83    ld   a,($TICK_MOD_FAST) ; faster in round 2
 14E3: E6 03       and  $03
 14E5: C0          ret  nz
@@ -6488,7 +6489,7 @@ SET_ENEMY_3_90_C0
 3B66: FF FF
 
 3B68: CD 40 3B    call $3B40
-3B6B: CD E0 14    call $14E0
+3B6B: CD E0 14    call $RESET_ENEMIES_2
 3B6E: 00          nop
 3B6F: 00          nop
 3B70: 00          nop

@@ -1,17 +1,19 @@
+-- Bongo trainer, by Mr Speaker.
+-- https://www.mrspeaker.net
 
-start_screen = 2 -- screen number (1-27), if not looping
-loop_screens = {27} -- if you want to practise levels, eg:
+start_screen = 1 -- screen number (1-27), if not looping
+loop_screens = {} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 1 -- starting round
 
 infinite_lives = true
 disable_round_speed_up = true -- don't get faster after catching dino
 skip_cutscene = true  -- don't show the cutscene
 disable_dino = false   -- no pesky dino... but also now you can't catch him
-fast_wipe = true  -- don't do slow transition to next screen
-fast_death = true    -- restart super fast after death
+fast_wipe = false  -- don't do slow transition to next screen
+fast_death = false    -- restart super fast after death
 clear_score = false    -- reset score to 0 on death and new screen
 
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
@@ -19,6 +21,8 @@ technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
 
 extra_s_platform = false -- testing. Adds a way to escape dino on S levels
+fix_jump_bug = false -- hold down jump after transitioning screen from high jump
+                     -- doesn't kill you.
 
 -- Removed features I found in the code
 show_timers = true -- speed run timers! Don't know why they removed them
@@ -91,6 +95,11 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
+
+function on_game_start()
+   started = false -- triggered below
+end
+
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
 function set_theme(col)
@@ -105,8 +114,18 @@ function set_theme(col)
    poke_rom(0x179B,col)
 end
 
-function on_game_start()
-   started = false -- triggered below
+-- not doing by default as it changes how the game plays
+function do_jump_bug_fix()
+   poke_rom(0x14dd, {0xaf,                -- xor a           ; reset falling_timer on
+                     0x32, 0x11, 0x80,    -- ld  ($8011),a   ; screen_reset
+                     0xc9,                -- ret
+                     0x3a, 0x15, 0x83,    -- Existing: used to start $14e0,
+                     0xe6, 0x03, 0xc0,    -- now starts $14e2
+                     0xcd, 0x50, 0x3a,
+                     0xcd, 0x88, 0x3a,
+                     0xcd, 0xc0, 0x3a,
+                     0xc9})
+   poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
 end
 
 if head_style > 0 then
@@ -132,6 +151,10 @@ poke_rom(0x56da,0x5c)
 poke_rom(0x1f01,0xfc)
 -- typography fix: align 1000 bonus better
 poke_rom(0x162d,0x0f)
+
+if fix_jump_bug == true then
+   do_jump_bug_fix()
+end
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
@@ -245,7 +268,6 @@ tap3 = mem:install_write_tap(ground, ground, "writes", function(offset, data)
 end)
 
 -- p1/p2 button to skip/go back screens
--- todo: should respect loops?
 pbuttons = false
 buttons = 0x800c
 tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
