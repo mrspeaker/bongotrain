@@ -1,6 +1,19 @@
 * Bongo
 Welcom to bongo.
 
+* blerg
+hacking away at a video game wr.
+aka: the earl of bongo
+
+at the office there is an arcade machine. It's one of those xxxx-in-one machines that has thousands of old games on it. Most of the games are bad, but if you hunt around you can find games on it that are *really* bad. If a game is both bad and good enough, it makes it to  our offce "Shit-game olympics" list.
+
+A few months ago a game called Bongo made the list, and started me on a journey: a journey ... wr.
+
+- not really into games... never finish them. like making and hacking - so what if did both at the same time?!
+- improve knowldeeg of code = better scores.
+- holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
+  
+
 * Mame debugging
 
 ./mame bongo -autoboot_script scripts/bongo.lua
@@ -742,14 +755,6 @@ mini "bug" 8011 "falling timer' continues over to next screen - but you're on th
 
     
     
-* blerg
-hacking away at a wr.
-
-- not really into games... never finish them. like making and hacking - so what if did both at the same time?!
-- improve knowldeeg of code = better scores.
-
-- holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
-  
 * hw
 
 - 0.188: Map Bongo jump as a button and not as up direction [Angelo Salese].
