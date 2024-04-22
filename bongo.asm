@@ -92,6 +92,9 @@
     EXTRA_GOT_P1   $8070  ; P1 Earned extra life
     EXTRA_GOT_P1   $8071  ; P2 Earned extra life
 
+    _              $8075  ; ??
+    _              $8076  ; ??
+
     SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
                           ; Gets memcpy'd to $9800
 
@@ -4977,7 +4980,7 @@ ENTER_HISCORE_SCREEN
 2EBE: 28 08       jr   z,$2EC8
 2EC0: E1          pop  hl
 2EC1: 36 89       ld   (hl),$89
-2EC3: CD 08 31    call $3108
+2EC3: CD 08 31    call $HISCORE_ENTER_SOMETHING
 2EC6: 18 B8       jr   $2E80
 2EC8: E1          pop  hl
 2EC9: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
@@ -5256,6 +5259,8 @@ SET_HISCORE_TEXT
 
 30FF: FF ...
 
+    ;;
+HISCORE_ENTER_SOMETHING
 3108: E5          push hl
 3109: C5          push bc
 310A: FD E5       push iy
@@ -5268,7 +5273,7 @@ SET_HISCORE_TEXT
 3119: 3C          inc  a
 311A: 32 76 80    ld   ($8076),a
 311D: E6 01       and  $01
-311F: 28 14       jr   z,$3135
+311F: 28 14       jr   z,$3135  ; um, bug? Middle of instruction! "93" (sub e)
 3121: 21 75 80    ld   hl,$8075
 3124: 7E          ld   a,(hl)
 3125: 3D          dec  a
@@ -5286,7 +5291,7 @@ SET_HISCORE_TEXT
 313C: C1          pop  bc
 313D: E1          pop  hl
 313E: C9          ret
-313F: FF          rst  $38
+313F: FF
 
     ;; load rock pos (reset rock pos?)
 UPDATE_ENEMY_1
@@ -8242,7 +8247,7 @@ PLAY_SFX
 48B0: C9          ret
 48B1: FF          rst  $38
 
-ATTRACK_YOUR_BEING_CHASED_FLASH
+ATTRACT_YOUR_BEING_CHASED_FLASH
 48B2: CD 50 4B    call $YOUR_BEING_CHASED_DINO_SPRITE
 48B5: CD A8 5A    call $FLASH_BORDER
 48B8: CD A8 5A    call $FLASH_BORDER
@@ -9578,10 +9583,7 @@ SFX_6_DATA
 51E9: FF          rst  $38
 
 SFX_7_DATA
-51EA: 03          inc  bc
-51EB: DA 51 E6    jp   c,$E651
-51EE: 51          ld   d,c
-51EF: F4 51 FF    call p,$FF51
+51EA: 03 DA 51 E6 51 F4 51 FF
 51F2: FF          rst  $38
 51F3: FF          rst  $38
 51F4: F8          ret  m
@@ -10168,7 +10170,7 @@ CHASED_BY_A_DINO_SCREEN
 55DB: 10 07
     ;; BY A DINOSAUR (classic!)
 55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
-55EB: C3 B2 48    jp   $ATTRACK_YOUR_BEING_CHASED_FLASH
+55EB: C3 B2 48    jp   $ATTRACT_YOUR_BEING_CHASED_FLASH
 
 55EE: FF ...
 
@@ -10873,7 +10875,8 @@ JMP_HL
 5C82: 40          ld   b,b
 5C83: 41          ld   b,c
 5C84: C9          ret
-5C85: FF          rst  $38
+5C85: FF
+
 5C86: 06 01       ld   b,$01
 5C88: 06 01       ld   b,$01
 5C8A: 06 01       ld   b,$01
@@ -11183,14 +11186,7 @@ SFX_11_DATA
 5E87: FF          rst  $38
 
 SFX_12_DATA
-5E88: 03          inc  bc
-5E89: 75          ld   (hl),l
-5E8A: 5E          ld   e,(hl)
-5E8B: 90          sub  b
-5E8C: 5E          ld   e,(hl)
-5E8D: 79          ld   a,c
-5E8E: 5E          ld   e,(hl)
-5E8F: FF          rst  $38
+5E88: 03 75 5E 90 5E 79 5E FF
 5E90: F4 5D 1C    call p,$1C5D
 5E93: 5E          ld   e,(hl)
 5E94: 4C          ld   c,h
@@ -11288,12 +11284,7 @@ SFX_12_DATA
 5F2F: FF          rst  $38
 
 SFX_13_DATA
-5F30: 03          inc  bc
-5F31: 24          inc  h
-5F32: 5F          ld   e,a
-5F33: 20 5F       jr   nz,$5F94
-5F35: 28 5F       jr   z,$5F96
-5F37: FF          rst  $38
+5F30: 03 24 5F 20 5F 28 5F FF
 5F38: 09          add  hl,bc
 5F39: 01 0E 01    ld   bc,$010E
 5F3C: 10 01       djnz $5F3F
@@ -11343,14 +11334,7 @@ SFX_13_DATA
 5F77: FF          rst  $38
 
 SFX_14_DATA
-5F78: 03          inc  bc
-5F79: 90          sub  b
-5F7A: 5F          ld   e,a
-5F7B: 80          add  a,b
-5F7C: 5F          ld   e,a
-5F7D: 98          sbc  a,b
-5F7E: 5F          ld   e,a
-5F7F: FF          rst  $38
+5F78: 03 90 5F 80 5F 98 5F FF
 5F80: 38 5F       jr   c,$5FE1
 5F82: 20 4A       jr   nz,$5FCE
 5F84: 20 4A       jr   nz,$5FD0
