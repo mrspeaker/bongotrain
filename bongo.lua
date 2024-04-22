@@ -1,27 +1,27 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
 
-start_screen = 1 -- screen number (1-27), if not looping
-loop_screens = {} --13,14,21,25,27} -- if you want to practise levels, eg:
+start_screen = 2 -- screen number (1-27), if not looping
+loop_screens = {}--13,14,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 1 -- starting round
+round = 2 -- starting round
 
 -- Serious bizness
-infinite_lives = true
+infinite_lives = false
 fast_death = true    -- restart super fast after death
 fast_wipe = true  -- don't do slow transition to next screen
 disable_dino = false   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
-no_bonuses = true    -- don't skip screen on bonus
+no_bonuses = false    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
-clear_score = true -- reset score to 0 on death and new screen
+clear_score = false -- reset score to 0 on death and new screen
 
 -- Non-so-serious bizness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 2 -- 0 = normal, 1 = dance, 2 = dino
+head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
 
 extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
@@ -154,6 +154,9 @@ poke_rom(0x56da,0x5c)
 poke_rom(0x1f01,0xfc)
 -- typography fix: align 1000 bonus better
 poke_rom(0x162d,0x0f)
+-- bugfix: don't jump to wrong byte in hiscore something.
+-- no visual changes, but hey.
+--poke_rom(0x3120,0x17)
 
 if fix_jump_bug == true then
    do_jump_bug_fix()

@@ -13,7 +13,7 @@ A few months ago ... An excite slack notifciation notified me "check out the new
 - not really into games... never finish them. like making and hacking - so what if did both at the same time?!
 - improve knowldeeg of code = better scores.
 - holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
-  
+  - couple of "middle of instruction" jumps - that luckily don't crash things. (HISCORE_ENTER_TIMER, and DRAW_BUGGY_BORDER). buggy border is a single bit (4 vs 5), but hiscore is 2 bits - (7 vs 4) - so probably not import error.
 
 * Mame debugging
 
@@ -272,6 +272,8 @@ fast round - can jump from second-to-bottom stair
 - what's that weird tiny "slowdown" right at the start? Lags for a split second
 - maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
 
+- on S-with-arrow levels, after getting 1000 bonus, JUMP back down - much faster than running the gauntlet towards the arrow
+
 --- advanced 
 on highwire levels, pauses for a few frames before falling to platform
 
@@ -282,6 +284,8 @@ can make it IN FRONT of the highwire birds: only way to beat faster levels (eg, 
 
 Blue meanies: as dino gets faster - can't wait - have to jump over the first one.
 This mean you miss the pickup: but it IS possible (not too hard) to jump back and get the pickup, then sneak under the second blue meanie. (works for round 4 - round 5 it can work but is much tricker: need to grab the pickup and then jump from the second-to-bottom platform... timing is harrrd)
+
+- extra points if you jump over the bonus on W and go to end, then come back - but very difficult to not pickup the pikup, and difficult not to trigger next level
 
 Dino cage
 1. Wait until dino goes up to middle platform, then go in front of two birds. Wait until front bird is close then spring.
@@ -688,6 +692,8 @@ The only thing that seems to change is how long the dino takes to start
 It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
 
 Can jump from one-step-higher in second round
+
+-- hand ro
 
 -----
     ;; Oooh, mystery function - commented out.

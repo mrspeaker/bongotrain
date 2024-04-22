@@ -92,8 +92,8 @@
     EXTRA_GOT_P1   $8070  ; P1 Earned extra life
     EXTRA_GOT_P1   $8071  ; P2 Earned extra life
 
-    _              $8075  ; ??
-    _              $8076  ; ??
+    HISCORE_TIMER  $8075  ; Countdown for entering time in hiscore screen
+    HISCORE_TIMER2 $8076  ; 16 counter for countdown
 
     SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
                           ; Gets memcpy'd to $9800
@@ -175,6 +175,7 @@
     TILE_HYPHEN     $2B
 
     TILE_CAGE       $74
+    TILE_CURSOR     $89
     TILE_CROWN_PIKA $8C ; alt crown
     TILE_PIK_CROSSA $8D
     TILE_PIK_RINGA  $8E
@@ -2501,13 +2502,13 @@ UPDATE_EVERYTHING
 PLAYER_POS_UPDATE
 1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 1203: 47          ld   b,a
-1204: 3A 02 80    ld   a,($PL_Y_LEGS_COPY)
+1204: 3A 02 80    ld   a,($PL_Y_LEGS_COPY) ; no idea what this is about
 1207: B8          cp   b
-1208: 20 1E       jr   nz,$1228 ; legs copy different from legs?
-120A: C6 08       add  a,$08
-120C: CB 3F       srl  a
+1208: 20 1E       jr   nz,$_DID_LEG_THING ; legs copy different from legs?
+120A: C6 08       add  a,$08              ; they are the same.. add 8
+120C: CB 3F       srl  a                  ; ...
 120E: CB 3F       srl  a
-1210: E6 3E       and  $3E
+1210: E6 3E       and  $3E      ; 0011 1110 (62)
 1212: 26 81       ld   h,$81
 1214: 6F          ld   l,a
 1215: 3A 03 80    ld   a,($8003)
@@ -2521,6 +2522,7 @@ PLAYER_POS_UPDATE
 1221: 81          add  a,c
 1222: 32 40 81    ld   ($PLAYER_X),a
 1225: 32 44 81    ld   ($PLAYER_X_LEGS),a
+_DID_LEG_THING
 1228: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 122B: C6 08       add  a,$08
 122D: CB 3F       srl  a
@@ -4942,13 +4944,14 @@ ENTER_HISCORE_SCREEN
 2E68: 32 82 93    ld   ($9382),a
 2E6B: AF          xor  a
 2E6C: 32 62 93    ld   ($9362),a
-2E6F: 32 75 80    ld   ($8075),a
+2E6F: 32 75 80    ld   ($HISCORE_TIMER),a
 2E72: F1          pop  af
 2E73: FD 21 77 92 ld   iy,$9277
 2E77: 32 84 91    ld   ($9184),a
 2E7A: CD 88 2F    call $2F88
 2E7D: 21 4E 93    ld   hl,$934E
-2E80: 36 89       ld   (hl),$89
+SET_CURSOR
+2E80: 36 89       ld   (hl),$TILE_CURSOR
 2E82: DD 21 F1 83 ld   ix,$INPUT_BUTTONS
 2E86: 3A 84 91    ld   a,($9184)
 2E89: FE 01       cp   $01
@@ -4979,9 +4982,9 @@ ENTER_HISCORE_SCREEN
 2EBD: BC          cp   h
 2EBE: 28 08       jr   z,$2EC8
 2EC0: E1          pop  hl
-2EC1: 36 89       ld   (hl),$89
-2EC3: CD 08 31    call $HISCORE_ENTER_SOMETHING
-2EC6: 18 B8       jr   $2E80
+2EC1: 36 89       ld   (hl),$TILE_CURSOR ; useless? Done in SET_CURSOR
+2EC3: CD 08 31    call $HISCORE_ENTER_TIMER
+2EC6: 18 B8       jr   $SET_CURSOR
 2EC8: E1          pop  hl
 2EC9: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
 2ECC: C9          ret
@@ -5260,7 +5263,7 @@ SET_HISCORE_TEXT
 30FF: FF ...
 
     ;;
-HISCORE_ENTER_SOMETHING
+HISCORE_ENTER_TIMER
 3108: E5          push hl
 3109: C5          push bc
 310A: FD E5       push iy
@@ -5269,17 +5272,22 @@ HISCORE_ENTER_SOMETHING
 3110: CD A0 13    call $WAIT_VBLANK
 3113: 0D          dec  c
 3114: 20 FA       jr   nz,$3110
-3116: 3A 76 80    ld   a,($8076)
+3116: 3A 76 80    ld   a,($HISCORE_TIMER2)
 3119: 3C          inc  a
-311A: 32 76 80    ld   ($8076),a
+311A: 32 76 80    ld   ($HISCORE_TIMER2),a
 311D: E6 01       and  $01
-311F: 28 14       jr   z,$3135  ; um, bug? Middle of instruction! "93" (sub e)
-3121: 21 75 80    ld   hl,$8075
+    ;; Bug! Jumps to middle of instruction! 0x93 = `sub e, rld (hl)`
+    ;; I think maybe should be $3138? (28 17 instead of 28 14)
+    ;; (hl) points to the cursor pos. `rld (hl)` makes the cursor into a "0" (tile 0x90),
+    ;; but you don't see a visual glitch: because the cursor is re-drawn just
+    ;; immediately after this sub returns ($2E80)
+311F: 28 14       jr   z,$3135
+3121: 21 75 80    ld   hl,$HISCORE_TIMER
 3124: 7E          ld   a,(hl)
 3125: 3D          dec  a
 3126: 27          daa
 3127: CC 10 2F    call z,$THINGS_THEN_COPY_HISCORE_NAME
-312A: 77          ld   (hl),a
+312A: 77          ld   (hl),a   ; load a into $HISCORE_TIMER
 312B: AF          xor  a
 312C: ED 6F       rld  (hl)
 312E: 32 82 93    ld   ($9382),a
