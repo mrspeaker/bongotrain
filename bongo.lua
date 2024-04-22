@@ -1,7 +1,7 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
 
-start_screen = 2 -- screen number (1-27), if not looping
+start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {}--13,14,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
@@ -156,7 +156,15 @@ poke_rom(0x1f01,0xfc)
 poke_rom(0x162d,0x0f)
 -- bugfix: don't jump to wrong byte in hiscore something.
 -- no visual changes, but hey.
---poke_rom(0x3120,0x17)
+poke_rom(0x3120,0x17)
+
+function where_is_starfield
+   poke_rom(0xb004, 0xff) -- try to enable starfield
+   poke_rom(0x1480, {0xc9,0,0})
+   poke_rom(0x19c8, {0,0})
+   poke_rom(0x1768, {0xc9})
+   poke_rom(0xb004, 0xff)
+end
 
 if fix_jump_bug == true then
    do_jump_bug_fix()

@@ -10,6 +10,8 @@ at the office there is an arcade machine. It's one of those xxxx-in-one machines
 A few months ago ... An excite slack notifciation notified me "check out the new game".  a game called Bongo made the list, and started me on a journey: a journey ... hacking, trainign montges, , world record
 
 ----
+- while making a patch in the rom, missed a RET and the screen went to Galaxian startfiled scroll! What? rabbit hole of hacked ROM releases
+  
 - not really into games... never finish them. like making and hacking - so what if did both at the same time?!
 - improve knowldeeg of code = better scores.
 - holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
@@ -954,6 +956,64 @@ void galaxian_state::mooncrst_map_base(address_map &map)
     with value read from DSW (AY port A) via code at 0x3647.
     
 * jetsoft
+
+c64:
+
+ad: BMX Stunts, Cavelon II, Quari (bongo port). JetSoft the arcade people. 061-775 0333
+Sprite and character editor: https://ia903202.us.archive.org/31/items/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB.pdf
+RESET SWITCH (c64) - plugs into disc port  - instantly resets. "You need never loose a program again"
+
+Cavelon arcade game has exact same hiscore screen as bongo
+
+(wassis? https://uk.linkedin.com/in/john-hutchinson-b6898a23)
+
+
+"Was actually known as "Hopto" under the Mastertronic label,"
+"Hey, the game I had in TuttoComputer/games 3 with the name "Bongo"!"
+
+Real hardware: https://www.ukvac.com/forum/threads/bongo-by-jetsoft.9681/
+
+Fan art: https://cohost.org/rc/tagged/Bongo%20(Jetsoft)
+
+"'The Codemasters story actually begins in the early Eighties with Richard and David Darling. Fascinated with computers from an early age, they fell in love with coding and were soon making games, first for Mirrorsoft and Jetsoft and then for budget Kings Mastertronic. '"
+https://archive.org/details/retrogamerukbonus/Retro%20009%20%5B%21%5D/page/150/mode/2up?q=jetsoft
+
+Jetsoft were based in Manchester, or Leeds, depending on which advert you look at (see Your Computer, Dec '84 and Computer Gamer, April '85).
+
+- dudes talking bongo: https://retrogamingdailyshow.libsyn.com/285-arcade-hidden-gems-volume-4
+  "there is a charm in it's wonky...." "the guy is camper than..." "I fell in love with this game..."
+"so much charm"  "on the face of it it should be simple, but because the controls are so janky..." "you just come back for more"
+  - competion to win arcade: https://ia903202.us.archive.org/31/items/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB.pdf pg 25
+
+
+  
+** Company
+JETSOFT
+GOLD STAR HOUSE,
+198/200, Queenswood Drive,
+Leeds LS6 3ND.
+Tel. 0532 788758
+
+says they are US but I think no... https://www.arcade-museum.com/Videogame/cavelon
+
+long shot:
+Me and Rav met Crazy John from Free Enterprise Games. Yes he's a massive hacker, did loads of the Galaxian hacks, he gave us a load of cabs,pcbs and other stuff and showed us the stuff he still had including some unreleased games. He gave us the flyer for a couple, I have them somewhere.
+https://www.ukvac.com/forum/threads/arcade-manufacturers-in-the-uk.19228/#post-68330
+(bongo is a galaxian hack)
+
+----
+Hello John,
+
+I am trying to find out information about an arcade game called Bongo that was made by JetSoft in 1983. I was hoping to find out who the programmer was (or anything about it, really). 
+
+There isn't much information about the company online, but while searching I stumbled over a post that said you knew a lot about Galaxian hacks: which I think Bongo is one.
+
+As a longshot I thought I'd message you and see if you might know anything about it! No worries if not, and thank you for your time.
+
+Earle Castledine
+
+** Nope, red herring Jetsoft
+*** Falmouth
 Official Gazette of the United States Patent and Trademark Office. Trademarks  1983-11-22: Vol 1036 Iss 4
 https://archive.org/details/sim_official-gazette-us-patent-trademark-office-trademarks_1983-11-22_1036_4/page/424/mode/2up?q=jetsoft
 
@@ -969,20 +1029,7 @@ Jetsoft
 East Falmouth, MA 02536
 (617) 548-6670
 
-c64:
-
-ad: BMX Stunts, Cavelon II, Quari (bongo port). JetSoft the arcade people. 061-775 0333
-
-"Was actually known as "Hopto" under the Mastertronic label,"
-"Hey, the game I had in TuttoComputer/games 3 with the name "Bongo"!"
-
-Real hardware: https://www.ukvac.com/forum/threads/bongo-by-jetsoft.9681/
-
-Fan art: https://cohost.org/rc/tagged/Bongo%20(Jetsoft)
-
-.... after 2000: "Paint It (JETSoft)" https://archive.org/details/supportinginform0000farm/page/78/mode/2up?q=jetsoft
-
-** JETII
+*** JETII
 https://archive.org/details/bitsavers_datamation_54610682/page/n229/mode/2up?q=jetsoft
 DEVELOPMENT SYSTEM
 
@@ -994,10 +1041,13 @@ A report writer program is also in¬ cluded in the software. Designed to gener¬
 
 Programs and packages developed with this software are operating system-independent and transportable to most micro¬ computers. jetIII is available for a single copy, six-user cost of $40,000. jetsoft inc.. East Falmouth, Mass.
 
-** other 
+*** other 
 Jetsoft Corp: same jetsoft? https://archive.org/details/bub_gb_Xi8EAAAAMBAJ/page/n55/mode/2up?q=jetsoft
 Screen Protector, Screen Guardian
 Jetsoft Corp., 61 Crosby St., New York; (212) 966-9894
+
+.... after 2000: "Paint It (JETSoft)" https://archive.org/details/supportinginform0000farm/page/78/mode/2up?q=jetsoft
+
 
 Art-Copy 5.0: same? https://archive.org/details/HP-Professional_Vol._12_No._11_Nov_1998/page/44/mode/2up?q=jetsoft
 Jetsoft Development Company Cincinnati, OH (800) 374-7401
@@ -1005,10 +1055,6 @@ Jetsoft Development Company Cincinnati, OH (800) 374-7401
 Scanning software
 https://archive.org/details/MacDirectory_Issue_9_Spring_2001/page/170/mode/2up?q=jetsoft
 JETSOFT DEVELOPMENT, www.jetsoftdev.com 513/528-8668
-
-
-"'The Codemasters story actually begins in the early Eighties with Richard and David Darling. Fascinated with computers from an early age, they fell in love with coding and were soon making games, first for Mirrorsoft and Jetsoft and then for budget Kings Mastertronic. '"
-https://archive.org/details/retrogamerukbonus/Retro%20009%20%5B%21%5D/page/150/mode/2up?q=jetsoft
 
 
 oh no! Not the right Jetsoft?!
@@ -1022,6 +1068,7 @@ Hello,
 I'm not sure if I've reached the right person, but I've been trying to learn more about an old arcade game from 1983 called "Bongo". It was released by a company called JetSoft. 
  
 I was wondering if it was the same company you were a part of, and if so - if you know who coded and designed the game? And if not, sorry to bother you!
-        
+
+reply: nope, sorry.
 -------
 
