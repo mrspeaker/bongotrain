@@ -173,7 +173,7 @@
 
     TILE_CAGE       $74
     TILE_CROWN_PIKA $8C ; alt crown
-    TILE_PIK_CROSSA $8D ;
+    TILE_PIK_CROSSA $8D
     TILE_PIK_RINGA  $8E
     TILE_PIK_VASEA  $8F
     TILE_CROWN_PIK  $9C
@@ -182,7 +182,7 @@
     TILE_PIK_VASE   $9F
     TILE_LVL_01     $C0
 
-    ;; > $F8 is a platform
+    ;; tile > $F8 is a platform
     TILE_SOLID      $F8 ; high-wire platform R
     TILE_PLATFORM_R $FC
     TILE_PLATFORM_C $FD
@@ -2616,8 +2616,7 @@ _DRAW_COLUMN                    ; because first 6 are constant
 RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
 12F1: 22 1E 80    ld   ($SCREEN_PTR),hl ; hl = 9000 when hits here on death
 12F4: CD 10 35    call $RESET_ENEMIES
-    ;; calls $4c50: ADD_MOVE_SCORE
-12F7: 21 50 0C    ld   hl,$0C50
+12F7: 21 50 0C    ld   hl,$0C50 ; $ADD_SCREEN_PICKUPS
 12FA: CD E3 01    call $JMP_HL_PLUS_4K
 12FD: C3 10 3F    jp   $DRAW_BOTTOM_ROW_NUMBERS
     ;;
@@ -7105,11 +7104,9 @@ UPDATE_EVERYTHING_MORE
 
 403F: FF
 
-    ;; Whole bunch of PICKUP drawing below - is
-    ;; it one bunch of code per screen? Does something
-    ;; dispatch to each sub?
 
-4040: CD 68 45    call $4568
+ADD_PICKUP_PAT_8
+4040: CD 68 45    call $ADD_PICKUP_PAT_3
 4043: 3E 8E       ld   a,$TILE_PIK_RINGA
 4045: 32 7A 92    ld   ($927A),a
 4048: C9          ret
@@ -7137,12 +7134,14 @@ ADD_MOVE_SCORE
 
 4069: FF ...
 
+ADD_PICKUP_PAT_5
 4070: 3E 8C       ld   a,$TILE_CROWN_PIKA
 4072: 32 8E 91    ld   ($918E),a
 4075: C9          ret
 
 4076: FF ...
 
+ADD_PICKUP_PAT_6
 4078: 3E 8D       ld   a,$TILE_PIK_CROSSA
 407A: 32 D2 91    ld   ($91D2),a
 407D: C9          ret
@@ -7220,6 +7219,7 @@ GET_TILE_SCR_POS
 40E5: C9          ret
 40E6: FF ...
 
+ADD_PICKUP_PAT_9
 40E8: 3E 8F       ld   a,$TILE_PIK_VASEA
 40EA: 32 EE 92    ld   ($92EE),a
 40ED: 3E 8E       ld   a,$TILE_PIK_RINGA
@@ -7260,7 +7260,7 @@ HIT_BONUS
 
 4126: FF FF
 
-    ;; Draw crown,cross,vase (not ring?)... where? when?
+ADD_PICKUP_PAT_10
 4128: 3E 8C       ld   a,$TILE_CROWN_PIKA
 412A: 32 17 92    ld   ($9217),a
 412D: 3E 8D       ld   a,$TILE_PIK_CROSSA
@@ -7815,21 +7815,24 @@ SFX_03 ; Pickup bling
 
 4567: FF ...
 
-4568: 3E 8D       ld   a,$8D
+ADD_PICKUP_PAT_3
+4568: 3E 8D       ld   a,$TILE_PIK_CROSSA
 456A: 32 1A 91    ld   ($911A),a
 456D: C9          ret
 
 456E: FF ...
 
-4570: 3E 8C       ld   a,$8C
+ADD_PICKUP_PAT_4
+4570: 3E 8C       ld   a,$TILE_CROWN_PIKA
 4572: 32 B1 91    ld   ($91B1),a
 4575: C9          ret
 
 4576: FF
 
-4577: 3E 8E       ld   a,$8E
+ADD_PICKUP_PAT_7
+4577: 3E 8E       ld   a,$TILE_PIK_RINGA
 4579: 32 CB 90    ld   ($90CB),a
-457C: CD 70 40    call $4070
+457C: CD 70 40    call $ADD_PICKUP_PAT_5
 457F: C9          ret
 
 SFX_06 ; cutscene dance start
@@ -7895,7 +7898,8 @@ SFX_06 ; cutscene dance start
 45E7: FF          rst  $38
 
     ;;
-45E8: 3E 8D       ld   a,$8D
+ADD_PICKUP_PAT_2
+45E8: 3E 8D       ld   a,$TILE_PIK_CROSSA
 45EA: 32 5A 91    ld   ($915A),a
 45ED: C9          ret
 
@@ -8008,7 +8012,7 @@ CLEAR_SFX_1
 46D3: 3A 42 80    ld   a,($CH1_SFX)
 46D6: CD 30 47    call $POINT_HL_TO_SFX_DATA
 46D9: DD 21 B8 82 ld   ix,$82B8
-46DD: CD 90 47    call $4790
+46DD: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
 46E0: AF          xor  a
 46E1: 32 42 80    ld   ($CH1_SFX),a
 46E4: C9          ret
@@ -8099,7 +8103,7 @@ DO_SOMETHING_WITH_SFX_DATA
 4791: 00          nop
 4792: 00          nop
 4793: 00          nop
-4794: 7E          ld   a,(hl)
+4794: 7E          ld   a,(hl)   ; points at sfx data
 4795: DD 77 0D    ld   (ix+$0d),a
 4798: 47          ld   b,a
 4799: 23          inc  hl
@@ -8794,7 +8798,8 @@ SFX_2_DATA
 4C4E: FF          rst  $38
 4C4F: FF          rst  $38
 
-
+    ;;
+ADD_SCREEN_PICKUPS
 4C50: CD 84 44    call $DRAW_CAGE_TOP
 4C53: 3A 04 80    ld   a,($PLAYER_NUM)
 4C56: A7          and  a
@@ -8807,60 +8812,60 @@ SFX_2_DATA
 4C63: 87          add  a,a      ; * 3
 4C64: CD 00 49    call $JUMP_REL_A_COPY
     ;; One per screen
-4C67: CD E3 4C    call $4CE3
+4C67: CD E3 4C    call $ADD_PICKUP_PAT_1
 4C6A: C9          ret
-4C6B: CD E8 45    call $45E8
+4C6B: CD E8 45    call $ADD_PICKUP_PAT_2
 4C6E: C9          ret
-4C6F: CD 68 45    call $4568
+4C6F: CD 68 45    call $ADD_PICKUP_PAT_3
 4C72: C9          ret
-4C73: CD E3 4C    call $4CE3
+4C73: CD E3 4C    call $ADD_PICKUP_PAT_1
 4C76: C9          ret
-4C77: CD 70 45    call $4570
+4C77: CD 70 45    call $ADD_PICKUP_PAT_4
 4C7A: C9          ret
-4C7B: CD 70 40    call $4070
+4C7B: CD 70 40    call $ADD_PICKUP_PAT_5
 4C7E: C9          ret
-4C7F: CD 78 40    call $4078
+4C7F: CD 78 40    call $ADD_PICKUP_PAT_6
 4C82: C9          ret
-4C83: CD E8 45    call $45E8
+4C83: CD E8 45    call $ADD_PICKUP_PAT_2
 4C86: C9          ret
-4C87: CD 68 45    call $4568
+4C87: CD 68 45    call $ADD_PICKUP_PAT_3
 4C8A: C9          ret
-4C8B: CD 70 45    call $4570
+4C8B: CD 70 45    call $ADD_PICKUP_PAT_4
 4C8E: C9          ret
-4C8F: CD 77 45    call $4577
+4C8F: CD 77 45    call $ADD_PICKUP_PAT_7
 4C92: C9          ret
-4C93: CD 78 40    call $4078
+4C93: CD 78 40    call $ADD_PICKUP_PAT_6
 4C96: C9          ret
-4C97: CD E3 4C    call $4CE3
+4C97: CD E3 4C    call $ADD_PICKUP_PAT_1
 4C9A: C9          ret
-4C9B: CD 40 40    call $4040
+4C9B: CD 40 40    call $ADD_PICKUP_PAT_8
 4C9E: C9          ret
-4C9F: CD E8 45    call $45E8
+4C9F: CD E8 45    call $ADD_PICKUP_PAT_2
 4CA2: C9          ret
-4CA3: CD E8 40    call $40E8
+4CA3: CD E8 40    call $ADD_PICKUP_PAT_9
 4CA6: C9          ret
-4CA7: CD 78 40    call $4078
+4CA7: CD 78 40    call $ADD_PICKUP_PAT_6
 4CAA: C9          ret
-4CAB: CD E8 45    call $45E8
+4CAB: CD E8 45    call $ADD_PICKUP_PAT_2
 4CAE: C9          ret
-4CAF: CD E8 40    call $40E8
+4CAF: CD E8 40    call $ADD_PICKUP_PAT_9
 4CB2: C9          ret
-4CB3: CD 78 40    call $4078
+4CB3: CD 78 40    call $ADD_PICKUP_PAT_6
 4CB6: C9          ret
-4CB7: CD 28 41    call $4128
+4CB7: CD 28 41    call $ADD_PICKUP_PAT_10
 4CBA: C9          ret
-4CBB: CD 77 45    call $4577
+4CBB: CD 77 45    call $ADD_PICKUP_PAT_7
 4CBE: C9          ret
-4CBF: CD 78 40    call $4078
+4CBF: CD 78 40    call $ADD_PICKUP_PAT_6
 4CC2: C9          ret
-4CC3: CD 28 41    call $4128
+4CC3: CD 28 41    call $ADD_PICKUP_PAT_10
 4CC6: C9          ret
-4CC7: CD 70 41    call $4170
+4CC7: CD 70 41    call $ADD_PICKUP_PAT_5
 4CCA: C9          ret
-4CCB: CD 78 40    call $4078
+4CCB: CD 78 40    call $ADD_PICKUP_PAT_6
 4CCE: C9          ret
-4CCF: 00          nop
-4CD0: 00          nop
+4CCF: 00          nop           ; screen 27
+4CD0: 00          nop           ; (no pickups)
 4CD1: 00          nop
 4CD2: C9          ret
 4CD3: 00          nop
@@ -8869,10 +8874,11 @@ SFX_2_DATA
 4CD6: C9          ret
 4CD7: FF ...
 
-4CE3: 3E 8C       ld   a,$8C
+ADD_PICKUP_PAT_1
+4CE3: 3E 8C       ld   a,$TILE_CROWN_PIKA ;
 4CE5: 32 5A 91    ld   ($915A),a
 4CE8: C9          ret
-4CE9: FF          rst  $38
+4CE9: FF
 
 ;;;
 4CEA: 3A 4C 81    ld   a,($DINO_X)
