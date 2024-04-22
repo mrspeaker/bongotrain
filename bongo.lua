@@ -1,12 +1,12 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
 
-start_screen = 8 -- screen number (1-27), if not looping
-loop_screens = {13,14,21,25,27} -- if you want to practise levels, eg:
+start_screen = 1 -- screen number (1-27), if not looping
+loop_screens = {} --13,14,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 1 -- starting round
 
 -- Serious bizness
 infinite_lives = true
@@ -18,10 +18,10 @@ no_bonuses = true    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
 clear_score = true -- reset score to 0 on death and new screen
 
--- Non-so-serious binzness
+-- Non-so-serious bizness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
+head_style = 2 -- 0 = normal, 1 = dance, 2 = dino
 
 extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
