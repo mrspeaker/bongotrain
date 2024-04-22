@@ -5,10 +5,11 @@ Welcom to bongo.
 hacking away at a video game wr.
 aka: the earl of bongo
 
-at the office there is an arcade machine. It's one of those xxxx-in-one machines that has thousands of old games on it. Most of the games are bad, but if you hunt around you can find games on it that are *really* bad. If a game is both bad and good enough, it makes it to  our offce "Shit-game olympics" list.
+at the office there is an arcade machine. It's one of those xxxx-in-one machines that has thousands of old games on it. Most of the games are bad, but if you hunt around you can find games on it that are /really/ bad. If a game is both bad /and/ good enough, it makes it to  our offce's treasured "shit-game olympics" list.
 
-A few months ago a game called Bongo made the list, and started me on a journey: a journey ... wr.
+A few months ago ... An excite slack notifciation notified me "check out the new game".  a game called Bongo made the list, and started me on a journey: a journey ... hacking, trainign montges, , world record
 
+----
 - not really into games... never finish them. like making and hacking - so what if did both at the same time?!
 - improve knowldeeg of code = better scores.
 - holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
@@ -593,6 +594,8 @@ Why the inconsistency? Always triggers on level 1->2, but more random on other s
 
     is the player Australian? Spanish? Wearing high-heels? Indiana Jones (Raiders was 1981).
     Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?
+Age? boy or man?
+    
 
 * TG
 https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
@@ -943,3 +946,76 @@ void galaxian_state::mooncrst_map_base(address_map &map)
     but their status is discarded with 3 'NOP' instructions at 0x06d1.
   - IN2 is read via code at 0x2426, but its contents is directly overwritten
     with value read from DSW (AY port A) via code at 0x3647.
+    
+* jetsoft
+Official Gazette of the United States Patent and Trademark Office. Trademarks  1983-11-22: Vol 1036 Iss 4
+https://archive.org/details/sim_official-gazette-us-patent-trademark-office-trademarks_1983-11-22_1036_4/page/424/mode/2up?q=jetsoft
+
+SN 404,133 Jetsoft inc., East Falmouth. Mass. filed Nov. 29 1982.
+
+JETIII: sn 404,129 JetSoft Inc
+JETjr: SN 404,134
+
+CAMS 1988
+https://archive.org/details/21035CAMSxx88DesktopSyste/page/134/mode/2up?q=jetsoft
+Jetsoft
+170 Main Street
+East Falmouth, MA 02536
+(617) 548-6670
+
+c64:
+
+ad: BMX Stunts, Cavelon II, Quari (bongo port). JetSoft the arcade people. 061-775 0333
+
+"Was actually known as "Hopto" under the Mastertronic label,"
+"Hey, the game I had in TuttoComputer/games 3 with the name "Bongo"!"
+
+Real hardware: https://www.ukvac.com/forum/threads/bongo-by-jetsoft.9681/
+
+Fan art: https://cohost.org/rc/tagged/Bongo%20(Jetsoft)
+
+.... after 2000: "Paint It (JETSoft)" https://archive.org/details/supportinginform0000farm/page/78/mode/2up?q=jetsoft
+
+** JETII
+https://archive.org/details/bitsavers_datamation_54610682/page/n229/mode/2up?q=jetsoft
+DEVELOPMENT SYSTEM
+
+jetIII is an integrated computer aided appli¬ cations software development system and multi-user database. The package runs un¬ der most microcomputer operating sys¬ tems, including cp/m, ccp/m, mp/m, pc/dos, and ms/dos.
+
+A menu-driven program generator enables programmers to write remarked and structured code. According to the vendor, it automatically generates code for many standard functions such as file mainte¬ nance, transaction processing, and report¬ ing. The software also offers an ability to accommodate relational, hierarchical, and network database structures and the facility to integrate applications software with the company’s BizWiz modules.
+
+A report writer program is also in¬ cluded in the software. Designed to gener¬ ate a variety of reports and delimited files from the database, the report writer is menu-driven. Other functions include menu and forms creation capabilities, file maintenance, and system security. During 1984, spreadsheet, word processing, and graphics enhancements are scheduled.
+
+Programs and packages developed with this software are operating system-independent and transportable to most micro¬ computers. jetIII is available for a single copy, six-user cost of $40,000. jetsoft inc.. East Falmouth, Mass.
+
+** other 
+Jetsoft Corp: same jetsoft? https://archive.org/details/bub_gb_Xi8EAAAAMBAJ/page/n55/mode/2up?q=jetsoft
+Screen Protector, Screen Guardian
+Jetsoft Corp., 61 Crosby St., New York; (212) 966-9894
+
+Art-Copy 5.0: same? https://archive.org/details/HP-Professional_Vol._12_No._11_Nov_1998/page/44/mode/2up?q=jetsoft
+Jetsoft Development Company Cincinnati, OH (800) 374-7401
+
+Scanning software
+https://archive.org/details/MacDirectory_Issue_9_Spring_2001/page/170/mode/2up?q=jetsoft
+JETSOFT DEVELOPMENT, www.jetsoftdev.com 513/528-8668
+
+
+"'The Codemasters story actually begins in the early Eighties with Richard and David Darling. Fascinated with computers from an early age, they fell in love with coding and were soon making games, first for Mirrorsoft and Jetsoft and then for budget Kings Mastertronic. '"
+https://archive.org/details/retrogamerukbonus/Retro%20009%20%5B%21%5D/page/150/mode/2up?q=jetsoft
+
+
+oh no! Not the right Jetsoft?!
+
+Senior Software Engineer. Jetsoft, Inc. 1982 - 1985 3 years. Falmouth, MA. 
+        Employee number 3 of this start-up venture that provided database development tools for early micro-computer platforms. Involved in many aspects of the business, including sales support, staffing, and software development.
+
+----------
+Hello,
+ 
+I'm not sure if I've reached the right person, but I've been trying to learn more about an old arcade game from 1983 called "Bongo". It was released by a company called JetSoft. 
+ 
+I was wondering if it was the same company you were a part of, and if so - if you know who coded and designed the game? And if not, sorry to bother you!
+        
+-------
+

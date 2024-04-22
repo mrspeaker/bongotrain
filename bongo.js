@@ -35,7 +35,7 @@ import { search_str } from "./search_str.js";
     const ctx = document.getElementById("board").getContext("2d");
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
-    const pix = ctx.getImageData(0, 0, w, h);
+    let pix = ctx.getImageData(0, 0, w, h);
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-k.bin");
@@ -54,7 +54,7 @@ import { search_str } from "./search_str.js";
                 px.push((b1 << 1) | b2);
             }
             return px;
-        }),
+        })
     );
 
     const drawTile = (tile, x, y) => {
@@ -78,6 +78,14 @@ import { search_str } from "./search_str.js";
         { r: 255, g: 255, b: 255 },
     ];
 
+    const drawSpr = (spr, x, y, cols) => {
+        const off = 0 + spr * 4;
+        drawTile(tiles[off], x + 8, y, cols);
+        drawTile(tiles[off + 1], x + 8, y + 8, cols);
+        drawTile(tiles[off + 2], x, y, cols);
+        drawTile(tiles[off + 3], x, y + 8, cols);
+    };
+
     const tw = 32;
     const th = 8;
     for (let j = 0; j < th; j++) {
@@ -87,22 +95,24 @@ import { search_str } from "./search_str.js";
         }
     }
 
-    const drawSpr = (spr, x, y, cols) => {
-        const off = 0 + spr * 4;
-        drawTile(tiles[off], x + 8, y, cols);
-        drawTile(tiles[off + 1], x + 8, y + 8, cols);
-        drawTile(tiles[off + 2], x, y, cols);
-        drawTile(tiles[off + 3], x, y + 8, cols);
-    };
-
     let yo = 78;
     for (let j = 0; j < 8; j++) {
         for (let i = 0; i < 16; i++) {
             drawSpr(j * 16 + i, i * 16, j * 16 + yo);
         }
     }
-
     ctx.putImageData(pix, 0, 0);
+
+    setInterval(() => {
+        ctx.clearRect(ctx.canvas.width - 20, 0, 20, ctx.canvas.height);
+        pix = ctx.getImageData(0, 0, w, h);
+
+        const t = Math.floor(Date.now() / 200);
+
+        drawSpr(16 * 4 + (t % 4), ctx.canvas.width - 20, 0);
+        drawSpr(16 * 4 + 5 + (t % 4), ctx.canvas.width - 20, 17);
+        ctx.putImageData(pix, 0, 0);
+    }, 16);
 
     // Hunting in bin files for strings...
     const fetches = [1, 2, 3, 4, 5, 6].map((v) => getRomBytes(`bg${v}.bin`));
