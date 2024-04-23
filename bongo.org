@@ -205,12 +205,14 @@ No bonus for catching dino. how cool is that? Also, dino screen is lowest point 
 First 6 columns of every screen is the same.
 
 ----
-sneaky timing - easy to learn, hard (impossible?) to master... it's own handrolled collision - distinct feel, infuriating, but learnable and then you always blame yourself.
+sneaky timing - easy to learn, hard (impossible?) to master... it's own handrolled collision - distinct feel, infuriating, but learnable and then you always blame yourself. - you can't play on autopilot: need to be in the zone and concentrating
 
 3s and 6s... plus offset by 1
 inc
 inc
 inc
+
+Every level encourages running out of the game - except for the two-birds-opposite-directions: that punishes it.
 
 Stairs are juuuust too narrow - so can't hold down jump right: changes completely on second round.
 
@@ -304,6 +306,7 @@ Dino cage
 
 ---
 
+if you realise you've jumped too early, keep playing like you're going to stick the landing. Sometimes you do, and the mostly likely thing to do is instantly die if you try to compensate.
 
 ---
 
@@ -1017,9 +1020,20 @@ https://www.visit-watchet.co.uk/Members_Pages/FreeEnterprise/index.htm
   https://www.omeek.co.uk/people/john-richards/c8a45b26b965cf4ef6aebf3f013a270e/
 https://easychair.org/smart-program/DiGRA2023/2023-06-23.html
 
+
+john hutchinson credited:
+https://www.mobygames.com/person/1460954/john-hutchinson/
+https://www.mobygames.com/game/72184/bongo/credits/arcade/
+
+// found bmx stunts rom:
+https://www.mameworld.info/ubbthreads/showthreaded.php?Cat=&Number=396318&page=0&view=expanded&sb=5&o=&fpart=1&vc=1
+https://www.youtube.com/watch?app=desktop&v=0ZqunWXrV-w // bmx stunds
+
 ** YOUTUBE VIDEW!!!
 https://www.youtube.com/watch?v=Rsy6yXQ9fAM
 "got back to the lead developer: a man named John Huchinson"
+https://uk.linkedin.com/in/john-hutchinson-b6898a23
+https://github.com/zynmuse
 
 "transition to next screen and turn into a Bongo tree for some reason" xD
 
@@ -1091,6 +1105,9 @@ John R
 Free Enterprise Games
 
 00000000000000000000000000
+
+"I payed Bongo in a generic cabinet in a pub in Falmouth UK in the early 1980s when I was 5 or 6. The colours were wrong; the blue and yellow palette that briefly appears during the attract sequence was used for the whole game. So perhaps that was a bootleg."
+wtf? Falmouth UK? Falmouth Mass?! Also... theme 7!
 
 
 ** Nope, red herring Jetsoft
