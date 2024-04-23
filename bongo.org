@@ -20,20 +20,6 @@ A few months ago ... An excite slack notifciation notified me "check out the new
 - looking for jetsoft.
   ... some code hadweird bugs... needed to know more about the design process.
 
-** crazy john questions
-*** what was the process to make a game from existing hardware?
-- case of ripping out the roms and doing your own thing? What if you needed different hw/ram/audio etc?
-*** symbols off
-written by hand?!
-*** how were gfx designed? On graph paper?
-*** weird jump table
-JMP_HL_PLUS_4K:
-push bc
-ld   bc,$4000
-add  hl,bc
-pop  bc
-jp   (hl)
-
 * Mame debugging
 
 ./mame bongo -autoboot_script scripts/bongo.lua
@@ -680,7 +666,7 @@ yyy rom name
 zzz version of wolfmame
 _separator 
 
------------
+* More notes
 
 Well, I spent a bunch of time on the weekend reverse engineering bongo source code. (I reckon I'd be world champion now if I had have just played the game!) 
 https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm
@@ -1005,14 +991,50 @@ Jetsoft were based in Manchester, or Leeds, depending on which advert you look a
   - competion to win arcade: https://ia903202.us.archive.org/31/items/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB.pdf pg 25
 
 
-  John Richards
-https://www.omeek.co.uk/people/john-richards/c8a45b26b965cf4ef6aebf3f013a270e/
-https://easychair.org/smart-program/DiGRA2023/2023-06-23.html
-  http://www.free-enterprise.co.uk/#
-  https://www.visit-watchet.co.uk/Members_Pages/FreeEnterprise/index.htm
-  https://segaretro.org/Sega_v_Richards
-  https://direct.mit.edu/books/oa-monograph/5459/Arcade-BritanniaA-Social-History-of-the-British
+**  John
+- I used mame debugger to step throguht... how did you figure it out back then?
+- did you play the games? design the gameplay? How did you know what would work?
   
+*** what was the process to make a game from existing hardware?
+- case of ripping out the roms and doing your own thing? What if you needed different hw/ram/audio etc?
+  
+*** symbols/labels off
+written by hand?!
+*** how were gfx designed? On graph paper?
+*** weird jump table
+JMP_HL_PLUS_4K:
+push bc
+ld   bc,$4000
+add  hl,bc
+pop  bc
+jp   (hl)
+
+  http://www.free-enterprise.co.uk/#
+https://www.visit-watchet.co.uk/Members_Pages/FreeEnterprise/index.htm
+  
+  https://direct.mit.edu/books/oa-monograph/5459/Arcade-BritanniaA-Social-History-of-the-British
+  https://segaretro.org/Sega_v_Richards
+  https://www.omeek.co.uk/people/john-richards/c8a45b26b965cf4ef6aebf3f013a270e/
+https://easychair.org/smart-program/DiGRA2023/2023-06-23.html
+
+** YOUTUBE VIDEW!!!
+https://www.youtube.com/watch?v=Rsy6yXQ9fAM
+"got back to the lead developer: a man named John Huchinson"
+
+"transition to next screen and turn into a Bongo tree for some reason" xD
+
+"way more addicting that I ever expected".
+
+Lava = "Well of souls". Bongo 50/50s.
+
+bongoitis - can't pickup treasure. caues bongo has bad knees.
+
+can jump the dino on S, fast level!
+
+"favourite character: the floating 600" (platform scroll)
+
+"bongo's got bad knees, so he can't survive that fall".
+
 ** Company
 JETSOFT
 GOLD STAR HOUSE,
@@ -1027,6 +1049,24 @@ Me and Rav met Crazy John from Free Enterprise Games. Yes he's a massive hacker,
 https://www.ukvac.com/forum/threads/arcade-manufacturers-in-the-uk.19228/#post-68330
 (bongo is a galaxian hack)
 
+
+--- John said:
+Had a hewitt packard workstation - that could emulate the z80 (and others). 25000 pounds in th 80s! emulatore the processor. 5inch monitor that showed whole map of the memory. First things to figure out where the scores and the credits. Put a coin in, watch the screen and see what changed. It could break on memory access - so dump the previous 100 lines and figure out the coin routine. Start going from there - a fun challenge
+
+Started to recognise routines - interrupt always at the same place.
+
+Dump the rom then get it assembling. Start filling in all the labels.
+
+25fps interupts to read the switches.
+
+hardware was really similar... made their own boards that attached to the original to scrabmle the data and address lines -
+
+macro assmebler: could use symbols. 
+
+scramble board: not galazian probably.
+
+stored in mem after vblank - when missiles got oto much, overwrot his code. give 50 credits and stuff.
+
 ----
 Hello John,
 
@@ -1036,7 +1076,22 @@ There isn't much information about the company online, but while searching I stu
 
 As a longshot I thought I'd message you and see if you might know anything about it! No worries if not, and thank you for your time.
 
-Earle Castledine
+Earle
+0000000000000
+
+Hi
+Back at a computer now not a phone, so can type more....
+
+I vaguely remember the game but pretty sure I don't have the software for it.....but long ago so might just have!!!
+I used to write the software for an awful lot Galaxian and similar conversions back then, know as "Competitive Video" up in Surbiton, Surrey.
+
+As mentioned, feel free to call 0...32 any day from 11am until 9pm, or, if you are outside UK let me have your number as have a European 'phone as well.    Can probably help with most problems and information when i tax the old memory!
+
+John R
+Free Enterprise Games
+
+00000000000000000000000000
+
 
 ** Nope, red herring Jetsoft
 *** Falmouth

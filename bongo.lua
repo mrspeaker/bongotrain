@@ -6,20 +6,20 @@ loop_screens = {}--13,14,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 1 -- starting round
 
 -- Serious bizness
-infinite_lives = false
+infinite_lives = true
 fast_death = true    -- restart super fast after death
 fast_wipe = true  -- don't do slow transition to next screen
 disable_dino = false   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
-no_bonuses = false    -- don't skip screen on bonus
+no_bonuses = true    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
 clear_score = false -- reset score to 0 on death and new screen
 
 -- Non-so-serious bizness
-theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
+theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
 
@@ -158,7 +158,7 @@ poke_rom(0x162d,0x0f)
 -- no visual changes, but hey.
 poke_rom(0x3120,0x17)
 
-function where_is_starfield
+function where_is_starfield()
    poke_rom(0xb004, 0xff) -- try to enable starfield
    poke_rom(0x1480, {0xc9,0,0})
    poke_rom(0x19c8, {0,0})
