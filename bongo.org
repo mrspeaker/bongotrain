@@ -17,6 +17,23 @@ A few months ago ... An excite slack notifciation notified me "check out the new
 - holy crap, think they hand-rolled this! I was doing everyting with text eeditor to disassemble... they were doing it too!
   - couple of "middle of instruction" jumps - that luckily don't crash things. (HISCORE_ENTER_TIMER, and DRAW_BUGGY_BORDER). buggy border is a single bit (4 vs 5), but hiscore is 2 bits - (7 vs 4) - so probably not import error.
 
+- looking for jetsoft.
+  ... some code hadweird bugs... needed to know more about the design process.
+
+** crazy john questions
+*** what was the process to make a game from existing hardware?
+- case of ripping out the roms and doing your own thing? What if you needed different hw/ram/audio etc?
+*** symbols off
+written by hand?!
+*** how were gfx designed? On graph paper?
+*** weird jump table
+JMP_HL_PLUS_4K:
+push bc
+ld   bc,$4000
+add  hl,bc
+pop  bc
+jp   (hl)
+
 * Mame debugging
 
 ./mame bongo -autoboot_script scripts/bongo.lua
@@ -211,6 +228,8 @@ inc
 
 Stairs are juuuust too narrow - so can't hold down jump right: changes completely on second round.
 
+the flow of the levels is really great. Ups and downs match (barring skipping with bonus, which messes you up sometimes). And the way it transitions from the early screens to the later feels very well thought out. Each time you master a section, it stops showing up. The dastardly W with 3 birds is the icing. Then the dino catch is the icing on the icing. Then the cutscene is the chococlate on the icing on the icing.
+
 ** Level types
 
 7 types of level
@@ -285,7 +304,7 @@ on highwire levels, pauses for a few frames before falling to platform
 can make it IN FRONT of the highwire birds: only way to beat faster levels (eg, 3 bird level on 4, but requires very precise timing. I thought it was impossible, but did it! Need to find the new "impossible level".
 
 Blue meanies: as dino gets faster - can't wait - have to jump over the first one.
-This mean you miss the pickup: but it IS possible (not too hard) to jump back and get the pickup, then sneak under the second blue meanie. (works for round 4 - round 5 it can work but is much tricker: need to grab the pickup and then jump from the second-to-bottom platform... timing is harrrd)
+This mean you miss the pickup: but it IS possible (not too hard) to jump back and get the pickup, then sneak under the second blue meanie. (works for round 4 - round 5 it can work but is much tricker: need to grab the pickup and then jump from the second-to-bottom platform... timing is harrrd. UPDATE: nope, not hard - you don't need to jump back very much... only slightly to get the pickup. So it's easy to grab it and flip around back down the stairs: probably safer than trying to jump the horizontal meanie.)
 
 - extra points if you jump over the bonus on W and go to end, then come back - but very difficult to not pickup the pikup, and difficult not to trigger next level
 
@@ -986,6 +1005,13 @@ Jetsoft were based in Manchester, or Leeds, depending on which advert you look a
   - competion to win arcade: https://ia903202.us.archive.org/31/items/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB/Computer_Gamer_Issue_01_1985-04_Argus_Press_GB.pdf pg 25
 
 
+  John Richards
+https://www.omeek.co.uk/people/john-richards/c8a45b26b965cf4ef6aebf3f013a270e/
+https://easychair.org/smart-program/DiGRA2023/2023-06-23.html
+  http://www.free-enterprise.co.uk/#
+  https://www.visit-watchet.co.uk/Members_Pages/FreeEnterprise/index.htm
+  https://segaretro.org/Sega_v_Richards
+  https://direct.mit.edu/books/oa-monograph/5459/Arcade-BritanniaA-Social-History-of-the-British
   
 ** Company
 JETSOFT
