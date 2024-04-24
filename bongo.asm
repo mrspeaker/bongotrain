@@ -2961,9 +2961,10 @@ COPY_XOFFS_AND_COLS_TO_SCREEN
 
 1562: FF FF
 
+    ;; Why?
+ANIMATE_SPLASH_PICKUP_NOPS
 1564: 00          nop
 1565: 00          nop
-
 ANIMATE_SPLASH_PICKUPS
 1566: 3A 08 93    ld   a,($9308) ;
 1569: FE 10       cp   $TILE_BLANK
@@ -3072,7 +3073,7 @@ ANIMATE_SPLASH_SCREEN
 1665: CD C4 15    call $15C4
 1668: 1E 04       ld   e,$04
 166A: D5          push de
-166B: CD 28 21    call $2128
+166B: CD 28 21    call $WAIT_FOR_START_BUTTON
 166E: D1          pop  de
 166F: 1D          dec  e
 1670: 20 F8       jr   nz,$166A
@@ -3420,17 +3421,19 @@ LEVEL_BG__n_n
 
 ;;; Skip level AFTER getting bonus
 BONUS_SKIP_SCREEN
-199C: 3E F0       ld   a,$F0
+    ;; Draws the Bongo Tree. I thought this must have been a glitch,
+    ;; but nope: the Bongo Tree is meant to be like that!
+199C: 3E F0       ld   a,$F0    ; right of screen (scrolls to left)
 199E: 32 40 81    ld   ($PLAYER_X),a
 19A1: 32 44 81    ld   ($PLAYER_X_LEGS),a
-19A4: 3E 26       ld   a,$26
+19A4: 3E 26       ld   a,$26    ; top of screen
 19A6: 32 47 81    ld   ($PLAYER_Y_LEGS),a
 19A9: 3E 16       ld   a,$16
 19AB: 32 43 81    ld   ($PLAYER_Y),a
-19AE: 3E 17       ld   a,$17
+19AE: 3E 17       ld   a,$17    ; backwards player for both head and legs, lol
 19B0: 32 41 81    ld   ($PLAYER_FRAME),a
 19B3: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-19B6: AF          xor  a
+19B6: AF          xor  a        ; red and green for the bongo tree.
 19B7: 32 42 81    ld   ($PLAYER_COL),a
 19BA: 32 46 81    ld   ($PLAYER_COL_LEGS),a
 19BD: C3 78 17    jp   $TRANSITION_TO_NEXT_SCREEN
@@ -3817,11 +3820,13 @@ LEVEL_BG__S_S
 
 2122: FF ...
 
+    ;; Waits 1 vblank, checks if credit is added yet
 WAIT_FOR_START_BUTTON
 2128: CD A0 13    call $WAIT_VBLANK
 212B: 3A 03 83    ld   a,($CREDITS)
 212E: A7          and  a
 212F: C8          ret  z
+    ;; credit added! - start the game
 2130: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES
 2133: C3 A4 00    jp   $_PLAY_SPLASH
     ;;
@@ -7044,9 +7049,9 @@ DRAW_COPYRIGHT
 
 3FA5: FF ...
 
-DRAW_BLANKS
+BLANK_OUT_BOTTOM_ROW
 3FA8: CD 10 03    call $DRAW_TILES_H
-3FAB: 1F 00      ; Whole bunch of spaces
+3FAB: 1F 00      ; Whole bunch of spaces over the level numbers
 3FAD: 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
 3FBD: 10 10 10 10 10 10 10 10 10 10 10 10 FF
 3FCA: C9          ret
@@ -7574,7 +7579,7 @@ BLANK_OUT_1UP_TEXT
 431A: C9          ret
 431B: FF ...
 
-SFX_SOMETHING
+SFX_SOMETHING_CH_1
 4320: DD 6E 07    ld   l,(ix+$07)
 4323: DD 66 08    ld   h,(ix+$08)
 4326: 7E          ld   a,(hl)
@@ -7593,7 +7598,7 @@ SFX_SOMETHING
 433E: 18 FA       jr   $433A
 4340: 3D          dec  a
 4341: DD 77 12    ld   (ix+$12),a
-4344: CD 00 52    call $MORE_SFX_SOMETHING?
+4344: CD 00 52    call $PLAY_SFX_CHUNK_CH_1
 4347: FD 77 02    ld   (iy+$02),a
 434A: DD 7E 0E    ld   a,(ix+$0e)
 434D: FD 77 03    ld   (iy+$03),a
@@ -7603,7 +7608,7 @@ SFX_SOMETHING
 
 4356: FF ...
 
-;;;  synth?
+SFX_SOMETHING_CH_2
 4360: DD 6E 09    ld   l,(ix+$09)
 4363: DD 66 0A    ld   h,(ix+$0a)
 4366: 7E          ld   a,(hl)
@@ -7622,7 +7627,7 @@ SFX_SOMETHING
 437E: 18 FA       jr   $437A
 4380: 3D          dec  a
 4381: DD 77 13    ld   (ix+$13),a
-4384: CD 50 52    call $5250
+4384: CD 50 52    call $PLAY_SFX_CHUNK_CH_2
 4387: FD 77 02    ld   (iy+$02),a
 438A: DD 7E 0E    ld   a,(ix+$0e)
 438D: FD 77 03    ld   (iy+$03),a
@@ -7782,7 +7787,7 @@ SFX_02 ; Minor-key death ditti
 4516: 28 0A       jr   z,$SFX_03
 4518: DD 75 07    ld   (ix+$07),l
 451B: DD 74 08    ld   (ix+$08),h
-451E: CD 20 43    call $SFX_SOMETHING
+451E: CD 20 43    call $SFX_SOMETHING_CH_1
 4521: C9          ret
 
 SFX_03 ; Pickup bling
@@ -7810,7 +7815,7 @@ SFX_03 ; Pickup bling
 4547: DD 6E 07    ld   l,(ix+$07)
 454A: DD 66 08    ld   h,(ix+$08)
 454D: 7E          ld   a,(hl)
-454E: CD 20 43    call $SFX_SOMETHING
+454E: CD 20 43    call $SFX_SOMETHING_CH_1
 4551: C9          ret
 
 4552: FE FF       cp   $FF
@@ -7823,7 +7828,7 @@ SFX_03 ; Pickup bling
 455E: 23          inc  hl
 455F: 7E          ld   a,(hl)
 4560: DD 77 08    ld   (ix+$08),a
-4563: CD 20 43    call $SFX_SOMETHING
+4563: CD 20 43    call $SFX_SOMETHING_CH_1
 4566: C9          ret
 
 4567: FF ...
@@ -7848,14 +7853,13 @@ ADD_PICKUP_PAT_7
 457C: CD 70 40    call $ADD_PICKUP_PAT_5
 457F: C9          ret
 
-SFX_06 ; cutscene dance start
+SFX_06 ; cutscene dance start (also intro tune?)
 4580: DD 7E 13    ld   a,(ix+$13)
 4583: A7          and  a
 4584: 28 05       jr   z,$458B
 4586: 3D          dec  a
 4587: DD 77 13    ld   (ix+$13),a
 458A: C9          ret
-
     ;; sfxsomething #4
 458B: DD 6E 09    ld   l,(ix+$09)
 458E: DD 66 0A    ld   h,(ix+$0a)
@@ -7866,7 +7870,7 @@ SFX_06 ; cutscene dance start
 4596: 28 0A       jr   z,$45A2
 4598: DD 75 09    ld   (ix+$09),l
 459B: DD 74 0A    ld   (ix+$0a),h
-459E: CD 60 43    call $4360
+459E: CD 60 43    call $SFX_SOMETHING_CH_2
 45A1: C9          ret
 
     ;; sfxsomething #5
@@ -7894,7 +7898,7 @@ SFX_06 ; cutscene dance start
 45C7: DD 6E 09    ld   l,(ix+$09)
 45CA: DD 66 0A    ld   h,(ix+$0a)
 45CD: 7E          ld   a,(hl)
-45CE: CD 60 43    call $4360
+45CE: CD 60 43    call $SFX_SOMETHING_CH_2
 45D1: C9          ret
 
     ;; sfxsomething #6
@@ -7906,7 +7910,7 @@ SFX_06 ; cutscene dance start
 45DE: 23          inc  hl
 45DF: 7E          ld   a,(hl)
 45E0: DD 77 0A    ld   (ix+$0a),a
-45E3: CD 60 43    call $4360
+45E3: CD 60 43    call $SFX_SOMETHING_CH_2
 45E6: C9          ret
 45E7: FF          rst  $38
 
@@ -8179,11 +8183,11 @@ DO_SOMETHING_WITH_SFX_DATA
 480B: 23          inc  hl
 480C: 7E          ld   a,(hl)
 480D: DD 77 0C    ld   (ix+$0c),a
-4810: CD 20 43    call $SFX_SOMETHING
+4810: CD 20 43    call $SFX_SOMETHING_CH_1
 4813: DD 7E 0D    ld   a,(ix+$0d)
 4816: 3D          dec  a
 4817: C8          ret  z
-4818: CD 60 43    call $4360
+4818: CD 60 43    call $SFX_SOMETHING_CH_2
 481B: DD 7E 0D    ld   a,(ix+$0d)
 481E: 3D          dec  a
 481F: 3D          dec  a
@@ -8209,8 +8213,9 @@ SFX_QUEUER
 485F: A7          and  a
 4860: 20 05       jr   nz,$4867
 4862: CD 7C 48    call $MORE_SFX_SOMETHING
-4865: 18 03       jr   $486A
+4865: 18 03       jr   $_DONE
 4867: CD 9C 48    call $PLAY_SFX
+_DONE
 486A: C9          ret
 486B: FF ...
 
@@ -8249,7 +8254,7 @@ PLAY_SFX
 489F: 3A 44 80    ld   a,($SFX_ID)
 48A2: CD 30 47    call $POINT_HL_TO_SFX_DATA
 48A5: DD 21 E8 82 ld   ix,$82E8
-48A9: CD 90 47    call $4790
+48A9: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
 48AC: AF          xor  a
 48AD: 32 44 80    ld   ($SFX_ID),a
 48B0: C9          ret
@@ -9089,32 +9094,36 @@ ATTRACT_SPLASH_BONGO
 4E3D: 32 2A 80    ld   ($SCREEN_NUM_P2),a
 4E40: 21 B8 12    ld   hl,$DRAW_BACKGROUND
 4E43: CD 81 5C    call $JMP_HL
-4E46: 21 A8 3F    ld   hl,$DRAW_BLANKS
+4E46: 21 A8 3F    ld   hl,$BLANK_OUT_BOTTOM_ROW
 4E49: CD 81 5C    call $JMP_HL
-4E4C: 21 48 92    ld   hl,$9248
+4E4C: 21 48 92    ld   hl,$9248 ; draw the BONGO logo
 4E4F: 06 A0       ld   b,$A0
 4E51: 0E 05       ld   c,$05
-4E53: 70          ld   (hl),b
+_LP
+4E53: 70          ld   (hl),b   ; top right
 4E54: 04          inc  b
 4E55: 23          inc  hl
-4E56: 70          ld   (hl),b
+4E56: 70          ld   (hl),b   ; bottom right
 4E57: 04          inc  b
 4E58: 11 1F 00    ld   de,$001F
 4E5B: 19          add  hl,de
-4E5C: 70          ld   (hl),b
+4E5C: 70          ld   (hl),b   ; top left
 4E5D: 04          inc  b
 4E5E: 23          inc  hl
-4E5F: 70          ld   (hl),b
+4E5F: 70          ld   (hl),b   ; bottom left
 4E60: 11 A1 FF    ld   de,$FFA1
 4E63: 19          add  hl,de
 4E64: 04          inc  b
-4E65: CD D4 4E    call $4ED4
+4E65: CD D4 4E    call $WAIT_30_FOR_START_BUTTON
 4E68: 0D          dec  c
-4E69: 20 E8       jr   nz,$4E53
+4E69: 20 E8       jr   nz,$_LP
 4E6B: 21 8C 3F    ld   hl,$DRAW_COPYRIGHT
 4E6E: CD 81 5C    call $JMP_HL
-4E71: C3 E2 52    jp   $52E2
-4E74: FF          rst  $38
+4E71: C3 E2 52    jp   $ATTRACT_ANIMATE_PLAYER_UP_STAIRS
+
+4E74: FF
+
+    ;;
 4E75: F5          push af
 4E76: 3E 05       ld   a,$05
 4E78: 32 44 80    ld   ($SFX_ID),a
@@ -9185,6 +9194,7 @@ WAIT_15_FOR_START_BUTTON
 4ED3: C9          ret
 
     ;; what 30 for start
+WAIT_30_FOR_START_BUTTON
 4ED4: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
 4ED7: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
 4EDA: C9          ret
@@ -9607,8 +9617,8 @@ SFX_7_DATA
 51FE: FF          rst  $38
 51FF: FF          rst  $38
 
-    ;;
-MORE_SFX_SOMETHING?
+    ;; ??
+PLAY_SFX_CHUNK_CH_1
 5200: DD E5       push ix
 5202: E1          pop  hl
 5203: 7D          ld   a,l
@@ -9647,6 +9657,10 @@ MORE_SFX_SOMETHING?
 
 5241: FF ...
 
+    ;; triggers every few frames.
+    ;; Maybe play current chunk of tune?
+    ;; looks the same as above funk (ch1?)
+PLAY_SFX_CHUNK_CH_2
 5250: DD E5       push ix
 5252: E1          pop  hl
 5253: 7D          ld   a,l
@@ -9684,7 +9698,7 @@ MORE_SFX_SOMETHING?
 5290: C9          ret
 5291: FF ...
 
-    ;; attract something?
+    ;;
 52A0: DD E5       push ix
 52A2: E1          pop  hl
 52A3: 7D          ld   a,l
@@ -9723,15 +9737,16 @@ MORE_SFX_SOMETHING?
 52E1: FF          rst  $38
 
     ;;
+ATTRACT_ANIMATE_PLAYER_UP_STAIRS
 52E2: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
 52E5: 21 40 81    ld   hl,$PLAYER_X
-52E8: 36 D8       ld   (hl),$D8 ; x
+52E8: 36 D8       ld   (hl),$D8 ; x (right of screen)
 52EA: 23          inc  hl
 52EB: 36 8D       ld   (hl),$8D ; frame
 52ED: 23          inc  hl
 52EE: 36 11       ld   (hl),$11 ; color
 52F0: 23          inc  hl
-52F1: 36 E0       ld   (hl),$E0 ; y
+52F1: 36 E0       ld   (hl),$E0 ; y (bottom of screen)
 52F3: 23          inc  hl
 52F4: 36 D8       ld   (hl),$D8 ; x legs
 52F6: 23          inc  hl
@@ -9741,30 +9756,34 @@ MORE_SFX_SOMETHING?
 52FC: 23          inc  hl
 52FD: 36 F0       ld   (hl),$F0 ; y legs
 52FF: 1E 06       ld   e,$06
-5301: CD 28 53    call $5328
+_JUMP_UP_STAIR
+5301: CD 28 53    call $ATTRACT_JUMP_UP_ONE_STAIR
 5304: 1D          dec  e
-5305: 20 FA       jr   nz,$5301
+5305: 20 FA       jr   nz,$_JUMP_UP_STAIR
 5307: 21 48 81    ld   hl,$BONGO_X ; using bongo - but it shows dino
-530A: 36 20       ld   (hl),$20
+530A: 36 20       ld   (hl),$20 ; x (left of screen)
 530C: 23          inc  hl
-530D: 36 2D       ld   (hl),$2D
+530D: 36 2D       ld   (hl),$2D ; frame
 530F: 23          inc  hl
-5310: 36 12       ld   (hl),$12
+5310: 36 12       ld   (hl),$12 ; color
 5312: 23          inc  hl
-5313: 36 28       ld   (hl),$28
+5313: 36 28       ld   (hl),$28 ; y (top of screen)
 5315: 23          inc  hl
-5316: 36 19       ld   (hl),$19
+5316: 36 19       ld   (hl),$19 ; x legs
 5318: 23          inc  hl
-5319: 36 30       ld   (hl),$30
+5319: 36 30       ld   (hl),$30 ; frame legs
 531B: 23          inc  hl
-531C: 36 12       ld   (hl),$12
+531C: 36 12       ld   (hl),$12 ; color legs
 531E: 23          inc  hl
-531F: 36 38       ld   (hl),$38
-5321: CD AC 53    call $53AC
+531F: 36 38       ld   (hl),$38 ; y legs
+5321: CD AC 53    call $ATTRACT_JUMP_DOWN_STAIRS
 5324: C3 28 54    jp   $CALL_ATTRACT_BONUS_SCREEN
 5327: FF          rst  $38
+
+ATTRACT_JUMP_UP_ONE_STAIR
 5328: 16 00       ld   d,$00
-532A: 21 80 53    ld   hl,$5380
+_LP
+532A: 21 80 53    ld   hl,$ATTRACT_PLAYER_UP_STAIR_DATA
 532D: 7A          ld   a,d
 532E: 87          add  a,a
 532F: 87          add  a,a
@@ -9772,68 +9791,71 @@ MORE_SFX_SOMETHING?
 5331: 6F          ld   l,a
 5332: DD 21 40 81 ld   ix,$PLAYER_X
 5336: 7E          ld   a,(hl)
-5337: DD 77 01    ld   (ix+$01),a
+5337: DD 77 01    ld   (ix+$01),a ; frame
 533A: 23          inc  hl
 533B: 7E          ld   a,(hl)
-533C: DD 77 05    ld   (ix+$05),a
+533C: DD 77 05    ld   (ix+$05),a ; frame leg
 533F: 23          inc  hl
 5340: 7E          ld   a,(hl)
-5341: DD 86 00    add  a,(ix+$00)
-5344: DD 77 00    ld   (ix+$00),a
-5347: DD 77 04    ld   (ix+$04),a
+5341: DD 86 00    add  a,(ix+$00) ; x-offset
+5344: DD 77 00    ld   (ix+$00),a ; x
+5347: DD 77 04    ld   (ix+$04),a ; x legs
 534A: 23          inc  hl
 534B: 7E          ld   a,(hl)
-534C: DD 86 03    add  a,(ix+$03)
-534F: DD 77 03    ld   (ix+$03),a
+534C: DD 86 03    add  a,(ix+$03) ; y-offset
+534F: DD 77 03    ld   (ix+$03),a ; y
 5352: D6 10       sub  $10
-5354: DD 77 07    ld   (ix+$07),a
+5354: DD 77 07    ld   (ix+$07),a ; y legs
 5357: D5          push de
-5358: 21 28 21    ld   hl,$2128
+5358: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 535B: CD 81 5C    call $JMP_HL
-535E: 21 28 21    ld   hl,$2128
+535E: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 5361: CD 81 5C    call $JMP_HL
-5364: 21 28 21    ld   hl,$2128
+5364: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 5367: CD 81 5C    call $JMP_HL
 536A: D1          pop  de
 536B: 14          inc  d
 536C: 7A          ld   a,d
 536D: FE 06       cp   $06
-536F: 20 B9       jr   nz,$532A
-5371: CD D4 4E    call $4ED4
+536F: 20 B9       jr   nz,$_LP
+5371: CD D4 4E    call $WAIT_30_FOR_START_BUTTON
 5374: C9          ret
 5375: FF ...
 
-5380: 8D          adc  a,l
-5381: 8C          adc  a,h
-5382: FC F4 8F    call m,$8FF4
-5385: 8E          adc  a,(hl)
-5386: FC F6 91    call m,$91F6
-5389: 90          sub  b
-538A: FC F8 96    call m,$96F8
-538D: 92          sub  d
-538E: FC F8 94    call m,$94F8
-5391: 93          sub  e
-5392: FC 06 8D    call m,$8D06
-5395: 8C          adc  a,h
-5396: FC 08 3A    call m,$3A08
-5399: 49          ld   c,c
-539A: 81          add  a,c
+    ;; frame, frame leg, x-off, y-off
+ATTRACT_PLAYER_UP_STAIR_DATA
+5380: 8D 8C FC F4 ; jumping up stairs
+5384: 8F 8E FC F6
+5388: 91 90 FC F8
+538C: 96 92 FC F8
+5390: 94 93 FC 06 ; omg, frames are swapped! head on the bottom!
+5394: 8D 8C FC 08
+
+ATTRACT_ANIMATE_DINO_HEAD
+5398: 3A 49 81    ld   a,($BONGO_FRAME)
 539B: FE 2D       cp   $2D
 539D: 20 07       jr   nz,$53A6
 539F: 3E 2C       ld   a,$2C
 53A1: 32 49 81    ld   ($BONGO_FRAME),a
-53A4: 18 05       jr   $53AB
+53A4: 18 05       jr   $_DONE
 53A6: 3E 2D       ld   a,$2D
 53A8: 32 49 81    ld   ($BONGO_FRAME),a
+_DONE
 53AB: C9          ret
-53AC: 1E 06       ld   e,$06
-53AE: CD B8 53    call $53B8
-53B1: CD 98 53    call $5398
+
+ATTRACT_JUMP_DOWN_STAIRS
+53AC: 1E 06       ld   e,$06    ; 6 stairs down
+53AE: CD B8 53    call $ATTRACT_JUMP_DOWN_ONE_STAIR
+53B1: CD 98 53    call $ATTRACT_ANIMATE_DINO_HEAD
 53B4: 1D          dec  e
 53B5: 20 F7       jr   nz,$53AE
 53B7: C9          ret
+
+    ;; identical to jump up, but point at down data.
+ATTRACT_JUMP_DOWN_ONE_STAIR
 53B8: 16 00       ld   d,$00
-53BA: 21 08 54    ld   hl,$5408
+_LP
+53BA: 21 08 54    ld   hl,$ATTRACT_PLAYER_DOWN_STAIR_DATA
 53BD: 7A          ld   a,d
 53BE: 87          add  a,a
 53BF: 87          add  a,a
@@ -9841,65 +9863,47 @@ MORE_SFX_SOMETHING?
 53C1: 6F          ld   l,a
 53C2: DD 21 40 81 ld   ix,$PLAYER_X
 53C6: 7E          ld   a,(hl)
-53C7: DD 77 01    ld   (ix+$01),a
+53C7: DD 77 01    ld   (ix+$01),a ; frame
 53CA: 23          inc  hl
 53CB: 7E          ld   a,(hl)
-53CC: DD 77 05    ld   (ix+$05),a
+53CC: DD 77 05    ld   (ix+$05),a ; frame leg
 53CF: 23          inc  hl
 53D0: 7E          ld   a,(hl)
-53D1: DD 86 00    add  a,(ix+$00)
-53D4: DD 77 00    ld   (ix+$00),a
-53D7: DD 77 04    ld   (ix+$04),a
+53D1: DD 86 00    add  a,(ix+$00) ; x-offset
+53D4: DD 77 00    ld   (ix+$00),a ; x
+53D7: DD 77 04    ld   (ix+$04),a ; x legs
 53DA: 23          inc  hl
 53DB: 7E          ld   a,(hl)
-53DC: DD 86 03    add  a,(ix+$03)
-53DF: DD 77 03    ld   (ix+$03),a
+53DC: DD 86 03    add  a,(ix+$03) ; y-offset
+53DF: DD 77 03    ld   (ix+$03),a ; y
 53E2: D6 10       sub  $10
-53E4: DD 77 07    ld   (ix+$07),a
+53E4: DD 77 07    ld   (ix+$07),a ;  y legs
 53E7: D5          push de
-53E8: 21 28 21    ld   hl,$2128
+53E8: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 53EB: CD 81 5C    call $JMP_HL
-53EE: 21 28 21    ld   hl,$2128
+53EE: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 53F1: CD 81 5C    call $JMP_HL
-53F4: 21 28 21    ld   hl,$2128
+53F4: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 53F7: CD 81 5C    call $JMP_HL
 53FA: D1          pop  de
 53FB: 14          inc  d
 53FC: 7A          ld   a,d
 53FD: FE 06       cp   $06
-53FF: 20 B9       jr   nz,$53BA
-5401: CD C2 4E    call $4EC2
+53FF: 20 B9       jr   nz,$LP
+5401: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
 5404: C9          ret
 5405: FF ...
 
-5408: 0D          dec  c
-5409: 0C          inc  c
-540A: 04          inc  b
-540B: F8          ret  m
-540C: 0F          rrca
-540D: 0E 04       ld   c,$04
-540F: 00          nop
-5410: 11 10 04    ld   de,$OUT_OF_LIVES
-5413: 08          ex   af,af'
-5414: 16 12       ld   d,$12
-5416: 04          inc  b
-5417: 08          ex   af,af'
-5418: 14          inc  d
-5419: 13          inc  de
-541A: 04          inc  b
-541B: 08          ex   af,af'
-541C: 0D          dec  c
-541D: 0C          inc  c
-541E: 04          inc  b
-541F: 08          ex   af,af'
-5420: FF          rst  $38
-5421: FF          rst  $38
-5422: FF          rst  $38
-5423: FF          rst  $38
-5424: FF          rst  $38
-5425: FF          rst  $38
-5426: FF          rst  $38
-5427: FF          rst  $38
+    ;; frame, frame leg, x-off, y-off
+ATTRACT_PLAYER_DOWN_STAIR_DATA
+5408: 0D 0C 04 F8
+540C: 0F 0E 04 00
+5410: 11 10 04 08
+5414: 16 12 04 08
+5418: 14 13 04 08
+541C: 0D 0C 04 08
+
+5420: FF ...
 
 CALL_ATTRACT_BONUS_SCREEN
 5428: 21 D0 15    ld   hl,$ATTRACT_BONUS_SCREEN
@@ -9992,9 +9996,9 @@ ATTRACT_CATCH_DINO
 54C2: 3A 12 83    ld   a,($TICK_NUM)
 54C5: E6 03       and  $03
 54C7: 20 06       jr   nz,$54CF
-54C9: 21 64 15    ld   hl,$1564
+54C9: 21 64 15    ld   hl,$ANIMATE_SPLASH_PICKUP_NOPS
 54CC: CD 81 5C    call $JMP_HL
-54CF: 21 28 21    ld   hl,$2128
+54CF: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 54D2: CD 81 5C    call $JMP_HL
 54D5: C9          ret
 
@@ -10157,6 +10161,7 @@ _DONE
 
 559E: FF ...
 
+    ;; who calls?
 CHASED_BY_A_DINO_SCREEN
 55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
@@ -10689,7 +10694,7 @@ DRAW_SPLASH_CIRCLE_BORDER_3
 5A98: E5          push hl
 5A99: C5          push bc
 5A9A: D5          push de
-5A9B: 21 28 21    ld   hl,$2128
+5A9B: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
 5A9E: CD 81 5C    call $JMP_HL
 5AA1: D1          pop  de
 5AA2: C1          pop  bc

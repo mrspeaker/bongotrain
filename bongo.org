@@ -313,8 +313,29 @@ if you realise you've jumped too early, keep playing like you're going to stick 
 
 tas:1.25M!  https://tasvideos.org/6443S
 
-found a bug: inner border
+** Bug fixes
+-- bugfix: draws inner border on YOUR BEING CHASED screen
+poke_rom(0x56da,0x5c)
+-- bugfix: the pointy stair-down platform
+poke_rom(0x1f01,0xfc)
+-- subjective typography fix: align 1000 bonus better
+poke_rom(0x162d,0x0f)
+-- bugfix: don't jump to wrong byte in hiscore something.
+-- no visual changes, but hey.
+poke_rom(0x3120,0x17)
+-- bugfix: in attract screen, jumping up stairs the player's
+-- head and legs are flipped for one frame of animation. Fix it!
+poke_rom(0x5390,{0x93,0x94})
+-- subjective bugfix: add inner border to empty attract screen
+poke_rom(0x48C7, {
+   0xCD,0xD0,0x56, -- call DRAW_BUGGY_BORDER
+   0xCD,0xA8,0x5a, -- call original FLASH_BORDER
+   0xC9
+})
 
+Bongo Tree! Lol... it's meant to be like that, not a bug?!
+
+TODO: what is that lag at the start?!
 
 ** Trav bug
 

@@ -11,7 +11,7 @@ round = 1 -- starting round
 -- Serious bizness
 infinite_lives = true
 fast_death = true    -- restart super fast after death
-fast_wipe = true  -- don't do slow transition to next screen
+fast_wipe = false  -- don't do slow transition to next screen
 disable_dino = false   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false    -- don't skip screen on bonus
@@ -21,7 +21,7 @@ clear_score = false -- reset score to 0 on death and new screen
 -- Non-so-serious bizness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 3 -- 0 = normal, 1 = dance, 2 = dino
+head_style = 4 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy
 
 extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
@@ -130,9 +130,9 @@ function do_jump_bug_fix()
 end
 
 if head_style > 0 then
-   local fr = ({0x3e, 0x2c, 0x05})[head_style]
-   local fl = ({0x3e+0x80, 0x2c+0x80, 0x07})[head_style]
-   local jump_fr = ({0x3a, 0x2c + 2, 0x05})[head_style]
+   local fr = ({0x3e, 0x2c, 0x05, 0x17})[head_style]
+   local fl = ({0x3e+0x80, 0x2c+0x80, 0x07, 0x17+0x80})[head_style]
+   local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
 
    poke_rom(0x63A,{0x3e,fr, 0x32,0x41,0x81,0xc9 }) -- player_move_right
    poke_rom(0x67a,{0x3e,fl, 0x32,0x41,0x81,0xc9 })  -- player_move_left
@@ -150,11 +150,24 @@ end
 poke_rom(0x56da,0x5c)
 -- bugfix: the pointy stair-down platform
 poke_rom(0x1f01,0xfc)
--- typography fix: align 1000 bonus better
+-- subjective typography fix: align 1000 bonus better
 poke_rom(0x162d,0x0f)
 -- bugfix: don't jump to wrong byte in hiscore something.
 -- no visual changes, but hey.
 poke_rom(0x3120,0x17)
+-- bugfix: in attract screen, jumping up stairs the player's
+-- head and legs are flipped for one frame of animation. Fix it!
+poke_rom(0x5390,{0x93,0x94})
+-- subjective bugfix: add inner border to empty attract screen
+poke_rom(0x48C7, {
+   0xCD,0xD0,0x56, -- call DRAW_BUGGY_BORDER
+   0xCD,0xA8,0x5a, -- call original FLASH_BORDER
+   0xC9
+})
+
+-- what to do about Bongo Tree.
+-- feels wrong to "fix" it.
+-- poke_rom(0x19b7, {0,0,0, 0,0,0})
 
 function where_is_starfield()
    poke_rom(0xb004, 0xff) -- try to enable starfield
