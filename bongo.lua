@@ -14,14 +14,14 @@ fast_death = true    -- restart super fast after death
 fast_wipe = true  -- don't do slow transition to next screen
 disable_dino = false   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
-no_bonuses = true    -- don't skip screen on bonus
+no_bonuses = false    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
 clear_score = false -- reset score to 0 on death and new screen
 
 -- Non-so-serious bizness
-theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
+theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 0 -- 0 = normal, 1 = dance, 2 = dino
+head_style = 3 -- 0 = normal, 1 = dance, 2 = dino
 
 extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
@@ -130,11 +130,9 @@ function do_jump_bug_fix()
 end
 
 if head_style > 0 then
-   local fr = 0x2c --dino head
-   if head_style == 1 then fr = fr + 18 end -- dance head
-   local fl = fr + 0x80
-   local jump_fr = fr + 2
-   if head_style == 1 then jump_fr = fr -4 end -- dance head
+   local fr = ({0x3e, 0x2c, 0x05})[head_style]
+   local fl = ({0x3e+0x80, 0x2c+0x80, 0x07})[head_style]
+   local jump_fr = ({0x3a, 0x2c + 2, 0x05})[head_style]
 
    poke_rom(0x63A,{0x3e,fr, 0x32,0x41,0x81,0xc9 }) -- player_move_right
    poke_rom(0x67a,{0x3e,fl, 0x32,0x41,0x81,0xc9 })  -- player_move_left

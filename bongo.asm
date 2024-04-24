@@ -15,196 +15,196 @@
     ;;   He's complicated: celebrates the player's death,
     ;;   but also parties with player on dino capture.
 
-    TICK_MOD_3     $8000  ; timer for every 3 frames
-    TICK_MOD_6     $8001  ; timer for every 6 frames
-    PL_Y_LEGS_COPY $8002  ; copy of player y legs?
-    _              $8003  ; ? used with 8002 s bunch
-    PLAYER_NUM     $8004  ; current player
-    JUMP_TRIGGERED $8005  ; jump triggered by setting jump_tbl_idx
-    SECOND_TIMER   $8006
-    P1_TIME        $8007  ; time of player's run: never displayed!
-    P2_TIME        $8009  ; ...we could have had speed running!
-    CONTROLS       $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
-    BUTTONS_1      $800C  ; P1/P2 buttons... and?
-    BUTTONS_2      $800D  ; ... more buttons?
-    CONTROLSN      $800E  ; some kind of "normalized" controls
-    JUMP_TBL_IDX   $800F  ; index into table for physics jump
-    WALK_ANIM_TIMER $8010 ; % 7?
-    FALLING_TIMER  $8011  ; set to $10 when falling - if hits 0, dead.
-    PLAYER_DIED    $8012  ; 0 = no, 1 = yep, dead
-    P1_SCORE       $8014  ; and 8015, 8016 (BCD score)
-    P2_SCORE       $8017  ; and 8018, 8019 (BCD score)
-    _UNUSED_1      $801B  ; unused? Set once, never read
-    SCORE_TO_ADD   $801D  ; amount to add to the current score
+    TICK_MOD_3        $8000  ; timer for every 3 frames
+    TICK_MOD_6        $8001  ; timer for every 6 frames
+    PL_Y_LEGS_COPY    $8002  ; copy of player y legs?
+    _                 $8003  ; ? used with 8002 s bunch
+    PLAYER_NUM        $8004  ; current player
+    JUMP_TRIGGERED    $8005  ; jump triggered by setting jump_tbl_idx
+    SECOND_TIMER      $8006
+    P1_TIME           $8007  ; time of player's run: never displayed!
+    P2_TIME           $8009  ; ...we could have had speed running!
+    CONTROLS          $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
+    BUTTONS_1         $800C  ; P1/P2 buttons... and?
+    BUTTONS_2         $800D  ; ... more buttons?
+    CONTROLSN         $800E  ; some kind of "normalized" controls
+    JUMP_TBL_IDX      $800F  ; index into table for physics jump
+    WALK_ANIM_TIMER   $8010 ; % 7?
+    FALLING_TIMER     $8011  ; set to $10 when falling - if hits 0, dead.
+    PLAYER_DIED       $8012  ; 0 = no, 1 = yep, dead
+    P1_SCORE          $8014  ; and 8015, 8016 (BCD score)
+    P2_SCORE          $8017  ; and 8018, 8019 (BCD score)
+    _UNUSED_1         $801B  ; unused? Set once, never read
+    SCORE_TO_ADD      $801D  ; amount to add to the current score
 
-    SCREEN_RAM_PTR $801E  ; maybe it's where to start drawing bg?
-    LEVEL_BG_PTR $8020  ; screen data pointer (2 byte addr)
+    SCREEN_RAM_PTR    $801E  ; maybe it's where to start drawing bg?
+    LEVEL_BG_PTR      $8020  ; screen data pointer (2 byte addr)
 
-    DID_INIT       $8022  ; set after first init, not really used
-    BONGO_ANIM_TIMER $8023 ; [0,1,2] updated every 8 ticks
-    BONGO_JUMP_TIMER $8024 ; amount of ticks keep jumping for
-    BONGO_DIR_FLAG $8025 ; 4 = jump | 2 = left | 1 = right
-    BONGO_TIMER    $8027  ; ticks 0-1f for troll
+    DID_INIT          $8022  ; set after first init, not really used
+    BONGO_ANIM_TIMER  $8023 ; [0,1,2] updated every 8 ticks
+    BONGO_JUMP_TIMER  $8024 ; amount of ticks keep jumping for
+    BONGO_DIR_FLAG    $8025 ; 4 = jump | 2 = left | 1 = right
+    BONGO_TIMER       $8027  ; ticks 0-1f for troll
 
-    SCREEN_NUM     $8029  ; Current screen player is on
-    SCREEN_NUM_P2  $802A  ; Player 2 screen
-    _              $802C  ; ??
-    DINO_COUNTER   $802D  ; Ticks up when DINO_TIMER is done
-    DINO_DIR       $802E  ; 01 = right, ff = left
+    SCREEN_NUM        $8029  ; Current screen player is on
+    SCREEN_NUM_P2     $802A  ; Player 2 screen
+    _                 $802C  ; ??
+    DINO_COUNTER      $802D  ; Ticks up when DINO_TIMER is done
+    DINO_DIR          $802E  ; 01 = right, ff = left
 
-    PLAYER_MAX_X   $8030  ; furthest x pos (used for move score)
-    IS_2_PLAYERS   $8031  ; 1=2p, 0=1p mode (not used much)
-    LIVES          $8032
-    LIVES_P2       $8033
-    NUM_PLAYERS    $8034  ; attract mode = 0, 1P = 1, 2P = 2
-    CREDITS_UMM    $8035  ; something to do with credits
+    PLAYER_MAX_X      $8030  ; furthest x pos (used for move score)
+    IS_2_PLAYERS      $8031  ; 1=2p, 0=1p mode (not used much)
+    LIVES             $8032
+    LIVES_P2          $8033
+    NUM_PLAYERS       $8034  ; attract mode = 0, 1P = 1, 2P = 2
+    CREDITS_UMM       $8035  ; something to do with credits
 
-    ROCK_FALL_TIMER $8036 ; resets falling pos of rock
-    ENEMY_1_ACTIVE $8037  ; really "active"? think it has many values not just on/off
-    ENEMY_2_ACTIVE $8039  ;
-    ENEMY_3_ACTIVE $803B  ;
-    _              $8041   ; enemy 3 something..
+    ROCK_FALL_TIMER    $8036 ; resets falling pos of rock
+    ENEMY_1_ACTIVE    $8037  ; really "active"? think it has many values not just on/off
+    ENEMY_2_ACTIVE    $8039  ;
+    ENEMY_3_ACTIVE    $803B  ;
+    _                 $8041   ; enemy 3 something..
 
-    CH1_SFX        $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
-    CH2_SFX        $8043  ; SFX channel 2
-    SFX_ID         $8044  ; queued sound effect ID to play
+    CH1_SFX           $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+    CH2_SFX           $8043  ; SFX channel 2
+    SFX_ID            $8044  ; queued sound effect ID to play
 
-    1UP_SCR_POS    $804C  ; I reckon its where the 1up bonus text is on screen
-    1UP_SCR_POS_2  $804E  ; ... but not used I reckon,
-    1UP_SCR_POS_3  $804F  ; ... as they decided not to clear the text
+    1UP_SCR_POS       $804C  ; I reckon its where the 1up bonus text is on screen
+    1UP_SCR_POS_2     $804E  ; ... but not used I reckon,
+    1UP_SCR_POS_3     $804F  ; ... as they decided not to clear the text
 
-    1UP_TIMER      $8050  ; This is never read- but looks like was going to remove 1up text
-    IS_HIT_CAGE    $8051  ; did player trigger cage?
-    SPEED_DELAY_P1 $805b  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
-    SPEED_DELAY_P2 $805c  ; ...until dead. Smaller delay = faster dino/rock fall
-    DINO_TIMER     $805d  ; timer based on SPEED_DELAY (current round)
+    1UP_TIMER         $8050  ; This is never read- but looks like was going to remove 1up text
+    IS_HIT_CAGE       $8051  ; did player trigger cage?
+    SPEED_DELAY_P1    $805b  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
+    SPEED_DELAY_P2    $805c  ; ...until dead. Smaller delay = faster dino/rock fall
+    DINO_TIMER        $805d  ; timer based on SPEED_DELAY (current round)
 
-    BONUSES        $8060  ; How many bonuses collected
-    BONUS_MULT     $8062  ; Bonus multiplier.
+    BONUSES           $8060  ; How many bonuses collected
+    BONUS_MULT        $8062  ; Bonus multiplier.
 
-    SPLASH_ANIM_FR $8064  ; cycles 0-2 maybe... splash anim counter
-    SFX_PREV       $8065  ; prevent retrigger effect?
+    SPLASH_ANIM_FR    $8064  ; cycles 0-2 maybe... splash anim counter
+    SFX_PREV          $8065  ; prevent retrigger effect?
 
-    _              $8066  ; ?? OE when alive, 02 when dead?
-    _              $8067  ; ?? used with 66
-    _              $8068  ; ?? used with 67
+    _                 $8066  ; ?? OE when alive, 02 when dead?
+    _                 $8067  ; ?? used with 66
+    _                 $8068  ; ?? used with 67
 
-    EXTRA_GOT_P1   $8070  ; P1 Earned extra life
-    EXTRA_GOT_P1   $8071  ; P2 Earned extra life
+    EXTRA_GOT_P1      $8070  ; P1 Earned extra life
+    EXTRA_GOT_P1      $8071  ; P2 Earned extra life
 
-    HISCORE_TIMER  $8075  ; Countdown for entering time in hiscore screen
-    HISCORE_TIMER2 $8076  ; 16 counter for countdown
+    HISCORE_TIMER     $8075  ; Countdown for entering time in hiscore screen
+    HISCORE_TIMER2    $8076  ; 16 counter for countdown
 
-    SCREEN_XOFF_COL $8100 ; OFFSET and COL for each row of tiles
-                          ; Gets memcpy'd to $9800
+    SCREEN_XOFF_COL   $8100  ; OFFSET and COL for each row of tiles
+                             ; Gets memcpy'd to $9800
 
 
 ;;; ======== SPRITES ========
 ;;; all have the form: X, FRAME, COL, Y.
-    PLAYER_X       $8140
-    PLAYER_FRAME   $8141
-    PLAYER_COL     $8142
-    PLAYER_Y       $8143
-    PLAYER_X_LEGS  $8144
+    PLAYER_X          $8140
+    PLAYER_FRAME      $8141
+    PLAYER_COL        $8142
+    PLAYER_Y          $8143
+    PLAYER_X_LEGS     $8144
     PLAYER_FRAME_LEGS $8145
     PLAYER_COL_LEGS   $8146
-    PLAYER_Y_LEGS  $8147
-    BONGO_X        $8148
-    BONGO_FRAME    $8149
-    BONGO_COL      $814A
-    BONGO_Y        $814B
-    DINO_X         $814C
-    DINO_FRAME     $814D
-    DINO_COL       $814E
-    DINO_Y         $814F
-    DINO_X_LEGS    $8150
-    DINO_FRAME_LEGS $8151
-    DINO_COL_LEGS  $8152
-    DINO_Y_LEGS    $8153
+    PLAYER_Y_LEGS     $8147
+    BONGO_X           $8148
+    BONGO_FRAME       $8149
+    BONGO_COL         $814A
+    BONGO_Y           $814B
+    DINO_X            $814C
+    DINO_FRAME        $814D
+    DINO_COL          $814E
+    DINO_Y            $814F
+    DINO_X_LEGS       $8150
+    DINO_FRAME_LEGS   $8151
+    DINO_COL_LEGS     $8152
+    DINO_Y_LEGS       $8153
 
-    ENEMY_1_X      $8154
-    ENEMY_1_FRAME  $8155
-    ENEMY_1_COL    $8156
-    ENEMY_1_Y      $8157
-    ENEMY_2_X      $8158
-    ENEMY_2_FRAME  $8159
-    ENEMY_2_COL    $815A
-    ENEMY_2_Y      $815B
-    ENEMY_3_X      $815C
-    ENEMY_3_FRAME  $815D
-    ENEMY_3_COL    $815E
-    ENEMY_3_Y      $815F
+    ENEMY_1_X         $8154
+    ENEMY_1_FRAME     $8155
+    ENEMY_1_COL       $8156
+    ENEMY_1_Y         $8157
+    ENEMY_2_X         $8158
+    ENEMY_2_FRAME     $8159
+    ENEMY_2_COL       $815A
+    ENEMY_2_Y         $815B
+    ENEMY_3_X         $815C
+    ENEMY_3_FRAME     $815D
+    ENEMY_3_COL       $815E
+    ENEMY_3_Y         $815F
 ;;; ============================
 
-    PLATFORM_XOFFS $8180  ; maybe
+    PLATFORM_XOFFS    $8180  ; maybe
 
-    HISCORE        $8300  ;
-    HISCORE+1      $8301  ;
-    HISCORE+2      $8302
+    HISCORE           $8300  ;
+    HISCORE+1         $8301  ;
+    HISCORE+2         $8302
 
-    CREDITS        $8303  ; how many credits in machine
-    _              $8305  ; Coins? dunno
-    HISCORE_NAME   $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+    CREDITS           $8303  ; how many credits in machine
+    _                 $8305  ; Coins? dunno
+    HISCORE_NAME      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
-    TICK_NUM       $8312  ; adds 1 every tick
+    TICK_NUM          $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
-    TICK_MOD_FAST  $8315  ; % 3 in round 1, % 2 in round 2+
-    TICK_MOD_SLOW  $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
+    TICK_MOD_FAST     $8315  ; % 3 in round 1, % 2 in round 2+
+    TICK_MOD_SLOW     $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
-    STACK_LOCATION  $83F0  ; I think?
-    INPUT_BUTTONS   $83F1  ; copied to 800C and 800D
-    INPUT_BUTTONS_2 $83F2  ; dunno what buttons
+    STACK_LOCATION    $83F0  ; I think?
+    INPUT_BUTTONS     $83F1  ; copied to 800C and 800D
+    INPUT_BUTTONS_2   $83F2  ; dunno what buttons
 
 ;;;  constants
 
-    SCREEN_WIDTH    $E0  ; 224
-    SCR_TILE_W      $1a  ; 26 columns
-    SCR_TILE_H      $1c  ; 28 rows
-    NUM_SCREENS     $1B  ; 27 screens
+    SCREEN_WIDTH      $E0  ; 224
+    SCR_TILE_W        $1a  ; 26 columns
+    SCR_TILE_H        $1c  ; 28 rows
+    NUM_SCREENS       $1B  ; 27 screens
 
-    ROUND1_SPEED    $1f
-    ROUND2_SPEED    $10
-    ROUND3_SPEED    $0D
+    ROUND1_SPEED      $1f
+    ROUND2_SPEED      $10
+    ROUND3_SPEED      $0D
 
-    TILE_0          $00
-    TILE_9          $09
-    TILE_BLANK      $10
-    TILE_A          $11
-    TILE_E          $15
-    TILE_R          $22
-    TILE_HYPHEN     $2B
+    TILE_0            $00
+    TILE_9            $09
+    TILE_BLANK        $10
+    TILE_A            $11
+    TILE_E            $15
+    TILE_R            $22
+    TILE_HYPHEN       $2B
 
-    TILE_CAGE       $74
-    TILE_CURSOR     $89
-    TILE_CROWN_PIKA $8C ; alt crown
-    TILE_PIK_CROSSA $8D
-    TILE_PIK_RINGA  $8E
-    TILE_PIK_VASEA  $8F
-    TILE_CROWN_PIK  $9C
-    TILE_PIK_CROSS  $9D
-    TILE_PIK_RING   $9E
-    TILE_PIK_VASE   $9F
-    TILE_LVL_01     $C0
+    TILE_CAGE         $74
+    TILE_CURSOR       $89
+    TILE_CROWN_PIKA   $8C ; alt crown
+    TILE_PIK_CROSSA   $8D
+    TILE_PIK_RINGA    $8E
+    TILE_PIK_VASEA    $8F
+    TILE_CROWN_PIK    $9C
+    TILE_PIK_CROSS    $9D
+    TILE_PIK_RING     $9E
+    TILE_PIK_VASE     $9F
+    TILE_LVL_01       $C0
 
     ;; tile > $F8 is a platform
-    TILE_SOLID      $F8 ; high-wire platform R
-    TILE_PLATFORM_R $FC
-    TILE_PLATFORM_C $FD
-    TILE_PLATFORM_L $FE
+    TILE_SOLID        $F8 ; high-wire platform R
+    TILE_PLATFORM_R   $FC
+    TILE_PLATFORM_C   $FD
+    TILE_PLATFORM_L   $FE
 
-    SCR_LINE_PREV   $FFE0       ; -32 = previous screen line
+    SCR_LINE_PREV     $FFE0       ; -32 = previous screen line
 
 ;;; hardware
 
-    SCREEN_RAM      $9000 ; - 0x93ff  videoram
-    START_OF_TILES  $9040 ; top right tile...
-    XOFF_COL_RAM    $9800 ; xoffset and color data per tile row
-    SPRITES         $9840 ; 0x9800 - 0x98ff is spriteram
-    PORT_IN0        $A000 ;
-    PORT_IN1        $A800 ;
-    PORT_IN2        $B000 ;
-    INT_ENABLE      $b001 ; interrupt enable
-    WATCHDOG        $b800 ; main timer?
+    SCREEN_RAM        $9000 ; - 0x93ff  videoram
+    START_OF_TILES    $9040 ; top right tile...
+    XOFF_COL_RAM      $9800 ; xoffset and color data per tile row
+    SPRITES           $9840 ; 0x9800 - 0x98ff is spriteram
+    PORT_IN0          $A000 ;
+    PORT_IN1          $A800 ;
+    PORT_IN2          $B000 ;
+    INT_ENABLE        $b001 ; interrupt enable
+    WATCHDOG          $b800 ; main timer?
 
 ;;; ============ START OF BG1.BIN =============
 
