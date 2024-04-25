@@ -29,7 +29,7 @@
     BUTTONS_2         $800D  ; ... more buttons?
     CONTROLSN         $800E  ; some kind of "normalized" controls
     JUMP_TBL_IDX      $800F  ; index into table for physics jump
-    WALK_ANIM_TIMER   $8010 ; % 7?
+    WALK_ANIM_TIMER   $8010  ; % 7?
     FALLING_TIMER     $8011  ; set to $10 when falling - if hits 0, dead.
     PLAYER_DIED       $8012  ; 0 = no, 1 = yep, dead
     P1_SCORE          $8014  ; and 8015, 8016 (BCD score)
@@ -41,9 +41,9 @@
     LEVEL_BG_PTR      $8020  ; screen data pointer (2 byte addr)
 
     DID_INIT          $8022  ; set after first init, not really used
-    BONGO_ANIM_TIMER  $8023 ; [0,1,2] updated every 8 ticks
-    BONGO_JUMP_TIMER  $8024 ; amount of ticks keep jumping for
-    BONGO_DIR_FLAG    $8025 ; 4 = jump | 2 = left | 1 = right
+    BONGO_ANIM_TIMER  $8023  ; [0,1,2] updated every 8 ticks
+    BONGO_JUMP_TIMER  $8024  ; amount of ticks keep jumping for
+    BONGO_DIR_FLAG    $8025  ; 4 = jump | 2 = left | 1 = right
     BONGO_TIMER       $8027  ; ticks 0-1f for troll
 
     SCREEN_NUM        $8029  ; Current screen player is on
@@ -59,11 +59,19 @@
     NUM_PLAYERS       $8034  ; attract mode = 0, 1P = 1, 2P = 2
     CREDITS_UMM       $8035  ; something to do with credits
 
-    ROCK_FALL_TIMER    $8036 ; resets falling pos of rock
-    ENEMY_1_ACTIVE    $8037  ; really "active"? think it has many values not just on/off
+    ;; Enemies: seems to be mix-and-match per screen
+    ROCK_FALL_TIMER   $8036  ; resets falling pos of rock
+    ENEMY_1_ACTIVE    $8037  ; not really "active":  has many values.
+    ENEMY_1_TIMER     $8038  ; unused?
     ENEMY_2_ACTIVE    $8039  ;
+    ENEMY_2_TIMER     $803A  ;
     ENEMY_3_ACTIVE    $803B  ;
-    _                 $8041   ; enemy 3 something..
+    ENEMY_3_TIMER     $803C  ;
+    ENEMY_4_ACTIVE    $803D  ; ...1 - active as well? two kinds of active?
+    ROCK_LEFT_TIMER   $803E  ; Rock left timer
+    _                 $803F  ; ...2
+    _                 $8040  ; ?
+    ENEMY_6_ACTIVE    $8041  ;
 
     CH1_SFX           $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
     CH2_SFX           $8043  ; SFX channel 2
@@ -857,16 +865,16 @@ HISCORE_FOR_P2
     ;; This looks suspicious. 25 bytes written
     ;; to $8038+, code is never called (or read?)
     ;; wpset 0518,18,rw doesn't trigger
-0518: 21 38 80    ld   hl,$8038
+0518: 21 38 80    ld   hl,$ENEMY_1_TIMER
 051B: 36 39       ld   (hl),$39 ; 57
 051D: 23          inc  hl
-051E: 36 39       ld   (hl),$39
+051E: 36 39       ld   (hl),$39 ; enemy_2_active
 0520: 23          inc  hl
-0521: 36 39       ld   (hl),$39
+0521: 36 39       ld   (hl),$39 ; enemy_2_timer
 0523: 23          inc  hl
-0524: 36 39       ld   (hl),$39
+0524: 36 39       ld   (hl),$39 ; enemy_3_active
 0526: 23          inc  hl
-0527: 36 38       ld   (hl),$38
+0527: 36 38       ld   (hl),$38 ;
 0529: 23          inc  hl
 052A: 36 39       ld   (hl),$39
 052C: 23          inc  hl
@@ -1458,7 +1466,9 @@ PHYS_JUMP_LOOKUP_UP
 
 0964: FF ...
 
-    ;; Get tile from x/y?
+    ;; Get tile from x/y
+    ;; in: h = x, l = y
+    ;; out: hl = screen addr of tile
 GET_TILE_ADDR_FROM_XY
 0968: 45          ld   b,l
 0969: AF          xor  a
@@ -1488,12 +1498,12 @@ GROUND_CHECK
 098D: CB 3F       srl  a        ; /  2
 098F: CB 3F       srl  a        ; /  2
 0991: E6 FE       and  $FE      ; &  1111 1110
-0993: 21 00 81    ld   hl,$SCREEN_XOFF_COLL
+0993: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 0996: 85          add  a,l
 0997: 6F          ld   l,a
 0998: 3A 44 81    ld   a,($PLAYER_X_LEGS)
 099B: 96          sub  (hl)
-099C: C6 08       add  a,$08
+099C: C6 08       add  a,$08    ; offset of 8
 099E: 67          ld   h,a
 099F: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 09A2: C6 10       add  a,$10
@@ -1504,9 +1514,9 @@ GROUND_CHECK
 09A9: E6 F8       and  $TILE_SOLID
 09AB: FE F8       cp   $TILE_SOLID
 09AD: 28 02       jr   z,$09B1
-09AF: AF          xor  a
+09AF: AF          xor  a        ; walkable tile
 09B0: C9          ret
-09B1: 3E 01       ld   a,$01
+09B1: 3E 01       ld   a,$01    ; solid tile
 09B3: C9          ret
 
 09B4: FF ...
@@ -4751,7 +4761,7 @@ ENEMY_PATTERN_SCR_4
 2C58: CD 28 2C    call $ROCK_FALL_1
 2C5B: CD 40 31    call $UPDATE_ENEMY_1
 2C5E: CD 38 32    call $3238
-2C61: CD 60 32    call $3260
+2C61: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 2C64: C9          ret
 
 2C65: FF ...
@@ -4778,8 +4788,8 @@ ENEMY_PATTERN_SCR_8
 2C98: CD 28 2C    call $ROCK_FALL_1
 2C9B: CD 40 31    call $UPDATE_ENEMY_1
 2C9E: CD 38 32    call $3238
-2CA1: CD 60 32    call $3260
-2CA4: CD 70 35    call $3570
+2CA1: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
+2CA4: CD 70 35    call $UPDATE_ROCK_LEFT_TIMER
 2CA7: CD 90 35    call $3590
 2CAA: C9          ret
 
@@ -4970,7 +4980,7 @@ SET_CURSOR
 2E9D: CD A8 2F    call $2FA8
 2EA0: DD CB 00 56 bit  2,(ix+$00)
 2EA4: 28 03       jr   z,$2EA9
-2EA6: CD 50 2F    call $2F50
+2EA6: CD 50 2F    call $SET_HL_TO_SCREEN_POS_FOR_SOMETHING
 2EA9: CD 70 2C    call $2C70
 2EAC: 00          nop
 2EAD: 00          nop
@@ -5054,6 +5064,8 @@ THINGS_THEN_COPY_HISCORE_NAME
 
 2F45: FF ...
 
+    ;; something to do with hiscore name entry
+SET_HL_TO_SCREEN_POS_FOR_SOMETHING
 2F50: 36 10       ld   (hl),$10
 2F52: 11 40 00    ld   de,$0040
 2F55: 19          add  hl,de
@@ -5312,13 +5324,13 @@ UPDATE_ENEMY_1
 3140: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
 3143: A7          and  a
 3144: C8          ret  z        ; enemy not alive, return
-    ;;  Move rock down screen
+    ;;  Move rock according to lookup table
 3145: 3C          inc  a
 3146: FE 3C       cp   $3C
 3148: 20 01       jr   nz,$314B
 314A: AF          xor  a
 314B: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-314E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP
+314E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP ; list of [frame,y pos]
 3151: CB 27       sla  a
 3153: 85          add  a,l
 3154: 6F          ld   l,a
@@ -5362,6 +5374,7 @@ ROCK_FALL_LOOKUP
 
 31FE: FF ...
 
+SET_BIRD_LEFT_Y_C4
 3210: 3E F0       ld   a,$F0
 3212: 32 58 81    ld   ($ENEMY_2_X),a
 3215: 3E C4       ld   a,$C4
@@ -5375,6 +5388,8 @@ ROCK_FALL_LOOKUP
 3229: C9          ret
 322A: FF ...
 
+
+WRAP_BIRD_LEFT_Y_C4
 3238: 3A 58 81    ld   a,($ENEMY_2_X)
 323B: A7          and  a
 323C: 28 0F       jr   z,$324D
@@ -5386,10 +5401,11 @@ ROCK_FALL_LOOKUP
 3248: 28 03       jr   z,$324D
 324A: FE 04       cp   $04
 324C: C0          ret  nz
-324D: CD 10 32    call $3210
+324D: CD 10 32    call $SET_BIRD_LEFT_Y_C4
 3250: C9          ret
 3251: FF ...
 
+MOVE_ANIMATE_BIRD_LEFT
 3260: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3263: E6 01       and  $01
 3265: C8          ret  z
@@ -5404,6 +5420,7 @@ ROCK_FALL_LOOKUP
 3274: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3277: E6 02       and  $02
 3279: C0          ret  nz
+    ;; animate bird
 327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
 327D: FE 23       cp   $23
 327F: 20 06       jr   nz,$3287
@@ -5428,15 +5445,16 @@ ROCK_FALL_LOOKUP
 32C9: C9          ret
 32CA: FF ...
 
+UPDATE_STAIR_UP_BLUE_TIMER
 32D0: 3A 12 83    ld   a,($TICK_NUM)
 32D3: E6 03       and  $03
 32D5: C0          ret  nz
-32D6: 3A 3A 80    ld   a,($803A)
+32D6: 3A 3A 80    ld   a,($ENEMY_2_TIMER)
 32D9: 3C          inc  a
 32DA: FE 20       cp   $20
 32DC: 20 01       jr   nz,$32DF
 32DE: AF          xor  a
-32DF: 32 3A 80    ld   ($803A),a
+32DF: 32 3A 80    ld   ($ENEMY_2_TIMER),a
 32E2: A7          and  a
 32E3: C0          ret  nz
 32E4: CD B0 32    call $32B0
@@ -5490,6 +5508,7 @@ ROCK_FALL_LOOKUP
 334D: C9          ret
 334E: FF ...
 
+SET_BIRD_LEFT_Y_40
 3358: 3E F0       ld   a,$F0
 335A: 32 58 81    ld   ($ENEMY_2_X),a
 335D: 3E 40       ld   a,$40
@@ -5503,23 +5522,26 @@ ROCK_FALL_LOOKUP
 3371: C9          ret
 3372: FF ...
 
+    ;; if x pos < 4 then wrap the bird
+WRAP_BIRD_LEFT_Y_40
 3378: 3A 58 81    ld   a,($ENEMY_2_X)
 337B: A7          and  a
-337C: 28 0F       jr   z,$338D
+337C: 28 0F       jr   z,$_WRAP
 337E: FE 01       cp   $01
-3380: 28 0B       jr   z,$338D
+3380: 28 0B       jr   z,$_WRAP
 3382: FE 02       cp   $02
-3384: 28 07       jr   z,$338D
+3384: 28 07       jr   z,$_WRAP
 3386: FE 03       cp   $03
-3388: 28 03       jr   z,$338D
+3388: 28 03       jr   z,$_WRAP
 338A: FE 04       cp   $04
 338C: C0          ret  nz
-338D: CD 58 33    call $3358
+_WRAP
+338D: CD 58 33    call $SET_BIRD_LEFT_Y_40
 3390: C9          ret
 3391: FF ...
 
-3398: CD 78 33    call $3378
-339B: CD 60 32    call $3260
+3398: CD 78 33    call $WRAP_BIRD_LEFT_Y_40
+339B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 339E: C9          ret
 339F: FF ...
 
@@ -5571,14 +5593,15 @@ ROCK_FALL_LOOKUP
 3408: C9          ret
 3409: FF ...
 
-3418: 3A 3D 80    ld   a,($803D)
+
+3418: 3A 3D 80    ld   a,($ENEMY_4_ACTIVE)
 341B: A7          and  a
 341C: C8          ret  z
 341D: 3C          inc  a
 341E: FE 61       cp   $61
 3420: 20 01       jr   nz,$3423
 3422: AF          xor  a
-3423: 32 3D 80    ld   ($803D),a
+3423: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
 3426: 47          ld   b,a
 3427: 37          scf
 3428: 3F          ccf
@@ -5618,20 +5641,21 @@ ROCK_FALL_LOOKUP
     ;; wats this?
 3470: CD B8 33    call $33B8
 3473: CD 18 34    call $3418
-3476: CD 88 34    call $3488
-3479: CD E8 34    call $34E8
+3476: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
+3479: CD E8 34    call $UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
 347C: C9          ret
 347D: FF ...
 
+UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
 3488: 3A 12 83    ld   a,($TICK_NUM)
 348B: E6 03       and  $03
 348D: C0          ret  nz
-348E: 3A 3A 80    ld   a,($803A)
+348E: 3A 3A 80    ld   a,($ENEMY_2_TIMER)
 3491: 3C          inc  a
 3492: FE 20       cp   $20
 3494: 20 01       jr   nz,$3497
 3496: AF          xor  a
-3497: 32 3A 80    ld   ($803A),a
+3497: 32 3A 80    ld   ($ENEMY_2_TIMER),a
 349A: A7          and  a
 349B: C0          ret  nz
 349C: CD A8 34    call $34A8
@@ -5660,19 +5684,20 @@ ROCK_FALL_LOOKUP
 34D7: 3E 17       ld   a,$17
 34D9: 32 5A 81    ld   ($ENEMY_2_COL),a
 34DC: 3E 01       ld   a,$01
-34DE: 32 3D 80    ld   ($803D),a
+34DE: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
 34E1: C9          ret
 34E2: FF ...
 
+UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
 34E8: 3A 12 83    ld   a,($TICK_NUM)
 34EB: E6 03       and  $03
 34ED: C0          ret  nz
-34EE: 3A 3C 80    ld   a,($803C)
+34EE: 3A 3C 80    ld   a,($ENEMY_3_TIMER)
 34F1: 3C          inc  a
 34F2: FE 28       cp   $28
 34F4: 20 01       jr   nz,$34F7
 34F6: AF          xor  a
-34F7: 32 3C 80    ld   ($803C),a
+34F7: 32 3C 80    ld   ($ENEMY_3_TIMER),a
 34FA: A7          and  a
 34FB: C0          ret  nz
 34FC: CD C8 34    call $34C8
@@ -5683,30 +5708,31 @@ ROCK_FALL_LOOKUP
 RESET_ENEMIES
 3510: 3E FF       ld   a,$FF
 3512: 32 36 80    ld   ($ROCK_FALL_TIMER),a
-3515: 32 38 80    ld   ($8038),a
-3518: 32 3A 80    ld   ($803A),a
-351B: 32 3C 80    ld   ($803C),a
-351E: 32 3E 80    ld   ($803E),a
+3515: 32 38 80    ld   ($ENEMY_1_TIMER),a
+3518: 32 3A 80    ld   ($ENEMY_2_TIMER),a
+351B: 32 3C 80    ld   ($ENEMY_3_TIMER),a
+351E: 32 3E 80    ld   ($ROCK_LEFT_TIMER),a
 3521: 32 40 80    ld   ($8040),a
 3524: AF          xor  a
 ;;;  reset a bunch of things to 0
 3525: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3528: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 352B: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-352E: 32 3D 80    ld   ($803D),a
+352E: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
 3531: 32 3F 80    ld   ($803F),a
 3534: 32 41 80    ld   ($8041),a
 3537: C9          ret
 
     ;;
-3538: CD 38 32    call $3238
-353B: CD 60 32    call $3260
+3538: CD 38 32    call $WRAP_BIRD_LEFT_Y_C4
+353B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 353E: CD 28 2C    call $2C28
 3541: CD 40 31    call $UPDATE_ENEMY_1
 3547: CD 90 35    call $SET_ENEMY_FR_AND_Y
 354A: C9          ret
 354B: FF ...
 
+SET_ROCK_X_60
 3550: 3E 60       ld   a,$60
 3552: 32 5C 81    ld   ($ENEMY_3_X),a
 3555: 3E 1D       ld   a,$1D
@@ -5716,30 +5742,32 @@ RESET_ENEMIES
 355F: 3E 40       ld   a,$40
 3561: 32 5F 81    ld   ($ENEMY_3_Y),a
 3564: 3E 01       ld   a,$01
-3566: 32 3F 80    ld   ($803F),a
+3566: 32 3F 80    ld   ($ROCK_LEFT_TIMER),a
 3569: C9          ret
 356A: FF ..
 
+UPDATE_ROCK_LEFT_TIMER
 3570: 3A 16 83    ld   a,($TICK_MOD_SLOW)
 3573: E6 07       and  $07
 3575: C0          ret  nz
-3576: 3A 3E 80    ld   a,($803E)
+3576: 3A 3E 80    ld   a,($ROCK_LEFT_TIMER)
 3579: 3C          inc  a
 357A: FE 14       cp   $14
 357C: 20 01       jr   nz,$357F
 357E: AF          xor  a
-357F: 32 3E 80    ld   ($803E),a
+357F: 32 3E 80    ld   ($ROCK_LEFT_TIMER),a
 3582: A7          and  a
 3583: C0          ret  nz
-3584: CD 50 35    call $3550
+3584: CD 50 35    call $SET_ROCK_X_60
 3587: C9          ret
 
 3588: FF ...
 
-SET_ENEMY_FR_AND_Y
+SET_ROCK_3_FR_AND_Y
 3590: 3A 3F 80    ld   a,($803F)
 3593: A7          and  a
 3594: C8          ret  z
+    ;;  Move rock according to lookup table
 3595: 3C          inc  a
 3596: FE 40       cp   $40
 3598: 20 01       jr   nz,$359B
@@ -5757,14 +5785,15 @@ SET_ENEMY_FR_AND_Y
 35AE: C9          ret
 35AF: FF ...
 
-35B8: CD 70 35    call $3570
-35BB: CD 90 35    call $3590
+35B8: CD 70 35    call $UPDATE_ROCK_LEFT_TIMER
+35BB: CD 90 35    call $SET_ROCK_3_FR_AND_Y
 35BE: CD 28 2C    call $2C28
 35C1: CD 40 31    call $UPDATE_ENEMY_1
 35C4: C9          ret
 35C5: FF ...
 
-INIT_ENEMY_3_Y_BC
+    ;; in screen 14
+SET_BIRD_RIGHT_Y_BC
 35D0: 3E 10       ld   a,$10
 35D2: 32 5C 81    ld   ($ENEMY_3_X),a
 35D5: 3E A3       ld   a,$A3
@@ -5778,9 +5807,8 @@ INIT_ENEMY_3_Y_BC
 35E9: C9          ret
 35EA: FF ...
 
-    ;; Is this weird? Looks like it inits enemy 3,
     ;; any time x < 5?
-RESET_ENEMY_3_IF_X_LT_5
+WRAP_BIRD_RIGHT_Y_BC
 35F0: 3A 5C 81    ld   a,($ENEMY_3_X)
 35F3: A7          and  a
 35F4: 28 0F       jr   z,$3605
@@ -5792,11 +5820,11 @@ RESET_ENEMY_3_IF_X_LT_5
 3600: 28 03       jr   z,$3605
 3602: FE 04       cp   $04
 3604: C0          ret  nz
-3605: CD D0 35    call $INIT_ENEMY_3_Y_BC
+3605: CD D0 35    call $SET_BIRD_RIGHT_Y_BC
 3608: C9          ret
 3609: FF ...
 
-UPDATE_ENEMY_3
+MOVE_ANIMATE_BIRD_RIGHT
 3610: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3613: E6 01       and  $01
 3615: C8          ret  z
@@ -5837,19 +5865,19 @@ CHECK_BUTTONS_FOR_SOMETHING
 3656: C1          pop  bc
 3657: C9          ret
 
-3658: CD F0 35    call $RESET_ENEMY_3_IF_X_LT_5
-365B: CD 10 36    call $UPDATE_ENEMY_3
+3658: CD F0 35    call $WRAP_BIRD_RIGHT_Y_BC
+365B: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 365E: CD 38 32    call $3238
-3661: CD 60 32    call $3260
+3661: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 3664: C9          ret
 3665: FF ...
 
 3670: CD B8 33    call $33B8
 3673: CD 18 34    call $3418
-3676: CD 88 34    call $3488
-3679: CD E8 34    call $34E8
+3676: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
+3679: CD E8 34    call $UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
 367C: CD A8 36    call $36A8
-367F: CD 10 36    call $UPDATE_ENEMY_3
+367F: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 3682: C9          ret
 3683: FF ...
 
@@ -5881,15 +5909,16 @@ CHECK_BUTTONS_FOR_SOMETHING
 36C0: C9          ret
 36C1: FF ...
 
-36D0: CD F0 35    call $35F0
-36D3: CD 10 36    call $UPDATE_ENEMY_3
+36D0: CD F0 35    call $WRAP_BIRD_RIGHT_Y_BC
+36D3: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 36D6: CD 38 32    call $3238
-36D9: CD 60 32    call $3260
+36D9: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 36DC: CD 28 2C    call $2C28
 36DF: CD 40 31    call $UPDATE_ENEMY_1
 36E2: C9          ret
 36E3: FF ...
 
+SET_SPEAR_LEFT_Y_94
 36E8: 3E F0       ld   a,$F0
 36EA: 32 5C 81    ld   ($ENEMY_3_X),a
 36ED: 3E 22       ld   a,$22
@@ -5903,6 +5932,8 @@ CHECK_BUTTONS_FOR_SOMETHING
 3701: C9          ret
 3702: FF ...
 
+
+WRAP_SPEAR_LEFT_Y_94
 3710: 3A 5C 81    ld   a,($ENEMY_3_X)
 3713: A7          and  a
 3714: 28 0F       jr   z,$3725
@@ -5914,7 +5945,7 @@ CHECK_BUTTONS_FOR_SOMETHING
 3720: 28 03       jr   z,$3725
 3722: FE 04       cp   $04
 3724: C0          ret  nz
-3725: CD E8 36    call $36E8
+3725: CD E8 36    call $SET_SPEAR_LEFT_Y_94
 3728: C9          ret
 3729: FF ...
 
@@ -5932,7 +5963,7 @@ CHECK_BUTTONS_FOR_SOMETHING
 3744: C9          ret
 3745: FF ...
 
-3760: CD 10 37    call $3710
+3760: CD 10 37    call $WRAP_SPEAR_LEFT_Y_94
 3763: CD 30 37    call $3730
 3766: CD 98 37    call $3798
 3769: CD B8 37    call $37B8
@@ -5983,24 +6014,26 @@ CHECK_BUTTONS_FOR_SOMETHING
 
 37CE: FF ...
 
-37E8: CD 10 37    call $3710
+37E8: CD 10 37    call $WRAP_SPEAR_LEFT_Y_94
 37EB: CD 30 37    call $3730
 37EE: CD 98 37    call $3798
 37F1: CD B8 37    call $37B8
 37F4: CD B8 33    call $33B8
-37F7: CD 88 34    call $3488
+37F7: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
 37FA: C9          ret
 
 37FB: FF ...
 
-3808: CD 78 33    call $3378
-380B: CD 60 32    call $3260
-380E: CD 40 38    call $3840
-3811: CD 10 36    call $UPDATE_ENEMY_3
+3808: CD 78 33    call $WRAP_BIRD_LEFT_Y_40
+380B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
+380E: CD 40 38    call $WRAP_BIRD_RIGHT_Y_60
+3811: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 3814: C9          ret
 
 3815: FF ...
 
+    ;; no! frame 23 is bird left.
+SET_BIRD_RIGHT_Y_60
 3820: 3E 10       ld   a,$10
 3822: 32 5C 81    ld   ($ENEMY_3_X),a
 3825: 3E 23       ld   a,$23
@@ -6015,35 +6048,39 @@ CHECK_BUTTONS_FOR_SOMETHING
 
 383A: FF ...
 
+    ;; if bird < 4, wrap
+    ;; i think this is bird left not right?
+WRAP_BIRD_RIGHT_Y_60
 3840: 3A 5C 81    ld   a,($ENEMY_3_X)
 3843: A7          and  a
-3844: 28 0F       jr   z,$3855
+3844: 28 0F       jr   z,$_WRAP
 3846: FE 01       cp   $01
-3848: 28 0B       jr   z,$3855
+3848: 28 0B       jr   z,$_WRAP
 384A: FE 02       cp   $02
-384C: 28 07       jr   z,$3855
+384C: 28 07       jr   z,$_WRAP
 384E: FE 03       cp   $03
-3850: 28 03       jr   z,$3855
+3850: 28 03       jr   z,$_WRAP
 3852: FE 04       cp   $04
 3854: C0          ret  nz
-3855: CD 20 38    call $3820
+_WRAP
+3855: CD 20 38    call $SET_BIRD_RIGHT_Y_60
 3858: C9          ret
 3859: FF ...
 
-3868: CD 88 34    call $3488
+3868: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
 386B: CD B8 33    call $33B8
 386E: CD A8 36    call $36A8
-3871: CD 10 36    call $UPDATE_ENEMY_3
+3871: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 3874: CD 38 32    call $3238
-3877: CD 60 32    call $3260
+3877: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 387A: C9          ret
 
 387B: FF ...
 
-3888: CD 78 33    call $3378
-388B: CD 60 32    call $3260
+3888: CD 78 33    call WRAP_BIRD_LEFT_Y_40
+388B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
 388E: CD 40 38    call $3840
-3891: CD 10 36    call $UPDATE_ENEMY_3
+3891: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
 3894: CD C0 38    call $38C0
 3897: CD D0 38    call $38D0
 389A: C9          ret
@@ -7528,7 +7565,10 @@ SFX_SOMETHING_CH_2
 4399: 3E 9E       ld   a,$9E
 439B: 32 AB 92    ld   ($92AB),a
 439E: C9          ret
-439F: FF          rst  $38
+
+439F: FF
+
+    ;;
 43A0: DD 6E 0B    ld   l,(ix+$0b)
 43A3: DD 66 0C    ld   h,(ix+$0c)
 43A6: 7E          ld   a,(hl)
@@ -8005,36 +8045,38 @@ _SFX_DATA_LOOKUP
 4787: FF ...
 
     ;; hl = sfx data
+    ;; ix = ... 82d0, 82e8, or 82b8
 DO_SOMETHING_WITH_SFX_DATA
 4790: 00          nop
 4791: 00          nop
 4792: 00          nop
 4793: 00          nop
-4794: 7E          ld   a,(hl)   ; points at sfx data
+4794: 7E          ld   a,(hl)   ; 1. points at sfx data
 4795: DD 77 0D    ld   (ix+$0d),a
 4798: 47          ld   b,a
 4799: 23          inc  hl
-479A: 7E          ld   a,(hl)
+479A: 7E          ld   a,(hl)   ; 2
 479B: DD 77 01    ld   (ix+$01),a
 479E: 23          inc  hl
-479F: 7E          ld   a,(hl)
+479F: 7E          ld   a,(hl)   ; 3
 47A0: DD 77 02    ld   (ix+$02),a
 47A3: 05          dec  b
-47A4: 28 17       jr   z,$47BD
+47A4: 28 17       jr   z,$_HERE ; branch...
 47A6: 23          inc  hl
-47A7: 7E          ld   a,(hl)
+47A7: 7E          ld   a,(hl)   ; 4
 47A8: DD 77 03    ld   (ix+$03),a
 47AB: 23          inc  hl
-47AC: 7E          ld   a,(hl)
+47AC: 7E          ld   a,(hl)   ; 5
 47AD: DD 77 04    ld   (ix+$04),a
 47B0: 05          dec  b
-47B1: 28 0A       jr   z,$47BD
+47B1: 28 0A       jr   z,$_HERE
 47B3: 23          inc  hl
-47B4: 7E          ld   a,(hl)
+47B4: 7E          ld   a,(hl)   ; 6
 47B5: DD 77 05    ld   (ix+$05),a
 47B8: 23          inc  hl
-47B9: 7E          ld   a,(hl)
+47B9: 7E          ld   a,(hl)   ; 7
 47BA: DD 77 06    ld   (ix+$06),a
+_HERE
 47BD: DD 66 02    ld   h,(ix+$02)
 47C0: DD 6E 01    ld   l,(ix+$01)
 47C3: 7E          ld   a,(hl)
@@ -10261,10 +10303,9 @@ SFX_RESET_A_BUNCH
 56F4: C9          ret
 56F5: FF ...
 
-56F8: 12          ld   (de),a
-56F9: 01 0E 01    ld   bc,$010E
-56FC: 12          ld   (de),a
-56FD: 01 0E 01    ld   bc,$010E
+    ;;
+56F8: 12 01 0E 01
+56FC: 12 01 0E 01
 5700: 10 01       djnz $5703
 5702: 0D          dec  c
 5703: 01 10 01    ld   bc,$0110

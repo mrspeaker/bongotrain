@@ -11,17 +11,18 @@ round = 1 -- starting round
 -- Serious bizness
 infinite_lives = true
 fast_death = true    -- restart super fast after death
-fast_wipe = false  -- don't do slow transition to next screen
-disable_dino = false   -- no pesky dino... but also now you can't catch him
+fast_wipe = true  -- don't do slow transition to next screen
+disable_dino = true   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
 clear_score = false -- reset score to 0 on death and new screen
+tile_indicator = true -- see where the game things tiles are
 
 -- Non-so-serious bizness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
-head_style = 4 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy
+head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy
 
 extra_s_platform = false -- Adds a way to escape dino on S levels!
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
@@ -60,10 +61,13 @@ end
 
 cpu = manager.machine.devices[":maincpu"]
 mem = cpu.spaces["program"]
+io = cpu.spaces["io"]
+img = manager.machine.images
 gfx = manager.machine.devices[":gfxdecode"]
+gfx1 = manager.machine.memory.regions[":gfx1"]
 
 print_pairs(manager.machine.devices)
-print(dump(gfx.spaces))
+print(dump(gfx1.size))
 
 -------------- Helpers -------------
 
@@ -101,12 +105,71 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
+--poke_rom(0x3225, 0);
+
+NOP = 0x00
+JR = 0x18
+JR_Z = 0x28
+INC_A = 0x3c
+LD_A = 0x3e
+LD_B_A = 0x47
+LD_A_HL = 0x7e
+LD_HL_A = 0x77
+LD_A_B = 0x78
+RET = 0xC9
+CALL = 0xCD
+XOR_A = 0xAF
+AND = 0xE6
+OR = 0xF6
+
+if tile_indicator == true then
+   -- draw in empty "solid" tile graphics (otherwise it draws holes)
+   for i = 0, 7 do
+      gfx1:write_u8(0x1000 + 0xf9 * 0x8 +i, 0x7f)
+      gfx1:write_u8(0x0000 + 0xfb * 0x8 +i, 0x7f)
+      gfx1:write_u8(0x1000 + 0xff * 0x8 +i, 0x7f)
+   end
+
+   -- draw a "collision pole" in player graphics
+   local foots = {0x135, 0x13d, 0x145, 0x14d, 0x155}
+   for i, v in pairs(foots) do
+      gfx1:write_u8(v * 0x8 + 7, 0x55)
+      gfx1:write_u8(0x1000 + v * 0x8 + 7, 0xAA)
+
+      gfx1:write_u8(v * 0x8 + 6, 0x00)
+      gfx1:write_u8(0x1000 + v * 0x8 + 6, 0x00)
+
+      gfx1:write_u8(v * 0x8 + 8 + 8, 0x00)
+      gfx1:write_u8(0x1000 + v * 0x8 + 8 + 8, 0x00)
+
+   end
+
+   --- rotate tiles as player walks
+   poke_rom(0x09AD,{
+               JR_Z, 7, -- jump to solid
+               -- walkable
+               LD_A_HL,
+               INC_A,
+               AND, 0xef,
+               NOP, --LD_HL_A, -- don't print empties!
+               XOR_A,  -- 0 = walkable tile
+               RET,
+               -- solid
+               LD_A_HL,
+               INC_A,
+               OR, 0xF8,
+               LD_HL_A,
+               LD_A, 0x1, -- 1 = solid tile
+               RET
+   })
+end
+
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
 function set_theme(col)
    -- change screen colors (resets xoffs and cols seperately)
    -- adds an extra: `ld (hl), $col, inc hl`
-   poke_rom(0x1496,{ 0x36,col,0x23,0x7D,0xFE,0x80,0x20,0xF5,0xC9 })
+   poke_rom(0x1496,{ 0x36,col,0x23,0x7D,0xFE,0x80,0x20,0xF5, RET })
    -- the routine above was duplicated, so just call instead.
    poke_rom(0x19d8,{0xCD,0x90,0x14,0,0,0,0,0,0,0,0})
    -- bottom row color
@@ -117,20 +180,20 @@ end
 
 -- not doing by default as it changes how the game plays
 function do_jump_bug_fix()
-   poke_rom(0x14dd, {0xaf,                -- xor a           ; reset falling_timer on
+   poke_rom(0x14dd, {XOR_A,               -- reset falling_timer on
                      0x32, 0x11, 0x80,    -- ld  ($8011),a   ; screen_reset
-                     0xc9,                -- ret
+                     RET,
                      0x3a, 0x15, 0x83,    -- Existing: used to start $14e0,
                      0xe6, 0x03, 0xc0,    -- now starts $14e2
-                     0xcd, 0x50, 0x3a,
-                     0xcd, 0x88, 0x3a,
-                     0xcd, 0xc0, 0x3a,
-                     0xc9})
+                     CALL, 0x50, 0x3a,
+                     CALL, 0x88, 0x3a,
+                     CALL, 0xc0, 0x3a,
+                     RET})
    poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
 end
 
 if head_style > 0 then
-   local fr = ({0x3e, 0x2c, 0x05, 0x1d})[head_style]
+   local fr = ({0x3e, 0x2c, 0x05, 0x17})[head_style]
    local fl = ({0x3e+0x80, 0x2c+0x80, 0x07, 0x17+0x80})[head_style]
    local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
 

@@ -652,6 +652,9 @@ https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-
  records to /inp
 playback inp:
 mame bongo -playback bongorecor
+
+-- record to video from playback
+./mame bongo -playback 2023-04-22-467370 -snapsize 448x512 -aviwrite bongo467k.avi
  
  
 -nvram_directory NUL
