@@ -3083,7 +3083,7 @@ ANIMATE_SPLASH_SCREEN
 
 1676: FF ...
 
-    ;; ?
+    ;; ? data for something?
 1678: E8          ret  pe
 1679: EC EE F0    call pe,$F0EE
 167C: E9          jp   (hl)
@@ -3729,7 +3729,7 @@ DRAW_BORDER_1_C
 1CF6: C9          ret
 1CF7: FF ...
 
-    ;; Lvel data for screens: 16, 19, 27
+    ;; Level data for screens: 16, 19, 27
     ;; (all `S` screens)
     ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
 LEVEL_BG__S
@@ -4786,6 +4786,7 @@ ENEMY_PATTERN_SCR_8
 2CAB: FF ...
 
     ;; wonder what this was for? No paths call anything
+    ;; maybe a debug tool?
 NOPPED_OUT_DISPATCH
 2CB0: 3A 04 80    ld   a,($PLAYER_NUM)
 2CB3: A7          and  a
@@ -5317,7 +5318,7 @@ UPDATE_ENEMY_1
 3148: 20 01       jr   nz,$314B
 314A: AF          xor  a
 314B: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-314E: 21 80 31    ld   hl,$ENEMY_LOOKUP
+314E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP
 3151: CB 27       sla  a
 3153: 85          add  a,l
 3154: 6F          ld   l,a
@@ -5338,139 +5339,28 @@ ENEMY_PATTERN_SCR_9
 
 316F: FF ...
 
-    ;; frame, Y pos
-ENEMY_LOOKUP
+    ;; ha, every frame is a lookup (like the jump table)
+    ;; Format is: [frame, y pos]
+ROCK_FALL_LOOKUP
 3180: 00 00
-3182: 1D          dec  e
-3183: 52          ld   d,d
-3184: 1D          dec  e
-3185: 54          ld   d,h
-3186: 1D          dec  e
-3187: 56          ld   d,(hl)
-3188: 1D          dec  e
-3189: 58          ld   e,b
-318A: 1D          dec  e
-318B: 5A          ld   e,d
-318C: 1D          dec  e
-318D: 5C          ld   e,h
-318E: 1D          dec  e
-318F: 5E          ld   e,(hl)
-3190: 1D          dec  e
-3191: 60          ld   h,b
-3192: 1D          dec  e
-3193: 62          ld   h,d
-3194: 1D          dec  e
-3195: 64          ld   h,h
-3196: 1D          dec  e
-3197: 66          ld   h,(hl)
-3198: 1D          dec  e
-3199: 68          ld   l,b
-319A: 1D          dec  e
-319B: 6A          ld   l,d
-319C: 1D          dec  e
-319D: 6C          ld   l,h
-319E: 1D          dec  e
-319F: 6E          ld   l,(hl)
-31A0: 1D          dec  e
-31A1: 71          ld   (hl),c
-31A2: 1D          dec  e
-31A3: 73          ld   (hl),e
-31A4: 1D          dec  e
-31A5: 75          ld   (hl),l
-31A6: 1D          dec  e
-31A7: 78          ld   a,b
-31A8: 1D          dec  e
-31A9: 7A          ld   a,d
-31AA: 1D          dec  e
-31AB: 7C          ld   a,h
-31AC: 1D          dec  e
-31AD: 7F          ld   a,a
-31AE: 1D          dec  e
-31AF: 81          add  a,c
-31B0: 1D          dec  e
-31B1: 83          add  a,e
-31B2: 1D          dec  e
-31B3: 86          add  a,(hl)
-31B4: 1D          dec  e
-31B5: 88          adc  a,b
-31B6: 1D          dec  e
-31B7: 8A          adc  a,d
-31B8: 1D          dec  e
-31B9: 8D          adc  a,l
-31BA: 1D          dec  e
-31BB: 8F          adc  a,a
-31BC: 1D          dec  e
-31BD: 91          sub  c
-31BE: 1D          dec  e
-31BF: 94          sub  h
-31C0: 1D          dec  e
-31C1: 96          sub  (hl)
-31C2: 1D          dec  e
-31C3: 98          sbc  a,b
-31C4: 1D          dec  e
-31C5: 9B          sbc  a,e
-31C6: 1D          dec  e
-31C7: 9D          sbc  a,l
-31C8: 1D          dec  e
-31C9: 9F          sbc  a,a
-31CA: 1D          dec  e
-31CB: A2          and  d
-31CC: 1D          dec  e
-31CD: A4          and  h
-31CE: 1D          dec  e
-31CF: A6          and  (hl)
-31D0: 1D          dec  e
-31D1: AB          xor  e
-31D2: 1D          dec  e
-31D3: AD          xor  l
-31D4: 1D          dec  e
-31D5: AF          xor  a
-31D6: 1D          dec  e
-31D7: B2          or   d
-31D8: 1D          dec  e
-31D9: B4          or   h
-31DA: 1D          dec  e
-31DB: B6          or   (hl)
-31DC: 1D          dec  e
-31DD: B9          cp   c
-31DE: 1D          dec  e
-31DF: BB          cp   e
-31E0: 1D          dec  e
-31E1: BD          cp   l
-31E2: 1D          dec  e
-31E3: C0          ret  nz
-31E4: 1D          dec  e
-31E5: C2 1D C4    jp   nz,$C41D
-31E8: 1D          dec  e
-31E9: C6 1D       add  a,$1D
-31EB: C8          ret  z
-31EC: 1D          dec  e
-31ED: CA 1D CC    jp   z,$CC1D
-31F0: 1D          dec  e
-31F1: CE 1E       adc  a,$1E
-31F3: CE 1F       adc  a,$1F
-31F5: CE 20       adc  a,$20
-31F7: CE 21       adc  a,$21
-31F9: CE 21       adc  a,$21
-31FB: CE 21       adc  a,$21
-31FD: CE FF       adc  a,$FF
-31FF: FF          rst  $38
-3200: FF          rst  $38
-3201: FF          rst  $38
-3202: FF          rst  $38
-3203: FF          rst  $38
-3204: FF          rst  $38
-3205: FF          rst  $38
-3206: FF          rst  $38
-3207: FF          rst  $38
-3208: FF          rst  $38
-3209: FF          rst  $38
-320A: FF          rst  $38
-320B: FF          rst  $38
-320C: FF          rst  $38
-320D: FF          rst  $38
-320E: FF          rst  $38
-320F: FF          rst  $38
+3182: 1D 52 1D 54 1D 56 1D 58
+318A: 1D 5A 1D 5C 1D 5E 1D 60
+3192: 1D 62 1D 64 1D 66 1D 68
+319A: 1D 6A 1D 6C 1D 6E 1D 71
+31A2: 1D 73 1D 75 1D 78 1D 7A
+31AA: 1D 7C 1D 7F 1D 81 1D 83
+31B2: 1D 86 1D 88 1D 8A 1D 8D
+31BA: 1D 8F 1D 91 1D 94 1D 96
+31C2: 1D 98 1D 9B 1D 9D 1D 9F
+31CA: 1D A2 1D A4 1D A6 1D AB
+31D2: 1D AD 1D AF 1D B2 1D B4
+31DA: 1D B6 1D B9 1D BB 1D BD
+31E2: 1D C0 1D C2 1D C4 1D C6
+31Ea: 1D C8 1D CA 1D CC 1D CE
+31F2: 1E CE 1F CE 20 CE 21 CE
+31FA: 21 CE 21 CE
+
+31FE: FF ...
 
 3210: 3E F0       ld   a,$F0
 3212: 32 58 81    ld   ($ENEMY_2_X),a
@@ -5855,7 +5745,7 @@ SET_ENEMY_FR_AND_Y
 3598: 20 01       jr   nz,$359B
 359A: AF          xor  a
 359B: 32 3F 80    ld   ($803F),a
-359E: 21 80 31    ld   hl,$ENEMY_LOOKUP
+359E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP
 35A1: CB 27       sla  a
 35A3: 85          add  a,l
 35A4: 6F          ld   l,a
@@ -9900,7 +9790,7 @@ ATTRACT_PLAYER_DOWN_STAIR_DATA
 540C: 0F 0E 04 00
 5410: 11 10 04 08
 5414: 16 12 04 08
-5418: 14 13 04 08
+5418: 14 13 04 08 ; WHAT?! Wrong on the way down too! Head and legs flipped.
 541C: 0D 0C 04 08
 
 5420: FF ...
@@ -9914,18 +9804,19 @@ CALL_ATTRACT_BONUS_SCREEN
 
 ATTRACT_CAGE_FALLS_ON_DINO
 5430: 21 24 92    ld   hl,$9224
+_LP
 5433: CD 08 4D    call $DRAW_CAGE_TILES
 5436: E5          push hl
-5437: CD C2 54    call $54C2
+5437: CD C2 54    call $ATTRACT_ANIMATE_PICKUPS_AND_WAIT
 543A: 00          nop
 543B: 00          nop
 543C: 00          nop
 543D: E1          pop  hl
 543E: 23          inc  hl
-543F: 3E 39       ld   a,$39
+543F: 3E 39       ld   a,$39    ; check if cage hit ground
 5441: BD          cp   l
-5442: 20 EF       jr   nz,$5433
-5444: 3E 38       ld   a,$38
+5442: 20 EF       jr   nz,$_LP
+5444: 3E 38       ld   a,$38    ; caged dino sprite
 5446: 32 41 81    ld   ($PLAYER_FRAME),a
 5449: 3C          inc  a
 544A: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
@@ -9993,6 +9884,7 @@ ATTRACT_CATCH_DINO
 54C1: FF
 
     ;;
+ATTRACT_ANIMATE_PICKUPS_AND_WAIT
 54C2: 3A 12 83    ld   a,($TICK_NUM)
 54C5: E6 03       and  $03
 54C7: 20 06       jr   nz,$54CF
@@ -10045,18 +9937,8 @@ ATTRACT_DINO_CAGE_INVERT
 5513: FF          rst  $38
 
 SFX_8_DATA
-5514: 03          inc  bc
-5515: 04          inc  b
-5516: 55          ld   d,l
-5517: 08          ex   af,af'
-5518: 55          ld   d,l
-5519: 08          ex   af,af'
-551A: 55          ld   d,l
-551B: FF          rst  $38
-551C: FF          rst  $38
-551D: FF          rst  $38
-551E: FF          rst  $38
-551F: FF          rst  $38
+5514: 03 04 55 08 55 08 55 FF
+551C: FF FF FF FF
 
     ;; mabye sfx?
 RESET_SFX_SOMETHING_1
@@ -10090,36 +9972,12 @@ RESET_SFX_SOMETHING_1
 554A: C9          ret
 554B: FF ...
 
-5550: 10 01       djnz $5553
-5552: 0B          dec  bc
-5553: 01 08 01    ld   bc,$0108
-5556: FF          rst  $38
-5557: FF          rst  $38
-5558: 04          inc  b
-5559: 04          inc  b
-555A: 0F          rrca
-555B: 10 50       djnz $55AD
-555D: 55          ld   d,l
-555E: FF          rst  $38
-555F: FF          rst  $38
+5550: 10 01 0B 01 08 01 FF FF
+5558: 04 04 0F 10 50 55 FF FF
 
 SFX_10_DATA
-5560: 03          inc  bc
-5561: 58          ld   e,b
-5562: 55          ld   d,l
-5563: 5C          ld   e,h
-5564: 55          ld   d,l
-5565: 5C          ld   e,h
-5566: 55          ld   d,l
-5567: FF          rst  $38
-5568: 6A          ld   l,d
-5569: 55          ld   d,l
-556A: FF          rst  $38
-556B: FF          rst  $38
-556C: FF          rst  $38
-556D: FF          rst  $38
-556E: FF          rst  $38
-556F: FF          rst  $38
+5560: 03 58 55 5C 55 5C 55 FF
+5568: 6A 55 FF FF FF FF FF FF
 
     ;; bytes after the call are
     ;; start_y, start_x, tile 1, ...tile x, 0xFF

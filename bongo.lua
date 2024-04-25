@@ -130,7 +130,7 @@ function do_jump_bug_fix()
 end
 
 if head_style > 0 then
-   local fr = ({0x3e, 0x2c, 0x05, 0x17})[head_style]
+   local fr = ({0x3e, 0x2c, 0x05, 0x1d})[head_style]
    local fl = ({0x3e+0x80, 0x2c+0x80, 0x07, 0x17+0x80})[head_style]
    local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
 
@@ -157,7 +157,8 @@ poke_rom(0x162d,0x0f)
 poke_rom(0x3120,0x17)
 -- bugfix: in attract screen, jumping up stairs the player's
 -- head and legs are flipped for one frame of animation. Fix it!
-poke_rom(0x5390,{0x93,0x94})
+poke_rom(0x5390,{0x93,0x94}) -- on the way up
+poke_rom(0x5418,{0x13,0x14}) -- on the way down
 -- subjective bugfix: add inner border to empty attract screen
 poke_rom(0x48C7, {
    0xCD,0xD0,0x56, -- call DRAW_BUGGY_BORDER
