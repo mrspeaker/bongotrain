@@ -1,8 +1,8 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
 
-start_screen = 1 -- screen number (1-27), if not looping
-loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
+start_screen = 25 -- screen number (1-27), if not looping
+loop_screens = {13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
@@ -20,7 +20,7 @@ clear_score = false -- reset score to 0 on death and new screen
 tile_indicator = false -- see where the game things tiles are
 
 -- Non-so-serious bizness
-theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
+theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 
@@ -372,7 +372,7 @@ tap2 = mem:install_write_tap(screen_addr, screen_addr, "writes", function(offset
 
    if started and loop_len > 0 then
       local next = loop_screens[loop_idx + 1]
-      loop_idx = (loop_idx + 1) % loop_len
+      loop_idx = (loop_idx + 1) % loop_len -- um, why does this work? "next" should mod?
       return next
    end
 
@@ -407,9 +407,18 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
      pbuttons = true
      local is_playing = peek(0x8034)
      if is_playing then
+        local cur = peek(screen_addr)
+        -- this doesn't work properly when you have loop selections.
+        if val == 1 then -- p1 button. wrap on cage screen.
+           if cur == 27 then
+              poke(screen_addr, 0)
+           end
+        end
         if val == 2 then -- p2 button, go back screen
-           local cur = peek(screen_addr)
-           if cur > 1 then
+           if cur <= 1 then
+              poke(screen_addr, 26)
+           else
+              --if cur > 1 then
               poke(screen_addr, cur - 2)
            end
         end
