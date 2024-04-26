@@ -2711,6 +2711,7 @@ _LP
 136F: 20 F7       jr   nz,$_LP
 1371: DD 22 20 80 ld   ($LEVEL_BG_PTR),ix
 1375: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl ; hl = 9160 on transition (e on HIGH-SCORE)
+_RESET_FOR_NEXT_LEVEL
 1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
 137B: CD B8 12    call $DRAW_BACKGROUND
 137E: AF          xor  a
@@ -6745,6 +6746,7 @@ DO_CUTSCENE
 3D82: 15          dec  d          ;             |
 3D83: 20 F7       jr   nz,$3D7C   ;         ____|
 3D85: CD B0 3E    call $END_CUTSCENE    ; end of round cutscene
+_CUTSCENE_DONE
 3D88: 3A 04 80    ld   a,($PLAYER_NUM) ; a = $8004 - which screen to use?
 3D8B: A7          and  a         ; if a != 0
 3D8C: 20 08       jr   nz,$3D96  ;   goto screen-set 2
