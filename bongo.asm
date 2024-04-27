@@ -139,7 +139,6 @@
     DINO_FRAME_LEGS   $8151
     DINO_COL_LEGS     $8152
     DINO_Y_LEGS       $8153
-
     ENEMY_1_X         $8154
     ENEMY_1_FRAME     $8155
     ENEMY_1_COL       $8156
@@ -155,6 +154,10 @@
 ;;; ============================
 
     PLATFORM_XOFFS    $8180  ; maybe
+
+    SYNTH1            $82A0  ; bunch of bytes for sfx
+    SYNTH2            $82A8  ; bunch of bytes for sfx
+    SYNTH3            $82B0  ; bunch of bytes for sfx
 
     HISCORE           $8300  ;
     HISCORE+1         $8301  ;
@@ -2826,7 +2829,7 @@ DRAW_TIME
 1416: 20 1E       jr   nz,$1436
     ;; p1 version
 1418: AF          xor  a
-1419: 21 07 80    ld   hl,$8007
+1419: 21 07 80    ld   hl,$P1_TIME
 141C: ED 67       rrd  (hl)
 141E: 32 02 93    ld   ($9302),a
 1421: ED 67       rrd  (hl)
@@ -2841,7 +2844,7 @@ DRAW_TIME
 1435: C9          ret
     ;;  p2 version
 1436: AF          xor  a
-1437: 21 09 80    ld   hl,$8009
+1437: 21 09 80    ld   hl,$P2_TIME
 143A: ED 67       rrd  (hl)
 143C: 32 82 90    ld   ($9082),a
 143F: ED 67       rrd  (hl)
@@ -6161,8 +6164,8 @@ DRAW_BONUS_BOX_B
 
 3913: FF ...
 
-3918: CD B8 39    call $39B8
-391B: CD E8 39    call $39E8
+3918: CD B8 39    call $WRAP_ENEMY_RIGHT_Y_C8
+391B: CD E8 39    call $UPDATE_3_ENEMIES
 391E: C9          ret
 
 391F: FF ...
@@ -6220,11 +6223,15 @@ SET_ENEMY_3_F0_68
 
 39A7: FF ...
 
-;;; ;
-39B0: 3A 07 80    ld   a,($8007)
-39B3: 32 36 80    ld   ($8036),a
+;;; not called? debug?
+39B0: 3A 07 80    ld   a,($P1_TIME) ; woah! P1 timer is used maybe?
+39B3: 32 36 80    ld   ($ROCK_FALL_TIMER),a
 39B6: C9          ret
-39B7: FF          rst  $38
+
+39B7: FF
+
+    ;;
+WRAP_ENEMY_RIGHT_Y_C8
 39B8: 3A 54 81    ld   a,($ENEMY_1_X)
 39BB: FE 80       cp   $80
 39BD: 28 14       jr   z,$39D3
@@ -6242,6 +6249,7 @@ SET_ENEMY_3_F0_68
 39D6: C3 C0 11    jp   $11C0
 39D9: FF ...
 
+UPDATE_3_ENEMIES
 39E8: 3A 15 83    ld   a,($TICK_MOD_FAST)
 39EB: E6 07       and  $07
 39ED: C0          ret  nz
@@ -6439,12 +6447,12 @@ SET_ENEMY_3_90_C0
 3B3D: FF FF FF
 
 3B40: CD 78 3B    call $3B78
-3B43: 3A 36 80    ld   a,($8036)
+3B43: 3A 36 80    ld   a,($ROCK_FALL_TIMER)
 3B46: 3C          inc  a
 3B47: FE 60       cp   $60
 3B49: 20 01       jr   nz,$3B4C
 3B4B: AF          xor  a
-3B4C: 32 36 80    ld   ($8036),a
+3B4C: 32 36 80    ld   ($ROCK_FALL_TIMER),a
 3B4F: FE 08       cp   $08
 3B51: 20 04       jr   nz,$3B57
 3B53: CD F8 3A    call $SET_ENEMY_1_98_C0
@@ -6472,6 +6480,7 @@ SET_ENEMY_3_90_C0
 3B76: FF          rst  $38
 3B77: FF          rst  $38
 
+    ;;
 3B78: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3B7B: E6 03       and  $03
 3B7D: C8          ret  z
@@ -6658,70 +6667,46 @@ BUBBLE_LAVA_VAR_3
 3CB9: 83 80 83 87 FF
 3CBE: C9          ret
 
-3CBF: FF          rst  $38
-3CC0: 80          add  a,b
-3CC1: 3A 11 70    ld   a,($7011)
-3CC4: 80          add  a,b
-3CC5: 3B          dec  sp
-3CC6: 11 80 94    ld   de,$9480
-3CC9: 05          dec  b
-3CCA: 12          ld   (de),a
-3CCB: 80          add  a,b
-3CCC: 00          nop
-3CCD: 00          nop
-3CCE: 12          ld   (de),a
-3CCF: 80          add  a,b
-3CD0: 00          nop
-3CD1: 00          nop
-3CD2: 12          ld   (de),a
-3CD3: 80          add  a,b
-3CD4: 6C          ld   l,h
-3CD5: 00          nop
-3CD6: 12          ld   (de),a
-3CD7: 80          add  a,b
-3CD8: A8          xor  b
-3CD9: 00          nop
-3CDA: 12          ld   (de),a
-3CDB: 80          add  a,b
-3CDC: 00          nop
-3CDD: 00          nop
-3CDE: 12          ld   (de),a
-3CDF: 80          add  a,b
+3CBF: FF
+
+    ;; x, frame, color, y
+CUTSCENE_DATA
+3CC0: 80 3A 11 70               ; player
+3CC4: 80 3B 11 80               ; player legs
+3CC8: 94 05 12 80               ; bongo
+3CCC: 00 00 12 80               ; dino (offscreen)
+3CD0: 00 00 12 80               ; dino legs
+3CD4: 6C 00 12 80               ; bambongo 1
+3CD8: A8 00 12 80               ; bambongo 2
+3CDC: 00 00 12 80               ; unused?
 
     ;; CUTSCENE something
+WAIT_VBLANK_8
 3CE0: 1E 08       ld   e,$08
+_LP
 3CE2: E5          push hl
 3CE3: D5          push de
 3CE4: CD A0 13    call $WAIT_VBLANK
 3CE7: D1          pop  de
 3CE8: E1          pop  hl
 3CE9: 1D          dec  e
-3CEA: 20 F6       jr   nz,$3CE2
+3CEA: 20 F6       jr   nz,$_LP
 3CEC: C9          ret
 
 3CED: FF ...
 
-    ;; gotta be cutscene related? Bongo, player, and dino...
-3D00: 3C          inc  a
-3D01: 3D          dec  a
-3D02: 06 01       ld   b,$01
-3D04: 3A 3B 05    ld   a,($053B)
-3D07: 00          nop
-3D08: 3C          inc  a
-3D09: 3D          dec  a
-3D0A: 06 01       ld   b,$01
-3D0C: 3A 3B 07    ld   a,($073B)
-3D0F: 02          ld   (bc),a
-3D10: 3E 3F       ld   a,$3F
-3D12: 08          ex   af,af'
-3D13: 03          inc  bc
-3D14: 3A 3B 07    ld   a,($073B)
-3D17: 02          ld   (bc),a
-3D18: 3E 3F       ld   a,$3F
-3D1A: 08          ex   af,af'
-3D1B: 03          inc  bc
-3D1C: 3A 3B 05    ld   a,($053B)
-3D1F: 00          nop
+    ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
+DANCE_FRAME_DATA
+3D00: 3C 3D 06 01
+3D04: 3A 3B 05 00
+3D08: 3C 3D 06 01
+3D0C: 3A 3B 07 02
+3D10: 3E 3F 08 03
+3D14: 3A 3B 07 02
+3D18: 3E 3F 08 03
+3D1C: 3A 3B 05 00
+
+UPDATE_DANCE_FRAMES
 3D20: 7E          ld   a,(hl)
 3D21: 32 41 81    ld   ($PLAYER_FRAME),a
 3D24: 23          inc  hl
@@ -6732,12 +6717,12 @@ BUBBLE_LAVA_VAR_3
 3D2B: 32 49 81    ld   ($BONGO_FRAME),a
 3D2E: 23          inc  hl
 3D2F: 7E          ld   a,(hl)
-3D30: 32 51 81    ld   ($DINO_FRAME_LEGS),a
+3D30: 32 51 81    ld   ($DINO_FRAME_LEGS),a ; how is dino the same?!
 3D33: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3D36: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3D39: 23          inc  hl
 3D3A: 7D          ld   a,l
-3D3B: E6 1F       and  $1F
+3D3B: E6 1F       and  $1F      ; wrap dance at 32 bytes
 3D3D: 6F          ld   l,a
 3D3E: C9          ret
 3D3F: FF ...
@@ -6753,24 +6738,25 @@ DO_CUTSCENE
 3D59: 00 00                     ; params to DRAW_SCREEN
 3D5B: CD A0 03    call $DRAW_LIVES
 3D5E: CD 50 24    call $DRAW_SCORE
-3D61: 21 40 81    ld   hl,$PLAYER_X ; destination
-3D64: 01 C0 3C    ld   bc,$3CC0   ; src location
-3D67: 16 20       ld   d,$20      ; 20 times do
+3D61: 21 40 81    ld   hl,$PLAYER_X       ; destination
+3D64: 01 C0 3C    ld   bc,$CUTSCENE_DATA  ; src location
+3D67: 16 20       ld   d,$20      ; 32 times do
 3D69: 0A          ld   a,(bc)     ;       <-
-3D6A: 77          ld   (hl),a     ;         |
+3D6A: 77          ld   (hl),a     ;         |  (sets all sprites)
 3D6B: 23          inc  hl         ;         |
 3D6C: 03          inc  bc         ;         |
 3D6D: 15          dec  d          ;         |
 3D6E: 20 F9       jr   nz,$3D69   ;        _|
 3D70: CD A0 3D    call $DRAW_CAGE_AND_SCENE
-3D73: 16 80       ld   d,$80      ; 80 x animate cutscene
+3D73: 16 80       ld   d,$80      ; 128 x animate cutscene
 3D75: AF          xor  a          ;
-3D76: 32 2D 80    ld   ($DINO_COUNTER),a  ;
-3D79: 21 00 3D    ld   hl,$3D00   ;
-3D7C: CD E0 3C    call $3CE0      ; draws gang <-
-3D7F: CD 20 3D    call $3D20      ;             |
-3D82: 15          dec  d          ;             |
-3D83: 20 F7       jr   nz,$3D7C   ;         ____|
+3D76: 32 2D 80    ld   ($DINO_COUNTER),a
+3D79: 21 00 3D    ld   hl,$DANCE_FRAME_DATA
+_LP
+3D7C: CD E0 3C    call $WAIT_VBLANK_8   ; draws gang <-
+3D7F: CD 20 3D    call $UPDATE_DANCE_FRAMES ;         |
+3D82: 15          dec  d          ;                   |
+3D83: 20 F7       jr   nz,$_LP    ;               ____|
 3D85: CD B0 3E    call $END_CUTSCENE    ; end of round cutscene
 _CUTSCENE_DONE
 3D88: 3A 04 80    ld   a,($PLAYER_NUM) ; a = $8004 - which screen to use?
@@ -6826,7 +6812,7 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 3E20: C9          ret
 3E21: FF
 
-    ;; called when?
+CUTSCENE_RUN_OFFSCREEN
 3E22: 3E 0C       ld   a,$0C
 3E24: 32 41 81    ld   ($PLAYER_FRAME),a
 3E27: 3E 0D       ld   a,$0D
@@ -6834,17 +6820,17 @@ DRAW_CAGE_AND_SCENE             ; for cutscene
 3E2C: 3E 29       ld   a,$29
 3E2E: 32 29 81    ld   ($SCREEN_XOFF_COL+29),a
 3E31: 1E 70       ld   e,$70
-;;;  End of level screen?
+_LP
 3E33: D5          push de
-3E34: CD F0 3E    call $3EF0
+3E34: CD F0 3E    call $ANIMATE_PLAYER_RIGHT
 3E37: CD E8 08    call $MOVE_BONGO_RIGHT
 3E3A: CD E8 08    call $MOVE_BONGO_RIGHT
 3E3D: CD A0 13    call $WAIT_VBLANK
 3E40: D1          pop  de
 3E41: 1D          dec  e
-;;;  end of end of level screen
-3E42: 20 EF       jr   nz,$3E33
+3E42: 20 EF       jr   nz,$_LP
 3E44: C9          ret
+
 3E45: FF ...
 
 DELAY_2_B
@@ -6888,35 +6874,36 @@ END_CUTSCENE
 3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
 3EB2: 32 42 80    ld   ($CH1_SFX),a
 3EB5: 21 50 81    ld   hl,$DINO_X_LEGS ; set a bunch of bytes at 8150
-3EB8: 36 18       ld   (hl),$18
+3EB8: 36 18       ld   (hl),$18        ; x
 3EBA: 23          inc  hl
-3EBB: 36 2E       ld   (hl),$2E
+3EBB: 36 2E       ld   (hl),$2E        ; frame
 3EBD: 23          inc  hl
-3EBE: 36 12       ld   (hl),$12
+3EBE: 36 12       ld   (hl),$12       ; color
 3EC0: 23          inc  hl
-3EC1: 36 70       ld   (hl),$70
+3EC1: 36 70       ld   (hl),$70       ; y
 3EC3: 21 5C 81    ld   hl,$ENEMY_3_X ; and 815c
-3EC6: 36 11       ld   (hl),$11
+3EC6: 36 11       ld   (hl),$11      ; x
 3EC8: 23          inc  hl
-3EC9: 36 30       ld   (hl),$30
+3EC9: 36 30       ld   (hl),$30      ; frame
 3ECB: 23          inc  hl
-3ECC: 36 12       ld   (hl),$12
+3ECC: 36 12       ld   (hl),$12      ; color
 3ECE: 23          inc  hl
-3ECF: 36 80       ld   (hl),$80
-3ED1: CD E0 3C    call $3CE0    ; dino appears
+3ECF: 36 80       ld   (hl),$80      ; y
+3ED1: CD E0 3C    call $WAIT_VBLANK_8
 3ED4: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
 3ED7: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
 3EDA: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
 3EDD: 80          add  a,b
-3EDE: CD 22 3E    call $3E22    ; run to the right
+3EDE: CD 22 3E    call $CUTSCENE_RUN_OFFSCREEN
 3EE1: C9          ret
 
 3EE2: FF ...
 
+ANIMATE_PLAYER_RIGHT
 3EF0: 7B          ld   a,e
 3EF1: E6 03       and  $03
 3EF3: C0          ret  nz
-3EF4: CD 18 06    call $0618
+3EF4: CD 18 06    call $PLAYER_MOVE_RIGHT
 3EF7: C9          ret
 
 3EF8: FF ...
@@ -6930,11 +6917,10 @@ DELAY_83_LOAD_A_VAL_WEIRD
 
 3F0A: FF ...
 
-;;; Probably the level tiles at the bottom of the screen
+;;; level tiles at the bottom of the screen
 DRAW_BOTTOM_ROW_NUMBERS
 3F10: CD 10 03    call $DRAW_TILES_H
-3F13: 1F          rra
-3F14: 00          nop
+3F13: 1F 00                     ; bottom row
 3F15: C0 C1 C2 C3 C4 C5 C6 C7
 3F1D: C8 C9 CA CB CC CD CE CF
 3F25: D0 D1 D2 D3 D4 D5 D6 D7
@@ -7337,7 +7323,7 @@ HIT_BONUS_DRAW_POINTS
 
 41E1: FF FF
 
-    ;; How do i get here?... is this data? Weird load
+    ;; How do i get here?... what is this Weird load for?
 41E3: 3A 00 41    ld   a,($4100)
 41E6: 01 E3 01    ld   bc,$JMP_HL_PLUS_4K
 41E9: C5          push bc
@@ -7528,6 +7514,8 @@ BLANK_OUT_1UP_TEXT
 430F: 00          nop
 4310: FF          rst  $38
 4311: FF          rst  $38
+
+    ;;
 4312: CD F8 41    call $41F8
 4315: 3E 9E       ld   a,$9E
 4317: 32 7A 92    ld   ($927A),a
@@ -9108,7 +9096,7 @@ DRAW_BORDER_AND_JETSOFT
 
     ;; This totally does nothing but waste some
     ;; cycles right? A reg is not even used after
-    ;; Maybe it was nopped out?
+    ;; Maybe it was nopped out? debug?
 LOAD_A_VAL_REALLY_WEIRD
 4E90: 3E F9       ld   a,$F9
 4E92: 00          nop
