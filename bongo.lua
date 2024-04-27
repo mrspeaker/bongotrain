@@ -1,12 +1,11 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
-
-start_screen = 25 -- screen number (1-27), if not looping
-loop_screens = {13,14,18,21,25,27} -- if you want to practise levels, eg:
+start_screen = 27 -- screen number (1-27), if not looping
+loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 1 -- starting round
 
 -- Serious bizness
 infinite_lives = true
@@ -20,10 +19,11 @@ clear_score = false -- reset score to 0 on death and new screen
 tile_indicator = false -- see where the game things tiles are
 
 -- Non-so-serious bizness
-theme = 7 -- color theme (0-7). 0 =  default, 7 = best one
+theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 
+one_px_moves = false -- test how it feels moving 1px per frame, not 3px per 3 frames.
 extra_s_platform = false -- Adds a way to escape dino on S levels, for fun
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
                      -- doesn't kill you.
@@ -116,6 +116,10 @@ end
 
 --poke_rom(0x3225, 0);
 
+poke_rom(0x4D0e, 20)
+
+PLAYER_X = 0x8140
+
 NOP = 0x00
 JR = 0x18
 JR_NZ = 0x20
@@ -160,9 +164,11 @@ if tile_indicator == true then
       poke_gfx(2, v * 0x8 + 8 + 8 + 7, 0x3f)
 
       -- blank out columns next
+      poke_gfx(3, v * 0x8 + 5, 0x00)
       poke_gfx(3, v * 0x8 + 6, 0x00)
       poke_gfx(3, v * 0x8 + 8 + 8, 0x00)
-   end
+      poke_gfx(3, v * 0x8 + 8 + 8 + 1, 0x00)
+  end
 
    --- rotate through tiles as player walks
    poke_rom(
@@ -329,6 +335,14 @@ if theme ~= 0 then
    set_theme(theme)
 end
 
+if one_px_moves == true then
+   poke_rom(0x068D, NOP) -- run every frame, not every 3
+   poke_rom(0x0632, {NOP,NOP}) -- nop 2x inc
+   poke_rom(0x0672, {NOP,NOP}) -- nop 2x dec
+end
+
+
+
 ------------- RAM hacks -------------
 
 started = false
@@ -370,16 +384,17 @@ tap2 = mem:install_write_tap(screen_addr, screen_addr, "writes", function(offset
       end
    end
 
+   if clear_score == true then
+      -- reset score on screen change
+      poke(0x8014, {0, 0, 0});
+   end
+
    if started and loop_len > 0 then
       local next = loop_screens[loop_idx + 1]
       loop_idx = (loop_idx + 1) % loop_len -- um, why does this work? "next" should mod?
       return next
    end
 
-   if clear_score == true then
-      -- reset score on screen change
-      poke(0x8014, {0, 0, 0});
-   end
 end)
 
 -- Change bg
@@ -405,24 +420,24 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
   end
   if not pbuttons and (val > 0) then
      pbuttons = true
-     local is_playing = peek(0x8034)
+     local is_playing = peek(PLAYER_X) > 0 -- 0 == not set
      if is_playing then
         local cur = peek(screen_addr)
         -- this doesn't work properly when you have loop selections.
         if val == 1 then -- p1 button. wrap on cage screen.
            if cur == 27 then
-              poke(screen_addr, 0)
+              poke(screen_addr, 0) -- 0 as it get incremented... somewhere else
            end
         end
         if val == 2 then -- p2 button, go back screen
            if cur <= 1 then
               poke(screen_addr, 26)
            else
-              --if cur > 1 then
               poke(screen_addr, cur - 2)
            end
         end
-        poke(0x8140, 0xe0);
+        -- send player to edge of screen. Triggers next level
+        poke(PLAYER_X, 0xe0);
      end
    end
 end)

@@ -39,7 +39,7 @@ video ram:
 
 330 = copywrite symbol on splash
 
-function printt(t)
+defunction printt(t)
    for i,j in pairs(t) do
       print(i,j)
    end
@@ -162,6 +162,38 @@ https://github.com/mamedev/mame/blob/85a3c394d20e82da9e1dd6f40d2be6ac2ac3cece/sr
   x: sub $18, add $30
   y: sub $28, add $50
 
+*** Cage-dino collision
+
+cage starts at `ld   hl,$91C9` C9. (in setupt_cage_sfx_and_screen)
+goes to $dc (ground)
+
+CHECK_DINO_CAGE_COLLISION
+
+x check:
+
+4CEA: 3A 4C 81    ld   a,($DINO_X)
+4CED: D6 84       sub  $84                  ; are we >= 0x84 (132)?
+4CEF: 37          scf
+4CF0: 3F          ccf                              ;
+4CF1: D6 18       sub  $18                  ; but < (0x84+0x18 (24)) = 0x9c  (156)
+4CF3: D0          ret  nc       ; not lined up with dino - return.
+
+Y check:
+
+4CF4: 3A 4F 81    ld   a,($DINO_Y)
+4CF7: CB 3F       srl  a
+4CF9: CB 3F       srl  a
+4CFB: CB 3F       srl  a       ; / 8
+4CFD: 47          ld   b,a
+4CFE: 7D          ld   a,l         ; CAGE_Y (201 to 220)
+4CFF: E6 1F       and  $1F ;  & 0001 1111 ? what?
+4D01: 90          sub  b        ; - dino_y/8
+4D02: 37          scf
+4D03: 3F          ccf
+4DB4: D6 02       sub  $02 ; is 2px diff?
+4DB6: D0          ret  nc
+
+4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO
 
   ----
 ** level data layout
@@ -212,11 +244,15 @@ inc
 inc
 inc
 
+Tried moving it 1px every frame (one_px_moves in trainer)... it's smoother (and a bit easier?) but the inputs are not consistent - not sure why, but can get it to move 1px sometimes. 2x1px otheres, 3x1px others, and even more... like 5x1px - just by pressing as fast as possible on keyboard.
+
 Every level encourages running out of the game - except for the two-birds-opposite-directions: that punishes it.
 
 Stairs are juuuust too narrow - so can't hold down jump right: changes completely on second round.
 
 the flow of the levels is really great. Ups and downs match (barring skipping with bonus, which messes you up sometimes). And the way it transitions from the early screens to the later feels very well thought out. Each time you master a section, it stops showing up. The dastardly W with 3 birds is the icing. Then the dino catch is the icing on the icing. Then the cutscene is the chococlate on the icing on the icing.
+
+R2 \ 1bl, 2bd = go down fast, but have to pause slightly on the last step and wait for bird. Previously had a long run of W-keying, so it throws your flow going into WoS.
 
 ** Level types
 
@@ -268,7 +304,7 @@ n_n, nTn, /,^^,\, S, Sc
 Safety stair pickup (e) - go up stair past pickup, drop back down.
 Fast rock leap (t) - in round 2, sneakily get pickup under rock, then back, thne jump over the rock as it falls
 moving bonus:
--- Jump from ledge will get more bonus... not flat ground
+-- Jump from ledge will get more bonus... not flat ground: bzzt. more complex than that. nTn can get more, /,W: no more, but sometimes less, S: 10 more is possible, usually less though. S: jump from platform can get you 130+ more, but it's hard. 80 is easy. S_S: no top, but yes platform: +250 or more. \: jumping from second-bottom stair gets less than bottom stair
 -- Can wait on moving platform to get more points if will skip above
 -- Can jump over bonus, go to end, come back for more points (if skip)
 -- Extreme: on S, can jump out right side of screen and then come back to get some extra points
@@ -276,7 +312,7 @@ moving bonus:
 collision is left 12px - can overlap birds heading at you
 bonus resets on round change - don't sweat end-level deaths
 favour speed-run over careful: doesn't work in round 2
-fast round - can jump from second-to-bottom stair
+can jump from the very edge of second-to-bottom stair
 
 - what's that weird tiny "slowdown" right at the start? Lags for a split second
 - maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
@@ -716,7 +752,7 @@ Looks like it was half-baked: on transition, flashes white for a couple of frame
 
 I also figured out you get more points if you jump off a ledge before the end of a screen. Like, if you walk off the end of screen 1, you get 2090 points, but if you jump off the ledge you get 2210 points. I was always jumping just to show-boat, but turns out it's optimal strategy
 
-Yeah, I watched BAZZA (BARRA? BAGGA?)'s run - they jump EVERY screen end (but it's not necessary unless there's an ledge... pffft, amateur)
+Yeah, I watched BAZZA (BARRA? BAGGA?)'s run - they jump EVERY screen end (but it's not necessary unless there's an ledge... pffft, amateur) ---- NOOOO, can get more! on nTn.. but only same or (very slightly) less on /, W: better to walk off
 ---
 Mini-tip: in the "jump up the stairs" level - you know it's hard to get the crown (you have to carefully tap until you get it)? Now I just go to the next stair up, and then drop back down. Bit less stressfull, and even works when the blue meanie guy is there.
 
@@ -726,7 +762,7 @@ The only thing that seems to change is how long the dino takes to start
 
 It does change things though - some levels you just have to go... like the blue meanies - you need to jump over the first one! That's why you can sit next to him.
 
-Can jump from one-step-higher in second round
+Can jump from one-step-higher in second round (false! First round too.)
 
 -- hand ro
 

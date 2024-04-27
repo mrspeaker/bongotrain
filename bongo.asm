@@ -182,7 +182,7 @@
     TILE_R            $22
     TILE_HYPHEN       $2B
 
-    TILE_CAGE         $74
+    TILE_CAGE         $74       ; - $7f
     TILE_CURSOR       $89
     TILE_CROWN_PIKA   $8C ; alt crown
     TILE_PIK_CROSSA   $8D
@@ -8832,24 +8832,27 @@ ADD_PICKUP_PAT_1
 4CE8: C9          ret
 4CE9: FF
 
-;;;
+    ;; Runs every frame as cage drops...
+    ;; hl contains screen location of cage
+    ;; so `l` is used as CAGE_Y
+CHECK_DINO_CAGE_COLLISION
 4CEA: 3A 4C 81    ld   a,($DINO_X)
-4CED: D6 84       sub  $84
+4CED: D6 84       sub  $84      ; is dino x >= 0x84 (132)?
 4CEF: 37          scf
-4CF0: 3F          ccf
-4CF1: D6 18       sub  $18
-4CF3: D0          ret  nc       ; not lined up with dino - return.
-4CF4: 3A 4F 81    ld   a,($DINO_Y)
+4CF0: 3F          ccf           ; ...
+4CF1: D6 18       sub  $18      ; and < 132 + 24 (156) ?
+4CF3: D0          ret  nc       ; no: return.
+4CF4: 3A 4F 81    ld   a,($DINO_Y) ; yes! check y
 4CF7: CB 3F       srl  a
 4CF9: CB 3F       srl  a
 4CFB: CB 3F       srl  a
-4CFD: 47          ld   b,a
-4CFE: 7D          ld   a,l
-4CFF: E6 1F       and  $1F
-4D01: 90          sub  b
+4CFD: 47          ld   b,a      ; b = y / 8
+4CFE: 7D          ld   a,l      ; cage_y
+4CFF: E6 1F       and  $1F      ; & 00011111 (?)
+4D01: 90          sub  b        ; - b
 4D02: 37          scf
-4D03: 3F          ccf
-4D04: C3 B4 4D    jp   $WAIT_FOR_CAGE_DOWN
+4D03: 3F          ccf           ; (... -2)
+4D04: C3 B4 4D    jp   $CHECK_DINO_CAGE_COLLISION_CONT
 
 4D07: FF
 
@@ -8857,7 +8860,7 @@ DRAW_CAGE_TILES
 4D08: CD 60 4D    call $RESET_3_ROW_XOFFS
 4D0B: E5          push hl
 4D0C: 2B          dec  hl
-4D0D: 36 10       ld   (hl),$10
+4D0D: 36 10       ld   (hl),$TILE_BLANK ; column 1
 4D0F: 23          inc  hl
 4D10: 36 76       ld   (hl),$76
 4D12: 23          inc  hl
@@ -8868,9 +8871,9 @@ DRAW_CAGE_TILES
 4D19: 36 7B       ld   (hl),$7B
 4D1B: 01 DC FF    ld   bc,$FFDC
 4D1E: 09          add  hl,bc
-4D1F: 36 10       ld   (hl),$10
+4D1F: 36 10       ld   (hl),$TILE_BLANK ; column 2
 4D21: 23          inc  hl
-4D22: 36 74       ld   (hl),$74
+4D22: 36 74       ld   (hl),$TILE_CAGE
 4D24: 23          inc  hl
 4D25: 36 75       ld   (hl),$75
 4D27: 23          inc  hl
@@ -8878,7 +8881,7 @@ DRAW_CAGE_TILES
 4D2A: 23          inc  hl
 4D2B: 36 79       ld   (hl),$79
 4D2D: 09          add  hl,bc
-4D2E: 36 10       ld   (hl),$10
+4D2E: 36 10       ld   (hl),$TILE_BLANK ; column 3
 4D30: 23          inc  hl
 4D31: 36 7E       ld   (hl),$7E
 4D33: 23          inc  hl
@@ -8892,22 +8895,25 @@ DRAW_CAGE_TILES
 
 4D3E: FF FF
 
+    ;; hl = cage screen addr, so l = "Y pos"
+    ;; starts at 0xC9 (201) and incs to 0xDC (220)
 TRIGGER_CAGE_FALL
-4D40: CD 75 4E    call $4E75
+4D40: CD 75 4E    call $SETUP_CAGE_SFX_AND_SCREEN
+_UPDATE_CAGE_FALL
 4D43: CD 08 4D    call $DRAW_CAGE_TILES
 4D46: E5          push hl
-4D47: 21 A0 13    ld   hl,$WAIT_VBLANK
+4D47: 21 A0 13    ld   hl,$WAIT_VBLANK ; blocks action as cage falls
 4D4A: CD 81 5C    call $JMP_HL
 4D4D: 3A 12 83    ld   a,($TICK_NUM)
 4D50: E6 03       and  $03
 4D52: 20 F3       jr   nz,$4D47
 4D54: E1          pop  hl
-4D55: 23          inc  hl
-4D56: CD EA 4C    call $4CEA
+4D55: 23          inc  hl       ; move cage down
+4D56: CD EA 4C    call $CHECK_DINO_CAGE_COLLISION
 4D59: 3E DC       ld   a,$DC    ; did cage hit ground?
 4D5B: BD          cp   l
 4D5C: C8          ret  z
-4D5D: 18 E4       jr   $4D43    ;nope, loop
+4D5D: 18 E4       jr   $_UPDATE_CAGE_FALL ; nope, loop
 
 4D5F: FF
 
@@ -8957,22 +8963,23 @@ CHECK_TOUCHING_CAGE
 
 4DB2: FF FF
 
-WAIT_FOR_CAGE_DOWN
-4DB4: D6 02       sub  $02
-4DB6: D0          ret  nc
-4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO
+CHECK_DINO_CAGE_COLLISION_CONT
+4DB4: D6 02       sub  $02      ; less than 2 diff?
+4DB6: D0          ret  nc       ; no, no Y collision
+4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO ; yes, caged the dino
 
 4DBA: FF ...
 
-    ;; really wait vblank?
-REALLY_VBLANK
+    ;;
+WAIT_VBLANK_40
 4DC0: 2E 40       ld   l,$40
+_LP
 4DC2: E5          push hl
 4DC3: 21 A0 13    ld   hl,$WAIT_VBLANK
 4DC6: CD 81 5C    call $JMP_HL
 4DC9: E1          pop  hl
 4DCA: 2D          dec  l
-4DCB: 20 F5       jr   nz,$4DC2
+4DCB: 20 F5       jr   nz,$_LP
 4DCD: C9          ret
 
 4DCE: FF FF
@@ -9006,7 +9013,7 @@ DONE_CAGED_DINO
 4E08: 32 52 81    ld   ($DINO_COL_LEGS),a
 4E0B: 3E E7       ld   a,$E7
 4E0D: 32 53 81    ld   ($DINO_Y_LEGS),a
-4E10: CD C0 4D    call $REALLY_VBLANK
+4E10: CD C0 4D    call $WAIT_VBLANK_40
 4E13: CD E0 4E    call $SPEED_UP_FOR_NEXT_ROUND
 4E16: 21 48 3D    ld   hl,$DO_CUTSCENE
 4E19: CD 81 5C    call $JMP_HL
@@ -9058,6 +9065,7 @@ _LP
 4E74: FF
 
     ;;
+SETUP_CAGE_SFX_AND_SCREEN
 4E75: F5          push af
 4E76: 3E 05       ld   a,$05
 4E78: 32 44 80    ld   ($SFX_ID),a
