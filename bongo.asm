@@ -2,6 +2,9 @@
     ;; picked apart by Mr Speaker
     ;; https://www.mrspeaker.net
 
+    ;; (NOTE: all just find/replace in a text editor:
+    ;; so don't try and compile me!)
+
     ;; Overview:
     ;; - BIG_RESET ($1000) inits and starts loop
     ;; - Main loop is at MAIN_LOOP ($104b)
@@ -102,6 +105,13 @@
 
     HISCORE_TIMER     $8075  ; Countdown for entering time in hiscore screen
     HISCORE_TIMER2    $8076  ; 16 counter for countdown
+
+
+    ;; Bunch of unused/debugs?
+    _                 $8086  ; set in hiscore, never read
+    _                 $8090  ; set to 1, never read?
+    _                 $8093  ; set to $20 in coinage... hiscore. used?
+    _                 $8094  ; unused? used with 8093
 
     SCREEN_XOFF_COL   $8100  ; OFFSET and COL for each row of tiles
                              ; Gets memcpy'd to $9800
@@ -205,7 +215,9 @@
 ;;; hardware
 
     SCREEN_RAM        $9000 ; - 0x93ff  videoram
-    START_OF_TILES    $9040 ; top right tile...
+    START_OF_TILES    $9040 ; top right tile
+    END_OF_TILES      $93BF ; bottom left tile
+    ;; what's all the stuff in herer?
     XOFF_COL_RAM      $9800 ; xoffset and color data per tile row
     SPRITES           $9840 ; 0x9800 - 0x98ff is spriteram
     PORT_IN0          $A000 ;
@@ -631,15 +643,16 @@ SETUP_MORE
 0349: 00          nop
 034A: 00          nop
 034B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
-034E: 21 00 80    ld   hl,$8000
+034E: 21 00 80    ld   hl,$8000 ; reset $8000-$88FF? to 0
+_LP
 0351: 36 00       ld   (hl),$00
 0353: 2C          inc  l
-0354: 20 FB       jr   nz,$0351
+0354: 20 FB       jr   nz,$_LP
 0356: 24          inc  h
 0357: 3A 00 B8    ld   a,($WATCHDOG)
 035A: 7C          ld   a,h
 035B: FE 88       cp   $88
-035D: 20 F2       jr   nz,$0351
+035D: 20 F2       jr   nz,$_LP
 035F: 31 F0 83    ld   sp,$STACK_LOCATION
 0362: 3E 01       ld   a,$01
 0364: 32 90 80    ld   ($8090),a
@@ -4574,18 +4587,21 @@ DRAW_BONUS_STATE
 
 2AE5: FF ...
 
+    ;; called?
 2B00: 3A 93 80    ld   a,($8093)
 2B03: 47          ld   b,a
 2B04: AF          xor  a
 2B05: 32 93 80    ld   ($8093),a
 2B08: 78          ld   a,b
 2B09: A7          and  a
-2B0A: 20 08       jr   nz,$2B14
+2B0A: 20 08       jr   nz,$_DONE
 2B0C: 3A 94 80    ld   a,($8094)
 2B0F: 47          ld   b,a
 2B10: AF          xor  a
 2B11: 32 94 80    ld   ($8094),a
+_DONE
 2B14: C9          ret
+
 2B15: FF ...
 
 2B20: 47          ld   b,a
@@ -4767,7 +4783,8 @@ ENEMY_PATTERN_SCR_4
 
 2C65: FF ...
 
-    ;; maybe entering letters on hiscore? maybe?
+    ;;
+HISCORE_CHECK_BUTTONS
 2C70: 3A F1 83    ld   a,($INPUT_BUTTONS)
 2C73: 47          ld   b,a
 2C74: 3A 84 91    ld   a,($9184)
@@ -4777,10 +4794,10 @@ ENEMY_PATTERN_SCR_4
 2C7D: 20 09       jr   nz,$2C88
 2C7F: 3A 00 A0    ld   a,($PORT_IN0)
 2C82: CB 6F       bit  5,a      ; jump?
-2C84: C4 D8 2E    call nz,$2ED8
+2C84: C4 D8 2E    call nz,$HISCORE_SELECT_LETTER
 2C87: C9          ret
 2C88: CB 68       bit  5,b      ; jump?
-2C8A: C4 D8 2E    call nz,$2ED8
+2C8A: C4 D8 2E    call nz,$HISCORE_SELECT_LETTER
 2C8D: C9          ret
 
 2C8E: FF ...
@@ -4957,7 +4974,7 @@ ENTER_HISCORE_SCREEN
 2E56: 17 0A
 2E58: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 2E63: CD 50 24    call $DRAW_SCORE
-2E66: 3E 09       ld   a,$09
+2E66: 3E 09       ld   a,$09    ; 90 seconds timer
 2E68: 32 82 93    ld   ($9382),a
 2E6B: AF          xor  a
 2E6C: 32 62 93    ld   ($9362),a
@@ -4965,74 +4982,79 @@ ENTER_HISCORE_SCREEN
 2E72: F1          pop  af
 2E73: FD 21 77 92 ld   iy,$9277
 2E77: 32 84 91    ld   ($9184),a
-2E7A: CD 88 2F    call $2F88
+2E7A: CD 88 2F    call $HISCORE_CLEAR_NAME
 2E7D: 21 4E 93    ld   hl,$934E
 SET_CURSOR
 2E80: 36 89       ld   (hl),$TILE_CURSOR
 2E82: DD 21 F1 83 ld   ix,$INPUT_BUTTONS
 2E86: 3A 84 91    ld   a,($9184)
-2E89: FE 01       cp   $01
+2E89: FE 01       cp   $01      ; p1?
 2E8B: 28 06       jr   z,$2E93
 2E8D: DD CB 00 7E bit  7,(ix+$00)
 2E91: 20 04       jr   nz,$2E97
 2E93: DD 21 00 A0 ld   ix,$PORT_IN0
-2E97: DD CB 00 5E bit  3,(ix+$00)
+2E97: DD CB 00 5E bit  3,(ix+$00) ; right?
 2E9B: 28 03       jr   z,$2EA0
-2E9D: CD A8 2F    call $2FA8
-2EA0: DD CB 00 56 bit  2,(ix+$00)
+2E9D: CD A8 2F    call $HISCORE_FWD_CURSOR
+2EA0: DD CB 00 56 bit  2,(ix+$00) ; left?
 2EA4: 28 03       jr   z,$2EA9
-2EA6: CD 50 2F    call $SET_HL_TO_SCREEN_POS_FOR_SOMETHING
-2EA9: CD 70 2C    call $2C70
+2EA6: CD 50 2F    call $HISCORE_BACK_CURSOR
+2EA9: CD 70 2C    call $HISCORE_CHECK_BUTTONS
 2EAC: 00          nop
 2EAD: 00          nop
 2EAE: 00          nop
 2EAF: 00          nop
 2EB0: 00          nop
 2EB1: 00          nop
+_CHECK_IF_LETTERS_FULL
 2EB2: E5          push hl
 2EB3: FD E5       push iy
 2EB5: E1          pop  hl
 2EB6: 3E 37       ld   a,$37
 2EB8: BD          cp   l
 2EB9: 20 05       jr   nz,$2EC0
-2EBB: 3E 91       ld   a,$91
+2EBB: 3E 91       ld   a,$91    ; 9137 = last letter pos
 2EBD: BC          cp   h
-2EBE: 28 08       jr   z,$2EC8
+2EBE: 28 08       jr   z,$_DONE
 2EC0: E1          pop  hl
 2EC1: 36 89       ld   (hl),$TILE_CURSOR ; useless? Done in SET_CURSOR
 2EC3: CD 08 31    call $HISCORE_ENTER_TIMER
 2EC6: 18 B8       jr   $SET_CURSOR
+_DONE
 2EC8: E1          pop  hl
 2EC9: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
 2ECC: C9          ret
 2ECD: FF ...
 
+    ;; called when entered a letter on name
+HISCORE_SELECT_LETTER
 2ED8: 3E 10       ld   a,$10
 2EDA: 32 93 80    ld   ($8093),a
-2EDD: 3E 90       ld   a,$90
+2EDD: 3E 90       ld   a,$90    ; did we press "end"?
 2EDF: BC          cp   h
-2EE0: 20 12       jr   nz,$2EF4
+2EE0: 20 12       jr   nz,$_ENTER_LETTER
 2EE2: 3E 92       ld   a,$92
 2EE4: BD          cp   l
-2EE5: 20 04       jr   nz,$2EEB
+2EE5: 20 04       jr   nz,$2EEB ; no!
 2EE7: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
 2EEA: C9          ret
-2EEB: 3E D2       ld   a,$D2
+2EEB: 3E D2       ld   a,$D2    ; how about "rub"?
 2EED: BD          cp   l
-2EEE: 20 04       jr   nz,$2EF4
-2EF0: CD 20 2F    call $2F20
+2EEE: 20 04       jr   nz,$_ENTER_LETTER ; nope...
+2EF0: CD 20 2F    call $HISCORE_RUB_LETTER
 2EF3: C9          ret
+_ENTER_LETTER
 2EF4: 2B          dec  hl
 2EF5: 7E          ld   a,(hl)
 2EF6: 23          inc  hl
-2EF7: FD 77 00    ld   (iy+$00),a
+2EF7: FD 77 00    ld   (iy+$00),a ; draws letter on screen
 2EFA: 11 E0 FF    ld   de,$SCR_LINE_PREV
 2EFD: FD 19       add  iy,de
 2EFF: C9          ret
 
 2F00: FF ...
 
-THINGS_THEN_COPY_HISCORE_NAME
+POP_HLS_THEN_COPY_HISCORE_NAME
 2F10: AF          xor  a
 2F11: 32 86 80    ld   ($8086),a
 2F14: E1          pop  hl
@@ -5042,6 +5064,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 
 2F1A: FF ...
 
+HISCORE_RUB_LETTER
 2F20: 11 20 00    ld   de,$0020
 2F23: FD 19       add  iy,de
 2F25: FD 36 00 2B ld   (iy+$00),$2B
@@ -5050,7 +5073,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 2F2E: E5          push hl
 2F2F: FD E5       push iy
 2F31: E1          pop  hl
-2F32: 3E 92       ld   a,$92
+2F32: 3E 92       ld   a,$92    ; 9297 = first letter pos
 2F34: BC          cp   h
 2F35: 20 05       jr   nz,$2F3C
 2F37: 3E 97       ld   a,$97
@@ -5065,8 +5088,7 @@ THINGS_THEN_COPY_HISCORE_NAME
 
 2F45: FF ...
 
-    ;; something to do with hiscore name entry
-SET_HL_TO_SCREEN_POS_FOR_SOMETHING
+HISCORE_BACK_CURSOR
 2F50: 36 10       ld   (hl),$10
 2F52: 11 40 00    ld   de,$0040
 2F55: 19          add  hl,de
@@ -5091,6 +5113,7 @@ SET_HL_TO_SCREEN_POS_FOR_SOMETHING
 
 2F74: FF ...
 
+HISCORE_CLEAR_NAME
 2F88: E5          push hl
 2F89: 21 07 83    ld   hl,$HISCORE_NAME ; default is "HI-SCORE", clearing...
 2F8C: 36 10       ld   (hl),$TILE_BLANK
@@ -5100,12 +5123,15 @@ SET_HL_TO_SCREEN_POS_FOR_SOMETHING
 2F92: 20 F8       jr   nz,$2F8C
 2F94: E1          pop  hl
 2F95: C9          ret
+
 2F96: FF          rst  $38
 2F97: FF          rst  $38
 2F98: FF          rst  $38
-2F99: 1F          rra
+2F99: 1F          rra           ; weird 0x1F. Dump error?
 2F9A: FF ...
 
+    ;;
+HISCORE_FWD_CURSOR
 2FA8: 3E 10       ld   a,$10
 2FAA: 32 93 80    ld   ($8093),a
 2FAD: 36 10       ld   (hl),$10
@@ -5117,17 +5143,17 @@ SET_HL_TO_SCREEN_POS_FOR_SOMETHING
 2FB8: 3E 4E       ld   a,$4E
 2FBA: BD          cp   l
 2FBB: 20 04       jr   nz,$2FC1
-2FBD: 21 50 93    ld   hl,$9350
+2FBD: 21 50 93    ld   hl,$9350 ; wrap line 1
 2FC0: C9          ret
 2FC1: 3E 50       ld   a,$50
 2FC3: BD          cp   l
 2FC4: 20 04       jr   nz,$2FCA
-2FC6: 21 52 93    ld   hl,$9352
+2FC6: 21 52 93    ld   hl,$9352 ; wrap line 2
 2FC9: C9          ret
 2FCA: 3E 52       ld   a,$52
 2FCC: BD          cp   l
 2FCD: C0          ret  nz
-2FCE: 21 4E 93    ld   hl,$934E
+2FCE: 21 4E 93    ld   hl,$934E ; wrap line 3
 2FD1: C9          ret
 2FD2: FF ...
 
@@ -5305,13 +5331,13 @@ HISCORE_ENTER_TIMER
 3124: 7E          ld   a,(hl)
 3125: 3D          dec  a
 3126: 27          daa
-3127: CC 10 2F    call z,$THINGS_THEN_COPY_HISCORE_NAME
+3127: CC 10 2F    call z,$POP_HLS_THEN_COPY_HISCORE_NAME
 312A: 77          ld   (hl),a   ; load a into $HISCORE_TIMER
 312B: AF          xor  a
 312C: ED 6F       rld  (hl)
-312E: 32 82 93    ld   ($9382),a
+312E: 32 82 93    ld   ($9382),a ; Timer countdown char 1
 3131: ED 6F       rld  (hl)
-3133: 32 62 93    ld   ($9362),a
+3133: 32 62 93    ld   ($9362),a ; Timer countdown char 2
 3136: ED 6F       rld  (hl)
 3138: DD E1       pop  ix
 313A: FD E1       pop  iy
