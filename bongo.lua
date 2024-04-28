@@ -291,8 +291,8 @@ if ognob_mode == true then
 
    })
 
-   -- Patch end of INIT_PLAYER_SPRITE
-   -- after death: reset to left or right side
+   -- Patch end of INIT_PLAYER_SPRITE after death:
+   -- reset to right side of screen if ognob-ing
    poke_rom(0x08b5, {
      LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y
      CP,        0x0,
@@ -302,13 +302,13 @@ if ognob_mode == true then
    })
 
    -- Patch TRANSITION_TO_NEXT_SCREEN to account for
-   -- being able to go right out of cage screen
+   -- being able to go right out of cage screen. Jumps to 0x1886.
    poke_rom(0x177B, {
      CALL,0x86,0x18, -- jumps to below (breaks P2 handling!)
      NOP, NOP, NOP
    })
 
-   -- Reset PLAYER_LEFT_Y on right-transition
+   -- Reset PLAYER_LEFT_Y on right-transition,
    -- and wrap level if right-transition on cage screen (possible now!)
    -- Used some free (looking) bytes at 0x1886...
    poke_rom(0x1886, {
