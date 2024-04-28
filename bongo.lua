@@ -5,31 +5,31 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 1 -- starting round
 
 -- Serious bizness
 infinite_lives = true
-fast_death = true    -- restart super fast after death
-fast_wipe = true  -- don't do slow transition to next screen
-disable_dino = true   -- no pesky dino... but also now you can't catch him
+fast_death = true      -- restart fast after death
+fast_wipe = true       -- don't do slow transition to next screen
+disable_dino = true    -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
-no_bonuses = false    -- don't skip screen on bonus
-skip_cutscene = true  -- don't show the cutscene
-clear_score = false -- reset score to 0 on death and new screen
+no_bonuses = false     -- don't skip screen on bonus
+skip_cutscene = true   -- don't show the cutscene
+clear_score = false    -- reset score to 0 on death and new screen
 tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
-technicolor = false -- randomize theme every death
-head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-ognob_mode = true -- can go out left side of screen to previous level
-                  -- warning: very flaky, even by Bongo standards.
-one_px_moves = false -- test how it feels moving 1px per frame, not 3px per 3 frames.
-fix_jump_bug = false -- hold down jump after transitioning screen from high jump
-                     -- doesn't kill you.
+theme = 0              -- color theme (0-7). 0 =  default, 7 = best one
+technicolor = false    -- randomize theme every death
+head_style = 0         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+ognob_mode = true      -- can go out left side of screen to previous level
+                       -- warning: very flaky, even by Bongo standards.
+one_px_moves = false   -- test how it feels moving 1px per frame, not 3px per 3 frames.
+fix_jump_bug = false   -- hold down jump after transitioning screen from high jump
+                       -- doesn't kill you.
 
 -- Removed features I found in the code
-show_timers = true -- speed run timers! Don't know why they removed them
+show_timers = true     -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
 alt_bongo_place = false -- I think was supposed to put guy on the ground for highwire levels
 
@@ -97,10 +97,6 @@ function peek_rom(addr)
    return mem:read_direct_u8(addr)
 end
 
-
-
-
-
 function poke_gfx(color, addr, byte)
    if color & 1 == 1 then
       gfx1:write_u8(addr, byte)
@@ -126,19 +122,12 @@ end
 
 ------------- ROM hacks -------------
 
--- poke_rom(0x069D, 0x20); -- autojump lol
---poke_rom(0x1494,0x1)
---poke_rom(0x19dc,0x2)
---
+-- poke_rom(0x069D, 0x20); -- autojump
 
 -- try colorizing player
 --poke_rom(0x8a2,8)
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
-
---poke_rom(0x3225, 0);
-
-poke_rom(0x4D0e, 20)
 
 PLAYER_X = 0x8140
 
@@ -198,16 +187,18 @@ end
 
 -- not doing by default as it changes how the game plays
 function do_jump_bug_fix()
-   poke_rom(0x14dd, {XOR_A,                -- reset falling_timer on
-                     LD_ADDR_A, 0x11,0x80, -- ld  ($8011),a   ; screen_reset
-                     RET,
-                     LD_A_ADDR, 0x15,0x83, -- Existing: used to start $14e0,
-                     AND, 0x03,            -- now starts $14e2
-                     RET_NZ,
-                     CALL, 0x50,0x3a,
-                     CALL, 0x88,0x3a,
-                     CALL, 0xc0,0x3a,
-                     RET})
+   poke_rom(0x14dd, {
+     XOR_A,                -- reset falling_timer on screen reset
+     LD_ADDR_A, 0x11,0x80, -- FALLING_TIMER
+     RET,
+     LD_A_ADDR, 0x15,0x83, -- Existing: used to start $14e0,
+     AND,       0x03,      -- now starts $14e2
+     RET_NZ,
+     CALL,      0x50,0x3a, -- ENEMY_1_RESET
+     CALL,      0x88,0x3a, -- ENEMY_2_RESET
+     CALL,      0xc0,0x3a, -- ENEMY_3_RESET
+     RET
+   })
    poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
 end
 
@@ -241,13 +232,7 @@ if fix_jump_bug == true then
    do_jump_bug_fix()
 end
 
---[[
-   free bytes
-   2AE5: 27 bytes
-   2CB0: unused func? 80 bytes
-   (I'm using thiw for OGNOB_MODE, as well as 0x8077 for PLAYER_Y)
---]]
-
+-- ognob mode: play bongo going left instead of right.
 if ognob_mode == true then
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
@@ -343,8 +328,6 @@ if ognob_mode == true then
 
 end
 
--- -- trigger my own write 0x8099 on exit-stage-left
--- --poke_rom(0x1A0C, {LD_ADDR_A, 0x99,0x80})
 ------------- settings -------------
 
 if fast_death == true then
@@ -369,14 +352,11 @@ if disable_round_speed_up == true then
 end
 
 if skip_cutscene == true then
-   poke_rom(
-      0x3d48,
-      {
-         XOR_A,
-         LD_ADDR_A, 0x2d,0x80, -- reset DINO_COUNTER
-         JP, 0x88,0x3D -- jp _CUTSCENE_DONE
-      }
-   );
+   poke_rom(0x3d48, {
+     XOR_A,
+     LD_ADDR_A, 0x2d,0x80, -- reset DINO_COUNTER
+     JP,        0x88,0x3D  -- _CUTSCENE_DONE
+   });
 end
 
 if no_bonuses == true then
@@ -462,27 +442,24 @@ if tile_indicator == true then
   end
 
    --- rotate through tiles as player walks
-   poke_rom(
-      0x09AD,
-      {
-         JR_Z, 0x7, -- jump to SOLID
-         -- WALKABLE
-         LD_A_HL,
-         INC_A,
-         AND, 0xef,
-         NOP, --LD_HL_A, -- don't print empties!
-         XOR_A,  -- 0 = walkable tile
-         RET,
-         -- SOLID:
-         LD_A_HL,
-         INC_A,
-         OR, 0xFC,
-         LD_HL_A,
-         LD_A, 0x1, -- 1 = solid tile
-         RET
+   poke_rom(0x09AD, {
+     JR_Z, 0x7, -- jump to SOLID
+     -- WALKABLE
+     LD_A_HL,
+     INC_A,
+     AND, 0xef,
+     NOP, --LD_HL_A, -- don't print empties!
+     XOR_A,  -- 0 = walkable tile
+     RET,
+     -- SOLID:
+     LD_A_HL,
+     INC_A,
+     OR, 0xFC,
+     LD_HL_A,
+     LD_A, 0x1, -- 1 = solid tile
+     RET
    })
 end
-
 
 ------------- RAM hacks -------------
 
