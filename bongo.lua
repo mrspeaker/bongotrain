@@ -1,6 +1,6 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
-start_screen = 27 -- screen number (1-27), if not looping
+start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
@@ -16,13 +16,14 @@ disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
 clear_score = false -- reset score to 0 on death and new screen
-tile_indicator = false -- see where the game things tiles are
+tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
 theme = 0 -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false -- randomize theme every death
 head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-
+ognob_mode = true -- can go out left side of screen to previous level
+                  -- warning: very flaky, even by Bongo standards.
 one_px_moves = false -- test how it feels moving 1px per frame, not 3px per 3 frames.
 extra_s_platform = false -- Adds a way to escape dino on S levels, for fun
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
@@ -60,6 +61,7 @@ function print_pairs(o)
 end
 
 cpu = manager.machine.devices[":maincpu"]
+debug = cpu.debug
 mem = cpu.spaces["program"]
 io = cpu.spaces["io"]
 gfx = manager.machine.devices[":gfxdecode"]
@@ -67,7 +69,11 @@ gfx1 = manager.machine.memory.regions[":gfx1"]
 
 print_pairs(manager.machine.devices)
 print(dump(gfx1.size))
+--print(dump(io.map.entries))
+--print_pairs(cpu.state) -- prints all cpu flags, regs
 
+-- debug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
+-- debug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
 -------------- Helpers -------------
 
 function poke(addr, bytes)
@@ -88,6 +94,14 @@ function peek(addr)
    return mem:read_u8(addr)
 end
 
+function peek_rom(addr)
+   return mem:read_direct_u8(addr)
+end
+
+
+
+
+
 function poke_gfx(color, addr, byte)
    if color & 1 == 1 then
       gfx1:write_u8(addr, byte)
@@ -97,6 +111,15 @@ function poke_gfx(color, addr, byte)
       gfx1:write_u8(addr + 0x1000, byte)
    end
 end
+
+function get_pc()
+   return cpu.state["PC"].value
+end
+
+function set_pc(addr)
+   cpu.state["PC"].value = addr
+end
+
 
 function on_game_start()
    started = false -- triggered below
@@ -120,6 +143,8 @@ poke_rom(0x4D0e, 20)
 
 PLAYER_X = 0x8140
 
+------- Op codes
+
 NOP = 0x00
 JR = 0x18
 JR_NZ = 0x20
@@ -129,6 +154,7 @@ LD_ADDR_A = 0x32
 LD_HL = 0x36
 LD_A_ADDR = 0x3a
 INC_A = 0x3c
+DEC_A = 0x3d
 LD_A = 0x3e
 LD_B_A = 0x47
 LD_HL_A = 0x77
@@ -137,6 +163,8 @@ LD_A_L = 0x7d
 LD_A_HL = 0x7e
 RET_NZ = 0xC0
 JP = 0xC3
+ADD_A = 0xC6
+RET_Z = 0xC8
 RET = 0xC9
 CALL = 0xCD
 XOR_A = 0xAF
@@ -144,53 +172,6 @@ AND = 0xE6
 OR = 0xF6
 CP = 0xFE
 
-if tile_indicator == true then
-   -- draw in empty "solid" tile graphics (otherwise it draws holes)
-   for i = 0, 7 do
-      poke_gfx(2, 0xf9 * 0x8 + i, 0x7f)
-      poke_gfx(1, 0xfb * 0x8 + i, 0x7f)
-      poke_gfx(2, 0xff * 0x8 + i, 0x7f)
-   end
-
-   -- draw a "collision pole" in player graphics
-   local foots = {0x135, 0x13d, 0x145, 0x14d, 0x155, 0x161}
-   for i, v in pairs(foots) do
-      -- middle pole
-      poke_gfx(1, v * 0x8 + 7, 0x55)
-      poke_gfx(2, v * 0x8 + 7, 0xAA)
-
-      -- fwd/back markers
-      poke_gfx(2, v * 0x8, 0x3f)
-      poke_gfx(2, v * 0x8 + 8 + 8 + 7, 0x3f)
-
-      -- blank out columns next
-      poke_gfx(3, v * 0x8 + 5, 0x00)
-      poke_gfx(3, v * 0x8 + 6, 0x00)
-      poke_gfx(3, v * 0x8 + 8 + 8, 0x00)
-      poke_gfx(3, v * 0x8 + 8 + 8 + 1, 0x00)
-  end
-
-   --- rotate through tiles as player walks
-   poke_rom(
-      0x09AD,
-      {
-         JR_Z, 0x7, -- jump to SOLID
-         -- WALKABLE
-         LD_A_HL,
-         INC_A,
-         AND, 0xef,
-         NOP, --LD_HL_A, -- don't print empties!
-         XOR_A,  -- 0 = walkable tile
-         RET,
-         -- SOLID:
-         LD_A_HL,
-         INC_A,
-         OR, 0xF8,
-         LD_HL_A,
-         LD_A, 0x1, -- 1 = solid tile
-         RET
-   })
-end
 
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
@@ -230,22 +211,6 @@ function do_jump_bug_fix()
    poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
 end
 
-if head_style > 0 then
-   local flip_x = function(v) return v + 0x80 end
-   local fr = ({0x3e, 0x2c, 0x05, 0x17})[head_style]
-   local fl = ({flip_x(0x3e), flip_x(0x2c), 0x07, flip_x(0x17)})[head_style]
-   local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
-
-   poke_rom(0x063A, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- player_move_right
-   poke_rom(0x067a, { LD_A,fl, LD_ADDR_A,0x41,0x81, RET })  -- player_move_left
-   poke_rom(0x1819, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- reset_player
-   poke_rom(0x07d5, fr) -- trigger_jump_left
-   poke_rom(0x07b5, fl) -- trigger_jump_right
-   poke_rom(0x08d5, jump_fr) -- trigger_jump_straight_up
-   poke_rom(0x09de, { NOP, NOP, NOP }) -- check_if_landed reset
-   poke_rom(0x06FA, { NOP, NOP, NOP }) -- player_physics frame set
-end
-
 ----------- bug fixes -------------
 
 -- bugfix: fix call to draw inner border on YOUR BEING CHASED screen
@@ -263,8 +228,8 @@ poke_rom(0x5390, { 0x93,0x94 }) -- on the way up
 poke_rom(0x5418, { 0x13,0x14 }) -- on the way down
 -- subjective bugfix: add inner border to empty attract screen
 poke_rom(0x48C7, {
-   CALL,0xD0,0x56, -- call DRAW_BUGGY_BORDER
-   CALL,0xA8,0x5a, -- call original FLASH_BORDER
+   CALL,  0xD0,0x56, -- call DRAW_BUGGY_BORDER
+   CALL,  0xA8,0x5a, -- call original FLASH_BORDER
    RET
 })
 
@@ -276,6 +241,88 @@ if fix_jump_bug == true then
    do_jump_bug_fix()
 end
 
+--[[
+   free bytes
+   2AE5: 27 bytes
+   2CB0: unused func? 80 bytes
+   (I'm using thiw for OGNOB_MODE, as well as 0x8077 for PLAYER_Y)
+--]]
+
+if ognob_mode == true then
+
+   poke_rom(
+      0x2cb0,
+      {
+  RET, -- for safety - I don't think this func is really called
+
+  LD_A_ADDR, 0x43,0x81, -- player_y
+  LD_ADDR_A, 0x77,0x80, -- tmp. 8099 seems to affect 8029?!
+  -- $TRANSITION_TO_NEXT_SCREEN
+  CALL,      0xC0,0x17, -- call $RESET_DINO
+  -- get the previous screen
+  LD_A_ADDR, 0x29,0x80, --$SCREEN_NUM
+  CP,        0x1,       -- screen 1?
+  JR_NZ,     0x2,       -- don't reset
+  LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
+  DEC_A,
+  LD_ADDR_A, 0x29,0x80,
+
+  -- $DURING_TRANSITION_NEXT
+  CALL,      0xB0,0x14, -- call $SCREEN_RESET
+  CALL,      0x90,0x14, -- call $RESET_XOFF_AND_COLS_AND_SPRITES
+  CALL,      0xB8,0x12, -- call $DRAW_BACKGROUND
+
+  --  XOR_A,
+--  LD_ADDR_A,0x02,0x80, -- PL_Y_LEGS_COPY
+--  LD_ADDR_A,0x03,0x80,
+  CALL,      0x20,0x18, -- $INIT_PLAYER_POS_FOR_SCREEN
+  CALL,      0xb8,0x0d, -- $DRAW_BONGO
+
+  -- set the player pos
+  -- currently PC should be 0x2CD6: used below.
+  LD_A, 0xE0-4, -- very right edge of screen
+  LD_ADDR_A, 0x40,0x81, -- player x
+  LD_ADDR_A, 0x44,0x81, -- player x legs
+  LD_A_ADDR, 0x77,0x80, --tmp y
+  LD_ADDR_A, 0x43,0x81, -- player _y
+  LD_A_ADDR, 0x41,0x81, --frame flip (face backwards
+  ADD_A,     0x80,
+  LD_ADDR_A, 0x41,0x81, --
+  LD_A_ADDR, 0x45,0x81, --frame legs flip
+  ADD_A,     0x80,
+  LD_ADDR_A, 0x45,0x81,
+
+  -- after $DURING_TRANSTION_NEXT
+  CALL,      0xD0,0x0A, -- call $SET_LEVEL_PLATFORM_XOFFS
+  LD_A,      0x02,
+  CALL,      0xB4,0x17,
+
+  RET
+   })
+
+   -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
+   poke_rom(0x1a0c, { CALL, 0xB1, 0x2c })
+
+   -- after death: reset to left or right side
+   poke_rom(0x08b5, {
+  LD_A_ADDR, 0x77,0x80,
+  CP, 0x0,
+  RET_Z,
+  CALL, 0xd6,0x2c, -- careful! Address will change if above modified.
+  RET
+   })
+
+  -- Reset temp Y when exit-stage-RIGHT
+   poke_rom(0x179a, {
+  XOR_A,
+  LD_ADDR_A, 0x77,0x80,
+  NOP
+})
+
+end
+
+-- -- trigger my own write 0x8099 on exit-stage-left
+-- --poke_rom(0x1A0C, {LD_ADDR_A, 0x99,0x80})
 ------------- settings -------------
 
 if fast_death == true then
@@ -284,7 +331,10 @@ if fast_death == true then
 end
 
 if fast_wipe == true then
+   -- skip parts of $DURING_TRANSITION_NEXT
    poke_rom(0x1358, { JR,0x1e, NOP }) -- jumps to $_RESET_FOR_NEXT_LEVEL
+   -- speeds up transition even more: skips $CLEAR_SCR_TO_BLANKS ...
+   poke_rom(0x1378, { CALL, 0x90, 0x14 }) -- ...and just does RESET_XOFF_AND_COLS_AND_SPRITES
 end
 
 if disable_round_speed_up == true then
@@ -341,6 +391,74 @@ if one_px_moves == true then
    poke_rom(0x0672, {NOP,NOP}) -- nop 2x dec
 end
 
+if head_style > 0 then
+   local flip_x = function(v) return v + 0x80 end
+   local fr = ({0x3e, 0x2c, 0x05, 0x17})[head_style]
+   local fl = ({flip_x(0x3e), flip_x(0x2c), 0x07, flip_x(0x17)})[head_style]
+   local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
+
+   poke_rom(0x063A, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- player_move_right
+   poke_rom(0x067a, { LD_A,fl, LD_ADDR_A,0x41,0x81, RET })  -- player_move_left
+   poke_rom(0x1819, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- reset_player
+   poke_rom(0x07d5, fr) -- trigger_jump_left
+   poke_rom(0x07b5, fl) -- trigger_jump_right
+   poke_rom(0x08d5, jump_fr) -- trigger_jump_straight_up
+   poke_rom(0x09de, { NOP, NOP, NOP }) -- check_if_landed reset
+   poke_rom(0x06FA, { NOP, NOP, NOP }) -- player_physics frame set
+end
+
+
+if tile_indicator == true then
+   -- draw in empty "solid" tile graphics (otherwise it draws holes)
+   for i = 0, 7 do
+      poke_gfx(2, 0xf9 * 0x8 + i, 0x7f)
+      poke_gfx(1, 0xfb * 0x8 + i, 0x7f)
+      poke_gfx(2, 0xff * 0x8 + i, 0x7f)
+   end
+
+   -- draw a "collision pole" in player graphics
+   local foots = {0x135, 0x13d, 0x145, 0x14d, 0x155, 0x161}
+   for i, v in pairs(foots) do
+      -- middle pole
+      poke_gfx(1, v * 0x8 + 7, 0x55)
+      poke_gfx(2, v * 0x8 + 7, 0xAA)
+
+      -- blank out columns next
+      poke_gfx(3, v * 0x8 + 5, 0x00)
+      poke_gfx(3, v * 0x8 + 6, 0x00)
+      poke_gfx(3, v * 0x8 + 8 + 8, 0x00)
+      poke_gfx(3, v * 0x8 + 8 + 8 + 1, 0x00)
+
+      -- fwd/back markers
+      --poke_gfx(2, v * 0x8, 0x3f)
+      poke_gfx(1, v * 0x8 + 8 + 8 + 3, 0x55)
+      poke_gfx(2, v * 0x8 + 8 + 8 + 3, 0xAA)
+      poke_gfx(3, v * 0x8 + 8 + 8 + 2, 0x00)
+      poke_gfx(3, v * 0x8 + 8 + 8 + 4, 0x00)
+
+  end
+
+   --- rotate through tiles as player walks
+   poke_rom(
+      0x09AD,
+      {
+         JR_Z, 0x7, -- jump to SOLID
+         -- WALKABLE
+         LD_A_HL,
+         INC_A,
+         AND, 0xef,
+         NOP, --LD_HL_A, -- don't print empties!
+         XOR_A,  -- 0 = walkable tile
+         RET,
+         -- SOLID:
+         LD_A_HL,
+         INC_A,
+         OR, 0xFC,
+         LD_HL_A,
+         LD_A, 0x1, -- 1 = solid tile
+         RET
+   })
+end
 
 
 ------------- RAM hacks -------------
@@ -436,8 +554,8 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
               poke(screen_addr, cur - 2)
            end
         end
-        -- send player to edge of screen. Triggers next level
-        poke(PLAYER_X, 0xe0);
+        --  Triggers next level
+        set_pc(0x1778)
      end
    end
 end)

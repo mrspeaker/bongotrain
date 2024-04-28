@@ -26,7 +26,9 @@
     JUMP_TRIGGERED    $8005  ; jump triggered by setting jump_tbl_idx
     SECOND_TIMER      $8006
     P1_TIME           $8007  ; time of player's run: never displayed!
+    P1_TIMER_H        $8008  ; hi byte of timer 1
     P2_TIME           $8009  ; ...we could have had speed running!
+    P2_TIMER_H        $800A  ; hi byte of timer 2
     CONTROLS          $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
     BUTTONS_1         $800C  ; P1/P2 buttons... and?
     BUTTONS_2         $800D  ; ... more buttons?
@@ -227,6 +229,8 @@
     PORT_IN1          $A800 ;
     PORT_IN2          $B000 ;
     INT_ENABLE        $b001 ; interrupt enable
+    _                 $b006 ; set to 1 for P1 or
+    _                 $b007 ; 0 for P2... why? Controls?
     WATCHDOG          $b800 ; main timer?
 
 ;;; ============ START OF BG1.BIN =============
@@ -498,7 +502,7 @@ POST_DEATH_RESET
 0240: 6F          ld   l,a
 0241: 7E          ld   a,(hl)
 0242: A7          and  a
-0243: CA 10 04    jp   z,$OUT_OF_LIVES  ; out of lives? (maybe)
+0243: CA 10 04    jp   z,$OUT_OF_LIVES
 0246: 3D          dec  a
 0247: 77          ld   (hl),a
 0248: 3A F1 83    ld   a,($INPUT_BUTTONS)
@@ -515,7 +519,7 @@ POST_DEATH_RESET
 0261: 32 06 B0    ld   ($B006),a
 0264: 32 07 B0    ld   ($B007),a
 0267: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
-026A: CB 5F       bit  3,a
+026A: CB 5F       bit  3,a      ; is this INfinite Lives DIP setting? resets lives on death
 026C: 28 10       jr   z,$027E
 026E: 3E 03       ld   a,$03    ; set 3 lives
 0270: 32 32 80    ld   ($LIVES),a
@@ -2292,7 +2296,7 @@ BIG_RESET
 1037: CD A0 03    call $DRAW_LIVES
 103A: CD 98 08    call $INIT_PLAYER_SPRITE
 103D: CD B8 12    call $DRAW_BACKGROUND
-1040: CD D0 0A    call $0AD0
+1040: CD D0 0A    call $SET_LEVEL_PLATFORM_XOFFS
 1043: CD B8 0D    call $DRAW_BONGO
 1046: 3E 02       ld   a,$02    ; bottom row is red
 1048: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a
@@ -2650,8 +2654,10 @@ RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
 12F7: 21 50 0C    ld   hl,$0C50 ; $ADD_SCREEN_PICKUPS
 12FA: CD E3 01    call $JMP_HL_PLUS_4K
 12FD: C3 10 3F    jp   $DRAW_BOTTOM_ROW_NUMBERS
-    ;;
-1300: 1E 04       ld   e,$04
+
+    ;; scrolls the screen one tile - done in a loop for the transition
+SCROLL_ONE_COLUMN
+1300: 1E 04       ld   e,$04    ; 4 loops of 2 pixels
 1302: E5          push hl
 1303: 21 06 81    ld   hl,$SCREEN_XOFF_COL+6
 1306: 35          dec  (hl)
@@ -2719,12 +2725,13 @@ DURING_TRANSITION_NEXT
 135C: CD B0 14    call $SCREEN_RESET
 135F: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
 1363: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR) ; must point to screen?
-1366: 16 15       ld   d,$15      ; 21 rows (why 21, not 23?)
+1366: 16 15       ld   d,$15      ; 21 columns to scroll
 _LP
 1368: CD 28 13    call $DRAW_SCREEN_FROM_LEVEL_DATA
-136B: CD 00 13    call $1300
+136B: CD 00 13    call $SCROLL_ONE_COLUMN
 136E: 15          dec  d
 136F: 20 F7       jr   nz,$_LP
+_DONE_SCROLLING
 1371: DD 22 20 80 ld   ($LEVEL_BG_PTR),ix
 1375: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl ; hl = 9160 on transition (e on HIGH-SCORE)
 _RESET_FOR_NEXT_LEVEL
@@ -3259,9 +3266,10 @@ TRANSITION_TO_NEXT_SCREEN
 178D: 3C          inc  a        ; next screen if p2
 178E: 32 2A 80    ld   ($SCREEN_NUM_P2),a
 1791: CD E0 27    call $SET_PLAYER_Y_LEVEL_START
-1794: CD 58 13    call $DURING_TRANSITION_NEXT ; is this the wipe?
+1794: CD 58 13    call $DURING_TRANSITION_NEXT ; wipes to next
 1797: CD D0 0A    call $SET_LEVEL_PLATFORM_XOFFS
 179A: 3E 02       ld   a,$02
+    ;; I think that should be call not jump. It rets anyway.
 179C: C3 B4 17    jp   $RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 179F: C9          ret
 
@@ -3349,7 +3357,7 @@ INIT_PLAYER_POS_FOR_SCREEN
 1826: 3A 29 80    ld   a,($SCREEN_NUM)
 1829: 18 03       jr   $182E
 182B: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-182E: 21 50 18    ld   hl,$1850
+182E: 21 50 18    ld   hl,$PLAYER_START_POS_DATA
 1831: 3D          dec  a
 1832: CB 27       sla  a
 1834: 85          add  a,l
@@ -3366,43 +3374,36 @@ INIT_PLAYER_POS_FOR_SCREEN
 184A: C9          ret
 184B: FF ...
 
-1850: 20 D0       jr   nz,$1822
-1852: 20 D0       jr   nz,$1824
-1854: 20 D0       jr   nz,$1826
-1856: 20 D0       jr   nz,$1828
-1858: 20 D0       jr   nz,$182A
-185A: 20 26       jr   nz,$1882
-185C: 20 26       jr   nz,$1884
-185E: 20 D0       jr   nz,$1830
-1860: 20 D0       jr   nz,$1832
-1862: 20 D0       jr   nz,$1834
-1864: 20 26       jr   nz,$188C
-1866: 20 26       jr   nz,$188E
-1868: 20 D0       jr   nz,$183A
-186A: 20 D0       jr   nz,$183C
-186C: 20 D0       jr   nz,$183E
-186E: 20 D0       jr   nz,$1840
-1870: 20 26       jr   nz,$1898
-1872: 20 D0       jr   nz,$1844
-1874: 20 D0       jr   nz,$1846
-1876: 20 26       jr   nz,$189E
-1878: 20 D0       jr   nz,$184A
-187A: 20 26       jr   nz,$18A2
-187C: 20 26       jr   nz,$18A4
-187E: 20 D0       jr   nz,$1850
-1880: 20 26       jr   nz,$18A8
-1882: 20 26       jr   nz,$18AA
-1884: 20 D0       jr   nz,$1856
-1886: 00          nop
-1887: 00          nop
-1888: 00          nop
-1889: 00          nop
-188A: 00          nop
-188B: 00          nop
-188C: 00          nop
-188D: 00          nop
-188E: 00          nop
-188F: 00          nop
+    ;; [x, y]
+PLAYER_START_POS_DATA
+1850: 20 D0
+1852: 20 D0
+1854: 20 D0
+1856: 20 D0
+185A: 20 26
+185C: 20 26
+185E: 20 D0
+1860: 20 D0
+1862: 20 D0
+1864: 20 26
+1866: 20 26
+1868: 20 D0
+186A: 20 D0
+186C: 20 D0
+186E: 20 D0
+1870: 20 26
+1872: 20 D0
+1874: 20 D0
+1876: 20 26
+1878: 20 D0
+187A: 20 26
+187C: 20 26
+187E: 20 D0
+1880: 20 26
+1882: 20 26
+1884: 20 D0
+1886: 00 00 00 00 00 00 00 00 00 00
+
 1890: FF ...
 
 RESET_XOFFS
@@ -4818,6 +4819,7 @@ ENEMY_PATTERN_SCR_8
 
     ;; wonder what this was for? No paths call anything
     ;; maybe a debug tool?
+    ;; -- i've stolen this area for OGNOB mode.
 NOPPED_OUT_DISPATCH
 2CB0: 3A 04 80    ld   a,($PLAYER_NUM)
 2CB3: A7          and  a

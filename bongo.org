@@ -239,6 +239,8 @@ First 6 columns of every screen is the same.
 ----
 sneaky timing - easy to learn, hard (impossible?) to master... it's own handrolled collision - distinct feel, infuriating, but learnable and then you always blame yourself. - you can't play on autopilot: need to be in the zone and concentrating
 
+- so easy to snatch defeat from the jaws of victory: a perfect run, then die 3 times on the same "easy" bit.
+
 3s and 6s... plus offset by 1
 inc
 inc
@@ -315,6 +317,7 @@ favour speed-run over careful: doesn't work in round 2
 can jump from the very edge of second-to-bottom stair
 
 - what's that weird tiny "slowdown" right at the start? Lags for a split second
+- why sometimes lava-jump well-of-souls is out of sync? Go to do the regular run, but it isn't the normal timing.
 - maybe the "impossible 3 bird" run : might be beatable if you time it so the first pickup is your bonus, and skip the screen
 
 - on S-with-arrow levels, after getting 1000 bonus, JUMP back down - much faster than running the gauntlet towards the arrow
@@ -668,6 +671,14 @@ Why the inconsistency? Always triggers on level 1->2, but more random on other s
     Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?
 Age? boy or man?
     
+
+* adorableness
+- why are there backwards gfx? why do you see the back of bongo?
+- such bad walk cycle. amazing.
+- hat tilt... beautiful
+  
+
+
 
 * TG
 https://www.twingalaxies.com/wiki_index.php?title=Policy:Official-MAME-Platform-Submission-Rules-and-Guidelines
