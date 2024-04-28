@@ -2646,8 +2646,6 @@ _DRAW_COLUMN                    ; because first 6 are constant
 12ED: 00          nop
 12EE: 15          dec  d
 12EF: 20 F7       jr   nz,$_DRAW_COLUMN
-
-    ;; how do i get here?
 RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
 12F1: 22 1E 80    ld   ($SCREEN_PTR),hl ; hl = 9000 when hits here on death
 12F4: CD 10 35    call $RESET_ENEMIES
@@ -6926,8 +6924,8 @@ DRAW_BOTTOM_ROW_NUMBERS
 3F25: D0 D1 D2 D3 D4 D5 D6 D7
 3F2D: D8 D9 DA
 3F30: FF
-
-    ;; called?
+    ;; falls through after drawing
+_ANIMATE_RED_LEVEL_INDICATOR
 3F31: 3A 04 80    ld   a,($PLAYER_NUM)
 3F34: A7          and  a
 3F35: 20 05       jr   nz,$3F3C
@@ -6936,7 +6934,7 @@ DRAW_BOTTOM_ROW_NUMBERS
 3F3C: 3A 2A 80    ld   a,($SCREEN_NUM_P2) ; a = scr
 3F3F: 21 BF 93    ld   hl,$93BF
 _LP
-3F42: CD 55 3F    call $DELAY_2_VBLANK
+3F42: CD 55 3F    call $DELAY_2_VBLANK ; slow things down
 3F45: 3D          dec  a
 3F46: 28 08       jr   z,$_DONE
 3F48: 36 DB       ld   (hl),$DB

@@ -11,7 +11,7 @@ round = 1 -- starting round
 infinite_lives = true
 fast_death = true    -- restart super fast after death
 fast_wipe = true  -- don't do slow transition to next screen
-disable_dino = false   -- no pesky dino... but also now you can't catch him
+disable_dino = true   -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false    -- don't skip screen on bonus
 skip_cutscene = true  -- don't show the cutscene
@@ -25,7 +25,6 @@ head_style = 0 -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true -- can go out left side of screen to previous level
                   -- warning: very flaky, even by Bongo standards.
 one_px_moves = false -- test how it feels moving 1px per frame, not 3px per 3 frames.
-extra_s_platform = false -- Adds a way to escape dino on S levels, for fun
 fix_jump_bug = false -- hold down jump after transitioning screen from high jump
                      -- doesn't kill you.
 
@@ -286,7 +285,7 @@ if ognob_mode == true then
 
   -- set the player pos
   -- currently PC should be 0x2CD6: !NOTE! used below.
-  LD_A, 0xE0-4, -- very right edge of screen
+  LD_A, 0xE0-1, -- very right edge of screen
   LD_ADDR_A, 0x40,0x81, -- PLAYER_X
   LD_ADDR_A, 0x44,0x81, -- PLAYER_X_LEGS
   LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y (mine)
@@ -338,6 +337,10 @@ if ognob_mode == true then
       RET
    })
 
+   -- extra platforms to make Bongo backwards-compatible (tee hee)
+   poke_rom(0x1e02, {0xfe}) -- S, right-bottom
+   poke_rom(0x21ea, {0xfc}) -- extra platform on S, right side
+
 end
 
 -- -- trigger my own write 0x8099 on exit-stage-left
@@ -354,6 +357,8 @@ if fast_wipe == true then
    poke_rom(0x1358, { JR,0x1e, NOP }) -- jumps to $_RESET_FOR_NEXT_LEVEL
    -- speeds up transition even more: skips $CLEAR_SCR_TO_BLANKS ...
    poke_rom(0x1378, { CALL, 0x90, 0x14 }) -- ...and just does RESET_XOFF_AND_COLS_AND_SPRITES
+   -- don't do bottom "level indicator" animation.
+   poke_rom(0x3F42, { NOP, NOP, NOP }) -- saves 2 vblanks-per-screen-number
 end
 
 if disable_round_speed_up == true then
@@ -394,10 +399,6 @@ end
 
 if disable_dino == true then
    poke_rom(0x22FE, RET); -- ret from timer start check
-end
-
-if extra_s_platform == true then
-   poke_rom(0x1d00, {0x0c, 0xfe, 0x10, 0x10}) -- extra platform on S lol
 end
 
 if theme ~= 0 then
