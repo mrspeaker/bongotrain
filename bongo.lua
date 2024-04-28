@@ -167,6 +167,7 @@ ADD_A = 0xC6
 RET_Z = 0xC8
 RET = 0xC9
 CALL = 0xCD
+RET_C = 0xD8
 XOR_A = 0xAF
 AND = 0xE6
 OR = 0xF6
@@ -250,74 +251,92 @@ end
 
 if ognob_mode == true then
 
-   poke_rom(
-      0x2cb0,
-      {
+   -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
+   poke_rom(0x1a0c, { CALL, 0xB1, 0x2c })
+
+   -- the main OGNOB_MODE routine. Does what would happen
+   -- during a normal screen switch, but also sets
+   -- PLAYER_LEFT_Y (0x8077: my variable) that indicates
+   -- the player is left-transitioning. It gets cleared if
+   -- you go through a normal right-transitioning.
+
+   poke_rom(0x2cb0, {
+
   RET, -- for safety - I don't think this func is really called
 
-  LD_A_ADDR, 0x43,0x81, -- player_y
-  LD_ADDR_A, 0x77,0x80, -- tmp. 8099 seems to affect 8029?!
-  -- $TRANSITION_TO_NEXT_SCREEN
-  CALL,      0xC0,0x17, -- call $RESET_DINO
+  LD_A_ADDR, 0x43,0x81, -- PLAYER_Y
+  LD_ADDR_A, 0x77,0x80, -- PLAYER_LEFT_Y (was using 8099 - but seemed to affect 8029?!)
+
+  -- TRANSITION_TO_NEXT_SCREEN
+  CALL,      0xC0,0x17, -- RESET_DINO
   -- get the previous screen
-  LD_A_ADDR, 0x29,0x80, --$SCREEN_NUM
+  LD_A_ADDR, 0x29,0x80, -- SCREEN_NUM
   CP,        0x1,       -- screen 1?
   JR_NZ,     0x2,       -- don't reset
   LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
   DEC_A,
-  LD_ADDR_A, 0x29,0x80,
+  LD_ADDR_A, 0x29,0x80, -- SCREEN_NUM
 
-  -- $DURING_TRANSITION_NEXT
-  CALL,      0xB0,0x14, -- call $SCREEN_RESET
-  CALL,      0x90,0x14, -- call $RESET_XOFF_AND_COLS_AND_SPRITES
-  CALL,      0xB8,0x12, -- call $DRAW_BACKGROUND
-
-  --  XOR_A,
---  LD_ADDR_A,0x02,0x80, -- PL_Y_LEGS_COPY
---  LD_ADDR_A,0x03,0x80,
-  CALL,      0x20,0x18, -- $INIT_PLAYER_POS_FOR_SCREEN
-  CALL,      0xb8,0x0d, -- $DRAW_BONGO
+  -- DURING_TRANSITION_NEXT
+  CALL,      0xB0,0x14, -- SCREEN_RESET
+  CALL,      0x90,0x14, -- RESET_XOFF_AND_COLS_AND_SPRITES
+  CALL,      0xB8,0x12, -- DRAW_BACKGROUND
+  CALL,      0x20,0x18, -- INIT_PLAYER_POS_FOR_SCREEN
+  CALL,      0xb8,0x0d, -- DRAW_BONGO
 
   -- set the player pos
-  -- currently PC should be 0x2CD6: used below.
+  -- currently PC should be 0x2CD6: !NOTE! used below.
   LD_A, 0xE0-4, -- very right edge of screen
-  LD_ADDR_A, 0x40,0x81, -- player x
-  LD_ADDR_A, 0x44,0x81, -- player x legs
-  LD_A_ADDR, 0x77,0x80, --tmp y
-  LD_ADDR_A, 0x43,0x81, -- player _y
-  LD_A_ADDR, 0x41,0x81, --frame flip (face backwards
-  ADD_A,     0x80,
-  LD_ADDR_A, 0x41,0x81, --
-  LD_A_ADDR, 0x45,0x81, --frame legs flip
-  ADD_A,     0x80,
-  LD_ADDR_A, 0x45,0x81,
+  LD_ADDR_A, 0x40,0x81, -- PLAYER_X
+  LD_ADDR_A, 0x44,0x81, -- PLAYER_X_LEGS
+  LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y (mine)
+  LD_ADDR_A, 0x43,0x81, -- PLAYER_Y
+  LD_A_ADDR, 0x41,0x81, -- PLAYER_FRAME
+  ADD_A,     0x80,      -- + 0x80 = flip horizontal
+  LD_ADDR_A, 0x41,0x81, -- store frame
+  LD_A_ADDR, 0x45,0x81, -- PLAYER_FRAME_LEGS
+  ADD_A,     0x80,      -- + 0x80 = flip horizontal
+  LD_ADDR_A, 0x45,0x81, -- store frame
 
-  -- after $DURING_TRANSTION_NEXT
-  CALL,      0xD0,0x0A, -- call $SET_LEVEL_PLATFORM_XOFFS
+  -- after DURING_TRANSTION_NEXT
+  CALL,      0xD0,0x0A, -- SET_LEVEL_PLATFORM_XOFFS
   LD_A,      0x02,
-  CALL,      0xB4,0x17,
+  CALL,      0xB4,0x17, -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 
   RET
+
    })
 
-   -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
-   poke_rom(0x1a0c, { CALL, 0xB1, 0x2c })
-
+   -- Patch end of INIT_PLAYER_SPRITE
    -- after death: reset to left or right side
    poke_rom(0x08b5, {
-  LD_A_ADDR, 0x77,0x80,
-  CP, 0x0,
-  RET_Z,
-  CALL, 0xd6,0x2c, -- careful! Address will change if above modified.
-  RET
+     LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y
+     CP,        0x0,
+     RET_Z,
+     CALL,      0xd6,0x2c, -- careful! Address will change if above modified.
+     RET
    })
 
-  -- Reset temp Y when exit-stage-RIGHT
-   poke_rom(0x179a, {
-  XOR_A,
-  LD_ADDR_A, 0x77,0x80,
-  NOP
-})
+   -- Patch TRANSITION_TO_NEXT_SCREEN to account for
+   -- being able to go right out of cage screen
+   poke_rom(0x177B, {
+     CALL,0x86,0x18, -- jumps to below (breaks P2 handling!)
+     NOP, NOP, NOP
+   })
+
+   -- Reset PLAYER_LEFT_Y on right-transition
+   -- and wrap level if right-transition on cage screen (possible now!)
+   -- Used some free (looking) bytes at 0x1886...
+   poke_rom(0x1886, {
+      XOR_A,
+      LD_ADDR_A, 0x77,0x80, -- reset PLAYER_LEFT_Y
+      LD_A_ADDR, 0x29,0x80, -- get screen num
+      CP,        0x1b,      -- is it 27?
+      RET_C,                -- nah, carry on
+      XOR_A,
+      LD_ADDR_A, 0x29,0x80, -- yep - reset to 0 (1?)
+      RET
+   })
 
 end
 

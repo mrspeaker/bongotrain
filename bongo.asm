@@ -3295,9 +3295,7 @@ ADD_AMOUNT_BDC
 17B0: 77          ld   (hl),a
 17B1: C9          ret
 
-;;;
-17B2: FF          rst  $38
-17B3: FF          rst  $38
+17B2: FF FF
 
 RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 17B4: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a ; set bottom row col
