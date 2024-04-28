@@ -5,7 +5,7 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 1 -- starting round
+round = 2 -- starting round
 
 -- Serious bizness
 infinite_lives = true
@@ -339,7 +339,7 @@ if ognob_mode == true then
 
    -- extra platforms to make Bongo backwards-compatible (tee hee)
    poke_rom(0x1e02, {0xfe}) -- S, right-bottom
-   poke_rom(0x21ea, {0xfc}) -- extra platform on S, right side
+   poke_rom(0x21ea, {0xfc}) -- nTn helper
 
 end
 
@@ -349,7 +349,10 @@ end
 
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
-   poke_rom(0x0CCB, { RET, NOP, NOP }); -- return after dino reset
+   poke_rom(0x0CCB, {
+               CALL, 0xa0, 0x0c, -- delay 8 vblanks
+               CALL, 0xa0, 0x0c, -- delay 8 vblanks
+               RET, NOP, NOP }); -- return after dino reset
 end
 
 if fast_wipe == true then
