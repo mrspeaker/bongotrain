@@ -231,7 +231,7 @@ if fix_jump_bug == true then
    do_jump_bug_fix()
 end
 
--- ognob mode: play bongo going left instead of right.
+-- ognob open-world mode: freely wander left or right
 if ognob_mode == true then
    -- TODO: ADD_MOVE_SCORE needs to do $SCR_WIDTH-PLAYER_X if there is a PLAYER_Y_LEFT!
    -- TODO: BONUS_SKIP_SCREEN needs to skip backwards!
@@ -357,6 +357,40 @@ if ognob_mode == true then
    -- extra platforms to make Bongo backwards-compatible (tee hee)
    poke_rom(0x1e02, {0xfe}) -- S, entry point bottom-right
    poke_rom(0x21ea, {0xfc}) -- nTn helper step
+
+   -- Skip left on bonuses
+   -- 27 bytes free here...
+   --poke_rom(0x1fc5, {})
+   --[[ TRANSITION_LEFT_OR_RIGHT
+      -- NO, won't work: transition_to_next clears plyaer-y-left.
+      ld a, player_y_left
+      jr z _done
+      ld a,screen
+      dec a
+      dec a
+      ld screen,a
+      _done
+      jp $TRANSITION_TO_NEXT_SCREEN
+
+      porlly need to fix transition to next to work with left
+      or right... but then needs to clear somewhere else (in edge)
+
+      ld a, screen_num
+      inc a
+      LD b,($plyaer_left-y)
+      and b
+      jz right
+      dec a
+      dec a
+      cp 0
+      jr nz,right
+      ld a, $27
+
+      right:
+      set_plyaer_y....
+--]]
+
+
 
 end
 
