@@ -109,10 +109,10 @@
     HISCORE_TIMER2    $8076  ; 16 counter for countdown
 
 
-    ;; Bunch of unused/debugs?
+    ;; Bunch of unused/debugs/tmps?
     _                 $8086  ; set in hiscore, never read
     _                 $8090  ; set to 1, never read?
-    _                 $8093  ; set to $20 in coinage... hiscore. used?
+    _                 $8093  ; set to $20 in coinage... hiscore, cursor?
     _                 $8094  ; unused? used with 8093
 
     SCREEN_XOFF_COL   $8100  ; OFFSET and COL for each row of tiles
@@ -256,6 +256,7 @@ SOFT_RESET
 0018: CD 88 22    call $WRITE_TO_0_AND_1
 001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
 
+    ;;
 001E: DD 19       add  ix,de
 0020: DD 19       add  ix,de
 0022: 2B          dec  hl
@@ -328,8 +329,8 @@ _PLAY_SPLASH
 00B3: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
 00B6: 3A 34 80    ld   a,($NUM_PLAYERS)
 00B9: A7          and  a
-00BA: C2 E7 01    jp   nz,$RESET_A_BUNCH
-00BD: 18 E5       jr   $00A4
+00BA: C2 E7 01    jp   nz,$START_GAME
+00BD: 18 E5       jr   $_PLAY_SPLASH
 00BF: FF
 
 NMI_INT_HANDLER
@@ -465,7 +466,7 @@ JMP_HL_PLUS_4K
 01E3: C3 80 01    jp   $DO_JMP_HL_PLUS_4K
 01E6: C9          ret
 
-RESET_A_BUNCH
+START_GAME
 01E7: 3E 1F       ld   a,$ROUND1_SPEED
 01E9: 32 5B 80    ld   ($SPEED_DELAY_P1),a
 01EC: 32 5C 80    ld   ($SPEED_DELAY_P2),a
@@ -677,13 +678,13 @@ _LP
 RESET_ENTS_ALL
 0370: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
-0376: CD E3 01    call $JMP_HL_PLUS_4K
-0379: 21 20 0E    ld   hl,$0E20
-037C: CD E3 01    call $JMP_HL_PLUS_4K
+0376: CD E3 01    call $JMP_HL_PLUS_4K ; $4520
+0379: 21 20 0E    ld   hl,$0E20 ; ATTRACT_SPLASH_BONGO
+037C: CD E3 01    call $JMP_HL_PLUS_4K ;$4220
 037F: 21 C0 17    ld   hl,$RESET_DINO
-0382: CD E3 01    call $JMP_HL_PLUS_4K
-0385: 21 A0 15    ld   hl,$15A0
-0388: CD E3 01    call $JMP_HL_PLUS_4K
+0382: CD E3 01    call $JMP_HL_PLUS_4K ; $57C0
+0385: 21 A0 15    ld   hl,$15A0 ; $CHASED_BY_A_DINO_SCREEN
+0388: CD E3 01    call $JMP_HL_PLUS_4K ; $55A0
 038B: 00          nop
 038C: 00          nop
 038D: 00          nop
@@ -889,6 +890,7 @@ HISCORE_FOR_P2
 
 0514: FF ...
 
+    ;; who calls?
     ;; This looks suspicious. 25 bytes written
     ;; to $8038+, code is never called (or read?)
     ;; wpset 0518,18,rw doesn't trigger
@@ -947,9 +949,11 @@ HISCORE_FOR_P2
 
 0569: FF ...
 
-_SETUP_2 ;looks like SETUP - no one calls it?
+    ;; (free bytes?)
+_SETUP_2 ;looks a lot like SETUP_BEFORE_PLAYING - no one calls it?
 0580: CD 48 03    call $SETUP_MORE
 0583: CD 80 30    call $SET_HISCORE_TEXT
+_PLAY_SPLASH_2
 0586: CD A0 13    call $WAIT_VBLANK
 0589: 3A 34 80    ld   a,($NUM_PLAYERS)
 058C: A7          and  a
@@ -959,17 +963,18 @@ _SETUP_2 ;looks like SETUP - no one calls it?
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $RESET_ENTS_ALL
 0598: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
-059B: 18 E9       jr   $0586
+059B: 18 E9       jr   $_PLAY_SPLASH_2
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
-05A1: CD D0 00    call $00D0
-05A4: 18 E0       jr   $0586
-05A6: CD 40 01    call $0140
-05A9: 18 DB       jr   $0586
-05AB: C2 E7 01    jp   nz,$RESET_A_BUNCH
-05AE: 18 D6       jr   $0586
+05A1: CD D0 00    call $ATTRACT_PRESS_P1_SCREEN
+05A4: 18 E0       jr   $_PLAY_SPLASH_2
+05A6: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
+05A9: 18 DB       jr   $_PLAY_SPLASH_2
+05AB: C2 E7 01    jp   nz,$START_GAME
+05AE: 18 D6       jr   $_PLAY_SPLASH_2
 05B0: FF ...
 
+    ;; who calls?
 05B8: 3A 03 83    ld   a,($CREDITS)
 05BB: A7          and  a
 05BC: 20 04       jr   nz,$05C2
@@ -1292,24 +1297,25 @@ PLAY_JUMP_SFX
 
 07FD: FF ...
 
-    ;;  totes loks like data... who reads it?
+    ;; who calls?
+    ;; this looks similar to other DRAW_TILES code (but draws 2 chars?)
+    ;; I set a breakpoint here and played a bunch (even cutscene)
+    ;; but could not get it to trigger... not used? debug?
 0800: 01 00 00    ld   bc,$0000
 0803: 00          nop
 0804: 00          nop
 0805: 00          nop
 0806: 00          nop
 0807: 01 3A 00    ld   bc,$003A
-080A: B8          cp   b
-    ;; this looks similar to other tile-related code
-    ;; I set a breakpoint here and played a bunch (even cutscene)
-    ;; but could not get it to trigger... not used?
+080A: B8          cp   b        ; really?
+    ;;
 080B: 21 40 90    ld   hl,$START_OF_TILES
-080E: C1          pop  bc
-080F: 0A          ld   a,(bc)   ; param 1
+080E: C1          pop  bc       ; stack return pointer into bc (ie, data)
+080F: 0A          ld   a,(bc)   ; start_y
 0810: 03          inc  bc
 0811: 85          add  a,l
 0812: 6F          ld   l,a
-0813: 0A          ld   a,(bc)   ; param 2
+0813: 0A          ld   a,(bc)   ; start_x
 0814: 5F          ld   e,a
 0815: 3E 1B       ld   a,$1B
 0817: 93          sub  e
@@ -1323,25 +1329,26 @@ PLAY_JUMP_SFX
 0823: 19          add  hl,de
 0824: 19          add  hl,de
 0825: 03          inc  bc
-0826: 0A          ld   a,(bc)   ; param 3
+0826: 0A          ld   a,(bc)   ; two chars at a time?
 0827: 5F          ld   e,a
 0828: 03          inc  bc
-0829: 0A          ld   a,(bc)   ; param 4
+0829: 0A          ld   a,(bc)   ; not drawn... pushed?
 082A: 57          ld   d,a
 082B: 03          inc  bc
 082C: C5          push bc
+_LP
 082D: 1A          ld   a,(de)
-082E: FE FF       cp   $FF
+082E: FE FF       cp   $FF      ; $FF delimited
 0830: C8          ret  z
 0831: 13          inc  de
 0832: 77          ld   (hl),a
 0833: 06 FF       ld   b,$FF
 0835: 0E E0       ld   c,$E0
 0837: 09          add  hl,bc
-0838: 18 F3       jr   $082D
+0838: 18 F3       jr   $_LP
 083A: FF ...
 
-    ;; screen something... draw level?
+    ;;
 DRAW_SCREEN
 0840: E5          push hl
 0841: D9          exx
@@ -1973,7 +1980,7 @@ _DONE_IF_ZERO
 0D14: 20 F2       jr   nz,$_LP
 0D16: C9          ret
 
-    ;; called?
+    ;; who calls?
 MOVE_PLAYER_TOWARDS_GROUND_FOR_A_WHILE
 0D17: 16 08       ld   d,$08    ; 8 frames
 0D19: 3A 43 81    ld   a,($PLAYER_Y)
@@ -4184,15 +4191,18 @@ TEST_THEN_DINO_COLLISION
 
 2522: FF ...
 
-    ;; who calls?
-DRAW_D4_EVERYWHERE
+    ;; who calls? (free bytes)
+    ;; Appears to draw [21] (the 21 in a box from the level indicators)
+    ;; through a thick horizontal band in the middle of the screen.
+    ;; ... for some reason
+UNUSED_DRAW_D4_EVERYWHERE
 2538: 11 16 00    ld   de,$0016 ; +22 each outer loop?
 253B: 0E 20       ld   c,$20
 253D: 21 10 90    ld   hl,$9000+10
 _J                              ; 32 loops
 2540: 06 0A       ld   b,$0A
 _I                              ; 10 loops
-2542: 36 D4       ld   (hl),$D4 ; draw. What's a D4?
+2542: 36 D4       ld   (hl),$D4 ; tile [21] (level indicator number)
 2544: 23          inc  hl
 2545: 05          dec  b
 2546: 20 FA       jr   nz,$_I
@@ -4202,32 +4212,35 @@ _I                              ; 10 loops
 254B: 18 F3       jr   $J
 254D: FF ...
 
-    ;; who calls?
-DRAWING_LOTSA_STUFF
+    ;; (free bytes... if you don't want a cool transition)
+    ;; whoa! Draws some weird spirtal cage flood-fill thing
+    ;; inward spiral fill of screen, then clear.
+    ;; (it's right in the dino code - maybe was supposed to happen
+    ;; if you got caught by a dino, or if you caught the dino)
+UNUSED_SPIRAL_CAGE_FILL_TRANSITION
 2550: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$START_OF_TILES
 2559: 1E 79       ld   e,$79
-255B: CD 88 25    call $2588
+255B: CD 88 25    call $_PART_TWO
 255E: 21 A0 93    ld   hl,$93A0
-2561: CD 88 25    call $2588
+2561: CD 88 25    call $_PART_TWO
 2564: 21 00 90    ld   hl,$SCREEN_RAM
-2567: CD 98 25    call $2598
+2567: CD 98 25    call $_PART_THREE
 256A: 21 1F 90    ld   hl,$901F
-256D: CD 98 25    call $2598
+256D: CD 98 25    call $_PART_THREE
 2570: 16 10       ld   d,$10
 2572: 21 61 90    ld   hl,$9061
 _LP
-2575: CD A8 25    call $25A8
-2578: CD C0 25    call $25C0
-257B: CD D0 25    call $25D0
-257E: CD E8 25    call $25E8
+2575: CD A8 25    call $_PART_FOUR
+2578: CD C0 25    call $_PART_FIVE
+257B: CD D0 25    call $_PART_SIX
+257E: CD E8 25    call $_PART_SEVEN
 2581: 15          dec  d
 2582: 20 F1       jr   nz,$_LP
 2584: CD 80 14    call $CLEAR_SCREEN
 2587: C9          ret
-
-    ;;
+_PART_TWO
 2588: 73          ld   (hl),e
 2589: 2C          inc  l
 258A: 7D          ld   a,l
@@ -4235,7 +4248,7 @@ _LP
 258D: C8          ret  z
 258E: 18 F8       jr   $2588
 2590: FF ...
-
+_PART_THREE
 2598: 73          ld   (hl),e
 2599: 01 20 00    ld   bc,$0020
 259C: 09          add  hl,bc
@@ -4244,7 +4257,7 @@ _LP
 25A0: C8          ret  z
 25A1: 18 F5       jr   $2598
 25A3: FF ...
-
+_PART_FOUR
 25A8: CD A0 13    call $WAIT_VBLANK
 25AB: 73          ld   (hl),e
 25AC: 01 20 00    ld   bc,$0020
@@ -4255,7 +4268,7 @@ _LP
 25B4: ED 42       sbc  hl,bc
 25B6: C9          ret
 25B7: FF ...
-
+_PART_FIVE
 25C0: CD A0 13    call $WAIT_VBLANK
 25C3: 73          ld   (hl),e
 25C4: 23          inc  hl
@@ -4265,7 +4278,7 @@ _LP
 25C9: 2B          dec  hl
 25CA: C9          ret
 25CB: FF ...
-
+_PART_SIX
 25D0: CD A0 13    call $WAIT_VBLANK
 25D3: 73          ld   (hl),e
 25D4: 01 20 00    ld   bc,$0020
@@ -4276,7 +4289,7 @@ _LP
 25DD: 09          add  hl,bc
 25DE: C9          ret
 25DF: FF ...
-
+_PART_SEVEN
 25E8: CD A0 13    call $WAIT_VBLANK
 25EB: 73          ld   (hl),e
 25EC: 2B          dec  hl
@@ -4524,7 +4537,7 @@ GOT_A_BONUS
 29C7: 6F          ld   l,a
 29C8: 7E          ld   a,(hl)
 29C9: 32 8C 93    ld   ($938C),a
-29CC: CD D0 3F    call $3FD0
+29CC: CD D0 3F    call $DO_BONUS_FLASHING
 29CF: 0E 0A       ld   c,$0A    ; 10x
 29D1: 3A 62 80    ld   a,($BONUS_MULT)
 29D4: 47          ld   b,a
@@ -4596,7 +4609,7 @@ DRAW_BONUS_STATE
 
 2AE5: FF ...
 
-    ;; called?
+    ;; who calls? (free bytes)
 2B00: 3A 93 80    ld   a,($8093)
 2B03: 47          ld   b,a
 2B04: AF          xor  a
@@ -4613,6 +4626,7 @@ _DONE
 
 2B15: FF ...
 
+    ;; who calls? (free bytes?)
 2B20: 47          ld   b,a
 2B21: E6 F0       and  $F0
 2B23: 20 03       jr   nz,$2B28
@@ -6234,7 +6248,7 @@ SET_SPEAR_LEFT_TOP
 
 39A7: FF ...
 
-;;; not called? debug?
+;;; who calls? debug?
 39B0: 3A 07 80    ld   a,($P1_TIME) ; woah! P1 timer is used maybe?
 39B3: 32 36 80    ld   ($ROCK_FALL_TIMER),a
 39B6: C9          ret
@@ -7010,14 +7024,12 @@ BLANK_OUT_BOTTOM_ROW
 3FCA: C9          ret
 3FCB: FF ...
 
-3FD0: 00          nop
-3FD1: 00          nop
+DO_BONUS_FLASHING
+3FD0: 00          nop ; wonder what these did originally?
+3FD1: 00          nop ; 5 bytes?
 3FD2: 00          nop
 3FD3: 00          nop
 3FD4: 00          nop
-
-    ;; (how called?)
-DO_BONUS_FLASHING
 3FD5: CD D0 17    call $DRAW_BONUS_BOX
 3FD8: CD EC 24    call $DELAY_8_PLAY_SOUND
 3FDB: CD E0 38    call $DRAW_BONUS_BOX_B
@@ -10097,7 +10109,6 @@ _DONE
 
 559E: FF ...
 
-    ;; who calls?
 CHASED_BY_A_DINO_SCREEN
 55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 55A3: CD 81 5C    call $JMP_HL
