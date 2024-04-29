@@ -33,6 +33,9 @@ look for write: wpset 8032,1,w
 wpset 8042,1,w,,{ printf "w@%04X : %02X",wpaddr,wpdata ; g }
 0247 ld (hl),a ... one opcode! 77. How to nop it out?
 
+`history` to see history of PC
+do PC=0x100   = set PC, or other cpu 
+
 video ram:
 0x3a0 = top left corner
 0x3bf = bottom left corner - 0xF = bottom, second column
