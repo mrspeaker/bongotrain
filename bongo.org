@@ -347,6 +347,8 @@ Dino cage
 
 if you realise you've jumped too early, keep playing like you're going to stick the landing. Sometimes you do, and the mostly likely thing to do is instantly die if you try to compensate.
 
+jump over dino from platforrm
+
 ---
 
 
@@ -670,7 +672,7 @@ Why the inconsistency? Always triggers on level 1->2, but more random on other s
     is the player Australian? Spanish? Wearing high-heels? Indiana Jones (Raiders was 1981).
     Bongo is ewok-ish - RotJ was also 1983... could they have known about ewoks?
 Age? boy or man?
-    
+ rabbi? cowboy? muppet?   
 
 * adorableness
 - why are there backwards gfx? why do you see the back of bongo?
@@ -1117,7 +1119,7 @@ Lava = "Well of souls". Bongo 50/50s.
 
 bongoitis - can't pickup treasure. caues bongo has bad knees.
 
-can jump the dino on S, fast level!
+can jump the dino on S, fast level! (everywhere!)
 
 "favourite character: the floating 600" (platform scroll)
 
