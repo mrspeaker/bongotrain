@@ -506,16 +506,16 @@ POST_DEATH_RESET
 0246: 3D          dec  a
 0247: 77          ld   (hl),a
 0248: 3A F1 83    ld   a,($INPUT_BUTTONS)
-024B: CB 7F       bit  7,a
+024B: CB 7F       bit  7,a      ; what is this "button"?!
 024D: 28 11       jr   z,$0260
 024F: 3A 04 80    ld   a,($PLAYER_NUM)
 0252: FE 01       cp   $01
 0254: 20 0A       jr   nz,$0260
 0256: 3E 01       ld   a,$01
-0258: 32 06 B0    ld   ($B006),a
+0258: 32 06 B0    ld   ($B006),a ; a = 1 if P1,
 025B: 32 07 B0    ld   ($B007),a
 025E: 18 07       jr   $0267
-0260: AF          xor  a
+0260: AF          xor  a        ; 0 if P2
 0261: 32 06 B0    ld   ($B006),a
 0264: 32 07 B0    ld   ($B007),a
 0267: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
@@ -4976,20 +4976,20 @@ ENTER_HISCORE_SCREEN
 2E58: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
 2E63: CD 50 24    call $DRAW_SCORE
 2E66: 3E 09       ld   a,$09    ; 90 seconds timer
-2E68: 32 82 93    ld   ($9382),a
+2E68: 32 82 93    ld   ($9382),a ; num 1 to screen
 2E6B: AF          xor  a
-2E6C: 32 62 93    ld   ($9362),a
+2E6C: 32 62 93    ld   ($9362),a ; num 2 to screen
 2E6F: 32 75 80    ld   ($HISCORE_TIMER),a
 2E72: F1          pop  af
 2E73: FD 21 77 92 ld   iy,$9277
-2E77: 32 84 91    ld   ($9184),a
+2E77: 32 84 91    ld   ($9184),a ; something else on screen...
 2E7A: CD 88 2F    call $HISCORE_CLEAR_NAME
 2E7D: 21 4E 93    ld   hl,$934E
 SET_CURSOR
 2E80: 36 89       ld   (hl),$TILE_CURSOR
 2E82: DD 21 F1 83 ld   ix,$INPUT_BUTTONS
-2E86: 3A 84 91    ld   a,($9184)
-2E89: FE 01       cp   $01      ; p1?
+2E86: 3A 84 91    ld   a,($9184) ; read from screen set above?
+2E89: FE 01       cp   $01      ; p1 (maybe)?
 2E8B: 28 06       jr   z,$2E93
 2E8D: DD CB 00 7E bit  7,(ix+$00)
 2E91: 20 04       jr   nz,$2E97

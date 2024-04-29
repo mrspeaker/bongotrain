@@ -5,7 +5,7 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 1 -- starting round
+round = 2 -- starting round
 
 -- Serious bizness
 infinite_lives = true
@@ -19,8 +19,8 @@ clear_score = false    -- reset score to 0 on death and new screen
 tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 0              -- color theme (0-7). 0 =  default, 7 = best one
-technicolor = false    -- randomize theme every death
+theme = 7              -- color theme (0-7). 0 =  default, 7 = best one
+technicolor = true    -- randomize theme every death
 head_style = 0         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true      -- can go out left side of screen to previous level
                        -- warning: very flaky, even by Bongo standards.
@@ -129,8 +129,6 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
-PLAYER_X = 0x8140
-
 ------- Op codes
 
 NOP = 0x00
@@ -213,8 +211,8 @@ poke_rom(0x162d, 0x0f)
 -- bugfix: don't jump to wrong byte in hiscore something.
 -- no visual changes, but hey.
 poke_rom(0x3120, 0x17)
--- bugfix: in attract screen, jumping up stairs the player's
--- head and legs are flipped for one frame of animation. Fix it!
+-- bugfix: in BONGO attract screen, jumping up stairs the player's
+-- head and legs are switched for one frame of animation. Fix it!
 poke_rom(0x5390, { 0x93,0x94 }) -- on the way up
 poke_rom(0x5418, { 0x13,0x14 }) -- on the way down
 -- subjective bugfix: add inner border to empty attract screen
@@ -234,6 +232,10 @@ end
 
 -- ognob mode: play bongo going left instead of right.
 if ognob_mode == true then
+   -- TODO: ADD_MOVE_SCORE needs to do $SCR_WIDTH-PLAYER_X if there is a PLAYER_Y_LEFT!
+   -- TODO: BONUS_SKIP_SCREEN needs to skip backwards!
+   -- TODO: Prevent insta-death by spears on 25? (possible to get around, but hard)
+   -- TODO: If you do a full Ognob run, there should be something on screen 1.
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
    poke_rom(0x1a0c, { CALL, 0xB1, 0x2c })
@@ -326,8 +328,8 @@ if ognob_mode == true then
    })
 
    -- extra platforms to make Bongo backwards-compatible (tee hee)
-   poke_rom(0x1e02, {0xfe}) -- S, right-bottom
-   poke_rom(0x21ea, {0xfc}) -- nTn helper
+   poke_rom(0x1e02, {0xfe}) -- S, entry point bottom-right
+   poke_rom(0x21ea, {0xfc}) -- nTn helper step
 
 end
 
@@ -483,6 +485,8 @@ tap1 = mem:install_write_tap(lives_addr, lives_addr, "writes", function(offset, 
 
    -- infinite lives
    if infinite_lives == true and data < 3 then
+      -- TODO: make this a ROM hack: 0x026A
+      -- change DIP switch setting to always be true.
       return 3
    end
 end)
@@ -530,9 +534,10 @@ tap3 = mem:install_write_tap(ground, ground, "writes", function(offset, data)
    end
 end)
 
--- p1/p2 button to skip/go back screens
+-- p1/p2 button to skip forward/go back screens
 pbuttons = false
 buttons = 0x800c
+PLAYER_X = 0x8140
 tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
   local val = data & 3 -- 1: p1, 2: p2
   if pbuttons == true and val == 0 then
@@ -557,7 +562,9 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
               poke(screen_addr, cur - 2)
            end
         end
-        --  Triggers next level
+        -- Triggers next level
+        -- TODO: the set_pc approach not working properly if triggered during a transition!
+        -- (Perhaps the old way - move PLAYER_X to screen edge - is safer than interrupting PC?)
         set_pc(0x1778)
      end
    end
