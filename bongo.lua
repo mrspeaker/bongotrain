@@ -161,6 +161,9 @@ OR = 0xF6
 CP = 0xFE
 
 
+-- add the cool spiral transition to attract mode
+poke_rom(0x038b, { CALL, 0x50,0x25 }) -- cool transition!
+
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
 function set_theme(col)
