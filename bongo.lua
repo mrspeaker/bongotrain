@@ -10,7 +10,7 @@ round = 2 -- starting round
 -- Serious bizness
 infinite_lives = true
 fast_death = true      -- restart fast after death
-fast_wipe = true       -- don't do slow transition to next screen
+fast_wipe = false       -- don't do slow transition to next screen
 disable_dino = true    -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false     -- don't skip screen on bonus
@@ -19,11 +19,11 @@ clear_score = false    -- reset score to 0 on death and new screen
 tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 7              -- color theme (0-7). 0 =  default, 7 = best one
-technicolor = true    -- randomize theme every death
+theme = 0              -- color theme (0-7). 0 =  default, 7 = best one
+technicolor = false    -- randomize theme every death
 head_style = 0         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-ognob_mode = true      -- can go out left side of screen to previous level
-                       -- warning: very flaky, even by Bongo standards.
+ognob_mode = true      -- Open-world Bongo. Can go out left or right.
+                       -- ...are you brave enough to do all levels in Ognob?
 one_px_moves = false   -- test how it feels moving 1px per frame, not 3px per 3 frames.
 fix_jump_bug = false   -- hold down jump after transitioning screen from high jump
                        -- doesn't kill you.
@@ -235,7 +235,6 @@ end
 if ognob_mode == true then
    -- TODO: ADD_MOVE_SCORE needs to do $SCR_WIDTH-PLAYER_X if there is a PLAYER_Y_LEFT!
    -- TODO: BONUS_SKIP_SCREEN needs to skip backwards!
-   -- TODO: Prevent insta-death by spears on 25? (possible to get around, but hard)
    -- TODO: If you do a full Ognob run, there should be something on screen 1.
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
@@ -363,12 +362,17 @@ end
 
 ------------- settings -------------
 
+if infinite_lives == true then
+   poke_rom(0x26c, { NOP, NOP }) -- act like DIP switch on
+end
+
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    poke_rom(0x0CCB, {
-               CALL, 0xa0, 0x0c, -- delay 8 vblanks
-               CALL, 0xa0, 0x0c, -- delay 8 vblanks
-               RET, NOP, NOP }); -- return after dino reset
+     CALL, 0xa0,0x0c,  -- delay 8 vblanks
+     CALL, 0xa0,0x0c,  -- delay 8 vblanks (still pretty short)
+     RET, NOP, NOP     -- return after dino reset
+   });
 end
 
 if fast_wipe == true then
@@ -500,8 +504,8 @@ started = false
 loop_len = #loop_screens
 loop_idx = 0
 
-lives_addr = 0x8032
-tap1 = mem:install_write_tap(lives_addr, lives_addr, "writes", function(offset, data)
+LIVES = 0x8032
+tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
    -- clear score on death
    if clear_score == true then
       poke(0x8014, {0, 0, 0});
@@ -510,17 +514,10 @@ tap1 = mem:install_write_tap(lives_addr, lives_addr, "writes", function(offset, 
    if technicolor == true then
       set_theme(math.random(16))
    end
-
-   -- infinite lives
-   if infinite_lives == true and data < 3 then
-      -- TODO: make this a ROM hack: 0x026A
-      -- change DIP switch setting to always be true.
-      return 3
-   end
 end)
 
-screen_addr = 0x8029
-tap2 = mem:install_write_tap(screen_addr, screen_addr, "writes", function(offset, data)
+SCREEN_NUM = 0x8029
+tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, data)
    -- loop screens
    if data == 1 and not started then
       -- player has started
@@ -576,24 +573,26 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
      pbuttons = true
      local is_playing = peek(PLAYER_X) > 0 -- 0 == not set
      if is_playing then
-        local cur = peek(screen_addr)
+        local cur = peek(SCREEN_NUM)
         -- this doesn't work properly when you have loop selections.
         if val == 1 then -- p1 button. wrap on cage screen.
            if cur == 27 then
-              poke(screen_addr, 0) -- 0 as it get incremented... somewhere else
+              poke(SCREEN_NUM, 0) -- 0 as it get incremented... somewhere else
            end
         end
         if val == 2 then -- p2 button, go back screen
            if cur <= 1 then
-              poke(screen_addr, 26)
+              poke(SCREEN_NUM, 26)
            else
-              poke(screen_addr, cur - 2)
+              poke(SCREEN_NUM, cur - 2)
            end
         end
-        -- Triggers next level
-        -- TODO: the set_pc approach not working properly if triggered during a transition!
-        -- (Perhaps the old way - move PLAYER_X to screen edge - is safer than interrupting PC?)
-        set_pc(0x1778)
+        -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
+        -- (this is what is scrolled while transitioning)
+        if peek(0x8106) == 0 then
+           set_pc(0x1778)
+        end
+
      end
    end
 end)
