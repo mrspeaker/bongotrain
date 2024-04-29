@@ -280,12 +280,10 @@ if ognob_mode == true then
   ADD_A,     0x10,
   LD_ADDR_A, 0x47,0x81, -- PLAYER_Y_LEGS
   -- could save some bytes if I just hardcoded the frames
-  LD_A_ADDR, 0x41,0x81, -- PLAYER_FRAME
-  ADD_A,     0x80,      -- + 0x80 = flip horizontal
-  LD_ADDR_A, 0x41,0x81, -- store frame
-  LD_A_ADDR, 0x45,0x81, -- PLAYER_FRAME_LEGS
-  ADD_A,     0x80,      -- + 0x80 = flip horizontal
-  LD_ADDR_A, 0x45,0x81, -- store frame
+  LD_A,      0x8C,      -- player idle, flipped
+  LD_ADDR_A, 0x41,0x81, -- PLAYER_FRAME
+  INC_A,
+  LD_ADDR_A, 0x45,0x81, -- PLAYER_FRAME_LEGS
 
   -- after DURING_TRANSTION_NEXT
   CALL,      0xD0,0x0A, -- SET_LEVEL_PLATFORM_XOFFS
