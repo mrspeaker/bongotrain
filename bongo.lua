@@ -147,6 +147,7 @@ LD_HL_A = 0x77
 LD_A_B = 0x78
 LD_A_L = 0x7d
 LD_A_HL = 0x7e
+AND_A = 0xA7
 RET_NZ = 0xC0
 JP = 0xC3
 ADD_A = 0xC6
@@ -325,6 +326,33 @@ if ognob_mode == true then
       XOR_A,
       LD_ADDR_A, 0x29,0x80, -- yep - reset to 0 (1?)
       RET
+   })
+
+   -- Patch SET_SPEAR_LEFT_BOTTOM to fix insta-death spears
+   -- Not enough bytes, so overwriting color set, but then
+   -- doing this in SET_SPEAR_LEFT_MIDDLE. lol.
+   poke_rom(0x3947, {
+     -- original code, moved up 3 bytes...
+     LD_A,      0xC8,       -- original y value
+     LD_ADDR_A, 0x57,0x81,  -- ENEMY_1_Y
+     LD_A,      0x01,       -- original active value
+     LD_ADDR_A, 0x37,0x80,  -- ENEMY_1_ACTIVE
+
+     -- fix screen 26 spears insta-death (new bit...)
+     LD_A_ADDR, 0x77,0x80, -- is PLAYER_LEFT_Y?
+     AND_A,
+     RET_Z,
+     LD_A,      0xc6,       -- New Y value (2 higher!)
+     LD_ADDR_A, 0x57,0x81,  -- ENEMY_1_Y
+     RET
+   })
+
+   -- Patch SET_SPEAR_LEFT_MIDDLE to set the bottom spear
+   -- because of the bytes we stole above!
+   poke_rom(0x397E, {
+     LD_A,      0x17,      -- set spear color
+     LD_ADDR_A, 0x56,0x81, -- ENEMY_1_COL
+     RET
    })
 
    -- extra platforms to make Bongo backwards-compatible (tee hee)

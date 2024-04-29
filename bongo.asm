@@ -189,6 +189,13 @@
     ROUND2_SPEED      $10
     ROUND3_SPEED      $0D
 
+    FR_ROCK_1         $1D
+    FR_SPEAR          $22
+    FR_BIRD_1         $23
+    FR_BIRD_2         $24
+    FR_BLUE_1         $34
+    FR_BLUE_2         $35
+
     TILE_0            $00
     TILE_9            $09
     TILE_BLANK        $10
@@ -2496,6 +2503,7 @@ UPDATE_EVERYTHING
 
 11B9: FF ...
 
+WRAP_OTHER_SPEARS_LEFT
 11C0: 3A 58 81    ld   a,($ENEMY_2_X)
 11C3: FE 70       cp   $70
 11C5: 28 14       jr   z,$11DB
@@ -2509,7 +2517,7 @@ UPDATE_EVERYTHING
 11D5: 28 04       jr   z,$11DB
 11D7: FE 00       cp   $00
 11D9: 20 03       jr   nz,$11DE
-11DB: CD 60 39    call $SET_ENEMY_2_F0_98
+11DB: CD 60 39    call $SET_SPEAR_LEFT_MIDDLE
     ;;
 11DE: 3A 5C 81    ld   a,($ENEMY_3_X)
 11E1: FE 60       cp   $60
@@ -2524,7 +2532,7 @@ UPDATE_EVERYTHING
 11F3: 28 04       jr   z,$11F9
 11F5: FE 00       cp   $00
 11F7: 20 03       jr   nz,$11FC
-11F9: CD 88 39    call $SET_ENEMY_3_F0_68
+11F9: CD 88 39    call $SET_SPEAR_LEFT_TOP
 11FC: C9          ret
 11FD: FF ...
 
@@ -3231,7 +3239,7 @@ CHECK_DONE_SCREEN
 1760: 3F          ccf
 1761: D6 E0       sub  $SCREEN_WIDTH  ;out of screen?
 1763: D8          ret  c
-1764: CD 78 17    call $TRANSITION_TO_NEXT_SCREEN    ; jump to next csreen
+1764: CD 78 17    call $TRANSITION_TO_NEXT_SCREEN    ; jump to next screen
 1767: C9          ret
 
     ;;
@@ -4701,7 +4709,7 @@ UPDATE_ENEMIES
 2BC5: C9          ret
 2BC6: CD 88 38    call $3888    ; scr 25
 2BC9: C9          ret
-2BCA: CD 18 39    call $3918    ; scr 26
+2BCA: CD 18 39    call $ENEMY_PATTERN_SCR_26
 2BCD: C9          ret
 2BCE: CD 88 38    call $3888    ; scr 27
 2BD1: C9          ret
@@ -4740,7 +4748,7 @@ SET_ROCK_1_B0_40
 2C02: 32 54 81    ld   ($ENEMY_1_X),a
 2C05: 3E 40       ld   a,$40
 2C07: 32 57 81    ld   ($ENEMY_1_Y),a
-2C0A: 3E 1D       ld   a,$1D
+2C0A: 3E 1D       ld   a,$FR_ROCK
 2C0C: 32 55 81    ld   ($ENEMY_1_FRAME),a
 2C0F: 3E 15       ld   a,$15
 2C11: 32 56 81    ld   ($ENEMY_1_COL),a
@@ -5407,7 +5415,7 @@ SET_BIRD_LEFT_Y_C4
 3212: 32 58 81    ld   ($ENEMY_2_X),a
 3215: 3E C4       ld   a,$C4
 3217: 32 5B 81    ld   ($ENEMY_2_Y),a
-321A: 3E 23       ld   a,$23
+321A: 3E 23       ld   a,$FR_BIRD_1
 321C: 32 59 81    ld   ($ENEMY_2_FRAME),a
 321F: 3E 16       ld   a,$16
 3221: 32 5A 81    ld   ($ENEMY_2_COL),a
@@ -5448,29 +5456,32 @@ MOVE_ANIMATE_BIRD_LEFT
 3274: 3A 15 83    ld   a,($TICK_MOD_FAST)
 3277: E6 02       and  $02
 3279: C0          ret  nz
-    ;; animate bird
+_ANIMATE_BIRD
 327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
-327D: FE 23       cp   $23
+327D: FE 23       cp   $FR_BIRD_1
 327F: 20 06       jr   nz,$3287
-3281: 3E 24       ld   a,$24
+3281: 3E 24       ld   a,$FR_BIRD_2
 3283: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3286: C9          ret
-3287: 3E 23       ld   a,$23
+3287: 3E 23       ld   a,$FR_BIRD_1
 3289: 32 59 81    ld   ($ENEMY_2_FRAME),a
 328C: C9          ret
+
 328D: FF ...
 
+SET_BLUE_MEANIE_A0_D0
 32B0: 3E A0       ld   a,$A0
 32B2: 32 54 81    ld   ($ENEMY_1_X),a
 32B5: 3E D0       ld   a,$D0
 32B7: 32 57 81    ld   ($ENEMY_1_Y),a
 32BA: 3E 17       ld   a,$17
 32BC: 32 56 81    ld   ($ENEMY_1_COL),a
-32BF: 3E 34       ld   a,$34
+32BF: 3E 34       ld   a,$FR_BLUE_1
 32C1: 32 55 81    ld   ($ENEMY_1_FRAME),a
 32C4: 3E 01       ld   a,$01
 32C6: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a ; why enemy_3?
 32C9: C9          ret
+
 32CA: FF ...
 
 UPDATE_STAIR_UP_BLUE_TIMER
@@ -5485,7 +5496,7 @@ UPDATE_STAIR_UP_BLUE_TIMER
 32DF: 32 3A 80    ld   ($ENEMY_2_TIMER),a
 32E2: A7          and  a
 32E3: C0          ret  nz
-32E4: CD B0 32    call $32B0
+32E4: CD B0 32    call $SET_BLUE_MEANIE_A0_D0
 32E7: C9          ret
 32E8: FF ...
 
@@ -5516,12 +5527,12 @@ UPDATE_STAIR_UP_BLUE_TIMER
 3320: E6 03       and  $03
 3322: C0          ret  nz
 3323: 3A 55 81    ld   a,($ENEMY_1_FRAME)
-3326: FE 34       cp   $34
+3326: FE 34       cp   $FR_BLUE_1
 3328: 28 06       jr   z,$3330
-332A: 3E 34       ld   a,$34
+332A: 3E 34       ld   a,$FR_BLUE_1
 332C: 32 55 81    ld   ($ENEMY_1_FRAME),a
 332F: C9          ret
-3330: 3E 35       ld   a,$35
+3330: 3E 35       ld   a,$FR_BLUE_2
 3332: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3335: C9          ret
 3336: FF ...
@@ -5531,7 +5542,7 @@ UPDATE_STAIR_UP_BLUE_TIMER
 3343: 3C          inc  a
 3344: 3C          inc  a
 3345: 32 57 81    ld   ($ENEMY_1_Y),a
-3348: 3E 34       ld   a,$34
+3348: 3E 34       ld   a,$FR_BLUE_1
 334A: 32 55 81    ld   ($ENEMY_1_FRAME),a
 334D: C9          ret
 334E: FF ...
@@ -5541,7 +5552,7 @@ SET_BIRD_LEFT_Y_40
 335A: 32 58 81    ld   ($ENEMY_2_X),a
 335D: 3E 40       ld   a,$40
 335F: 32 5B 81    ld   ($ENEMY_2_Y),a
-3362: 3E 23       ld   a,$23
+3362: 3E 23       ld   a,$FR_BIRD_1
 3364: 32 59 81    ld   ($ENEMY_2_FRAME),a
 3367: 3E 16       ld   a,$16
 3369: 32 5A 81    ld   ($ENEMY_2_COL),a
@@ -5763,7 +5774,7 @@ RESET_ENEMIES
 SET_ROCK_X_60
 3550: 3E 60       ld   a,$60
 3552: 32 5C 81    ld   ($ENEMY_3_X),a
-3555: 3E 1D       ld   a,$1D
+3555: 3E 1D       ld   a,$FR_ROCK
 3557: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 355A: 3E 15       ld   a,$15
 355C: 32 5E 81    ld   ($ENEMY_3_COL),a
@@ -6064,7 +6075,7 @@ WRAP_SPEAR_LEFT_Y_94
 SET_BIRD_RIGHT_Y_60
 3820: 3E 10       ld   a,$10
 3822: 32 5C 81    ld   ($ENEMY_3_X),a
-3825: 3E 23       ld   a,$23
+3825: 3E 23       ld   a,$FR_BIRD_1
 3827: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 382A: 3E 16       ld   a,$16
 382C: 32 5E 81    ld   ($ENEMY_3_COL),a
@@ -6162,19 +6173,20 @@ DRAW_BONUS_BOX_B
 
 3913: FF ...
 
-3918: CD B8 39    call $WRAP_ENEMY_RIGHT_Y_C8
-391B: CD E8 39    call $UPDATE_3_ENEMIES
+ENEMY_PATTERN_SCR_26
+3918: CD B8 39    call $WRAP_SPEAR_LEFT_BOTTOM
+391B: CD E8 39    call $UPDATE_3_SPEARS_LEFT
 391E: C9          ret
 
 391F: FF ...
 
-SET_ENEMY_1_F0_C8
+SET_SPEAR_LEFT_BOTTOM
 3938: 3A 54 81    ld   a,($ENEMY_1_X)
 393B: A7          and  a
 393C: C0          ret  nz
-393D: 3E F0       ld   a,$F0
+393D: 3E F0       ld   a,$SCREEN_WIDTH+$10
 393F: 32 54 81    ld   ($ENEMY_1_X),a
-3942: 3E 22       ld   a,$22
+3942: 3E 22       ld   a,$FR_SPEAR
 3944: 32 55 81    ld   ($ENEMY_1_FRAME),a
 3947: 3E 17       ld   a,$17
 3949: 32 56 81    ld   ($ENEMY_1_COL),a
@@ -6186,13 +6198,13 @@ SET_ENEMY_1_F0_C8
 
 3957: FF ...
 
-SET_ENEMY_2_F0_98
+SET_SPEAR_LEFT_MIDDLE
 3960: 3A 58 81    ld   a,($ENEMY_2_X)
 3963: A7          and  a
 3964: C0          ret  nz
-3965: 3E F0       ld   a,$F0
+3965: 3E F0       ld   a,$SCREEN_WIDTH+$10
 3967: 32 58 81    ld   ($ENEMY_2_X),a
-396A: 3E 22       ld   a,$22
+396A: 3E 22       ld   a,$FR_SPEAR
 396C: 32 59 81    ld   ($ENEMY_2_FRAME),a
 396F: 3E 17       ld   a,$17
 3971: 32 5A 81    ld   ($ENEMY_2_COL),a
@@ -6203,13 +6215,13 @@ SET_ENEMY_2_F0_98
 397E: C9          ret
 397F: FF ...
 
-SET_ENEMY_3_F0_68
+SET_SPEAR_LEFT_TOP
 3988: 3A 5C 81    ld   a,($ENEMY_3_X)
 398B: A7          and  a
 398C: C0          ret  nz
-398D: 3E F0       ld   a,$F0
+398D: 3E F0       ld   a,$SCREEN_WIDTH+$10
 398F: 32 5C 81    ld   ($ENEMY_3_X),a
-3992: 3E 22       ld   a,$22
+3992: 3E 22       ld   a,$FR_SPEAR
 3994: 32 5D 81    ld   ($ENEMY_3_FRAME),a
 3997: 3E 17       ld   a,$17
 3999: 32 5E 81    ld   ($ENEMY_3_COL),a
@@ -6229,7 +6241,7 @@ SET_ENEMY_3_F0_68
 39B7: FF
 
     ;;
-WRAP_ENEMY_RIGHT_Y_C8
+WRAP_SPEAR_LEFT_BOTTOM
 39B8: 3A 54 81    ld   a,($ENEMY_1_X)
 39BB: FE 80       cp   $80
 39BD: 28 14       jr   z,$39D3
@@ -6243,46 +6255,47 @@ WRAP_ENEMY_RIGHT_Y_C8
 39CD: 28 04       jr   z,$39D3
 39CF: FE 00       cp   $00
 39D1: 20 03       jr   nz,$39D6
-39D3: CD 38 39    call $SET_ENEMY_1_F0_C8
-39D6: C3 C0 11    jp   $11C0
+39D3: CD 38 39    call $SET_SPEAR_LEFT_BOTTOM
+39D6: C3 C0 11    jp   $WRAP_OTHER_SPEARS_LEFT
 39D9: FF ...
 
-UPDATE_3_ENEMIES
+UPDATE_3_SPEARS_LEFT            ; screen 26
 39E8: 3A 15 83    ld   a,($TICK_MOD_FAST)
 39EB: E6 07       and  $07
 39ED: C0          ret  nz
-39EE: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
+39EE: 3A 37 80    ld   a,($ENEMY_1_ACTIVE) ; bottom spear
 39F1: A7          and  a
-39F2: 28 19       jr   z,$3A0D
+39F2: 28 19       jr   z,$_MIDDLE_SPEAR
 39F4: 3C          inc  a
 39F5: FE 40       cp   $40
 39F7: 20 09       jr   nz,$3A02
 39F9: AF          xor  a
-    ;; enemy 1
 39FA: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 39FD: 32 54 81    ld   ($ENEMY_1_X),a
-3A00: 18 0B       jr   $3A0D
+3A00: 18 0B       jr   $_MIDDLE_SPEAR
 3A02: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
 3A05: 3A 54 81    ld   a,($ENEMY_1_X)
 3A08: D6 02       sub  $02
 3A0A: 32 54 81    ld   ($ENEMY_1_X),a
-    ;; enemy 2
-3A0D: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
+    ;;
+_MIDDLE_SPEAR
+3A0D: 3A 39 80    ld   a,($ENEMY_2_ACTIVE) ; middle spear
 3A10: A7          and  a
-3A11: 28 19       jr   z,$3A2C
+3A11: 28 19       jr   z,$_TOP_SPEAR
 3A13: 3C          inc  a
 3A14: FE 40       cp   $40
 3A16: 20 09       jr   nz,$3A21
 3A18: AF          xor  a
 3A19: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A1C: 32 58 81    ld   ($ENEMY_2_X),a
-3A1F: 18 0B       jr   $3A2C
+3A1F: 18 0B       jr   $_TOP_SPEAR
 3A21: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
 3A24: 3A 58 81    ld   a,($ENEMY_2_X)
 3A27: D6 03       sub  $03
 3A29: 32 58 81    ld   ($ENEMY_2_X),a
-    ;; enemy 3
-3A2C: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
+    ;;
+_TOP_SPEAR
+3A2C: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE) ; top spear
 3A2F: A7          and  a
 3A30: C8          ret  z
 3A31: 3C          inc  a
