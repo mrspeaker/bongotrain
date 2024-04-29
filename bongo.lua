@@ -275,6 +275,9 @@ if ognob_mode == true then
   LD_ADDR_A, 0x44,0x81, -- PLAYER_X_LEGS
   LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y (mine)
   LD_ADDR_A, 0x43,0x81, -- PLAYER_Y
+  ADD_A,     0x10,
+  LD_ADDR_A, 0x47,0x81, -- PLAYER_Y_LEGS
+  -- could save some bytes if I just hardcoded the frames
   LD_A_ADDR, 0x41,0x81, -- PLAYER_FRAME
   ADD_A,     0x80,      -- + 0x80 = flip horizontal
   LD_ADDR_A, 0x41,0x81, -- store frame
