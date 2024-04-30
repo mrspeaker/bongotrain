@@ -13,9 +13,9 @@ fast_death = true      -- restart fast after death
 fast_wipe = true      -- don't do slow transition to next screen
 disable_dino = true    -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
-no_bonuses = false     -- don't skip screen on bonus
-skip_cutscene = true   -- don't show the cutscene
-clear_score = false    -- reset score to 0 on death and new screen
+disable_bonus_skip = false     -- don't skip screen on bonus
+disable_cutscene = true   -- don't show the cutscene
+reset_score = false    -- reset score to 0 on death and new screen
 tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
@@ -24,6 +24,7 @@ technicolor = false    -- randomize theme every death
 head_style = 2         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true      -- Open-world Bongo. Can go out left or right.
                        -- ...are you brave enough to do all levels in Ognob?
+
 one_px_moves = false   -- test how it feels moving 1px per frame, not 3px per 3 frames.
 fix_jump_bug = false   -- hold down jump after transitioning screen from high jump
                        -- doesn't kill you.
@@ -43,6 +44,8 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 -- 25:   W    \    S
 -----------------------------------
 
+
+
 function dump(o)
    if type(o) == 'table' then
       local s = '{ '
@@ -57,19 +60,21 @@ function dump(o)
 end
 
 function flatten(list)
-  if type(list) ~= "table" then return {list} end
-  local flat_list = {}
-  for _, elem in ipairs(list) do
-    for _, val in ipairs(flatten(elem)) do
-      flat_list[#flat_list + 1] = val
+  if type(list) ~= "table" then return { list } end
+  local flat = {}
+  for _, el in ipairs(list) do
+    for _, val in ipairs(flatten(el)) do
+      flat[#flat + 1] = val
     end
   end
-  return flat_list
+  return flat
 end
 
 function print_pairs(o)
    for tag, device in pairs(o) do print(tag) end
 end
+
+-----------------------------------------
 
 cpu = manager.machine.devices[":maincpu"]
 debug = cpu.debug
@@ -85,6 +90,7 @@ print(dump(gfx1.size))
 
 -- debug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
 -- debug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+
 -------------- Helpers -------------
 
 function poke(addr, bytes)
@@ -147,7 +153,7 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
-------- Op codes
+------------- z/80 op codes --------------
 
 NOP = 0x00
 JR = 0x18
@@ -183,64 +189,81 @@ CP = 0xFE
 SCREEN_NUM = 0x8029
 PLAYER_LEFT_Y = 0x8077
 
--- add the cool spiral transition to attract mode
-poke_rom(0x038b, { CALL, 0x50,0x25 }) -- cool transition!
+---------------------------------------------------------
 
 -- change color palette
 -- (seems to also mess up a couple of tiles under P2 on load?)
 function set_theme(col)
+   -- patches RESET_XOFF_AND_COLS_AND_SPRITES
    -- change screen colors (resets xoffs and cols seperately)
-   -- adds an extra: `ld (hl), $col, inc hl` for the color
+   -- by adding an extra: `ld (hl), $col, inc hl` for the color
    poke_rom(0x1496, {
-               LD_HL, col,
-               INC_HL,
-               LD_A_L,
-               CP, 0x80,
-               JR_NZ, 0xF5,
-               RET
+     LD_HL,     col,
+     INC_HL,
+     LD_A_L,
+     CP,        0x80,
+     JR_NZ,     0xF5,
+     RET
    })
    -- the routine above was duplicated, so just call instead.
-   poke_rom(0x19d8,{
-               CALL,0x90,0x14,
-               0,0,0,0,0,0,0,0})
+   poke_rom(0x19d8, {
+     CALL,  x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
+     0,0,0,0,0,0,0,0
+   })
    -- bottom row color
    poke_rom(0x1047, col)
    poke_rom(0x179B, col)
    poke_rom(0x179B, col)
 end
 
--- not doing by default as it changes how the game plays
+-- not doing by default because it changes how the game plays
 function do_jump_bug_fix()
    poke_rom(0x14dd, {
      XOR_A,                -- reset falling_timer on screen reset
-     LD_ADDR_A, 0x11,0x80, -- FALLING_TIMER
+     LD_ADDR_A, x(0x8011), -- FALLING_TIMER
      RET,
-     LD_A_ADDR, 0x15,0x83, -- Existing: used to start $14e0,
+     LD_A_ADDR, x(0x0815), -- Existing: used to start at $14e0,
      AND,       0x03,      -- now starts $14e2
      RET_NZ,
-     CALL,      0x50,0x3a, -- ENEMY_1_RESET
-     CALL,      0x88,0x3a, -- ENEMY_2_RESET
-     CALL,      0xc0,0x3a, -- ENEMY_3_RESET
+     CALL,      x(0x3a50), -- ENEMY_1_RESET
+     CALL,      x(0x3a88), -- ENEMY_2_RESET
+     CALL,      x(0x3ac0), -- ENEMY_3_RESET
      RET
    })
    poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
+end
+
+
+function do_reset_score()
+   poke(0x8014, {0, 0, 0});
+end
+
+function do_disable_bonus_skip()
+   local GOT_A_BONUS = 0x29c0
+   poke_rom(GOT_A_BONUS, { JP, x(0x29f5) }) -- jump to end of sub
+   poke_rom(0x29FC, { NOP, NOP, NOP }) -- but don't skip screen
 end
 
 ----------- bug fixes -------------
 
 -- bugfix: fix call to draw inner border on YOUR BEING CHASED screen
 poke_rom(0x56da, 0x5c) -- (was typo'd as 0x4c)
+
 -- bugfix: the pointy stair-down platform
 poke_rom(0x1f01, 0xfc)
+
 -- subjective typography fix: align 1000 bonus better
 poke_rom(0x162d, 0x0f)
+
 -- bugfix: don't jump to wrong byte in hiscore something.
 -- no visual changes, but hey.
 poke_rom(0x3120, 0x17)
+
 -- bugfix: in BONGO attract screen, jumping up stairs the player's
 -- head and legs are switched for one frame of animation. Fix it!
 poke_rom(0x5390, { 0x93, 0x94 }) -- on the way up
 poke_rom(0x5418, { 0x13, 0x14 }) -- on the way down
+
 -- subjective bugfix: add inner border to empty attract screen
 poke_rom(0x48C7, {
    CALL,  0xD0,0x56, -- call DRAW_BUGGY_BORDER
@@ -248,18 +271,17 @@ poke_rom(0x48C7, {
    RET
 })
 
+-- add the cool spiral transition to attract mode
+poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
+
+
 -- what to do about Bongo Tree.
 -- feels wrong to "fix" it.
 -- poke_rom(0x19b7, {0,0,0, 0,0,0})
 
-if fix_jump_bug == true then
-   do_jump_bug_fix()
-end
-
--- ognob open-world mode: freely wander left or right
+-- Open-world mode: freely wander left or right
 if ognob_mode == true then
-   -- TODO: ADD_MOVE_SCORE needs to do $SCR_WIDTH-PLAYER_X if there is a PLAYER_Y_LEFT!
-   -- TODO: BONUS_SKIP_SCREEN needs to skip backwards!
+
    -- TODO: If you do a full Ognob run, there should be something on screen 1.
 
    local OGNOB_MODE_ADDR = 0x0800
@@ -267,12 +289,13 @@ if ognob_mode == true then
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
    poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
 
-   -- the main OGNOB_MODE routine. Does what would happen
-   -- during a normal screen switch, but also sets
-   -- PLAYER_LEFT_Y (0x8077: my variable) that indicates
-   -- the player is left-transitioning. It gets cleared if
-   -- you go through a normal right-transitioning.
-
+   --[[
+      the main OGNOB_MODE routine. Does what would happen
+      during a normal screen switch, but also sets
+      PLAYER_LEFT_Y (0x8077: my variable) that indicates
+      the player is left-transitioning. It gets cleared if
+      you go through a normal right-transitioning.
+   -- ]]
    poke_rom(OGNOB_MODE_ADDR, {
 
   LD_A_ADDR, x(0x8143),        -- PLAYER_Y
@@ -286,14 +309,14 @@ if ognob_mode == true then
   JR_NZ,     0x2,       -- don't reset
   LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
   DEC_A,
-  LD_ADDR_A, 0x29,0x80, -- SCREEN_NUM
+  LD_ADDR_A, x(SCREEN_NUM),
 
   -- DURING_TRANSITION_NEXT
-  CALL,      0xB0,0x14, -- SCREEN_RESET
-  CALL,      0x90,0x14, -- RESET_XOFF_AND_COLS_AND_SPRITES
-  CALL,      0xB8,0x12, -- DRAW_BACKGROUND
-  CALL,      0x20,0x18, -- INIT_PLAYER_POS_FOR_SCREEN
-  CALL,      0xb8,0x0d, -- DRAW_BONGO
+  CALL,      x(0x14B0), -- SCREEN_RESET
+  CALL,      x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
+  CALL,      x(0x12B8), -- DRAW_BACKGROUND
+  CALL,      x(0x1820), -- INIT_PLAYER_POS_FOR_SCREEN
+  CALL,      x(0x0db8), -- DRAW_BONGO
 
   -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
   LD_A, 0xE0-1, -- very right edge of screen
@@ -385,40 +408,19 @@ if ognob_mode == true then
    poke_rom(0x1e02, 0xfe) -- S, entry point bottom-right
    poke_rom(0x21ea, 0xfc) -- nTn helper step
 
-   -- Skip left on bonuses
-   -- 27 bytes free here...
-   --poke_rom(0x1fc5, {})
-   --[[ TRANSITION_LEFT_OR_RIGHT
-      -- NO, won't work: transition_to_next clears plyaer-y-left.
-      ld a, player_y_left
-      jr z _done
-      ld a,screen
-      dec a
-      dec a
-      ld screen,a
-      _done
-      jp $TRANSITION_TO_NEXT_SCREEN
+   -- Don't get ADD_MOVE_SCORE score when moving left.
+   -- patch UPDATE_EVERYTHING_MORE to continditionally call
+   -- ADD_MOVE_SCORE only when not Ognobbing.
+   poke_rom(0x4020, { CALL, x(0x4030) }) -- jump to some free bytes
+   poke_rom(0x4030, {
+     LD_A_ADDR, x(PLAYER_LEFT_Y),
+     AND_A,
+     RET_NZ,
+     JP,        x(0x4050), -- ADD_MOVE_SCORE
+   })
 
-      porlly need to fix transition to next to work with left
-      or right... but then needs to clear somewhere else (in edge)
-
-      ld a, screen_num
-      inc a
-      LD b,($plyaer_left-y)
-      and b
-      jz right
-      dec a
-      dec a
-      cp 0
-      jr nz,right
-      ld a, $27
-
-      right:
-      set_plyaer_y....
---]]
-
-
-
+   -- No bonuses when bongo-ing
+   do_disable_bonus_skip()
 end
 
 ------------- settings -------------
@@ -445,11 +447,15 @@ if fast_wipe == true then
    poke_rom(0x3F42, { NOP, NOP, NOP }) -- saves 2 vblanks-per-screen-number
 end
 
+if disable_dino == true then
+   poke_rom(0x22FE, RET); -- ret from timer start check
+end
+
 if disable_round_speed_up == true then
    poke_rom(0x4EE3, RET); -- return early
 end
 
-if skip_cutscene == true then
+if disable_cutscene == true then
    poke_rom(0x3d48, {
      XOR_A,
      LD_ADDR_A, 0x2d,0x80, -- reset DINO_COUNTER
@@ -457,10 +463,12 @@ if skip_cutscene == true then
    });
 end
 
-if no_bonuses == true then
-   local GOT_A_BONUS = 0x29c0
-   poke_rom(GOT_A_BONUS, { JP, 0xf5,0x29 }) -- jump to end of sub
-   poke_rom(0x29FC, { NOP, NOP, NOP }) -- but don't skip screen
+if disable_bonus_skip == true then
+   do_disable_bonus_skip()
+end
+
+if fix_jump_bug == true then
+   do_jump_bug_fix()
 end
 
 if alt_bongo_place == true then
@@ -476,10 +484,6 @@ end
 if prevent_cloud_jump == true then
    -- PREVENT_CLOUD_JUMP_REDACTED
    poke_rom(0x1290, NOP); -- nop out ret
-end
-
-if disable_dino == true then
-   poke_rom(0x22FE, RET); -- ret from timer start check
 end
 
 if theme ~= 0 then
@@ -568,8 +572,8 @@ loop_idx = 0
 LIVES = 0x8032
 tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
    -- clear score on death
-   if clear_score == true then
-      poke(0x8014, {0, 0, 0});
+   if reset_score == true then
+      do_reset_score()
    end
 
    if technicolor == true then
@@ -594,9 +598,9 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
       end
    end
 
-   if clear_score == true then
-      -- reset score on screen change
-      poke(0x8014, {0, 0, 0});
+   -- reset score on screen change
+   if reset_score == true then
+      do_reset_score()
    end
 
    if started and loop_len > 0 then

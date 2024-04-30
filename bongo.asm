@@ -3920,9 +3920,9 @@ UPDATE_DINO
 22AA: 3E 12       ld   a,$12
 22AC: 32 4E 81    ld   ($DINO_COL),a
 22AF: 32 52 81    ld   ($DINO_COL_LEGS),a
-22B2: 7E          ld   a,(hl)   ; param 3?
+22B2: 7E          ld   a,(hl)   ; anim height (for hiding dino)
 22B3: E6 FC       and  $FC      ; 1111 1100
-22B5: 28 1D       jr   z,$22D4
+22B5: 28 1D       jr   z,$_THIS
 22B7: E6 F8       and  $F8      ; 1111 1000
 22B9: 20 07       jr   nz,$22C2
 22BB: 3A 4C 81    ld   a,($DINO_X)
@@ -3935,6 +3935,7 @@ UPDATE_DINO
 22CD: C6 10       add  a,$10
 22CF: 32 53 81    ld   ($DINO_Y_LEGS),a
 22D2: 18 04       jr   $22D8
+_THIS
 22D4: AF          xor  a
 22D5: 32 50 81    ld   ($DINO_X_LEGS),a
 22D8: 7E          ld   a,(hl)
@@ -7079,9 +7080,9 @@ UPDATE_EVERYTHING_MORE
 4030: C9          ret
 4031: FF ...
 
+    ;; who calls?
     ;; What the heck is $c000?
-    ;; How is this called? RESET_VECTOR is 0x38, this
-    ;; is 4k higher... coincidence?
+    ;; RESET_VECTOR is 0x38, this is 4k higher... coincidence?
 4038: 21 00 C0    ld   hl,$C000
 403B: CD 81 5C    call $JMP_HL
 403E: C9          ret
