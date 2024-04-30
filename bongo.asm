@@ -7178,7 +7178,8 @@ GET_TILE_SCR_POS
 40BD: 6F          ld   l,a
 40BE: C9          ret
 
-40BF: FF          rst  $38
+40BF: FF
+
 40C0: DD 7E 05    ld   a,(ix+$05)
 40C3: A7          and  a
 40C4: 28 05       jr   z,$40CB
@@ -7218,7 +7219,8 @@ HIT_BONUS
 40FC: CD 81 5C    call $JMP_HL
 40FF: C9          ret
 
-    ;;
+    ;; Called directly by SFX_SUMFIN_2 and
+    ;; indirectly (maybe) by weird load at 0x41e3
 4100: DD 7E 05    ld   a,(ix+$05)
 4103: A7          and  a
 4104: 28 05       jr   z,$410B
@@ -7434,23 +7436,26 @@ PICKUP_TILE_COLLISION
 426A: C8          ret  z
     ;;
 426B: FE 8C       cp   $TILE_CROWN_PIKA
-426D: 20 08       jr   nz,$4277
+426D: 20 08       jr   nz,$_CROSSA
 426F: 3E 20       ld   a,$20    ; 200 bonus
 4271: 36 10       ld   (hl),$TILE_BLANK
 4273: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4276: C9          ret
+_CROSSA
 4277: FE 8D       cp   $TILE_PIK_CROSSA
-4279: 20 08       jr   nz,$4283
+4279: 20 08       jr   nz,$_RINGA
 427B: 3E 40       ld   a,$40    ; 400 bonus
 427D: 36 10       ld   (hl),$TILE_BLANK
 427F: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4282: C9          ret
+_RINGA
 4283: FE 8E       cp   $TILE_PIK_RINGA
-4285: 20 08       jr   nz,$428F
+4285: 20 08       jr   nz,$_VASEA
 4287: 3E 60       ld   a,$60    ; 600 bonus
 4289: 36 10       ld   (hl),$TILE_BLANK
 428B: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 428E: C9          ret
+_VASEA
 428F: FE 8F       cp   $TILE_PIK_VASEA
 4291: C0          ret  nz
 4292: 3E A0       ld   a,$A0    ; 1000 bonus
@@ -7458,13 +7463,18 @@ PICKUP_TILE_COLLISION
 4296: CD B0 41    call $HIT_BONUS_DRAW_POINTS
 4299: C9          ret
 
-;;;
+;;; called? Draws a cross (same spot as "ADD_PICKUP_PAT_6", but A version)
+    ;; might be old dud code
 429A: 3E 9D       ld   a,$TILE_PIK_CROSS
 429C: 32 D2 91    ld   ($91D2),a
 429F: C9          ret
+
+    ;; Weird bug in it - same code as ADD_PICKUP_PAT_7,
+    ;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
+FUNKY_LOOKING_SET_RING
 42A0: 3E 8E       ld   a,$TILE_PIK_RINGA
 42A2: 32 CB 90    ld   ($90CB),a
-42A5: CD 02 36    call $3602    ; <- that looks od. Weird jump to middle of code
+42A5: CD 02 36    call $3602    ; <- that looks odd. Weird jump to middle of code
 42A8: C9          ret
 
 42A9: FF ...
@@ -7601,14 +7611,17 @@ SFX_SOMETHING_CH_2
 4390: 3E 01       ld   a,$01
 4392: FD 77 04    ld   (iy+$04),a
 4395: C9          ret
-4396: CD A0 42    call $42A0
-4399: 3E 9E       ld   a,$9E
+
+    ;; called?
+4396: CD A0 42    call $FUNKY_LOOKING_SET_RING
+4399: 3E 9E       ld   a,$TILE_PIK_RING
 439B: 32 AB 92    ld   ($92AB),a
 439E: C9          ret
 
 439F: FF
 
     ;;
+SFX_WHAT_1
 43A0: DD 6E 0B    ld   l,(ix+$0b)
 43A3: DD 66 0C    ld   h,(ix+$0c)
 43A6: 7E          ld   a,(hl)
@@ -7627,7 +7640,7 @@ SFX_SOMETHING_CH_2
 43BE: 18 FA       jr   $43BA
 43C0: 3D          dec  a
 43C1: DD 77 14    ld   (ix+$14),a
-43C4: CD A0 52    call $52A0
+43C4: CD A0 52    call $SFX_SUB_WHAT_1
 43C7: FD 77 02    ld   (iy+$02),a
 43CA: DD 7E 0E    ld   a,(ix+$0e)
 43CD: FD 77 03    ld   (iy+$03),a
@@ -7908,7 +7921,7 @@ ADD_PICKUP_PAT_2
 4616: 28 0A       jr   z,$4622
 4618: DD 75 0B    ld   (ix+$0b),l
 461B: DD 74 0C    ld   (ix+$0c),h
-461E: CD A0 43    call $43A0
+461E: CD A0 43    call $SFX_WHAT_1
 4621: C9          ret
 
     ;; sfxsomething #8
@@ -7936,7 +7949,7 @@ ADD_PICKUP_PAT_2
 4647: DD 6E 0B    ld   l,(ix+$0b)
 464A: DD 66 0C    ld   h,(ix+$0c)
 464D: 7E          ld   a,(hl)
-464E: CD A0 43    call $43A0
+464E: CD A0 43    call $SFX_WHAT_1
 4651: C9          ret
 
     ;; sfxsomething #9
@@ -7948,7 +7961,7 @@ ADD_PICKUP_PAT_2
 465E: 23          inc  hl
 465F: 7E          ld   a,(hl)
 4660: DD 77 0C    ld   (ix+$0c),a
-4663: CD A0 43    call $43A0
+4663: CD A0 43    call $SFX_WHAT_1
 4666: C9          ret
 4667: FF ...
 
@@ -8164,7 +8177,7 @@ _HERE
 481E: 3D          dec  a
 481F: 3D          dec  a
 4820: C8          ret  z
-4821: CD A0 43    call $43A0
+4821: CD A0 43    call $SFX_WHAT_1
 4824: C9          ret
 4825: FF ...
 
@@ -8688,6 +8701,7 @@ YOUR_BEING_CHASED_DINO_SPRITE
 4B68: 36 A0       ld   (hl),$A0 ; y legs
 4B6A: 23          inc  hl
 4B6B: C9          ret
+
 4B6C: FF ...
 
 4BE0: 0E 04       ld   c,$04
@@ -9678,7 +9692,8 @@ PLAY_SFX_CHUNK_CH_2
 5290: C9          ret
 5291: FF ...
 
-    ;;
+    ;;??
+SFX_SUB_WHAT_1
 52A0: DD E5       push ix
 52A2: E1          pop  hl
 52A3: 7D          ld   a,l
@@ -9714,7 +9729,8 @@ PLAY_SFX_CHUNK_CH_2
 52DC: C9          ret
 52DD: DD 7E 10    ld   a,(ix+$10)
 52E0: C9          ret
-52E1: FF          rst  $38
+
+52E1: FF
 
     ;;
 ATTRACT_ANIMATE_PLAYER_UP_STAIRS
@@ -10484,8 +10500,8 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 57DD: CD 70 55    call $DRAW_TILES_H_COPY
 57E0: 09 08
 57E2: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
-57EE: CD B0 4E    call $4EB0
-57F1: CD B0 4E    call $4EB0
+57EE: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
+57F1: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
 57F4: CD 70 55    call $DRAW_TILES_H_COPY
 57F7: 0C 07
 57F9: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
@@ -10495,8 +10511,8 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 581E: CD 70 55    call $DRAW_TILES_H_COPY
 5821: 14 07
 5823: 1C 1F 23 19 1E 10 11 10 1C 19 16 15 FF
-5831: CD B0 4E    call $4EB0
-5834: CD B0 4E    call $4EB0
+5831: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
+5834: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
 5837: CD 70 55    call $DRAW_TILES_H_COPY
 583A: 17 0B
 583C: E0 DC DD DE DF FF
@@ -10509,10 +10525,10 @@ CALL_DRAW_EXTRA_BONUS_SCREEN
 5858: CD 70 55    call $DRAW_TILES_H_COPY
 585B: 1A 0B
 585D: E2 E3 E3 E3 E4 FF
-5853: CD B0 4E    call $4EB0
-5866: CD B0 4E    call $4EB0
-5869: CD B0 4E    call $4EB0
-586C: CD B0 4E    call $4EB0
+5853: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
+5866: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
+5869: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
+586C: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
 586F: C9          ret
 
     ;; what's this data eh? Looks similar to $5c00
