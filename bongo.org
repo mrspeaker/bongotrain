@@ -54,6 +54,11 @@ cpu = manager.machine.devices[":maincpu"]
 mem = cpu.spaces["program"]
 --vid = cpu.items["0/:videoram"]
 
+Loading more lua from script:
+local path = debug.getinfo(1).source:match("@?(.*/)")
+package.path = package.path .. ';'..path..'?.lua;'
+
+
 cheatinit
 cheatnext +
 cheatnext -
