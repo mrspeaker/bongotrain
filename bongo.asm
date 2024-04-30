@@ -1298,7 +1298,8 @@ PLAY_JUMP_SFX
 07FD: FF ...
 
     ;; who calls?
-    ;; this looks similar to other DRAW_TILES code (but draws 2 chars?)
+    ;; this looks similar to other DRAW_TILES code, but tile data
+    ;; is indirectly fetched via (bc) addresses.
     ;; I set a breakpoint here and played a bunch (even cutscene)
     ;; but could not get it to trigger... not used? debug?
 0800: 01 00 00    ld   bc,$0000
@@ -1329,15 +1330,15 @@ PLAY_JUMP_SFX
 0823: 19          add  hl,de
 0824: 19          add  hl,de
 0825: 03          inc  bc
-0826: 0A          ld   a,(bc)   ; two chars at a time?
+0826: 0A          ld   a,(bc)   ; addr hi byte
 0827: 5F          ld   e,a
 0828: 03          inc  bc
-0829: 0A          ld   a,(bc)   ; not drawn... pushed?
+0829: 0A          ld   a,(bc)   ; addr lo byte
 082A: 57          ld   d,a
 082B: 03          inc  bc
 082C: C5          push bc
 _LP
-082D: 1A          ld   a,(de)
+082D: 1A          ld   a,(de)   ;
 082E: FE FF       cp   $FF      ; $FF delimited
 0830: C8          ret  z
 0831: 13          inc  de
