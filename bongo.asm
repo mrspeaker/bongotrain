@@ -1297,7 +1297,7 @@ PLAY_JUMP_SFX
 
 07FD: FF ...
 
-    ;; who calls?
+    ;; who calls? (free bytes)
     ;; this looks similar to other DRAW_TILES code, but tile data
     ;; is indirectly fetched via (bc) addresses.
     ;; I set a breakpoint here and played a bunch (even cutscene)

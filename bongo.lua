@@ -10,7 +10,7 @@ round = 2 -- starting round
 -- Serious bizness
 infinite_lives = true
 fast_death = true      -- restart fast after death
-fast_wipe = false       -- don't do slow transition to next screen
+fast_wipe = true      -- don't do slow transition to next screen
 disable_dino = true    -- no pesky dino... but also now you can't catch him
 disable_round_speed_up = true -- don't get faster after catching dino
 no_bonuses = false     -- don't skip screen on bonus
@@ -21,7 +21,7 @@ tile_indicator = false -- middle line = block check pos. Back line = pickup chec
 -- Non-so-serious bizness
 theme = 0              -- color theme (0-7). 0 =  default, 7 = best one
 technicolor = false    -- randomize theme every death
-head_style = 0         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+head_style = 2         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true      -- Open-world Bongo. Can go out left or right.
                        -- ...are you brave enough to do all levels in Ognob?
 one_px_moves = false   -- test how it feels moving 1px per frame, not 3px per 3 frames.
@@ -55,6 +55,18 @@ function dump(o)
       return tostring(o)
    end
 end
+
+function flatten(list)
+  if type(list) ~= "table" then return {list} end
+  local flat_list = {}
+  for _, elem in ipairs(list) do
+    for _, val in ipairs(flatten(elem)) do
+      flat_list[#flat_list + 1] = val
+    end
+  end
+  return flat_list
+end
+
 function print_pairs(o)
    for tag, device in pairs(o) do print(tag) end
 end
@@ -77,6 +89,7 @@ print(dump(gfx1.size))
 
 function poke(addr, bytes)
    if type(bytes)=="number" then bytes = {bytes} end
+   bytes = flatten(bytes)
    for i = 1, #bytes do
       mem:write_u8(addr + (i - 1), bytes[i])
    end
@@ -84,6 +97,7 @@ end
 
 function poke_rom(addr, bytes)
    if type(bytes) == "number" then bytes = {bytes} end
+   bytes = flatten(bytes)
    for i = 1, #bytes do
       mem:write_direct_u8(addr + (i - 1), bytes[i])
    end
@@ -115,6 +129,10 @@ function set_pc(addr)
    cpu.state["PC"].value = addr
 end
 
+-- return an array with  hi/lo bytes of a 16bit value
+function x(v)
+   return { v & 0xff, v >> 8 }
+end
 
 function on_game_start()
    started = false -- triggered below
@@ -160,6 +178,10 @@ AND = 0xE6
 OR = 0xF6
 CP = 0xFE
 
+--- RAM locations ---
+
+SCREEN_NUM = 0x8029
+PLAYER_LEFT_Y = 0x8077
 
 -- add the cool spiral transition to attract mode
 poke_rom(0x038b, { CALL, 0x50,0x25 }) -- cool transition!
@@ -217,8 +239,8 @@ poke_rom(0x162d, 0x0f)
 poke_rom(0x3120, 0x17)
 -- bugfix: in BONGO attract screen, jumping up stairs the player's
 -- head and legs are switched for one frame of animation. Fix it!
-poke_rom(0x5390, { 0x93,0x94 }) -- on the way up
-poke_rom(0x5418, { 0x13,0x14 }) -- on the way down
+poke_rom(0x5390, { 0x93, 0x94 }) -- on the way up
+poke_rom(0x5418, { 0x13, 0x14 }) -- on the way down
 -- subjective bugfix: add inner border to empty attract screen
 poke_rom(0x48C7, {
    CALL,  0xD0,0x56, -- call DRAW_BUGGY_BORDER
@@ -240,8 +262,10 @@ if ognob_mode == true then
    -- TODO: BONUS_SKIP_SCREEN needs to skip backwards!
    -- TODO: If you do a full Ognob run, there should be something on screen 1.
 
+   local OGNOB_MODE_ADDR = 0x0800
+
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
-   poke_rom(0x1a0c, { CALL, 0xB1, 0x2c })
+   poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
 
    -- the main OGNOB_MODE routine. Does what would happen
    -- during a normal screen switch, but also sets
@@ -249,17 +273,15 @@ if ognob_mode == true then
    -- the player is left-transitioning. It gets cleared if
    -- you go through a normal right-transitioning.
 
-   poke_rom(0x2cb0, {
+   poke_rom(OGNOB_MODE_ADDR, {
 
-  RET, -- for safety - I don't think this func is really called
-
-  LD_A_ADDR, 0x43,0x81, -- PLAYER_Y
-  LD_ADDR_A, 0x77,0x80, -- PLAYER_LEFT_Y (was using 8099 - but seemed to affect 8029?!)
+  LD_A_ADDR, x(0x8143),        -- PLAYER_Y
+  LD_ADDR_A, x(PLAYER_LEFT_Y), --  (was using 8099 - but seemed to affect 8029?!)
 
   -- TRANSITION_TO_NEXT_SCREEN
-  CALL,      0xC0,0x17, -- RESET_DINO
+  CALL,      x(0x17C0),        -- RESET_DINO
   -- get the previous screen
-  LD_A_ADDR, 0x29,0x80, -- SCREEN_NUM
+  LD_A_ADDR, x(SCREEN_NUM),
   CP,        0x1,       -- screen 1?
   JR_NZ,     0x2,       -- don't reset
   LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
@@ -273,58 +295,62 @@ if ognob_mode == true then
   CALL,      0x20,0x18, -- INIT_PLAYER_POS_FOR_SCREEN
   CALL,      0xb8,0x0d, -- DRAW_BONGO
 
-  -- set the player pos
-  -- currently PC should be 0x2CD6: !NOTE! used below.
+  -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
   LD_A, 0xE0-1, -- very right edge of screen
   LD_ADDR_A, 0x40,0x81, -- PLAYER_X
   LD_ADDR_A, 0x44,0x81, -- PLAYER_X_LEGS
-  LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y (mine)
+  LD_A_ADDR, x(PLAYER_LEFT_Y), -- (mine)
   LD_ADDR_A, 0x43,0x81, -- PLAYER_Y
   ADD_A,     0x10,
   LD_ADDR_A, 0x47,0x81, -- PLAYER_Y_LEGS
-  -- could save some bytes if I just hardcoded the frames
-  LD_A,      0x8C,      -- player idle, flipped
-  LD_ADDR_A, 0x41,0x81, -- PLAYER_FRAME
-  INC_A,
-  LD_ADDR_A, 0x45,0x81, -- PLAYER_FRAME_LEGS
+  LD_A_ADDR, x(0x8141), -- PLAYER_FRAME
+  ADD_A,     0x80,      -- flip x
+  LD_ADDR_A, x(0x8141), -- PLAYER_FRAME
+  LD_A_ADDR, x(0x8145), -- PLAYER_FRAME_LEGS
+  ADD_A,     0x80,      -- flip x
+  LD_ADDR_A, x(0x8145), -- PLAYER_FRAME_LEGS
 
   -- after DURING_TRANSTION_NEXT
-  CALL,      0xD0,0x0A, -- SET_LEVEL_PLATFORM_XOFFS
+  CALL,      x(0x0AD0), -- SET_LEVEL_PLATFORM_XOFFS
   LD_A,      0x02,
-  CALL,      0xB4,0x17, -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
+  CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 
   RET
 
    })
 
+   local SET_PLAYER_LEFT = OGNOB_MODE_ADDR + 0x25 -- careful! Address will change if above modified.
+
    -- Patch end of INIT_PLAYER_SPRITE after death:
    -- reset to right side of screen if ognob-ing
    poke_rom(0x08b5, {
-     LD_A_ADDR, 0x77,0x80, -- PLAYER_LEFT_Y
+     LD_A_ADDR, x(PLAYER_LEFT_Y),
      CP,        0x0,
      RET_Z,
-     CALL,      0xd6,0x2c, -- careful! Address will change if above modified.
+     CALL,      x(SET_PLAYER_LEFT),
      RET
    })
+
+   local SET_PLAYER_LEFT_LOC = 0x1886 -- some free bytes here
 
    -- Patch TRANSITION_TO_NEXT_SCREEN to account for
    -- being able to go right out of cage screen. Jumps to 0x1886.
    poke_rom(0x177B, {
-     CALL,0x86,0x18, -- jumps to below (breaks P2 handling!)
+     CALL, x(SET_PLAYER_LEFT_LOC), -- (breaks P2 handling!)
      NOP, NOP, NOP
    })
 
    -- Reset PLAYER_LEFT_Y on right-transition,
    -- and wrap level if right-transition on cage screen (possible now!)
    -- Used some free (looking) bytes at 0x1886...
-   poke_rom(0x1886, {
+   poke_rom(SET_PLAYER_LEFT_LOC, {
       XOR_A,
-      LD_ADDR_A, 0x77,0x80, -- reset PLAYER_LEFT_Y
-      LD_A_ADDR, 0x29,0x80, -- get screen num
+      LD_ADDR_A, x(PLAYER_LEFT_Y),
+      LD_A_ADDR, x(SCREEN_NUM),
       CP,        0x1b,      -- is it 27?
       RET_C,                -- nah, carry on
       XOR_A,
-      LD_ADDR_A, 0x29,0x80, -- yep - reset to 0 (1?)
+      LD_ADDR_A, x(SCREEN_NUM), -- yep - reset to 0
       RET
    })
 
@@ -339,7 +365,7 @@ if ognob_mode == true then
      LD_ADDR_A, 0x37,0x80,  -- ENEMY_1_ACTIVE
 
      -- fix screen 26 spears insta-death (new bit...)
-     LD_A_ADDR, 0x77,0x80, -- is PLAYER_LEFT_Y?
+     LD_A_ADDR, x(PLAYER_LEFT_Y), -- is left side?
      AND_A,
      RET_Z,
      LD_A,      0xc6,       -- New Y value (2 higher!)
@@ -351,13 +377,13 @@ if ognob_mode == true then
    -- because of the bytes we stole above!
    poke_rom(0x397E, {
      LD_A,      0x17,      -- set spear color
-     LD_ADDR_A, 0x56,0x81, -- ENEMY_1_COL
+     LD_ADDR_A, x(0x8156), -- ENEMY_1_COL
      RET
    })
 
    -- extra platforms to make Bongo backwards-compatible (tee hee)
-   poke_rom(0x1e02, {0xfe}) -- S, entry point bottom-right
-   poke_rom(0x21ea, {0xfc}) -- nTn helper step
+   poke_rom(0x1e02, 0xfe) -- S, entry point bottom-right
+   poke_rom(0x21ea, 0xfc) -- nTn helper step
 
    -- Skip left on bonuses
    -- 27 bytes free here...
@@ -551,7 +577,6 @@ tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
    end
 end)
 
-SCREEN_NUM = 0x8029
 tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, data)
    -- loop screens
    if data == 1 and not started then
