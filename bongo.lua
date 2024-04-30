@@ -1,5 +1,8 @@
 -- Bongo trainer, by Mr Speaker.
 -- https://www.mrspeaker.net
+
+-- press P1/P2 during game to skip forward/back screens.
+
 start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
@@ -9,30 +12,30 @@ round = 2 -- starting round
 
 -- Serious bizness
 infinite_lives = true
-fast_death = true      -- restart fast after death
-fast_wipe = true      -- don't do slow transition to next screen
-disable_dino = true    -- no pesky dino... but also now you can't catch him
+fast_death = true       -- restart fast after death
+fast_wipe = true        -- fast transition to next screen
+disable_dino = true     -- no pesky dino (oh, but also now you can't catch 'im)
 disable_round_speed_up = true -- don't get faster after catching dino
-disable_bonus_skip = false     -- don't skip screen on bonus
-disable_cutscene = true   -- don't show the cutscene
-reset_score = false    -- reset score to 0 on death and new screen
-tile_indicator = false -- middle line = block check pos. Back line = pickup check pos
+disable_bonus_skip = false    -- don't skip screen on 6xbonus
+disable_cutscene = true       -- don't show the awesome cutscene
+reset_score = false     -- reset score to 0 on death and new screen
+tile_indicator = false  -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 0              -- color theme (0-7). 0 =  default, 7 = best one
-technicolor = false    -- randomize theme every death
-head_style = 2         -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-ognob_mode = true      -- Open-world Bongo. Can go out left or right.
-                       -- ...are you brave enough to do all levels in Ognob?
+theme = 0               -- color theme (0-7). 0 =  default, 7 = best one
+technicolor = false     -- randomize theme every death
+head_style = 2          -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+ognob_mode = true       -- Open-world Bongo. Can go out left or right.
+                        -- ...are you brave enough to do all levels in Ognob?
 
-one_px_moves = false   -- test how it feels moving 1px per frame, not 3px per 3 frames.
-fix_jump_bug = false   -- hold down jump after transitioning screen from high jump
-                       -- doesn't kill you.
-
--- Removed features I found in the code
-show_timers = true     -- speed run timers! Don't know why they removed them
+-- Removed features I found in the code, and tweaks/tests
+show_timers = true      -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
 alt_bongo_place = false -- I think was supposed to put guy on the ground for highwire levels
+one_px_moves = false    -- test how it feels moving 1px per frame, not 3px per 3 frames.
+fix_jump_bug = false    -- hold down jump after transitioning screen from high jump
+                        -- doesn't kill you.
+
 
 -----------------------------------
 -- Bongo world map
@@ -45,6 +48,8 @@ alt_bongo_place = false -- I think was supposed to put guy on the ground for hig
 -----------------------------------
 
 
+
+--------------- General helpers ----------------
 
 function dump(o)
    if type(o) == 'table' then
@@ -74,12 +79,12 @@ function print_pairs(o)
    for tag, device in pairs(o) do print(tag) end
 end
 
------------------------------------------
+------------------- MAME machine -----------------------
 
 cpu = manager.machine.devices[":maincpu"]
-debug = cpu.debug
+--debug = cpu.debug
 mem = cpu.spaces["program"]
-io = cpu.spaces["io"]
+--io = cpu.spaces["io"]
 gfx = manager.machine.devices[":gfxdecode"]
 gfx1 = manager.machine.memory.regions[":gfx1"]
 
@@ -91,7 +96,7 @@ print(dump(gfx1.size))
 -- debug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
 -- debug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
 
--------------- Helpers -------------
+-------------- MAME Helpers -------------
 
 function poke(addr, bytes)
    if type(bytes)=="number" then bytes = {bytes} end
@@ -144,7 +149,8 @@ function on_game_start()
    started = false -- triggered below
 end
 
-------------- ROM hacks -------------
+------------- Scratch pad -------------
+
 
 -- poke_rom(0x069D, 0x20); -- autojump
 
@@ -160,9 +166,9 @@ JR = 0x18
 JR_NZ = 0x20
 INC_HL = 0x23
 JR_Z = 0x28
-LD_ADDR_A = 0x32
+LD_MEM_A = 0x32
 LD_HL = 0x36
-LD_A_ADDR = 0x3a
+LD_A_MEM = 0x3a
 INC_A = 0x3c
 DEC_A = 0x3d
 LD_A = 0x3e
@@ -216,24 +222,6 @@ function set_theme(col)
    poke_rom(0x179B, col)
 end
 
--- not doing by default because it changes how the game plays
-function do_jump_bug_fix()
-   poke_rom(0x14dd, {
-     XOR_A,                -- reset falling_timer on screen reset
-     LD_ADDR_A, x(0x8011), -- FALLING_TIMER
-     RET,
-     LD_A_ADDR, x(0x0815), -- Existing: used to start at $14e0,
-     AND,       0x03,      -- now starts $14e2
-     RET_NZ,
-     CALL,      x(0x3a50), -- ENEMY_1_RESET
-     CALL,      x(0x3a88), -- ENEMY_2_RESET
-     CALL,      x(0x3ac0), -- ENEMY_3_RESET
-     RET
-   })
-   poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
-end
-
-
 function do_reset_score()
    poke(0x8014, {0, 0, 0});
 end
@@ -274,154 +262,9 @@ poke_rom(0x48C7, {
 -- add the cool spiral transition to attract mode
 poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
 
-
 -- what to do about Bongo Tree.
 -- feels wrong to "fix" it.
 -- poke_rom(0x19b7, {0,0,0, 0,0,0})
-
--- Open-world mode: freely wander left or right
-if ognob_mode == true then
-
-   -- TODO: If you do a full Ognob run, there should be something on screen 1.
-
-   local OGNOB_MODE_ADDR = 0x0800
-
-   -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
-   poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
-
-   --[[
-      the main OGNOB_MODE routine. Does what would happen
-      during a normal screen switch, but also sets
-      PLAYER_LEFT_Y (0x8077: my variable) that indicates
-      the player is left-transitioning. It gets cleared if
-      you go through a normal right-transitioning.
-   -- ]]
-   poke_rom(OGNOB_MODE_ADDR, {
-
-  LD_A_ADDR, x(0x8143),        -- PLAYER_Y
-  LD_ADDR_A, x(PLAYER_LEFT_Y), --  (was using 8099 - but seemed to affect 8029?!)
-
-  -- TRANSITION_TO_NEXT_SCREEN
-  CALL,      x(0x17C0),        -- RESET_DINO
-  -- get the previous screen
-  LD_A_ADDR, x(SCREEN_NUM),
-  CP,        0x1,       -- screen 1?
-  JR_NZ,     0x2,       -- don't reset
-  LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
-  DEC_A,
-  LD_ADDR_A, x(SCREEN_NUM),
-
-  -- DURING_TRANSITION_NEXT
-  CALL,      x(0x14B0), -- SCREEN_RESET
-  CALL,      x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
-  CALL,      x(0x12B8), -- DRAW_BACKGROUND
-  CALL,      x(0x1820), -- INIT_PLAYER_POS_FOR_SCREEN
-  CALL,      x(0x0db8), -- DRAW_BONGO
-
-  -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
-  LD_A, 0xE0-1, -- very right edge of screen
-  LD_ADDR_A, 0x40,0x81, -- PLAYER_X
-  LD_ADDR_A, 0x44,0x81, -- PLAYER_X_LEGS
-  LD_A_ADDR, x(PLAYER_LEFT_Y), -- (mine)
-  LD_ADDR_A, 0x43,0x81, -- PLAYER_Y
-  ADD_A,     0x10,
-  LD_ADDR_A, 0x47,0x81, -- PLAYER_Y_LEGS
-  LD_A_ADDR, x(0x8141), -- PLAYER_FRAME
-  ADD_A,     0x80,      -- flip x
-  LD_ADDR_A, x(0x8141), -- PLAYER_FRAME
-  LD_A_ADDR, x(0x8145), -- PLAYER_FRAME_LEGS
-  ADD_A,     0x80,      -- flip x
-  LD_ADDR_A, x(0x8145), -- PLAYER_FRAME_LEGS
-
-  -- after DURING_TRANSTION_NEXT
-  CALL,      x(0x0AD0), -- SET_LEVEL_PLATFORM_XOFFS
-  LD_A,      0x02,
-  CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
-
-  RET
-
-   })
-
-   local SET_PLAYER_LEFT = OGNOB_MODE_ADDR + 0x25 -- careful! Address will change if above modified.
-
-   -- Patch end of INIT_PLAYER_SPRITE after death:
-   -- reset to right side of screen if ognob-ing
-   poke_rom(0x08b5, {
-     LD_A_ADDR, x(PLAYER_LEFT_Y),
-     CP,        0x0,
-     RET_Z,
-     CALL,      x(SET_PLAYER_LEFT),
-     RET
-   })
-
-   local SET_PLAYER_LEFT_LOC = 0x1886 -- some free bytes here
-
-   -- Patch TRANSITION_TO_NEXT_SCREEN to account for
-   -- being able to go right out of cage screen. Jumps to 0x1886.
-   poke_rom(0x177B, {
-     CALL, x(SET_PLAYER_LEFT_LOC), -- (breaks P2 handling!)
-     NOP, NOP, NOP
-   })
-
-   -- Reset PLAYER_LEFT_Y on right-transition,
-   -- and wrap level if right-transition on cage screen (possible now!)
-   -- Used some free (looking) bytes at 0x1886...
-   poke_rom(SET_PLAYER_LEFT_LOC, {
-      XOR_A,
-      LD_ADDR_A, x(PLAYER_LEFT_Y),
-      LD_A_ADDR, x(SCREEN_NUM),
-      CP,        0x1b,      -- is it 27?
-      RET_C,                -- nah, carry on
-      XOR_A,
-      LD_ADDR_A, x(SCREEN_NUM), -- yep - reset to 0
-      RET
-   })
-
-   -- Patch SET_SPEAR_LEFT_BOTTOM to fix insta-death spears
-   -- Not enough bytes, so overwriting color set, but then
-   -- doing this in SET_SPEAR_LEFT_MIDDLE. lol.
-   poke_rom(0x3947, {
-     -- original code, moved up 3 bytes...
-     LD_A,      0xC8,       -- original y value
-     LD_ADDR_A, 0x57,0x81,  -- ENEMY_1_Y
-     LD_A,      0x01,       -- original active value
-     LD_ADDR_A, 0x37,0x80,  -- ENEMY_1_ACTIVE
-
-     -- fix screen 26 spears insta-death (new bit...)
-     LD_A_ADDR, x(PLAYER_LEFT_Y), -- is left side?
-     AND_A,
-     RET_Z,
-     LD_A,      0xc6,       -- New Y value (2 higher!)
-     LD_ADDR_A, 0x57,0x81,  -- ENEMY_1_Y
-     RET
-   })
-
-   -- Patch SET_SPEAR_LEFT_MIDDLE to set the bottom spear
-   -- because of the bytes we stole above!
-   poke_rom(0x397E, {
-     LD_A,      0x17,      -- set spear color
-     LD_ADDR_A, x(0x8156), -- ENEMY_1_COL
-     RET
-   })
-
-   -- extra platforms to make Bongo backwards-compatible (tee hee)
-   poke_rom(0x1e02, 0xfe) -- S, entry point bottom-right
-   poke_rom(0x21ea, 0xfc) -- nTn helper step
-
-   -- Don't get ADD_MOVE_SCORE score when moving left.
-   -- patch UPDATE_EVERYTHING_MORE to continditionally call
-   -- ADD_MOVE_SCORE only when not Ognobbing.
-   poke_rom(0x4020, { CALL, x(0x4030) }) -- jump to some free bytes
-   poke_rom(0x4030, {
-     LD_A_ADDR, x(PLAYER_LEFT_Y),
-     AND_A,
-     RET_NZ,
-     JP,        x(0x4050), -- ADD_MOVE_SCORE
-   })
-
-   -- No bonuses when bongo-ing
-   do_disable_bonus_skip()
-end
 
 ------------- settings -------------
 
@@ -458,7 +301,7 @@ end
 if disable_cutscene == true then
    poke_rom(0x3d48, {
      XOR_A,
-     LD_ADDR_A, 0x2d,0x80, -- reset DINO_COUNTER
+     LD_MEM_A, 0x2d,0x80, -- reset DINO_COUNTER
      JP,        0x88,0x3D  -- _CUTSCENE_DONE
    });
 end
@@ -467,8 +310,21 @@ if disable_bonus_skip == true then
    do_disable_bonus_skip()
 end
 
+-- not doing by default because it changes how the game plays
 if fix_jump_bug == true then
-   do_jump_bug_fix()
+   poke_rom(0x14dd, {
+     XOR_A,                -- reset falling_timer on screen reset
+     LD_MEM_A,  x(0x8011), -- FALLING_TIMER
+     RET,
+     LD_A_MEM,  x(0x0815), -- Existing: used to start at $14e0,
+     AND,       0x03,      -- now starts $14e2
+     RET_NZ,
+     CALL,      x(0x3a50), -- ENEMY_1_RESET
+     CALL,      x(0x3a88), -- ENEMY_2_RESET
+     CALL,      x(0x3ac0), -- ENEMY_3_RESET
+     RET
+   })
+   poke_rom(0x3b6c, 0xe2) -- bump call addr to $14e2
 end
 
 if alt_bongo_place == true then
@@ -492,8 +348,8 @@ end
 
 if one_px_moves == true then
    poke_rom(0x068D, NOP) -- run every frame, not every 3
-   poke_rom(0x0632, {NOP,NOP}) -- nop 2x inc
-   poke_rom(0x0672, {NOP,NOP}) -- nop 2x dec
+   poke_rom(0x0632, { NOP,NOP }) -- nop 2x inc
+   poke_rom(0x0672, { NOP,NOP }) -- nop 2x dec
 end
 
 if head_style > 0 then
@@ -502,9 +358,9 @@ if head_style > 0 then
    local fl = ({flip_x(0x3e), flip_x(0x2c), 0x07, flip_x(0x17)})[head_style]
    local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
 
-   poke_rom(0x063A, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- player_move_right
-   poke_rom(0x067a, { LD_A,fl, LD_ADDR_A,0x41,0x81, RET })  -- player_move_left
-   poke_rom(0x1819, { LD_A,fr, LD_ADDR_A,0x41,0x81, RET }) -- reset_player
+   poke_rom(0x063A, { LD_A,fr, LD_MEM_A,0x41,0x81, RET }) -- player_move_right
+   poke_rom(0x067a, { LD_A,fl, LD_MEM_A,0x41,0x81, RET })  -- player_move_left
+   poke_rom(0x1819, { LD_A,fr, LD_MEM_A,0x41,0x81, RET }) -- reset_player
    poke_rom(0x07d5, fr) -- trigger_jump_left
    poke_rom(0x07b5, fl) -- trigger_jump_right
    poke_rom(0x08d5, jump_fr) -- trigger_jump_straight_up
@@ -540,8 +396,7 @@ if tile_indicator == true then
       poke_gfx(2, v * 0x8 + 8 + 8 + 3, 0xAA)
       poke_gfx(3, v * 0x8 + 8 + 8 + 2, 0x00)
       poke_gfx(3, v * 0x8 + 8 + 8 + 4, 0x00)
-
-  end
+   end
 
    --- rotate through tiles as player walks
    poke_rom(0x09AD, {
@@ -672,3 +527,149 @@ tap5 = mem:install_write_tap(credit_addr, credit_addr, "writes", function(offset
   end
   credits = data
 end)
+
+-------------------- OGNOB mode -------------------
+
+-- Open-world mode: freely wander left or right
+if ognob_mode == true then
+
+   -- TODO: If you do a full Ognob run, there should be something on screen 1.
+
+   local OGNOB_MODE_ADDR = 0x0800
+
+   -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
+   poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
+
+   --[[
+      the main OGNOB_MODE routine. Does what would happen
+      during a normal screen switch, but also sets
+      PLAYER_LEFT_Y (0x8077: my variable) that indicates
+      the player is left-transitioning. It gets cleared if
+      you go through a normal right-transitioning.
+   -- ]]
+   poke_rom(OGNOB_MODE_ADDR, {
+
+  LD_A_MEM,  x(0x8143),        -- PLAYER_Y
+  LD_MEM_A,  x(PLAYER_LEFT_Y), --  (was using 8099 - but seemed to affect 8029?!)
+
+  -- TRANSITION_TO_NEXT_SCREEN
+  CALL,      x(0x17C0),        -- RESET_DINO
+  -- get the previous screen
+  LD_A_MEM,  x(SCREEN_NUM),
+  CP,        0x1,       -- screen 1?
+  JR_NZ,     0x2,       -- don't reset
+  LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
+  DEC_A,
+  LD_MEM_A, x(SCREEN_NUM),
+
+  -- DURING_TRANSITION_NEXT
+  CALL,      x(0x14B0), -- SCREEN_RESET
+  CALL,      x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
+  CALL,      x(0x12B8), -- DRAW_BACKGROUND
+  CALL,      x(0x1820), -- INIT_PLAYER_POS_FOR_SCREEN
+  CALL,      x(0x0db8), -- DRAW_BONGO
+
+  -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
+  LD_A,      0xE0-1, -- very right edge of screen
+  LD_MEM_A,  0x40,0x81, -- PLAYER_X
+  LD_MEM_A,  0x44,0x81, -- PLAYER_X_LEGS
+  LD_A_MEM,  x(PLAYER_LEFT_Y), -- (mine)
+  LD_MEM_A,  0x43,0x81, -- PLAYER_Y
+  ADD_A,     0x10,
+  LD_MEM_A,  0x47,0x81, -- PLAYER_Y_LEGS
+  LD_A_MEM,  x(0x8141), -- PLAYER_FRAME
+  ADD_A,     0x80,      -- flip x
+  LD_MEM_A,  x(0x8141), -- PLAYER_FRAME
+  LD_A_MEM,  x(0x8145), -- PLAYER_FRAME_LEGS
+  ADD_A,     0x80,      -- flip x
+  LD_MEM_A,  x(0x8145), -- PLAYER_FRAME_LEGS
+
+  -- after DURING_TRANSTION_NEXT
+  CALL,      x(0x0AD0), -- SET_LEVEL_PLATFORM_XOFFS
+  LD_A,      0x02,
+  CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
+
+  RET
+
+   })
+
+   local SET_PLAYER_LEFT = OGNOB_MODE_ADDR + 0x25 -- careful! Address will change if above modified.
+
+   -- Patch end of INIT_PLAYER_SPRITE after death:
+   -- reset to right side of screen if ognob-ing
+   poke_rom(0x08b5, {
+     LD_A_MEM,  x(PLAYER_LEFT_Y),
+     CP,        0x0,
+     RET_Z,
+     CALL,      x(SET_PLAYER_LEFT),
+     RET
+   })
+
+   local SET_PLAYER_LEFT_LOC = 0x1886 -- some free bytes here
+
+   -- Patch TRANSITION_TO_NEXT_SCREEN to account for
+   -- being able to go right out of cage screen.
+   poke_rom(0x177B, {
+     CALL, x(SET_PLAYER_LEFT_LOC), -- (breaks P2 handling!)
+     NOP, NOP, NOP
+   })
+
+   -- Reset PLAYER_LEFT_Y on right-transition,
+   -- and wrap level if right-transition on cage screen (possible now!)
+   -- Used some free (looking) bytes at 0x1886...
+   poke_rom(SET_PLAYER_LEFT_LOC, {
+      XOR_A,
+      LD_MEM_A,  x(PLAYER_LEFT_Y),
+      LD_A_MEM,  x(SCREEN_NUM),
+      CP,        0x1b,      -- is it 27?
+      RET_C,                -- nah, carry on
+      XOR_A,
+      LD_MEM_A,  x(SCREEN_NUM), -- yep - reset to 0
+      RET
+   })
+
+   -- Patch SET_SPEAR_LEFT_BOTTOM to fix insta-death spears
+   -- Not enough bytes, so overwriting color set, but then
+   -- doing this in SET_SPEAR_LEFT_MIDDLE. lol.
+   poke_rom(0x3947, {
+     -- original code, moved up 3 bytes...
+     LD_A,      0xC8,       -- original y value
+     LD_MEM_A,  x(0x8157),  -- ENEMY_1_Y
+     LD_A,      0x01,       -- original active value
+     LD_MEM_A,  x(0x8037),  -- ENEMY_1_ACTIVE
+
+     -- fix screen 26 spears insta-death
+     LD_A_MEM,  x(PLAYER_LEFT_Y), -- is left side?
+     AND_A,
+     RET_Z,
+     LD_A,      0xC6,       -- New Y value (2 higher - misses head!)
+     LD_MEM_A,  x(0x8157),  -- ENEMY_1_Y
+     RET
+   })
+
+   -- Patch SET_SPEAR_LEFT_MIDDLE to set the bottom spear color.
+   -- Had to be done here because of the bytes we stole above!
+   poke_rom(0x397E, {
+     LD_A,      0x17,      -- set spear color
+     LD_MEM_A,  x(0x8156), -- ENEMY_1_COL
+     RET
+   })
+
+   -- extra platforms to make Bongo backwards-compatible (tee hee)
+   poke_rom(0x1e02, 0xfe) -- S, entry point bottom-right
+   poke_rom(0x21ea, 0xfc) -- nTn helper step
+
+   -- Prevent score-accumulation from moving ognob. (too hard to do properly)
+   -- Patch UPDATE_EVERYTHING_MORE to conditionally call
+   -- ADD_MOVE_SCORE only when not Ognobbing.
+   poke_rom(0x4020, { CALL, x(0x4030) }) -- jump to some free bytes
+   poke_rom(0x4030, {
+     LD_A_MEM,  x(PLAYER_LEFT_Y),
+     AND_A,
+     RET_NZ,
+     JP,        x(0x4050), -- ADD_MOVE_SCORE
+   })
+
+   -- No bonuses when bongo-ing
+   do_disable_bonus_skip()
+end
