@@ -79,6 +79,20 @@ function print_pairs(o)
    for tag, device in pairs(o) do print(tag) end
 end
 
+local evs = {
+   game_start = {},
+   screen_change = {},
+}
+function add_ev(name, func)
+   local ev = evs[name]
+   ev[#ev+1]=func
+end
+function fire_ev(name, ...)
+   for _, f in ipairs(evs[name]) do
+      f(...)
+   end
+end
+
 ------------------- MAME machine -----------------------
 
 cpu = manager.machine.devices[":maincpu"]
@@ -145,8 +159,8 @@ function x(v)
    return { v & 0xff, v >> 8 }
 end
 
-function on_game_start()
-   started = false -- triggered below
+function on_switch_screen(cur, last)
+ --
 end
 
 ------------- Scratch pad -------------
@@ -358,9 +372,9 @@ if head_style > 0 then
    local fl = ({flip_x(0x3e), flip_x(0x2c), 0x07, flip_x(0x17)})[head_style]
    local jump_fr = ({0x3a, 0x2c + 2, 0x05, 0x19})[head_style]
 
-   poke_rom(0x063A, { LD_A,fr, LD_MEM_A,0x41,0x81, RET }) -- player_move_right
-   poke_rom(0x067a, { LD_A,fl, LD_MEM_A,0x41,0x81, RET })  -- player_move_left
-   poke_rom(0x1819, { LD_A,fr, LD_MEM_A,0x41,0x81, RET }) -- reset_player
+   poke_rom(0x063A, { LD_A, fr, LD_MEM_A, x(0x8141), RET }) -- player_move_right
+   poke_rom(0x067a, { LD_A, fl, LD_MEM_A, x(0x8141), RET })  -- player_move_left
+   poke_rom(0x1819, { LD_A, fr, LD_MEM_A, x(0x8141), RET }) -- reset_player
    poke_rom(0x07d5, fr) -- trigger_jump_left
    poke_rom(0x07b5, fl) -- trigger_jump_right
    poke_rom(0x08d5, jump_fr) -- trigger_jump_straight_up
@@ -377,8 +391,8 @@ if tile_indicator == true then
    end
 
    -- draw a "collision pole" in player graphics
-   local foots = {0x135, 0x13d, 0x145, 0x14d, 0x155, 0x161}
-   for i, v in pairs(foots) do
+   local feet_frames = {0x135, 0x13d, 0x145, 0x14d, 0x155, 0x161}
+   for i, v in pairs(feet_frames) do
       -- middle pole
       poke_gfx(1, v * 0x8 + 7, 0x55)
       poke_gfx(2, v * 0x8 + 7, 0xAA)
@@ -419,9 +433,14 @@ end
 
 ------------- RAM hacks -------------
 
-started = false
+run_started = false
 loop_len = #loop_screens
 loop_idx = 0
+
+add_ev("game_start", function ()
+   print("game started")
+end)
+
 
 LIVES = 0x8032
 tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
@@ -442,9 +461,11 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
    end
 
    -- loop screens
-   if data == 1 and not started then
+   if data == 1 and not run_started then
       -- player has started
-      started = true
+      run_started = true
+      fire_ev("game_start")
+
       -- go to round 2 if requested
       local SPEED_DELAY_P1 = 0x805b
       if round > 1 and peek(SPEED_DELAY_P1) == 0x1f then
@@ -467,11 +488,9 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
    end
 
    if data ~= last_screen then
-      print("new screen "..data..":"..last_screen)
+      fire_ev("screen_change", data, last_screen)
       last_screen = data
    end
-
-
 
    if loop_len > 0 then
       local next = loop_screens[loop_idx + 1]
@@ -531,14 +550,14 @@ tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
    end
 end)
 
--- Fire "on_game_start" event player uses up a credit
+-- Player uses up a credit
 credit_addr = 0x8303
 credits = 0
 tap5 = mem:install_write_tap(credit_addr, credit_addr, "writes", function(offset, data)
   -- figure out when hit start
   if data == credits - 1 then
-     -- we started
-     on_game_start()
+     run_started = false -- credit started, but level not started yet...
+     -- TODO: should this be set false on death? (yes!)
   end
   credits = data
 end)
@@ -684,4 +703,13 @@ if ognob_mode == true then
 
    -- No bonuses when bongo-ing
    do_disable_bonus_skip()
+
+   -- track an Ognob run
+   local ognobbing = false
+   add_ev("screen_change", function(cur, last)
+     if cur == 27 and last == 1 then
+        print("Begin Ognob run...")
+        ognobbing = true
+     end
+   end)
 end
