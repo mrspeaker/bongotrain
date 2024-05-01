@@ -181,8 +181,8 @@
 ;;;  constants
 
     SCREEN_WIDTH      $E0  ; 224
-    SCR_TILE_W        $1a  ; 26 columns
-    SCR_TILE_H        $1c  ; 28 rows
+    SCR_TILE_W        $1a  ; 26 columns (just playable? TW=27.)
+    SCR_TILE_H        $1c  ; 28 rows    (only playable area? TH=31.)
     NUM_SCREENS       $1B  ; 27 screens
 
     ROUND1_SPEED      $1f
@@ -312,6 +312,7 @@ NMI_LOOP
 SETUP_BEFORE_PLAYING
 008D: CD 48 03    call $SETUP_MORE
 0090: CD 80 30    call $SET_HISCORE_TEXT
+_AFTER_GAME_OVER
 0093: CD A0 13    call $WAIT_VBLANK
 0096: 3A 03 83    ld   a,($CREDITS)
 0099: A7          and  a
@@ -510,7 +511,7 @@ POST_DEATH_RESET
 0240: 6F          ld   l,a
 0241: 7E          ld   a,(hl)
 0242: A7          and  a
-0243: CA 10 04    jp   z,$OUT_OF_LIVES
+0243: CA 10 04    jp   z,$GAME_OVER
 0246: 3D          dec  a
 0247: 77          ld   (hl),a
 0248: 3A F1 83    ld   a,($INPUT_BUTTONS)
@@ -738,10 +739,11 @@ DRAW_LIVES
 
 03E7: FF
 
+CLEAR_AFTER_GAME_OVER
 03E8: AF          xor  a
 03E9: 32 34 80    ld   ($NUM_PLAYERS),a
 03EC: 32 35 80    ld   ($CREDITS_UMM),a
-03EF: C3 93 00    jp   $0093
+03EF: C3 93 00    jp   $_AFTER_GAME_OVER
 
 03F2: FF ...
 
@@ -760,15 +762,15 @@ SET_LIVES_ROW_COLOR
 
 040E: FF FF
 
-OUT_OF_LIVES
-0410: 21 E8 16    ld   hl,$16E8
+GAME_OVER
+0410: 21 E8 16    ld   hl,$16E8 ; $SFX_RESET_A_BUNCH-$4000
 0413: CD E3 01    call $JMP_HL_PLUS_4K
 0416: CD E0 24    call $DELAY_60_VBLANKS
 0419: CD 30 04    call $CHECK_IF_HISCORE
 041C: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
-0423: C3 00 2D    jp   $2D00
+0423: C3 00 2D    jp   $SET_HISCORE_AND_RESET_GAME
 
 0426: FF ...
 
@@ -4898,6 +4900,7 @@ NOPPED_OUT_DISPATCH
 2CF0: FF ...
 
     ;; HiScore somthing
+SET_HISCORE_AND_RESET_GAME
 2D00: 21 00 83    ld   hl,$HISCORE
 2D03: 3A 14 80    ld   a,($P1_SCORE)
 2D06: BE          cp   (hl)
@@ -4910,8 +4913,8 @@ NOPPED_OUT_DISPATCH
 2D11: 3A 16 80    ld   a,($P1_SCORE+2)
 2D14: BE          cp   (hl)
 2D15: 20 06       jr   nz,$2D1D
-2D17: CD 48 2D    call $2D48    ; p1 got  hiscore
-2D1A: C3 E8 03    jp   $03E8
+2D17: CD 48 2D    call $P1_GOT_HISCORE
+2D1A: C3 E8 03    jp   $CLEAR_AFTER_GAME_OVER
 2D1D: 21 00 83    ld   hl,$HISCORE
 2D20: 3A 17 80    ld   a,($P2_SCORE)
 2D23: BE          cp   (hl)
@@ -4924,8 +4927,8 @@ NOPPED_OUT_DISPATCH
 2D2E: 3A 19 80    ld   a,($P2_SCORE+2)
 2D31: BE          cp   (hl)
 2D32: 20 E6       jr   nz,$2D1A
-2D34: CD 58 2D    call $2D58    ; p2 got hiscore
-2D37: C3 E8 03    jp   $03E8
+2D34: CD 58 2D    call $P2_GOT_HISCORE
+2D37: C3 E8 03    jp   $CLEAR_AFTER_GAME_OVER
 
 2D3A: FF ...
 

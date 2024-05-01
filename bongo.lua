@@ -8,7 +8,7 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 -- {}: no looping, normal sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round
+round = 2 -- starting round (1 = default, 2, 3, 4... )
 
 -- Serious bizness
 infinite_lives = true
@@ -22,19 +22,60 @@ reset_score = false     -- reset score to 0 on death and new screen
 tile_indicator = false  -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 0               -- color theme (0-7). 0 =  default, 7 = best one
+theme = 7               -- color theme (0-7). 0 = default, 7 = best one
 technicolor = false     -- randomize theme every death
-head_style = 2          -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+head_style = 0          -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true       -- Open-world Bongo. Can go out left or right.
-                        -- ...are you brave enough to do all levels in Ognob?
+
+--[[
+                ======= Official OGNOB MODE Rules =======
+
+   You've caught the dinosaur and danced with Bongo & friends, but your knees
+   can handle more? Then exit stage left... and try your luck in the wild world
+   of Ognob.
+
+   Ognob competitive settings:
+
+   * ognob_mode         = true
+   * start_screen       = 1
+   * loop_screens       = {}
+   * round              = 2
+   * infinite_lives     = false (hardcore), true (easy mode)
+   * disable_dino       = true (good luck otherwise...)
+   * show_timers        = true (if you're speed runnin')
+
+   * disable_bonus_skip = n/a  (disabled by ognob-mode)
+   * head_style         = player's choice
+   * theme              = player's choice
+
+   Start on screen 1, and make your way left. Your not being chased by a
+   dinosaur, yet many challenges lay ahead of you. Make it all the way
+   back to screen 1 to lay claim to the title, The Honourable Earl of Ognob.
+
+--]]
+
 
 -- Removed features I found in the code, and tweaks/tests
 show_timers = true      -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
-alt_bongo_place = false -- I think was supposed to put guy on the ground for highwire levels
+alt_bongo_place = false -- I think was supposed to put lil guy on the ground for highwire levels
 one_px_moves = false    -- test how it feels moving 1px per frame, not 3px per 3 frames.
 fix_jump_bug = false    -- hold down jump after transitioning screen from high jump
-                        -- doesn't kill you.
+                        -- doesn't kill you (optional, as it changes gameplay)
+
+fix_all_the_lil_bugs = true
+   -- ====== A bunch of bugs I found why spelunking... ===========
+   -- * fix call to draw inner border on YOUR BEING CHASED screen
+   -- * add other missing inner border in empty attract screen
+   -- * fixed the pointy stair-down platform
+   -- * don't jump to wrong byte in hiscore timer code (0x3108).
+   --   (no visual changes, but hey.)
+   -- * in BONGO attract screen, jumping up and down stairs the player's head
+   --   and legs are switched for one frame of animation (really!). Fix it!
+   -- * subjective typography fix: align 1000 bonus better
+   -- * add the cool spiral transition to attract mode. Code was just sitting there.
+
+
 
 
 -----------------------------------
@@ -47,6 +88,14 @@ fix_jump_bug = false    -- hold down jump after transitioning screen from high j
 -- 25:   W    \    S
 -----------------------------------
 
+
+
+
+--  Warning traveller ...
+-- ... You can look at the code,
+-- ... but you can not unlook at the code
+
+                           -- Mr Speaker
 
 
 --------------- General helpers ----------------
@@ -81,7 +130,9 @@ end
 
 local evs = {
    game_start = {},
+   game_over = {},
    screen_change = {},
+   tick = {}
 }
 function add_ev(name, func)
    local ev = evs[name]
@@ -114,7 +165,7 @@ print(dump(gfx1.size))
 
 function poke(addr, bytes)
    if type(bytes)=="number" then bytes = {bytes} end
-   bytes = flatten(bytes)
+   bytes = flatten(bytes) -- you should be scared by now...
    for i = 1, #bytes do
       mem:write_u8(addr + (i - 1), bytes[i])
    end
@@ -154,7 +205,7 @@ function set_pc(addr)
    cpu.state["PC"].value = addr
 end
 
--- return an array with  hi/lo bytes of a 16bit value
+-- return an array with hi/lo bytes of a 16bit value
 function x(v)
    return { v & 0xff, v >> 8 }
 end
@@ -164,7 +215,6 @@ function on_switch_screen(cur, last)
 end
 
 ------------- Scratch pad -------------
-
 
 -- poke_rom(0x069D, 0x20); -- autojump
 
@@ -240,6 +290,10 @@ function do_reset_score()
    poke(0x8014, {0, 0, 0});
 end
 
+function do_reset_time()
+   poke(0x8007, {0, 0});
+end
+
 function do_disable_bonus_skip()
    local GOT_A_BONUS = 0x29c0
    poke_rom(GOT_A_BONUS, { JP, x(0x29f5) }) -- jump to end of sub
@@ -248,33 +302,36 @@ end
 
 ----------- bug fixes -------------
 
--- bugfix: fix call to draw inner border on YOUR BEING CHASED screen
-poke_rom(0x56da, 0x5c) -- (was typo'd as 0x4c)
+if fix_all_the_lil_bugs == true then
+   -- bugfix: fix call to draw inner border on YOUR BEING CHASED screen
+   poke_rom(0x56da, 0x5c) -- (was typo'd as 0x4c)
 
--- bugfix: the pointy stair-down platform
-poke_rom(0x1f01, 0xfc)
+   -- bugfix: the pointy stair-down platform
+   poke_rom(0x1f01, 0xfc)
 
--- subjective typography fix: align 1000 bonus better
-poke_rom(0x162d, 0x0f)
+   -- subjective typography fix: align 1000 bonus better
+   poke_rom(0x162d, 0x0f)
 
--- bugfix: don't jump to wrong byte in hiscore something.
--- no visual changes, but hey.
-poke_rom(0x3120, 0x17)
+   -- bugfix: don't jump to wrong byte in hiscore something.
+   -- no visual changes, but hey.
+   poke_rom(0x3120, 0x17)
 
--- bugfix: in BONGO attract screen, jumping up stairs the player's
--- head and legs are switched for one frame of animation. Fix it!
-poke_rom(0x5390, { 0x93, 0x94 }) -- on the way up
-poke_rom(0x5418, { 0x13, 0x14 }) -- on the way down
+   -- bugfix: in BONGO attract screen, jumping up stairs the player's
+   -- head and legs are switched for one frame of animation. Fix it!
+   poke_rom(0x5390, { 0x93, 0x94 }) -- on the way up
+   poke_rom(0x5418, { 0x13, 0x14 }) -- on the way down
 
--- subjective bugfix: add inner border to empty attract screen
-poke_rom(0x48C7, {
-   CALL,  0xD0,0x56, -- call DRAW_BUGGY_BORDER
-   CALL,  0xA8,0x5a, -- call original FLASH_BORDER
-   RET
-})
+   -- subjective bugfix: add inner border to empty attract screen
+   poke_rom(0x48C7, {
+      CALL,  x(0x56D0), -- call DRAW_BUGGY_BORDER
+      CALL,  x(0x5aA8), -- call original FLASH_BORDER
+      RET
+   })
 
--- add the cool spiral transition to attract mode
-poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
+   -- add the cool spiral transition to attract mode
+   poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
+
+end
 
 -- what to do about Bongo Tree.
 -- feels wrong to "fix" it.
@@ -443,7 +500,7 @@ end)
 
 
 LIVES = 0x8032
-tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
+tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, lives)
    -- clear score on death
    if reset_score == true then
       do_reset_score()
@@ -452,9 +509,16 @@ tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
    if technicolor == true then
       set_theme(math.random(16))
    end
+
+   if lives == 0 then
+      fire("game_over")
+   end
 end)
 
 local last_screen = 1
+add_ev("game_start", function()
+   last_screen = 1
+end)
 tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, data)
    if data == 0 then
       return
@@ -500,7 +564,16 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
 
 end)
 
--- Change bg
+local START_OF_TILES = 0x9040 -- top right tile
+local TW = 27
+local TH = 31
+--    END_OF_TILES      $93BF ; bottom left tile
+function draw_tile(x, y, tile)
+   poke(START_OF_TILES + (TW - x) * 32 + y, tile)
+end
+
+-- What?
+if false then
 ground = 0x90fe -- rando ground tile on screen
 w = {0x0e, 0x0a, 0x22, 0x1c, 0x0e, 0x3b, 0x3e, 0x22, 0x25, 0x1c, 0x0e, 0x23}
 tap3 = mem:install_write_tap(ground, ground, "writes", function(offset, data)
@@ -511,6 +584,7 @@ tap3 = mem:install_write_tap(ground, ground, "writes", function(offset, data)
       end
    end
 end)
+end
 
 -- p1/p2 button to skip forward/go back screens
 pbuttons = false
@@ -561,6 +635,21 @@ tap5 = mem:install_write_tap(credit_addr, credit_addr, "writes", function(offset
   end
   credits = data
 end)
+
+-- Added the "tick" event that fires every second... but i don't think
+-- it's used. TODO: Maybe use it in `ognob_win`!
+P1_TIME = 0x8007
+prev_time = 0
+tap6 = mem:install_write_tap(P1_TIME, P1_TIME, "writes", function(offset, data)
+   if data == prev_time + 1 then
+      fire("tick", data)
+      prev_time = data
+   end
+end)
+add_ev("game_start", function()
+  prev_time = 0
+end)
+
 
 -------------------- OGNOB mode -------------------
 
@@ -706,10 +795,43 @@ if ognob_mode == true then
 
    -- track an Ognob run
    local ognobbing = false
-   add_ev("screen_change", function(cur, last)
+   local ognob_done = add_ev("screen_change", function(cur, last)
+     if cur == 1 and last == 27 then
+        ognobbing = false
+     end
      if cur == 27 and last == 1 then
-        print("Begin Ognob run...")
         ognobbing = true
+        ognob_start()
+     end
+
+     -- You did it!
+     if ognobbing and cur == 1 then
+        ognob_win()
      end
    end)
+
+   add_ev("game_over", function()
+      ognobbing = false
+   end)
+end
+
+-- begin your ognob run
+function ognob_start()
+   do_reset_time()
+   do_reset_score()
+   poke(0x801D, 10) -- 100 starting points to force re-draw
+   local ogtxt = {31,23,30,31,18}
+   for i = 1, 5 do
+      draw_tile(i-1,TH-2,ogtxt[i])
+   end
+
+end
+
+function ognob_win()
+   local ogtxt = {31,23,30,31,18,0x10}
+   for j = 3, TH do
+      for i = 0, 5 do
+         draw_tile(i,j,ogtxt[(j+i) % #ogtxt + 1])
+      end
+   end
 end
