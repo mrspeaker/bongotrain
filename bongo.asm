@@ -3635,7 +3635,7 @@ _BOTH
 1BBD: CD 10 03    call $DRAW_TILES_H
 1BC0: 10 0A
 1BC2: 20 1C 11 29 15 22 10 02 FF ; PLAYER 2
-1BCB: CD 41 1C    call $1C41
+1BCB: CD 41 1C    call $PLAY_INTRO_JINGLE
 1BCE: C9          ret
 
 1BCF: 3E 08       ld   a,$08

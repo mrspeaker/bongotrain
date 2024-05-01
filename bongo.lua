@@ -2,6 +2,7 @@
 -- https://www.mrspeaker.net
 
 -- press P1/P2 during game to skip forward/back screens.
+-- (NOTE: to get some bytes for features, I broke P2 handling. One-player only.)
 
 start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
@@ -11,21 +12,21 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 round = 2 -- starting round (1 = default, 2, 3, 4... )
 
 -- Serious bizness
-infinite_lives = true
-fast_death = true       -- restart fast after death
-fast_wipe = true        -- fast transition to next screen
-disable_dino = true     -- no pesky dino (oh, but also now you can't catch 'im)
+infinite_lives = false
+fast_death = true             -- restart fast after death
+fast_wipe = true              -- fast transition to next screen
+disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
 disable_round_speed_up = true -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
 disable_cutscene = true       -- don't show the awesome cutscene
-reset_score = false     -- reset score to 0 on death and new screen
-tile_indicator = false  -- middle line = block check pos. Back line = pickup check pos
+reset_score = false           -- reset score to 0 on death and new screen
+collision_indicator = false   -- middle line = block check pos. Back line = pickup check pos
 
 -- Non-so-serious bizness
-theme = 7               -- color theme (0-7). 0 = default, 7 = best one
-technicolor = false     -- randomize theme every death
-head_style = 0          -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-ognob_mode = true       -- Open-world Bongo. Can go out left or right.
+theme = 7                     -- color theme (0-7). 0 = default, 7 = best one
+technicolor = false           -- randomize theme every death
+head_style = 0                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+ognob_mode = false             -- open-world Bongo. Can go out left or right.
 
 --[[
                 ======= Official OGNOB MODE Rules =======
@@ -40,7 +41,7 @@ ognob_mode = true       -- Open-world Bongo. Can go out left or right.
    * start_screen       = 1
    * loop_screens       = {}
    * round              = 2
-   * infinite_lives     = false (hardcore), true (easy mode)
+   * infinite_lives     = false (hardcore), true (easy)
    * disable_dino       = true (good luck otherwise...)
    * show_timers        = true (if you're speed runnin')
 
@@ -58,7 +59,7 @@ ognob_mode = true       -- Open-world Bongo. Can go out left or right.
 -- Removed features I found in the code, and tweaks/tests
 show_timers = true      -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false -- makes jumping from underneath really crap!
-alt_bongo_place = false -- I think was supposed to put lil guy on the ground for highwire levels
+alt_bongo_place = false -- maybe supposed to put lil guy on the ground for highwire levels?
 one_px_moves = false    -- test how it feels moving 1px per frame, not 3px per 3 frames.
 fix_jump_bug = false    -- hold down jump after transitioning screen from high jump
                         -- doesn't kill you (optional, as it changes gameplay)
@@ -132,7 +133,7 @@ local evs = {
    game_start = {},
    game_over = {},
    screen_change = {},
-   tick = {}
+   died = {}
 }
 function add_ev(name, func)
    local ev = evs[name]
@@ -158,8 +159,8 @@ print(dump(gfx1.size))
 --print(dump(io.map.entries))
 --print_pairs(cpu.state) -- prints all cpu flags, regs
 
--- cpudebug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
--- cpudebug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+-- cpudebug:wpset(mem, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
+-- cpudebug:wpset(mem, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
 
 -------------- MAME Helpers -------------
 
@@ -210,10 +211,6 @@ function x(v)
    return { v & 0xff, v >> 8 }
 end
 
-function on_switch_screen(cur, last)
- --
-end
-
 ------------- Scratch pad -------------
 
 -- poke_rom(0x069D, 0x20); -- autojump
@@ -223,15 +220,16 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
-------------- z/80 op codes --------------
+------------- z/80 opcodes --------------
 
 NOP = 0x00
 JR = 0x18
 JR_NZ = 0x20
+LD_HL = 0x21
 INC_HL = 0x23
 JR_Z = 0x28
 LD_MEM_A = 0x32
-LD_HL = 0x36
+LD_HLP = 0x36
 LD_A_MEM = 0x3a
 INC_A = 0x3c
 DEC_A = 0x3d
@@ -268,7 +266,7 @@ function set_theme(col)
    -- change screen colors (resets xoffs and cols seperately)
    -- by adding an extra: `ld (hl), $col, inc hl` for the color
    poke_rom(0x1496, {
-     LD_HL,     col,
+     LD_HLP,    col,
      INC_HL,
      LD_A_L,
      CP,        0x80,
@@ -287,11 +285,11 @@ function set_theme(col)
 end
 
 function do_reset_score()
-   poke(0x8014, {0, 0, 0});
+   poke(0x8014, {0, 0, 0})
 end
 
 function do_reset_time()
-   poke(0x8007, {0, 0});
+   poke(0x8007, {0, 0})
 end
 
 function do_disable_bonus_skip()
@@ -346,17 +344,17 @@ end
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    poke_rom(0x0CCB, {
-     CALL, 0xa0,0x0c,  -- delay 8 vblanks
-     CALL, 0xa0,0x0c,  -- delay 8 vblanks (still pretty short)
+     CALL, x(0x0ca0),  -- delay 8 vblanks
+     CALL, x(0x0ca0),  -- delay 8 vblanks (still pretty short)
      RET, NOP, NOP     -- return after dino reset
    });
 end
 
 if fast_wipe == true then
    -- skip parts of $DURING_TRANSITION_NEXT
-   poke_rom(0x1358, { JR,0x1e, NOP }) -- jumps to $_RESET_FOR_NEXT_LEVEL
+   poke_rom(0x1358, { JR, 0x1e, NOP }) -- jumps to $_RESET_FOR_NEXT_LEVEL
    -- speeds up transition even more: skips $CLEAR_SCR_TO_BLANKS ...
-   poke_rom(0x1378, { CALL, 0x90, 0x14 }) -- ...and just does RESET_XOFF_AND_COLS_AND_SPRITES
+   poke_rom(0x1378, { CALL, x(0x1490) }) -- ...and just does RESET_XOFF_AND_COLS_AND_SPRITES
    -- don't do bottom "level indicator" animation.
    poke_rom(0x3F42, { NOP, NOP, NOP }) -- saves 2 vblanks-per-screen-number
 end
@@ -372,8 +370,8 @@ end
 if disable_cutscene == true then
    poke_rom(0x3d48, {
      XOR_A,
-     LD_MEM_A, 0x2d,0x80, -- reset DINO_COUNTER
-     JP,        0x88,0x3D  -- _CUTSCENE_DONE
+     LD_MEM_A, x(0x802d),  -- reset DINO_COUNTER
+     JP,       x(0x3D88)   -- _CUTSCENE_DONE
    });
 end
 
@@ -439,7 +437,7 @@ if head_style > 0 then
    poke_rom(0x06FA, { NOP, NOP, NOP }) -- player_physics frame set
 end
 
-if tile_indicator == true then
+if collision_indicator == true then
    -- draw in empty "solid" tile graphics (otherwise it draws holes)
    for i = 0, 7 do
       poke_gfx(2, 0xf9 * 0x8 + i, 0x7f)
@@ -494,12 +492,18 @@ run_started = false
 loop_len = #loop_screens
 loop_idx = 0
 
-add_ev("game_start", function ()
-   print("game started")
-end)
-
-
 LIVES = 0x8032
+cur_lives = -1
+-- Game doesn't update LIVES on final death, so can't be hooked.
+-- This patch sets LIVES to 0xff so it fires, then in the tap
+-- can check this (and return 0 to set it back to 0)
+poke_rom(0x0410, { CALL, x(0x0426) }) -- jump down to some free bytes
+poke_rom(0x0426, {
+  LD_A,     0xff,                   -- set lives to 0xff marker
+  LD_MEM_A, x(LIVES),
+  LD_HL,    x(0x16e8),              -- replace original code form 0x410
+  RET
+})
 tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, lives)
    -- clear score on death
    if reset_score == true then
@@ -510,8 +514,27 @@ tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, lives)
       set_theme(math.random(16))
    end
 
-   if lives == 0 then
-      fire("game_over")
+   -- Player deaths
+   if run_started then
+      -- deal with init or bonus lives (plus init-write weirdness)
+      if cur_lives == -1 or lives > cur_lives then
+         cur_lives = lives
+      end
+      local game_over = false
+      if lives == 0xff then -- my game-over marker
+         lives = -1
+         game_over = true
+      end
+
+      if game_over or lives < cur_lives then
+         fire_ev("died", lives + 1)
+         cur_lives = lives
+      end
+      if game_over then
+         fire_ev("game_over")
+         run_started = false
+         return 0
+      end
    end
 end)
 
@@ -587,76 +610,43 @@ end)
 end
 
 -- p1/p2 button to skip forward/go back screens
-pbuttons = false
-buttons = 0x800c
-PLAYER_X = 0x8140
-tap4 = mem:install_write_tap(buttons, buttons, "writes", function(offset, data)
+buttons = false
+BUTTONS = 0x800c
+tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
   local val = data & 3 -- 1: p1, 2: p2
-  if pbuttons == true and val == 0 then
+  if buttons == true and val == 0 then
      -- button released (stops repeats)
-     pbuttons = false
+     buttons = false
   end
-  if not pbuttons and (val > 0) then
-     pbuttons = true
-     local is_playing = peek(PLAYER_X) > 0 -- 0 == not set
-     if is_playing then
-        local cur = peek(SCREEN_NUM)
-        -- this doesn't work properly when you have loop selections.
-        if val == 1 then -- p1 button. wrap on cage screen.
-           if cur == 27 then
-              poke(SCREEN_NUM, 0) -- 0 as it get incremented... somewhere else
-           end
+  if run_started and not buttons and (val > 0) then
+     buttons = true
+     local cur = peek(SCREEN_NUM)
+     -- TODO: this doesn't work properly when you have loop selections.
+     if val == 1 then -- p1 button. wrap on cage screen.
+        if cur == 27 then
+           poke(SCREEN_NUM, 0) -- 0 as it get incremented... somewhere else
         end
-        if val == 2 then -- p2 button, go back screen
-           if cur <= 1 then
-              poke(SCREEN_NUM, 26)
-           else
-              poke(SCREEN_NUM, cur - 2)
-           end
+     end
+     if val == 2 then -- p2 button, go back screen
+        if cur <= 1 then
+           poke(SCREEN_NUM, 26)
+        else
+           poke(SCREEN_NUM, cur - 2)
         end
-        -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
-        -- (this is what is scrolled while transitioning)
-        if peek(0x8106) == 0 then
-           set_pc(0x1778)
-        end
-
+     end
+     -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
+     -- (this is what is scrolled while transitioning: to prevent double-triggering)
+     if peek(0x8106) == 0 then
+        set_pc(0x1778)
      end
    end
 end)
-
--- Player uses up a credit
-credit_addr = 0x8303
-credits = 0
-tap5 = mem:install_write_tap(credit_addr, credit_addr, "writes", function(offset, data)
-  -- figure out when hit start
-  if data == credits - 1 then
-     run_started = false -- credit started, but level not started yet...
-     -- TODO: should this be set false on death? (yes!)
-  end
-  credits = data
-end)
-
--- Added the "tick" event that fires every second... but i don't think
--- it's used. TODO: Maybe use it in `ognob_win`!
-P1_TIME = 0x8007
-prev_time = 0
-tap6 = mem:install_write_tap(P1_TIME, P1_TIME, "writes", function(offset, data)
-   if data == prev_time + 1 then
-      fire("tick", data)
-      prev_time = data
-   end
-end)
-add_ev("game_start", function()
-  prev_time = 0
-end)
-
 
 -------------------- OGNOB mode -------------------
 
 -- Open-world mode: freely wander left or right
 if ognob_mode == true then
 
-   -- TODO: If you do a full Ognob run, there should be something on screen 1.
    local OGNOB_MODE_ADDR = 0x0800
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
