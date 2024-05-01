@@ -478,7 +478,7 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
       end
    end
 
-   if not started then
+   if not run_started then
       return
    end
 
