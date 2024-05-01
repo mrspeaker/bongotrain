@@ -82,7 +82,7 @@ end
 ------------------- MAME machine -----------------------
 
 cpu = manager.machine.devices[":maincpu"]
---debug = cpu.debug
+cpudebug = cpu.debug
 mem = cpu.spaces["program"]
 --io = cpu.spaces["io"]
 gfx = manager.machine.devices[":gfxdecode"]
@@ -93,8 +93,8 @@ print(dump(gfx1.size))
 --print(dump(io.map.entries))
 --print_pairs(cpu.state) -- prints all cpu flags, regs
 
--- debug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
--- debug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+-- cpudebug:wpset(programSpace, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
+-- cpudebug:wpset(programSpace, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
 
 -------------- MAME Helpers -------------
 
@@ -368,7 +368,6 @@ if head_style > 0 then
    poke_rom(0x06FA, { NOP, NOP, NOP }) -- player_physics frame set
 end
 
-
 if tile_indicator == true then
    -- draw in empty "solid" tile graphics (otherwise it draws holes)
    for i = 0, 7 do
@@ -436,7 +435,12 @@ tap1 = mem:install_write_tap(LIVES, LIVES, "writes", function(offset, data)
    end
 end)
 
+local last_screen = 1
 tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, data)
+   if data == 0 then
+      return
+   end
+
    -- loop screens
    if data == 1 and not started then
       -- player has started
@@ -453,12 +457,23 @@ tap2 = mem:install_write_tap(SCREEN_NUM, SCREEN_NUM, "writes", function(offset, 
       end
    end
 
+   if not started then
+      return
+   end
+
    -- reset score on screen change
    if reset_score == true then
       do_reset_score()
    end
 
-   if started and loop_len > 0 then
+   if data ~= last_screen then
+      print("new screen "..data..":"..last_screen)
+      last_screen = data
+   end
+
+
+
+   if loop_len > 0 then
       local next = loop_screens[loop_idx + 1]
       loop_idx = (loop_idx + 1) % loop_len -- um, why does this work? "next" should mod?
       return next
@@ -534,63 +549,60 @@ end)
 if ognob_mode == true then
 
    -- TODO: If you do a full Ognob run, there should be something on screen 1.
-
    local OGNOB_MODE_ADDR = 0x0800
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
    poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
 
    --[[
-      the main OGNOB_MODE routine. Does what would happen
+      The main OGNOB_MODE routine. Does what would happen
       during a normal screen switch, but also sets
       PLAYER_LEFT_Y (0x8077: my variable) that indicates
       the player is left-transitioning. It gets cleared if
       you go through a normal right-transitioning.
    -- ]]
    poke_rom(OGNOB_MODE_ADDR, {
+     LD_A_MEM,  x(0x8143),        -- PLAYER_Y
+     LD_MEM_A,  x(PLAYER_LEFT_Y), -- (was using 8099 - but seemed to affect 8029?! How?!)
 
-  LD_A_MEM,  x(0x8143),        -- PLAYER_Y
-  LD_MEM_A,  x(PLAYER_LEFT_Y), --  (was using 8099 - but seemed to affect 8029?!)
+     -- TRANSITION_TO_NEXT_SCREEN
+     CALL,      x(0x17C0),        -- RESET_DINO
+     -- get the previous screen
+     LD_A_MEM,  x(SCREEN_NUM),
+     CP,        0x1,       -- screen 1?
+     JR_NZ,     0x2,       -- don't reset
+     LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
+     DEC_A,
+     LD_MEM_A,  x(SCREEN_NUM),
 
-  -- TRANSITION_TO_NEXT_SCREEN
-  CALL,      x(0x17C0),        -- RESET_DINO
-  -- get the previous screen
-  LD_A_MEM,  x(SCREEN_NUM),
-  CP,        0x1,       -- screen 1?
-  JR_NZ,     0x2,       -- don't reset
-  LD_A,      0x1C,      -- screen 28 (1 extra, that gets dec-d)
-  DEC_A,
-  LD_MEM_A, x(SCREEN_NUM),
+     -- DURING_TRANSITION_NEXT
+     CALL,      x(0x14B0), -- SCREEN_RESET
+     CALL,      x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
+     CALL,      x(0x12B8), -- DRAW_BACKGROUND
+     CALL,      x(0x1820), -- INIT_PLAYER_POS_FOR_SCREEN
+     CALL,      x(0x0db8), -- DRAW_BONGO
 
-  -- DURING_TRANSITION_NEXT
-  CALL,      x(0x14B0), -- SCREEN_RESET
-  CALL,      x(0x1490), -- RESET_XOFF_AND_COLS_AND_SPRITES
-  CALL,      x(0x12B8), -- DRAW_BACKGROUND
-  CALL,      x(0x1820), -- INIT_PLAYER_POS_FOR_SCREEN
-  CALL,      x(0x0db8), -- DRAW_BONGO
+     -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
+     LD_A,      0xE0 - 1,  -- very right edge of screen
+     LD_MEM_A,  x(0x8140), -- PLAYER_X
+     LD_MEM_A,  x(0x8144), -- PLAYER_X_LEGS
+     LD_A_MEM,  x(PLAYER_LEFT_Y), -- (mine)
+     LD_MEM_A,  x(0x8143), -- PLAYER_Y
+     ADD_A,     0x10,
+     LD_MEM_A,  x(0x8147), -- PLAYER_Y_LEGS
+     LD_A_MEM,  x(0x8141), -- PLAYER_FRAME
+     ADD_A,     0x80,      -- flip x
+     LD_MEM_A,  x(0x8141), -- PLAYER_FRAME
+     LD_A_MEM,  x(0x8145), -- PLAYER_FRAME_LEGS
+     ADD_A,     0x80,      -- flip x
+     LD_MEM_A,  x(0x8145), -- PLAYER_FRAME_LEGS
 
-  -- SET_PLAYER_LEFT: PC must be OGNOB_MODE_ADDR+0x25
-  LD_A,      0xE0-1, -- very right edge of screen
-  LD_MEM_A,  0x40,0x81, -- PLAYER_X
-  LD_MEM_A,  0x44,0x81, -- PLAYER_X_LEGS
-  LD_A_MEM,  x(PLAYER_LEFT_Y), -- (mine)
-  LD_MEM_A,  0x43,0x81, -- PLAYER_Y
-  ADD_A,     0x10,
-  LD_MEM_A,  0x47,0x81, -- PLAYER_Y_LEGS
-  LD_A_MEM,  x(0x8141), -- PLAYER_FRAME
-  ADD_A,     0x80,      -- flip x
-  LD_MEM_A,  x(0x8141), -- PLAYER_FRAME
-  LD_A_MEM,  x(0x8145), -- PLAYER_FRAME_LEGS
-  ADD_A,     0x80,      -- flip x
-  LD_MEM_A,  x(0x8145), -- PLAYER_FRAME_LEGS
+     -- after DURING_TRANSTION_NEXT
+     CALL,      x(0x0AD0), -- SET_LEVEL_PLATFORM_XOFFS
+     LD_A,      0x02,
+     CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 
-  -- after DURING_TRANSTION_NEXT
-  CALL,      x(0x0AD0), -- SET_LEVEL_PLATFORM_XOFFS
-  LD_A,      0x02,
-  CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
-
-  RET
-
+     RET
    })
 
    local SET_PLAYER_LEFT = OGNOB_MODE_ADDR + 0x25 -- careful! Address will change if above modified.
