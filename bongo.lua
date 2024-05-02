@@ -272,6 +272,7 @@ CP = 0xFE
 
 SCREEN_NUM = 0x8029
 PLAYER_LEFT_Y = 0x8077
+OGNOB_TRIGGER = 0x8078
 
 ---------------------------------------------------------
 
@@ -343,7 +344,10 @@ if fix_all_the_lil_bugs == true then
    })
 
    -- add the cool spiral transition to attract mode
-   poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
+   -- (if not ognob, because I need the bytes for that)
+   if ognob_mode == false then
+      poke_rom(0x038b, { CALL, x(0x2550) }) -- cool transition!
+   end
 
 end
 
@@ -669,7 +673,7 @@ end)
 -- Open-world mode: freely wander left or right
 if ognob_mode == true then
 
-   local OGNOB_MODE_ADDR = 0x0800
+   local OGNOB_MODE_ADDR = 0x2538
 
    -- on EXIT_STAGE_LEFT, call $OGNOB_MODE
    poke_rom(0x1a0c, { CALL, x(OGNOB_MODE_ADDR) })
@@ -722,7 +726,10 @@ if ognob_mode == true then
      LD_A,      0x02,
      CALL,      x(0x17B4), -- RESET_JUMP_AND_REDIFY_BOTTOM_ROW
 
-     RET
+     -- trigger 0x8078 so I can catch it in hook
+     LD_A,      0x1,
+     LD_MEM_A,  x(OGNOB_TRIGGER),
+     RET,
    })
 
    local SET_PLAYER_LEFT = OGNOB_MODE_ADDR + 0x25 -- careful! Address will change if above modified.
@@ -804,6 +811,7 @@ if ognob_mode == true then
 
    -- track an Ognob run
    local ognobbing = false
+   is_ognob_win = false
    local ognob_done = add_ev("screen_change", function(cur, last)
      if cur == 1 and last == 27 then
         ognobbing = false
@@ -815,7 +823,7 @@ if ognob_mode == true then
      end
 
      -- You did it!
-     if ognobbing and cur == 1 then
+     if ognobbing == true and last == 2 and cur == 1 then
         ognob_win()
      end
    end)
@@ -829,6 +837,7 @@ function ognob_stop()
    for i = 1, 5 do
       draw_tile(i-1,TH-2,0x10)
    end
+   is_ognob_win = false
 end
 
 -- begin your ognob run
@@ -840,6 +849,7 @@ function ognob_start()
    for i = 1, 5 do
       draw_tile(i-1,TH-2,ogtxt[i])
    end
+   is_ognob_win = false
 end
 
 function ognob_win()
@@ -849,7 +859,13 @@ function ognob_win()
          draw_tile(i,j,ogtxt[(j+i) % #ogtxt + 1])
       end
    end
-   -- TODO: play win song (withough stepping on original sfx tune.)
-   poke(0x8042, 0xc)
-   poke(0x8065, 0xc)
+   is_ognob_win = true
 end
+
+tap_ognob = mem:install_write_tap(OGNOB_TRIGGER, OGNOB_TRIGGER, "writes", function(offset, data)
+  if is_ognob_win then
+   -- Play win song
+   poke(0x8042, 0x6) -- ch1 sfx
+   poke(0x8065, 0x6) -- prev sfx (or something)
+  end
+end)
