@@ -12,10 +12,10 @@ loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
 round = 2 -- starting round (1 = default, 2, 3, 4... )
 
 -- Serious bizness
-infinite_lives = false
+infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
-disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
+disable_dino = true          -- no pesky dino (oh, but also now you can't catch 'im)
 disable_round_speed_up = true -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
 disable_cutscene = true       -- don't show the awesome cutscene
@@ -24,9 +24,9 @@ collision_indicator = false   -- middle line = block check pos. Back line = pick
 
 -- Non-so-serious bizness
 theme = 7                     -- color theme (0-7). 0 = default, 7 = best one
-technicolor = false           -- randomize theme every death
-head_style = 0                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
-ognob_mode = false             -- open-world Bongo. Can go out left or right.
+technicolor = true            -- randomize theme every death
+head_style = 3                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 --[[
                 ======= Official OGNOB MODE Rules =======
@@ -44,8 +44,7 @@ ognob_mode = false             -- open-world Bongo. Can go out left or right.
    * infinite_lives     = false (hardcore), true (easy)
    * disable_dino       = true (good luck otherwise...)
    * show_timers        = true (if you're speed runnin')
-
-   * disable_bonus_skip = n/a  (disabled by ognob-mode)
+   * disable_bonus_skip = true
    * head_style         = player's choice
    * theme              = player's choice
 
@@ -803,14 +802,12 @@ if ognob_mode == true then
      JP,        x(0x4050), -- ADD_MOVE_SCORE
    })
 
-   -- No bonuses when bongo-ing
-   do_disable_bonus_skip()
-
    -- track an Ognob run
    local ognobbing = false
    local ognob_done = add_ev("screen_change", function(cur, last)
      if cur == 1 and last == 27 then
         ognobbing = false
+        ognob_stop()
      end
      if cur == 27 and last == 1 then
         ognobbing = true
@@ -828,6 +825,12 @@ if ognob_mode == true then
    end)
 end
 
+function ognob_stop()
+   for i = 1, 5 do
+      draw_tile(i-1,TH-2,0x10)
+   end
+end
+
 -- begin your ognob run
 function ognob_start()
    do_reset_time()
@@ -837,7 +840,6 @@ function ognob_start()
    for i = 1, 5 do
       draw_tile(i-1,TH-2,ogtxt[i])
    end
-
 end
 
 function ognob_win()
