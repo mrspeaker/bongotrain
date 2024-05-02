@@ -3516,7 +3516,7 @@ CHECK_FALL_OFF_BOTTOM_SCR
 19F0: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
 19F3: 37          scf
 19F4: 3F          ccf
-19F5: C6 18       add  a,$18    ; +24 (ground)
+19F5: C6 18       add  a,$18    ; +24 (ground = 255-24?)
 19F7: D0          ret  nc
 19F8: CD C0 0C    call $DO_DEATH_SEQUENCE
 19FB: AF          xor  a
@@ -7724,27 +7724,16 @@ DRAW_CAGE_TOP
 44BB: 32 8C 91    ld   ($918C),a
 44BE: 18 24       jr   $_MORE_CAGE
     ;; looks like data: 2byte coords
-44C0: 10 01       djnz $44C3
-44C2: 12          ld   (de),a
-44C3: 03          inc  bc
-44C4: 14          inc  d
-44C5: 01 15 03    ld   bc,$0315
-44C8: 17          rla
-44C9: 01 19 03    ld   bc,$0319
-44CC: 1B          dec  de
-44CD: 01 1C 03    ld   bc,$031C
-44D0: FF          rst  $38
-44D1: FF          rst  $38
-44D2: 1C          inc  e
-44D3: 01 00 03    ld   bc,$0300
-44D6: 1C          inc  e
-44D7: 01 00 03    ld   bc,$0300
-44DA: 1C          inc  e
-44DB: 01 00 03    ld   bc,$0300
-44DE: 1C          inc  e
-44DF: 01 00 03    ld   bc,$0300
-44E2: FF          rst  $38
-44E3: FF          rst  $38
+44C0: 10 01 12 03
+44C4: 14 01 15 03
+44C8: 17 01 19 03
+44CC: 1B 01 1C 03
+44D0: FF FF
+44D2: 1C 01 00 03
+44D6: 1C 01 00 03
+44DA: 1C 01 00 03
+44DE: 1C 01 00 03
+44E2: FF FF
 _MORE_CAGE
 44E4: 3C          inc  a
 44E5: 32 89 91    ld   ($9189),a
@@ -8992,12 +8981,12 @@ END_SCREEN_LOGIC
 4D7F: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 4D82: FE 1B       cp   $1B      ;// check is screen 27
 4D84: C0          ret  nz
-4D85: CD 90 4D    call $CHECK_TOUCHING_CAGE
+4D85: CD 90 4D    call $CHECK_PLAYER_CAGE_COLLISION
 4D88: C9          ret
 
 4D89: FF ...
 
-CHECK_TOUCHING_CAGE
+CHECK_PLAYER_CAGE_COLLISION
 4D90: 3A 51 80    ld   a,($IS_HIT_CAGE)
 4D93: A7          and  a
 4D94: C0          ret  nz

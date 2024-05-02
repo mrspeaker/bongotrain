@@ -246,10 +246,13 @@ INC_HL = 0x23
 JR_Z = 0x28
 LD_MEM_A = 0x32
 LD_HLP = 0x36
+SCF = 0x37
+JR_C = 0x38
 LD_A_MEM = 0x3a
 INC_A = 0x3c
 DEC_A = 0x3d
 LD_A = 0x3e
+CCF = 0x3f
 LD_B_A = 0x47
 LD_HL_A = 0x77
 LD_A_B = 0x78
@@ -262,6 +265,7 @@ ADD_A = 0xC6
 RET_Z = 0xC8
 RET = 0xC9
 CALL = 0xCD
+SUB = 0xD6
 RET_C = 0xD8
 XOR_A = 0xAF
 AND = 0xE6
@@ -273,6 +277,10 @@ CP = 0xFE
 SCREEN_NUM = 0x8029
 PLAYER_LEFT_Y = 0x8077
 OGNOB_TRIGGER = 0x8078
+
+--- Constants -----
+
+TILE_BLANK = 0x10
 
 ---------------------------------------------------------
 
@@ -711,9 +719,19 @@ if ognob_mode == true then
      LD_MEM_A,  x(0x8140), -- PLAYER_X
      LD_MEM_A,  x(0x8144), -- PLAYER_X_LEGS
      LD_A_MEM,  x(PLAYER_LEFT_Y), -- (mine)
+     -- Set player to top or bottom depending where they entered the screen
+     -- dodgy (should do like INIT_PLAYER_POS_FOR_SCREEN, but eh.
+     SCF,
+     CCF,                  -- clear carry
+     SUB, 0x70,            -- ~ middle of screen height
+     JR_C, 4,
+     LD_A, 0xD0,           -- set to bottom of screen
+     JR, 2,
+     LD_A, 0x26,           -- set to top of screen
      LD_MEM_A,  x(0x8143), -- PLAYER_Y
      ADD_A,     0x10,
      LD_MEM_A,  x(0x8147), -- PLAYER_Y_LEGS
+
      LD_A_MEM,  x(0x8141), -- PLAYER_FRAME
      ADD_A,     0x80,      -- flip x
      LD_MEM_A,  x(0x8141), -- PLAYER_FRAME
@@ -831,41 +849,50 @@ if ognob_mode == true then
    add_ev("game_over", function()
       ognobbing = false
    end)
-end
 
-function ognob_stop()
-   for i = 1, 5 do
-      draw_tile(i-1,TH-2,0x10)
-   end
-   is_ognob_win = false
-end
-
--- begin your ognob run
-function ognob_start()
-   do_reset_time()
-   do_reset_score()
-   poke(0x801D, 10) -- 100 starting points to force re-draw
-   local ogtxt = {31,23,30,31,18}
-   for i = 1, 5 do
-      draw_tile(i-1,TH-2,ogtxt[i])
-   end
-   is_ognob_win = false
-end
-
-function ognob_win()
-   local ogtxt = {31,23,30,31,18,0x10}
-   for j = 3, TH do
-      for i = 0, 5 do
-         draw_tile(i,j,ogtxt[(j+i) % #ogtxt + 1])
+   function ognob_stop()
+      -- clear OGNOB text
+      for i = 1, 5 do
+         draw_tile(i-1, TH-2, TILE_BLANK)
       end
+      is_ognob_win = false
    end
-   is_ognob_win = true
-end
 
-tap_ognob = mem:install_write_tap(OGNOB_TRIGGER, OGNOB_TRIGGER, "writes", function(offset, data)
-  if is_ognob_win then
-   -- Play win song
-   poke(0x8042, 0x6) -- ch1 sfx
-   poke(0x8065, 0x6) -- prev sfx (or something)
-  end
-end)
+   -- begin your ognob run
+   function ognob_start()
+      do_reset_time()
+      do_reset_score()
+      poke(0x801D, 10) -- 100 starting points to force re-draw
+      -- draw OGNOB text
+      local ogtxt = {31,23,30,31,18}
+      for i = 1, 5 do
+         draw_tile(i-1,TH-2,ogtxt[i])
+      end
+      is_ognob_win = false
+   end
+
+   function ognob_win()
+      local ogtxt = {31,23,30,31,18,0x10}
+      for j = 3, TH do
+         for i = 0, 5 do
+            draw_tile(i,j,ogtxt[(j+i) % #ogtxt + 1])
+         end
+      end
+      is_ognob_win = true
+   end
+
+   -- tap (and OGNOB_TRIGGER) is because the screen write that fires
+   -- ognob_win happens BEFORE screen drawing etc, so any changes we make
+   -- will get overwritten by the original code. This tap happens
+   -- AFTER the original reseting and drawing.
+   tap_ognob = mem:install_write_tap(OGNOB_TRIGGER, OGNOB_TRIGGER, "writes", function(offset, data)
+      if is_ognob_win then
+         -- Play win song
+         poke(0x8042, 0x6) -- ch1 sfx
+         poke(0x8065, 0x6) -- prev sfx (or something)
+         -- remove pickup from last screen, so can't trigger bonus skip!
+         poke(0x915a, TILE_BLANK)
+      end
+   end)
+
+end
