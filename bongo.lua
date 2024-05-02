@@ -849,4 +849,7 @@ function ognob_win()
          draw_tile(i,j,ogtxt[(j+i) % #ogtxt + 1])
       end
    end
+   -- TODO: play win song (withough stepping on original sfx tune.)
+   poke(0x8042, 0xc)
+   poke(0x8065, 0xc)
 end
