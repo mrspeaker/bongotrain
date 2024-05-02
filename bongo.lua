@@ -1,8 +1,34 @@
--- Bongo trainer, by Mr Speaker.
+-- Bongo x Bongo, by Mr Speaker.
 -- https://www.mrspeaker.net
 
--- press P1/P2 during game to skip forward/back screens.
--- (NOTE: to get some bytes for features, I broke P2 handling. One-player only.)
+--[[
+   Welcome to Bongo x Bongo. This script makes modifications to the game
+   Bongo, written by John Hutchinson for JetSoft in 1983.
+
+   Bongo x Bongo adds a bunch of features to Bongo:
+
+   * General cheatin' and tweaks for practising
+   * OGNOB mode: new challenge - try to complete the game in reverse!
+   * New main character and colour themes
+   * Random stuff I found unused in the game code
+   * ... and much more!
+
+   RUNNING
+
+   As a prerequisite, you should already be able to load and play Bongo on
+   MAME. To run this script, you need to supply it as an extra argument when
+   running MAME from the command line:
+
+   `mame bongo --autoboot_script ./bongo.lua`
+
+   Where the path `./bongo.lua` points to the file you are currently reading.
+
+   (If you don't know how to run MAME from command line, you'll have to
+   do a bit of googlin'. Instead of clicking on mame.exe you need to run
+   that from a command prompt as described here:
+   https://easyemu.mameworld.info/mameguide/getting_started/running_mame.html)
+
+--]]
 
 start_screen = 1 -- screen number (1-27), if not looping
 loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
@@ -15,17 +41,22 @@ round = 2 -- starting round (1 = default, 2, 3, 4... )
 infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
-disable_dino = true          -- no pesky dino (oh, but also now you can't catch 'im)
+disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
 disable_round_speed_up = true -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
 disable_cutscene = true       -- don't show the awesome cutscene
 reset_score = false           -- reset score to 0 on death and new screen
 collision_indicator = false   -- middle line = block check pos. Back line = pickup check pos
 
+-- In game controls:
+-- * P1: skip forward one screen
+-- * P2: skip back one screen
+-- * P1 + P2: reset back to attract screen
+
 -- Non-so-serious bizness
-theme = 7                     -- color theme (0-7). 0 = default, 7 = best one
-technicolor = true            -- randomize theme every death
-head_style = 3                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+theme = 0                     -- color theme (0-7). 0 = default, 7 = best one
+technicolor = false           -- randomize theme every death
+head_style = 0                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
 ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 --[[
@@ -75,7 +106,7 @@ fix_all_the_lil_bugs = true
    -- * subjective typography fix: align 1000 bonus better
    -- * add the cool spiral transition to attract mode. Code was just sitting there.
 
-
+-- (NOTE: to get some bytes for features, I broke P2 handling I think. Probably One-player only.)
 
 
 -----------------------------------
@@ -215,6 +246,9 @@ end
 
 function set_pc(addr)
    cpu.state["PC"].value = addr
+end
+function set_sp(addr)
+   cpu.state["SP"].value = addr
 end
 
 -- return an array with hi/lo bytes of a 16bit value
@@ -650,6 +684,11 @@ tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
      buttons = true
      -- Don't transition unless playing
      if not is_on_game_screen() then
+        return
+     end
+
+     if val == 3 then -- both p1 & p2: reset
+        set_pc(0x0410) -- game over
         return
      end
 
