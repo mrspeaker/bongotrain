@@ -222,6 +222,11 @@ function x(v)
    return { v & 0xff, v >> 8 }
 end
 
+function is_on_game_screen()
+   return peek(0x93a9) == 0xFE -- platform tile in top left
+end
+
+
 ------------- Scratch pad -------------
 
 -- poke_rom(0x069D, 0x20); -- autojump
@@ -623,7 +628,6 @@ end
 -- p1/p2 button to skip forward/go back screens
 buttons = false
 BUTTONS = 0x800c
-dodgy_button_count = 0
 tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
   local val = data & 3 -- 1: p1, 2: p2
   if buttons == true and val == 0 then
@@ -632,12 +636,8 @@ tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
   end
   if not buttons and (val > 0) then
      buttons = true
-     -- Ok, super dodgy: get a bunch of P1 button presses
-     -- when starting... just wait for a few before we're serious.
-     -- TODO: find a way to know we're not on the PLAYER 1 screen
-     -- before accepting P1/P2 buttons
-     dodgy_button_count = dodgy_button_count + 1
-     if dodgy_button_count < 3 then
+     -- Don't transition unless playing
+     if not is_on_game_screen() then
         return
      end
 
