@@ -128,6 +128,13 @@ end
 function print_pairs(o)
    for tag, device in pairs(o) do print(tag) end
 end
+function yn(v)
+   if v == true then
+      return "Y"
+   end
+   return "N"
+end
+
 
 local evs = {
    game_start = {},
@@ -147,20 +154,25 @@ end
 
 ------------------- MAME machine -----------------------
 
+local debug_mame = true
+
 cpu = manager.machine.devices[":maincpu"]
 cpudebug = cpu.debug
 mem = cpu.spaces["program"]
---io = cpu.spaces["io"]
-gfx = manager.machine.devices[":gfxdecode"]
+io = cpu.spaces["io"]
 gfx1 = manager.machine.memory.regions[":gfx1"]
 
-print_pairs(manager.machine.devices)
-print(dump(gfx1.size))
---print(dump(io.map.entries))
---print_pairs(cpu.state) -- prints all cpu flags, regs
+if debug_mame == true then
+   print("=== bongo trainer dbg ===")
+   print_pairs(manager.machine.devices)
+   print("gfx size: "..dump(gfx1.size))
+   print("io:"..dump(io.map.entries))
+   --print_pairs(cpu.state) -- prints all cpu flags, regs
 
--- cpudebug:wpset(mem, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
--- cpudebug:wpset(mem, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+   -- cpudebug:wpset(mem, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
+   -- cpudebug:wpset(mem, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+   print("=== end dbg ===")
+end
 
 -------------- MAME Helpers -------------
 
@@ -612,14 +624,24 @@ end
 -- p1/p2 button to skip forward/go back screens
 buttons = false
 BUTTONS = 0x800c
+dodgy_button_count = 0
 tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
   local val = data & 3 -- 1: p1, 2: p2
   if buttons == true and val == 0 then
      -- button released (stops repeats)
      buttons = false
   end
-  if run_started and not buttons and (val > 0) then
+  if not buttons and (val > 0) then
      buttons = true
+     -- Ok, super dodgy: get a bunch of P1 button presses
+     -- when starting... just wait for a few before we're serious.
+     -- TODO: find a way to know we're not on the PLAYER 1 screen
+     -- before accepting P1/P2 buttons
+     dodgy_button_count = dodgy_button_count + 1
+     if dodgy_button_count < 3 then
+        return
+     end
+
      local cur = peek(SCREEN_NUM)
      -- TODO: this doesn't work properly when you have loop selections.
      if val == 1 then -- p1 button. wrap on cage screen.
@@ -634,12 +656,13 @@ tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
            poke(SCREEN_NUM, cur - 2)
         end
      end
+
      -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
      -- (this is what is scrolled while transitioning: to prevent double-triggering)
      if peek(0x8106) == 0 then
         set_pc(0x1778)
      end
-   end
+  end
 end)
 
 -------------------- OGNOB mode -------------------
