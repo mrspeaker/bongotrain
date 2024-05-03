@@ -5,13 +5,22 @@
    Welcome to Bongo x Bongo. This script makes modifications to the game
    Bongo, written by John Hutchinson for JetSoft in 1983.
 
-   Bongo x Bongo adds a bunch of features to Bongo:
-
    * General cheatin' and tweaks for practising
    * OGNOB mode: new challenge - try to complete the game in reverse!
    * New main character and colour themes
    * Random stuff I found unused in the game code
    * ... and much more!
+
+   SETTINGS
+
+   Changing the variables below to enable features. Most settings are true/false options
+   for enabling or disabling. For example, to turn off the "infinite lives" feature:
+
+      infinite_lives = false
+
+   There are tonnes of things to set - some are really useful if you're trying to
+   improve your Bongo runs, some are just for fun, and a bunch are things I was
+   testing when I found it buried in unused code in the Bongo ROM dump.
 
    RUNNING
 
@@ -30,14 +39,16 @@
 
 --]]
 
-start_screen = 1 -- screen number (1-27), if not looping
-loop_screens = {}--{13,14,18,21,25,27} -- if you want to practise levels, eg:
--- {}: no looping, normal sequence
+start_screen = 1 -- [1 - 27]. Screen to start the game. 27 is the dino screen.
+loop_screens = {}--{13,14,18,21,25,27} -- Loop if you want to practise levels, eg:
+-- {}: no looping, normal Bongo sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round (1 = default, 2, 3, 4... )
-
--- Serious bizness
+round = 2 -- starting round (1: initial speed, 2+: faster)
+-- 1: default Bongo speed for dinosaur and enemies
+-- 2: faster movement for player and enemies, and dinosaur starts earlier
+-- 3+: each round after 2, the player and enemeies are the same speed,
+--     but the dinosaur starts earlier and earlier and earlier...
 infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
@@ -46,17 +57,22 @@ disable_round_speed_up = true -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
 disable_cutscene = true       -- don't show the awesome cutscene
 reset_score = false           -- reset score to 0 on death and new screen
-collision_indicator = false   -- middle line = block check pos. Back line = pickup check pos
+collision_indicator = false   -- show where ground and pickup collisions occur
+-- Bongo is bad at picking things up because of his bongoitis and bad knees.
+-- This setting shows you exactly where collisions will occur. As you walk
+-- the ground will "cycle" so you can see which tile the game thinks you are on.
+--   *Middle line*  shows exactly where the tile collision happenss.
+--   *Back line*    shows you where pickup collision will happen.
+-- So you need to get the back line over a pickup before you actally pick anything up.
 
--- In game controls:
--- * P1: skip forward one screen
--- * P2: skip back one screen
--- * P1 + P2: reset back to attract screen
-
--- Non-so-serious bizness
+allow_skip = true             -- use player1/player to navigate screens while playing
+-- P1: skip forward one screen
+-- P2: skip back one screen
+-- P1 + P2: reset back to attract screen
 theme = 0                     -- color theme (0-7). 0 = default, 7 = best one
 technicolor = false           -- randomize theme every death
 head_style = 0                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+
 ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 --[[
@@ -74,10 +90,8 @@ ognob_mode = true             -- open-world Bongo. Can go out left or right.
    * round              = 2
    * infinite_lives     = false (hardcore), true (easy)
    * disable_dino       = true (good luck otherwise...)
-   * show_timers        = true (if you're speed runnin')
    * disable_bonus_skip = true
-   * head_style         = player's choice
-   * theme              = player's choice
+   * allow_skip         = false
 
    Start on screen 1, and make your way left. Your not being chased by a
    dinosaur, yet many challenges lay ahead of you. Make it all the way
@@ -87,15 +101,22 @@ ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 
 -- Removed features I found in the code, and tweaks/tests
-show_timers = true      -- speed run timers! Don't know why they removed them
-prevent_cloud_jump = false -- makes jumping from underneath really crap!
-alt_bongo_place = false -- maybe supposed to put lil guy on the ground for highwire levels?
-one_px_moves = false    -- test how it feels moving 1px per frame, not 3px per 3 frames.
-fix_jump_bug = false    -- hold down jump after transitioning screen from high jump
-                        -- doesn't kill you (optional, as it changes gameplay)
+show_timers = true             -- speed run timers! Don't know why they removed them
+prevent_cloud_jump = false     -- makes jumping from underneath really crap!
+alt_bongo_place = false        -- maybe supposed to put lil guy on the ground for highwire levels?
+one_px_moves = false           -- test how it feels moving 1px per frame, not 3px per 3 frames.
+-- I think this is the reason Bongo is so hard. This is responsible for Bongo 50/50s.
+-- Every three frames the player will move three pixels. The ground collision detection has
+-- *four* frames of leeway: so making a jump from the edge of a S_S level has a very
+-- small margin to be out - and the chunky three-pixel movement makes it even harder to
+-- get right. This setting shows kind of what a smooth movement would be like
+fix_jump_bug = false           -- don't die when holding jump on new screen
+-- Theres a nasty bug that sometimes comes up in game play: if you jump off a platform
+-- into the next screen, then if you hold jump while the next screen starts - sometimes
+-- the player does a weird stunted tripple-jump and just... dies. This fixes it.
 
 fix_all_the_lil_bugs = true
-   -- ====== A bunch of bugs I found why spelunking... ===========
+   -- ====== A bunch of bugs I found while spelunking... ===========
    -- * fix call to draw inner border on YOUR BEING CHASED screen
    -- * add other missing inner border in empty attract screen
    -- * fixed the pointy stair-down platform
@@ -106,19 +127,25 @@ fix_all_the_lil_bugs = true
    -- * subjective typography fix: align 1000 bonus better
    -- * add the cool spiral transition to attract mode. Code was just sitting there.
 
--- (NOTE: to get some bytes for features, I broke P2 handling I think. Probably One-player only.)
+-- NOTE: to get some bytes for features, I broke P2 handling I think.
+-- Probably One-player only now.
 
 
------------------------------------
+
 -- Bongo world map
+
 -- 01:  n_n  n_n  nTn  n_n   /   W
 -- 07:   \   n_n  nTn   /    W
 -- 12:   \   n_n  nTn  n_n   S
 -- 17:   \   n_n   S    \   S_S
 -- 22:   W    \   S_S
 -- 25:   W    \    S
------------------------------------
 
+
+
+-- =====================================================================================
+-- =============================== end of settings =====================================
+-- =====================================================================================
 
 
 
@@ -204,7 +231,7 @@ if debug_mame == true then
    print("=== end dbg ===")
 end
 
--------------- MAME Helpers -------------
+------------------- MAME Helpers ---------------------
 
 function poke(addr, bytes)
    if type(bytes)=="number" then bytes = {bytes} end
@@ -261,7 +288,7 @@ function is_on_game_screen()
 end
 
 
-------------- Scratch pad -------------
+----------------- Scratch pad -------------------
 
 -- poke_rom(0x069D, 0x20); -- autojump
 
@@ -270,7 +297,8 @@ end
 --poke_rom(0x1811,8)
 --nope. poke_rom(0x149b,{0x3d,col,0x32,0x42,0x81,0x32,0x46,0x81,0xc9}
 
-------------- z/80 opcodes --------------
+
+------------------ z/80 opcodes -----------------
 
 NOP = 0x00
 JR = 0x18
@@ -406,7 +434,7 @@ end
 if fast_death == true then
    -- return early from DO_DEATH_SEQUENCE
    poke_rom(0x0CCB, {
-     CALL, x(0x0ca0),  -- delay 8 vblanks
+     CALL, x(0x0ca0),  -- delay 8 vblanks to delay a little
      CALL, x(0x0ca0),  -- delay 8 vblanks (still pretty short)
      RET, NOP, NOP     -- return after dino reset
    });
@@ -672,48 +700,50 @@ end)
 end
 
 -- p1/p2 button to skip forward/go back screens
-buttons = false
-BUTTONS = 0x800c
-tap4 = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
-  local val = data & 3 -- 1: p1, 2: p2
-  if buttons == true and val == 0 then
-     -- button released (stops repeats)
-     buttons = false
-  end
-  if not buttons and (val > 0) then
-     buttons = true
-     -- Don't transition unless playing
-     if not is_on_game_screen() then
-        return
+if allow_skip == true then
+   buttons = false
+   BUTTONS = 0x800c
+   tap_buttons = mem:install_write_tap(BUTTONS, BUTTONS, "writes", function(offset, data)
+     local val = data & 3 -- 1: p1, 2: p2
+     if buttons == true and val == 0 then
+        -- button released (stops repeats)
+        buttons = false
      end
+     if not buttons and (val > 0) then
+        buttons = true
+        -- Don't transition unless playing
+        if not is_on_game_screen() then
+           return
+        end
 
-     if val == 3 then -- both p1 & p2: reset
-        set_pc(0x0410) -- game over
-        return
-     end
+        if val == 3 then -- both p1 & p2: reset
+           set_pc(0x0410) -- game over
+           return
+        end
 
-     local cur = peek(SCREEN_NUM)
-     -- TODO: this doesn't work properly when you have loop selections.
-     if val == 1 then -- p1 button. wrap on cage screen.
-        if cur == 27 then
-           poke(SCREEN_NUM, 0) -- 0 as it get incremented... somewhere else
+        local cur = peek(SCREEN_NUM)
+        -- TODO: this doesn't work properly when you have loop selections.
+        if val == 1 then -- p1 button. wrap on cage screen.
+           if cur == 27 then
+              poke(SCREEN_NUM, 0) -- 0 as it get incremented... somewhere else
+           end
+        end
+        if val == 2 then -- p2 button, go back screen
+           if cur <= 1 then
+              poke(SCREEN_NUM, 26)
+           else
+              poke(SCREEN_NUM, cur - 2)
+           end
+        end
+
+        -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
+        -- (this is what is scrolled while transitioning: to prevent double-triggering)
+        if peek(0x8106) == 0 then
+           set_pc(0x1778)
         end
      end
-     if val == 2 then -- p2 button, go back screen
-        if cur <= 1 then
-           poke(SCREEN_NUM, 26)
-        else
-           poke(SCREEN_NUM, cur - 2)
-        end
-     end
-
-     -- Triggers next level. Checks that $SCREEN_XOFF_COL+6 is 0
-     -- (this is what is scrolled while transitioning: to prevent double-triggering)
-     if peek(0x8106) == 0 then
-        set_pc(0x1778)
-     end
-  end
-end)
+   end)
+end
 
 -------------------- OGNOB mode -------------------
 
@@ -935,3 +965,8 @@ if ognob_mode == true then
    end)
 
 end
+
+
+
+
+---- Bongo always -----
