@@ -1,0 +1,12 @@
+* Bongo x Bongo
+
+Welcom to bongo.
+
+** Bongo x Bongo
+A trainer for Bongo, including a new game mode: OGNOB MODE.
+
+** Disassembly
+Fully annotated version of the Bongo source code. I did this the super-worst way: just search-replacing addresses in a text document. However, it should be trivial to turn this into real source code that can re-build the official ROMs. (And now that I've typed that sentance, I'm keen to do it).
+
+
+
