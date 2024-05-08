@@ -248,15 +248,14 @@ SOFT_RESET
 0004: 32 FF 80    ld   ($80FF),a
 0007: 3E FF       ld   a,$FF
 0009: 32 00 B8    ld   ($WATCHDOG),a
-000C: C3 A0 14    jp   $CLEAR_SCREEN
-
+000C: C3 A0 14    jp   $CLEAR_RAM ; jumps back here after clear
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
 0012: CD 00 3F    call $DELAY_83_LOAD_A_VAL_WEIRD
 0015: CD 48 00    call $INIT_SCREEN
 0018: CD 88 22    call $WRITE_TO_0_AND_1
 001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
 
-    ;;
+    ;; data?
 001E: DD 19       add  ix,de
 0020: DD 19       add  ix,de
 0022: 2B          dec  hl
@@ -332,6 +331,7 @@ _PLAY_SPLASH
 00B9: A7          and  a
 00BA: C2 E7 01    jp   nz,$START_GAME
 00BD: 18 E5       jr   $_PLAY_SPLASH
+
 00BF: FF
 
 NMI_INT_HANDLER
@@ -672,7 +672,7 @@ _LP
 035F: 31 F0 83    ld   sp,$STACK_LOCATION
 0362: 3E 01       ld   a,$01
 0364: 32 90 80    ld   ($8090),a
-0367: C3 83 05    jp   $0583
+0367: C3 83 05    jp   $_SETUP_MORE_RET
 
 036A: FF ...
 
@@ -954,6 +954,7 @@ HISCORE_FOR_P2
     ;; (free bytes?)
 _SETUP_2 ;looks a lot like SETUP_BEFORE_PLAYING - no one calls it?
 0580: CD 48 03    call $SETUP_MORE
+_SETUP_MORE_RET                 ; returns here after setup_more
 0583: CD 80 30    call $SET_HISCORE_TEXT
 _PLAY_SPLASH_2
 0586: CD A0 13    call $WAIT_VBLANK
@@ -2938,13 +2939,15 @@ RESET_XOFF_AND_COLS_AND_SPRITES     ; sets 128 locations to 0
 
 149C: FF ...
 
-14A0: 21 00 80    ld   hl,$TICK_MOD_3
+    ;;
+CLEAR_RAM
+14A0: 21 00 80    ld   hl,$TICK_MOD_3 ; = $8000, start of ram
 14A3: 36 00       ld   (hl),$00
 14A5: 23          inc  hl
 14A6: 7C          ld   a,h
-14A7: FE 84       cp   $84
+14A7: FE 84       cp   $84      ; 132
 14A9: 20 F8       jr   nz,$14A3
-14AB: C3 0F 00    jp   $000F
+14AB: C3 0F 00    jp   $000F    ; Return
 14AE: FF FF
 
 SCREEN_RESET
@@ -9818,7 +9821,7 @@ ATTRACT_PLAYER_UP_STAIR_DATA
 5384: 8F 8E FC F6
 5388: 91 90 FC F8
 538C: 96 92 FC F8
-5390: 94 93 FC 06 ; omg, frames are swapped! head on the bottom!
+5390: 94 93 FC 06 ; frames are swapped!  head on the bottom!
 5394: 8D 8C FC 08
 
 ATTRACT_ANIMATE_DINO_HEAD

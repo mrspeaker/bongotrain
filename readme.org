@@ -3,10 +3,17 @@
 Welcom to bongo.
 
 ** Bongo x Bongo
-A trainer for Bongo, including a new game mode: OGNOB MODE.
+`bongo.lua` is a trainer for Bongo, including a new game mode: OGNOB MODE.
+See the `RUNNING` section in the file for instructions (tl;dr:  `mame bongo --autoboot_script ./bongo.lua`)
 
-** Disassembly
-Fully annotated version of the Bongo source code. I did this the super-worst way: just search-replacing addresses in a text document. However, it should be trivial to turn this into real source code that can re-build the official ROMs. (And now that I've typed that sentance, I'm keen to do it).
+** Reverse engineered disassembly
+`bongo.asm` is an annotated version of the Bongo source code. I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for. Not 100% complete, but I think all the good stuff has been uncovered.
 
+** Building ROMs
+So the disassembly I did was completely by hand in a text editor with search and replace. This means that I most likely have messed with the original bytes, or accidentally cut/paste things somewhere - so the code can not be compiled back into ROMs.
 
+I'm now trying to do it properly, and there is a buildable version of the source in `bongo_src.asm`. This can be compiled with the `zmac` compiler, then split into chunks that recreate the original Bongo ROM files.
 
+There is a script `build.sh` that will chop the front off the `bongo_src.asm` (I need the bytes for reference, but can't compile with them). This generates `src.asm`, which is compiled by `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
+
+The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be deleted and `src.asm` will be the one-true-source of Bongo.
