@@ -77,11 +77,12 @@
 006D  CDC000        call nmi_handler
 0070  3A3480        ld   a,(num_players)
 0073  A7            and  a
-0074  2003          jr   nz,$0079
+0074  2003          jr   nz,_playing_0079
 0076  CD9001        call did_player_press_start
+                _playing_0079:
 0079  0601          ld   b,$01
 007B  CD0011        call tick_ticks ; update ticks
-007E  CD2024        call $2420
+007E  CD2024        call copy_inp_to_buttons_and_check_buttons
 0081  00            nop
 0082  3A00A0        ld   a,(port_in0)
 0085  CB4F          bit  1,a
@@ -6172,12 +6173,15 @@
 241D  FF            rst  $38
 241E  FF            rst  $38
 241F  FF            rst  $38
+
+                copy_inp_to_buttons_and_check_buttons:
 2420  3A00A8        ld   a,(port_in1)
 2423  32F183        ld   ($83F1),a
 2426  3A00B0        ld   a,(port_in2)
 2429  32F283        ld   ($83F2),a
 242C  CD4036        call $3640
 242F  C9            ret
+
 2430  0600          ld   b,$00
 2432  3A00B8        ld   a,(watchdog)
 2435  05            dec  b
