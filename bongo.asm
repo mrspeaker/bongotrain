@@ -303,7 +303,7 @@ NMI_LOOP
 0081: 00          nop
 0082: 3A 00 A0    ld   a,($PORT_IN0)
 0085: CB 4F       bit  1,a
-0087: C2 03 C0    jp   nz,$C003
+0087: C2 03 C0    jp   nz,$C003 ; c003?!
 008A: ED 45       retn          ; NMI return
 
 008C: FF

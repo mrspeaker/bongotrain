@@ -5,8 +5,10 @@
                 ;; before col 16.
 
                 ram_loc         = $8000
-
+                num_players     = $8034 ; attract mode = 0, 1P = 1, 2P = 2
                 _80ff           = $80ff ; written once at init. Unused?
+
+                credits         = $8303 ; how many credits in machine
                 stack_loc       = $83f0
 
                 ;;; hardware
@@ -40,11 +42,11 @@
 0018  CD8822        call write_out_0_1
 001B  C38D00        jp   setup_then_start_game
 
-                    ;; data? Looks weird. Never read/exec
-001E  DD19          db $dd,$19,$dd,$19,$2b,$10,$af,$ed
-0026  67            db $67,$dd,$77,$ed,$6f,$dd,$dd,$19
-002e  ed            db $ed,$6f,$dd,$ff,$ff,$ff,$ff,$ff
-0036  ed            db $ff,$ff
+                    ;; data? Never read/exec
+001E                db $dd,$19,$dd,$19,$2b,$10,$af,$ed
+0026                db $67,$dd,$77,$ed,$6f,$dd,$dd,$19
+002e                db $ed,$6f,$dd,$ff,$ff,$ff,$ff,$ff
+0036                db $ff,$ff
 
                 reset_vector:
 0038  3A00B8        ld   a,(watchdog)
@@ -52,24 +54,18 @@
 
 003D  FF            dc   11, $ff
 
+                ;; Called once at startup
                 init_screen:
 0048  3A00A0        ld   a,(port_in0)
-004B  E683          and  $83
+004B  E683          and  $83            ; 1000 0011
 004D  C8            ret  z
 004E  CD7014        call $1470
-0051  CD1003        call $0310
-0054  09            add  hl,bc
-0055  00            nop
-0056  13            inc  de
-0057  221514        ld   ($1415),hl
-005A  19            add  hl,de
-005B  24            inc  h
-005C  1016          djnz $0074
-005E  11251C        ld   de,$1C25
-0061  24            inc  h
-0062  FF            rst  $38
-0063  18E3          jr   $0048
-0065  FF            rst  $38
+0051  CD1003        call draw_tiles_h
+0054                db   $09, $00       ; CREDIT FAULT
+0056                db   $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF
+0063  18E3          jr   init_screen
+
+0065  FF            db   $ff
 
                 ;; Non-Maskable Interrupt handler. Fires every frame
                 nmi_loop:
@@ -77,18 +73,18 @@
 0067  3201B0        ld   (int_enable),a
 006A  3A00B8        ld   a,(watchdog)
 006D  CDC000        call nmi_handler
-0070  3A3480        ld   a,($8034)
+0070  3A3480        ld   a,(num_players)
 0073  A7            and  a
 0074  2003          jr   nz,$0079
-0076  CD9001        call $0190
+0076  CD9001        call did_player_press_start
 0079  0601          ld   b,$01
-007B  CD0011        call $1100
+007B  CD0011        call tick_ticks ; update ticks
 007E  CD2024        call $2420
 0081  00            nop
 0082  3A00A0        ld   a,(port_in0)
 0085  CB4F          bit  1,a
-0087  C203C0        jp   nz,$C003
-008A  ED45          retn        ; NMI return
+0087  C203C0        jp   nz,$C003   ; c003?! What's that?
+008A  ED45          retn            ; NMI return
 
 008C  FF            db   $ff
 
@@ -96,25 +92,26 @@
 008D  CD4803        call $0348
 0090  CD8030        call $3080
 0093  CDA013        call $13A0
-0096  3A0383        ld   a,($8303)
+0096  3A0383        ld   a,(credits)
 0099  A7            and  a
 009A  2008          jr   nz,$00A4
 009C  CD7003        call $0370
 009F  CD7014        call $1470
 00A2  18EF          jr   $0093
                 _play_splash:
-00A4  CDA013        call $13A0
-00A7  3A0383        ld   a,($8303)
+00A4  CDA013        call  wait_vblank
+00A7  3A0383        ld   a,(credits)
 00AA  FE01          cp   $01
 00AC  2005          jr   nz,$00B3
 00AE  CDD000        call $00D0
 00B1  1803          jr   $00B6
 00B3  CD4001        call $0140
-00B6  3A3480        ld   a,($8034)
+00B6  3A3480        ld   a,(num_players)
 00B9  A7            and  a
 00BA  C2E701        jp   nz,start_game
 00BD  18E5          jr   _play_splash
-00BF  FF            rst  $38
+
+00BF  FF            db  $ff
 
                 nmi_handler:
 00C0  D9            exx
@@ -131,7 +128,7 @@
 00D2  329080        ld   ($8090),a
 00D5  AF            xor  a
 00D6  3204B0        ld   ($B004),a
-00D9  3A0383        ld   a,($8303)
+00D9  3A0383        ld   a,(credits)
 00DC  47            ld   b,a
 00DD  3A3580        ld   a,($8035)
 00E0  B8            cp   b
@@ -145,7 +142,7 @@
 00EE  00            nop
 00EF  00            nop
 00F0  CD5024        call $2450
-00F3  CD1003        call $0310
+00F3  CD1003        call draw_tiles_h
 00F6  09            add  hl,bc
 00F7  0B            dec  bc
 00F8  2022          jr   nz,$011C
@@ -153,7 +150,7 @@
 00FB  23            inc  hl
 00FC  23            inc  hl
 00FD  FF            rst  $38
-00FE  CD1003        call $0310
+00FE  CD1003        call draw_tiles_h
 0101  0C            inc  c
 0102  09            add  hl,bc
 0103  1F            rra
@@ -171,7 +168,7 @@
 0116  24            inc  h
 0117  1F            rra
 0118  1EFF          ld   e,$FF
-011A  CD1003        call $0310
+011A  CD1003        call draw_tiles_h
 011D  19            add  hl,de
 011E  09            add  hl,bc
 011F  13            inc  de
@@ -180,26 +177,26 @@
 0124  24            inc  h
 0125  23            inc  hl
 0126  FF            rst  $38
-0127  210383        ld   hl,$8303
+0127  210383        ld   hl,credits
 012A  AF            xor  a
 012B  ED6F          rld
 012D  329991        ld   ($9199),a
 0130  ED6F          rld
 0132  327991        ld   ($9179),a
 0135  ED6F          rld
-0137  3A0383        ld   a,($8303)
+0137  3A0383        ld   a,(credits)
 013A  323580        ld   ($8035),a
 013D  C9            ret
 013E  FF            rst  $38
 013F  FF            rst  $38
 0140  CD3024        call $2430
-0143  3A0383        ld   a,($8303)
+0143  3A0383        ld   a,(credits)
 0146  47            ld   b,a
 0147  3A3580        ld   a,($8035)
 014A  B8            cp   b
 014B  00            nop
 014C  CDD000        call $00D0
-014F  CD1003        call $0310
+014F  CD1003        call draw_tiles_h
 0152  0C            inc  c
 0153  061F          ld   b,$1F
 0155  1E15          ld   e,$15
@@ -248,7 +245,9 @@
 018D  FF            rst  $38
 018E  FF            rst  $38
 018F  FF            rst  $38
-0190  3A0383        ld   a,($8303)
+
+                did_player_press_start:
+0190  3A0383        ld   a,(credits) ; check you have credits
 0193  A7            and  a
 0194  C8            ret  z
 0195  3AF183        ld   a,($83F1)
@@ -256,13 +255,13 @@
 019A  2811          jr   z,$01AD
 019C  CD6014        call $1460
 019F  3E01          ld   a,$01
-01A1  323480        ld   ($8034),a
-01A4  3A0383        ld   a,($8303)
+01A1  323480        ld   (num_players),a
+01A4  3A0383        ld   a,(credits)
 01A7  3D            dec  a
 01A8  27            daa
-01A9  320383        ld   ($8303),a
+01A9  320383        ld   (credits),a
 01AC  C9            ret
-01AD  3A0383        ld   a,($8303)
+01AD  3A0383        ld   a,(credits)
 01B0  3D            dec  a
 01B1  C8            ret  z
 01B2  3AF183        ld   a,($83F1)
@@ -270,13 +269,13 @@
 01B7  C8            ret  z
 01B8  CD6014        call $1460
 01BB  3E02          ld   a,$02
-01BD  323480        ld   ($8034),a
-01C0  3A0383        ld   a,($8303)
+01BD  323480        ld   (num_players),a
+01C0  3A0383        ld   a,(credits)
 01C3  3D            dec  a
 01C4  27            daa
 01C5  3D            dec  a
 01C6  27            daa
-01C7  320383        ld   ($8303),a
+01C7  320383        ld   (credits),a
 01CA  C9            ret
 01CB  FF            rst  $38
 01CC  FF            rst  $38
@@ -304,7 +303,7 @@
 01F7  C602          add  a,$02
 01F9  323280        ld   ($8032),a
 01FC  323380        ld   ($8033),a
-01FF  3A3480        ld   a,($8034)
+01FF  3A3480        ld   a,(num_players)
 0202  3D            dec  a
 0203  323180        ld   ($8031),a
 0206  3E01          ld   a,$01
@@ -407,12 +406,12 @@
 02D0  A7            and  a
 02D1  C8            ret  z
 02D2  47            ld   b,a
-02D3  3A0383        ld   a,($8303)
+02D3  3A0383        ld   a,(credits)
 02D6  3C            inc  a
 02D7  27            daa
 02D8  05            dec  b
 02D9  20FB          jr   nz,$02D6
-02DB  320383        ld   ($8303),a
+02DB  320383        ld   (credits),a
 02DE  AF            xor  a
 02DF  320583        ld   ($8305),a
 02E2  C9            ret
@@ -422,7 +421,7 @@
 02E8  FE01          cp   $01
 02EA  C8            ret  z
 02EB  47            ld   b,a
-02EC  3A0383        ld   a,($8303)
+02EC  3A0383        ld   a,(credits)
 02EF  3C            inc  a
 02F0  27            daa
 02F1  05            dec  b
@@ -432,11 +431,11 @@
 02F7  18F6          jr   $02EF
 02F9  3D            dec  a
 02FA  27            daa
-02FB  320383        ld   ($8303),a
+02FB  320383        ld   (credits),a
 02FE  3E01          ld   a,$01
 0300  320583        ld   ($8305),a
 0303  C9            ret
-0304  320383        ld   ($8303),a
+0304  320383        ld   (credits),a
 0307  AF            xor  a
 0308  320583        ld   ($8305),a
 030B  C9            ret
@@ -444,14 +443,17 @@
 030D  FF            rst  $38
 030E  FF            rst  $38
 030F  FF            rst  $38
+
+                ;; draw sequence of tiles at (y, x)
+                draw_tiles_h:
 0310  3A00B8        ld   a,(watchdog)
-0313  214090        ld   hl,$9040
+0313  214090        ld   hl,start_of_tiles
 0316  C1            pop  bc
-0317  0A            ld   a,(bc)
+0317  0A            ld   a,(bc) ; y pos
 0318  03            inc  bc
 0319  85            add  a,l
 031A  6F            ld   l,a
-031B  0A            ld   a,(bc)
+031B  0A            ld   a,(bc) ; x pos
 031C  5F            ld   e,a
 031D  3E1B          ld   a,$1B
 031F  93            sub  e
@@ -465,7 +467,7 @@
 032B  19            add  hl,de
 032C  19            add  hl,de
 032D  03            inc  bc
-032E  0A            ld   a,(bc)
+032E  0A            ld   a,(bc) ; read data until 0xff
 032F  03            inc  bc
 0330  FEFF          cp   $FF
 0332  2002          jr   nz,$0336
@@ -476,16 +478,9 @@
 0339  1EE0          ld   e,$E0
 033B  19            add  hl,de
 033C  18F0          jr   $032E
-033E  FF            rst  $38
-033F  FF            rst  $38
-0340  FF            rst  $38
-0341  FF            rst  $38
-0342  FF            rst  $38
-0343  FF            rst  $38
-0344  FF            rst  $38
-0345  FF            rst  $38
-0346  FF            rst  $38
-0347  FF            rst  $38
+
+033E                dc 10,$ff
+
 0348  00            nop
 0349  00            nop
 034A  00            nop
@@ -523,7 +518,7 @@
 038D  00            nop
 038E  C9            ret
 038F  FF            rst  $38
-0390  CDA013        call $13A0
+0390  CDA013        call wait_vblank
 0393  18FB          jr   $0390
 0395  FF            rst  $38
 0396  FF            rst  $38
@@ -576,7 +571,7 @@
 03E6  C9            ret
 03E7  FF            rst  $38
 03E8  AF            xor  a
-03E9  323480        ld   ($8034),a
+03E9  323480        ld   (num_players),a
 03EC  323580        ld   ($8035),a
 03EF  C39300        jp   $0093
 03F2  FF            rst  $38
@@ -586,7 +581,7 @@
 03F6  FF            rst  $38
 03F7  FF            rst  $38
 03F8  0EE0          ld   c,$E0
-03FA  CDA013        call $13A0
+03FA  CDA013        call wait_vblank
 03FD  0C            inc  c
 03FE  20FA          jr   nz,$03FA
 0400  C9            ret
@@ -709,7 +704,7 @@
 04AE  FF            rst  $38
 04AF  FF            rst  $38
 04B0  0E01          ld   c,$01
-04B2  CDA013        call $13A0
+04B2  CDA013        call wait_vblank
 04B5  0D            dec  c
 04B6  20FA          jr   nz,$04B2
 04B8  C9            ret
@@ -844,11 +839,11 @@
 057F  FF            rst  $38
 0580  CD4803        call $0348
 0583  CD8030        call $3080
-0586  CDA013        call $13A0
-0589  3A3480        ld   a,($8034)
+0586  CDA013        call wait_vblank
+0589  3A3480        ld   a,(num_players)
 058C  A7            and  a
 058D  201C          jr   nz,$05AB
-058F  3A0383        ld   a,($8303)
+058F  3A0383        ld   a,(credits)
 0592  A7            and  a
 0593  2008          jr   nz,$059D
 0595  CD7003        call $0370
@@ -870,12 +865,12 @@
 05B5  FF            rst  $38
 05B6  FF            rst  $38
 05B7  FF            rst  $38
-05B8  3A0383        ld   a,($8303)
+05B8  3A0383        ld   a,(credits)
 05BB  A7            and  a
 05BC  2004          jr   nz,$05C2
-05BE  CDA013        call $13A0
+05BE  CDA013        call wait_vblank
 05C1  C9            ret
-05C2  CDA013        call $13A0
+05C2  CDA013        call wait_vblank
 05C5  E1            pop  hl
 05C6  E1            pop  hl
 05C7  E1            pop  hl
@@ -1702,8 +1697,8 @@
 0ABE  320F80        ld   ($800F),a
 0AC1  3E08          ld   a,$08
 0AC3  321180        ld   ($8011),a
-0AC6  CDA013        call $13A0
-0AC9  CDA013        call $13A0
+0AC6  CDA013        call wait_vblank
+0AC9  CDA013        call wait_vblank
 0ACC  C9            ret
 0ACD  FF            rst  $38
 0ACE  FF            rst  $38
@@ -2001,7 +1996,7 @@
 0C60  3A1280        ld   a,($8012)
 0C63  A7            and  a
 0C64  C8            ret  z
-0C65  CDA013        call $13A0
+0C65  CDA013        call wait_vblank
 0C68  3A4381        ld   a,($8143)
 0C6B  3C            inc  a
 0C6C  3C            inc  a
@@ -2035,7 +2030,7 @@
 0C9E  FF            rst  $38
 0C9F  FF            rst  $38
 0CA0  1E08          ld   e,$08
-0CA2  CDA013        call $13A0
+0CA2  CDA013        call wait_vblank
 0CA5  1D            dec  e
 0CA6  20FA          jr   nz,$0CA2
 0CA8  C9            ret
@@ -2049,7 +2044,7 @@
 0CB0  1E03          ld   e,$03
 0CB2  CD300D        call $0D30
 0CB5  CD600D        call $0D60
-0CB8  CDA013        call $13A0
+0CB8  CDA013        call wait_vblank
 0CBB  1D            dec  e
 0CBC  20F4          jr   nz,$0CB2
 0CBE  C9            ret
@@ -2097,7 +2092,7 @@
 0D1F  324381        ld   ($8143),a
 0D22  C610          add  a,$10
 0D24  324781        ld   ($8147),a
-0D27  CDA013        call $13A0
+0D27  CDA013        call wait_vblank
 0D2A  15            dec  d
 0D2B  20EC          jr   nz,$0D19
 0D2D  C9            ret
@@ -2536,7 +2531,7 @@
 0F85  00            nop
 0F86  00            nop
 0F87  00            nop
-0F88  CD1003        call $0310
+0F88  CD1003        call draw_tiles_h
 0F8B  02            ld   (bc),a
 0F8C  02            ld   (bc),a
 0F8D  E0            ret  po
@@ -2655,7 +2650,7 @@
 104B  CDE010        call $10E0
 104E  CD3011        call $1130
 1051  CD7011        call $1170
-1054  CDA013        call $13A0
+1054  CDA013        call wait_vblank
 1057  3A00B8        ld   a,(watchdog)
 105A  3A0040        ld   a,($4000)
 105D  18EC          jr   $104B
@@ -2755,24 +2750,26 @@
 10E9  320080        ld   ($8000),a
 10EC  CB27          sla  a
 10EE  CB27          sla  a
-10F0  CD9013        call $1390
+10F0  CD9013        call jump_rel_a
 10F3  CD0017        call $1700
 10F6  C9            ret
 10F7  CD7010        call $1070
 10FA  C9            ret
 10FB  CD1825        call $2518
 10FE  C9            ret
-10FF  FF            rst  $38
+
+10FF  FF            db   $ff
+
+                ;; Ticks the main ticks and speed timers
+                tick_ticks:
 1100  3A1283        ld   a,($8312)
 1103  3C            inc  a
 1104  321283        ld   ($8312),a
 1107  CD8016        call $1680
 110A  C9            ret
-110B  FF            rst  $38
-110C  FF            rst  $38
-110D  FF            rst  $38
-110E  FF            rst  $38
-110F  FF            rst  $38
+
+110B  FF            dc   5,$ff
+
 1110  F5            push af
 1111  E5            push hl
 1112  216680        ld   hl,$8066
@@ -2805,7 +2802,7 @@
 1139  320180        ld   ($8001),a
 113C  CB27          sla  a
 113E  CB27          sla  a
-1140  CD9013        call $1390
+1140  CD9013        call jump_rel_a
 1143  CD023C        call $3C02
 1146  C9            ret
 1147  00            nop
@@ -3035,7 +3032,7 @@
 12B5  FF            rst  $38
 12B6  FF            rst  $38
 12B7  FF            rst  $38
-12B8  CD1003        call $0310
+12B8  CD1003        call draw_tiles_h
 12BB  03            inc  bc
 12BC  00            nop
 12BD  40            ld   b,b
@@ -3045,7 +3042,7 @@
 12C1  41            ld   b,c
 12C2  40            ld   b,b
 12C3  FF            rst  $38
-12C4  CD1003        call $0310
+12C4  CD1003        call draw_tiles_h
 12C7  09            add  hl,bc
 12C8  00            nop
 12C9  FEFD          cp   $FD
@@ -3089,7 +3086,7 @@
 130F  7D            ld   a,l
 1310  FE3E          cp   $3E
 1312  20F2          jr   nz,$1306
-1314  CDA013        call $13A0
+1314  CDA013        call wait_vblank
 1317  1D            dec  e
 1318  20E9          jr   nz,$1303
 131A  E1            pop  hl
@@ -3156,34 +3153,37 @@
 1388  CDB80D        call $0DB8
 138B  CD0804        call $0408
 138E  C9            ret
-138F  FF            rst  $38
+
+138F  FF            db   $ff
+
+                ;; "jump relative A": dispatches to address based on A
+                jump_rel_a:
 1390  D9            exx
-1391  E1            pop  hl
+1391  E1            pop  hl       ; stack RET pointer
 1392  0600          ld   b,$00
 1394  4F            ld   c,a
 1395  09            add  hl,bc
 1396  E5            push hl
 1397  D9            exx
-1398  C9            ret
-1399  FF            rst  $38
-139A  FF            rst  $38
-139B  FF            rst  $38
-139C  FF            rst  $38
-139D  FF            rst  $38
-139E  FF            rst  $38
-139F  FF            rst  $38
+1398  C9            ret           ; sets PC to RET + A
+
+1399  FF            dc 7, $ff
+
+                wait_vblank:
 13A0  0600          ld   b,$00
 13A2  3E01          ld   a,$01
-13A4  3201B0        ld   (int_enable),a
+13A4  3201B0        ld   (int_enable),a ; enable interrupts
 13A7  3A00B8        ld   a,(watchdog)
 13AA  78            ld   a,b
 13AB  FE01          cp   $01
 13AD  20F3          jr   nz,$13A2
 13AF  AF            xor  a
-13B0  3201B0        ld   (int_enable),a
+13B0  3201B0        ld   (int_enable),a ; disable interrupts
 13B3  3A00B8        ld   a,(watchdog)
 13B6  C9            ret
-13B7  FF            rst  $38
+
+13B7  FF            db   $ff
+
 13B8  214881        ld   hl,$8148
 13BB  3600          ld   (hl),$00
 13BD  23            inc  hl
@@ -3525,7 +3525,7 @@
 15D9  3E8C          ld   a,$8C
 15DB  320893        ld   ($9308),a
 15DE  CD6016        call $1660
-15E1  CD1003        call $0310
+15E1  CD1003        call draw_tiles_h
 15E4  08            ex   af,af'
 15E5  1002          djnz $15E9
 15E7  00            nop
@@ -3538,7 +3538,7 @@
 15F1  3E8D          ld   a,$8D
 15F3  320C93        ld   ($930C),a
 15F6  CD6016        call $1660
-15F9  CD1003        call $0310
+15F9  CD1003        call draw_tiles_h
 15FC  0C            inc  c
 15FD  1004          djnz $1603
 15FF  00            nop
@@ -3551,7 +3551,7 @@
 1609  3E8E          ld   a,$8E
 160B  321093        ld   ($9310),a
 160E  CD6016        call $1660
-1611  CD1003        call $0310
+1611  CD1003        call draw_tiles_h
 1614  1010          djnz $1626
 1616  0600          ld   b,$00
 1618  00            nop
@@ -3563,7 +3563,7 @@
 1621  3E8F          ld   a,$8F
 1623  321493        ld   ($9314),a
 1626  CD6016        call $1660
-1629  CD1003        call $0310
+1629  CD1003        call draw_tiles_h
 162C  14            inc  d
 162D  1001          djnz $1630
 162F  00            nop
@@ -3660,14 +3660,14 @@
 16CD  FF            rst  $38
 16CE  FF            rst  $38
 16CF  FF            rst  $38
-16D0  CD1003        call $0310
+16D0  CD1003        call draw_tiles_h
 16D3  0A            ld   a,(bc)
 16D4  00            nop
 16D5  E0            ret  po
 16D6  DCDDDE        call c,$DEDD
 16D9  DF            rst  $18
 16DA  FF            rst  $38
-16DB  CD1003        call $0310
+16DB  CD1003        call draw_tiles_h
 16DE  0B            dec  bc
 16DF  00            nop
 16E0  E1            pop  hl
@@ -3675,7 +3675,7 @@
 16E2  E5            push hl
 16E3  E5            push hl
 16E4  E6FF          and  $FF
-16E6  CD1003        call $0310
+16E6  CD1003        call draw_tiles_h
 16E9  0C            inc  c
 16EA  00            nop
 16EB  E1            pop  hl
@@ -3683,7 +3683,7 @@
 16ED  E5            push hl
 16EE  E5            push hl
 16EF  E6FF          and  $FF
-16F1  CD1003        call $0310
+16F1  CD1003        call draw_tiles_h
 16F4  0D            dec  c
 16F5  00            nop
 16F6  E2E3E3        jp   po,$E3E3
@@ -3692,7 +3692,7 @@
 16FD  FF            rst  $38
 16FE  FF            rst  $38
 16FF  FF            rst  $38
-1700  3A3480        ld   a,($8034)
+1700  3A3480        ld   a,(num_players)
 1703  A7            and  a
 1704  C8            ret  z
 1705  3A0480        ld   a,($8004)
@@ -3823,7 +3823,7 @@
 17CD  FF            rst  $38
 17CE  FF            rst  $38
 17CF  FF            rst  $38
-17D0  CD1003        call $0310
+17D0  CD1003        call draw_tiles_h
 17D3  0A            ld   a,(bc)
 17D4  00            nop
 17D5  B8            cp   b
@@ -3832,27 +3832,27 @@
 17D8  B6            or   (hl)
 17D9  B7            or   a
 17DA  FF            rst  $38
-17DB  CD1003        call $0310
+17DB  CD1003        call draw_tiles_h
 17DE  0B            dec  bc
 17DF  00            nop
 17E0  B9            cp   c
 17E1  FF            rst  $38
-17E2  CD1003        call $0310
+17E2  CD1003        call draw_tiles_h
 17E5  0B            dec  bc
 17E6  04            inc  b
 17E7  BE            cp   (hl)
 17E8  FF            rst  $38
-17E9  CD1003        call $0310
+17E9  CD1003        call draw_tiles_h
 17EC  0C            inc  c
 17ED  00            nop
 17EE  B9            cp   c
 17EF  FF            rst  $38
-17F0  CD1003        call $0310
+17F0  CD1003        call draw_tiles_h
 17F3  0C            inc  c
 17F4  04            inc  b
 17F5  BE            cp   (hl)
 17F6  FF            rst  $38
-17F7  CD1003        call $0310
+17F7  CD1003        call draw_tiles_h
 17FA  0D            dec  c
 17FB  00            nop
 17FC  BA            cp   d
@@ -4216,7 +4216,7 @@
 19DE  7D            ld   a,l
 19DF  FE80          cp   $80
 19E1  20F8          jr   nz,$19DB
-19E3  CDA013        call $13A0
+19E3  CDA013        call wait_vblank
 19E6  C9            ret
 19E7  FF            rst  $38
 19E8  FF            rst  $38
@@ -4531,14 +4531,14 @@
 1BA7  3A0480        ld   a,($8004)
 1BAA  A7            and  a
 1BAB  2010          jr   nz,$1BBD
-1BAD  CD1003        call $0310
+1BAD  CD1003        call draw_tiles_h
 1BB0  100A          djnz $1BBC
 1BB2  201C          jr   nz,$1BD0
 1BB4  112915        ld   de,$1529
 1BB7  221001        ld   ($0110),hl
 1BBA  FF            rst  $38
 1BBB  180E          jr   $1BCB
-1BBD  CD1003        call $0310
+1BBD  CD1003        call draw_tiles_h
 1BC0  100A          djnz $1BCC
 1BC2  201C          jr   nz,$1BE0
 1BC4  112915        ld   de,$1529
@@ -4550,7 +4550,7 @@
 1BD1  328680        ld   ($8086),a
 1BD4  C9            ret
 1BD5  FF            rst  $38
-1BD6  CD1003        call $0310
+1BD6  CD1003        call draw_tiles_h
 1BD9  1B            dec  de
 1BDA  02            ld   (bc),a
 1BDB  E2E3E3        jp   po,$E3E3
@@ -4587,7 +4587,7 @@
 1BFE  FF            rst  $38
 1BFF  FF            rst  $38
 1C00  1E18          ld   e,$18
-1C02  CDA013        call $13A0
+1C02  CDA013        call wait_vblank
 1C05  1D            dec  e
 1C06  20FA          jr   nz,$1C02
 1C08  C9            ret
@@ -5562,8 +5562,8 @@
 2125  FF            rst  $38
 2126  FF            rst  $38
 2127  FF            rst  $38
-2128  CDA013        call $13A0
-212B  3A0383        ld   a,($8303)
+2128  CDA013        call wait_vblank
+212B  3A0383        ld   a,(credits)
 212E  A7            and  a
 212F  C8            ret  z
 2130  CD9014        call $1490
@@ -6274,7 +6274,7 @@
 24DE  FF            rst  $38
 24DF  FF            rst  $38
 24E0  2660          ld   h,$60
-24E2  CDA013        call $13A0
+24E2  CDA013        call wait_vblank
 24E5  24            inc  h
 24E6  20FA          jr   nz,$24E2
 24E8  C9            ret
@@ -6284,7 +6284,7 @@
 24EC  C5            push bc
 24ED  0608          ld   b,$08
 24EF  C5            push bc
-24F0  CDA013        call $13A0
+24F0  CDA013        call wait_vblank
 24F3  C1            pop  bc
 24F4  10F9          djnz $24EF
 24F6  C1            pop  bc
@@ -6356,7 +6356,7 @@
 254E  FF            rst  $38
 254F  FF            rst  $38
 2550  CD7014        call $1470
-2553  CDA013        call $13A0
+2553  CDA013        call wait_vblank
 2556  214090        ld   hl,$9040
 2559  1E79          ld   e,$79
 255B  CD8825        call $2588
@@ -6402,7 +6402,7 @@
 25A5  FF            rst  $38
 25A6  FF            rst  $38
 25A7  FF            rst  $38
-25A8  CDA013        call $13A0
+25A8  CDA013        call wait_vblank
 25AB  73            ld   (hl),e
 25AC  012000        ld   bc,$0020
 25AF  09            add  hl,bc
@@ -6420,7 +6420,7 @@
 25BD  FF            rst  $38
 25BE  FF            rst  $38
 25BF  FF            rst  $38
-25C0  CDA013        call $13A0
+25C0  CDA013        call wait_vblank
 25C3  73            ld   (hl),e
 25C4  23            inc  hl
 25C5  7E            ld   a,(hl)
@@ -6433,7 +6433,7 @@
 25CD  FF            rst  $38
 25CE  FF            rst  $38
 25CF  FF            rst  $38
-25D0  CDA013        call $13A0
+25D0  CDA013        call wait_vblank
 25D3  73            ld   (hl),e
 25D4  012000        ld   bc,$0020
 25D7  ED42          sbc  hl,bc
@@ -6451,7 +6451,7 @@
 25E5  FF            rst  $38
 25E6  FF            rst  $38
 25E7  FF            rst  $38
-25E8  CDA013        call $13A0
+25E8  CDA013        call wait_vblank
 25EB  73            ld   (hl),e
 25EC  2B            dec  hl
 25ED  7E            ld   a,(hl)
@@ -7573,7 +7573,7 @@
 2B5E  3D            dec  a
 2B5F  CB27          sla  a
 2B61  CB27          sla  a
-2B63  CD9013        call $1390
+2B63  CD9013        call jump_rel_a
 2B66  00            nop
 2B67  00            nop
 2B68  00            nop
@@ -7804,7 +7804,7 @@
 2CBF  E607          and  $07
 2CC1  CB27          sla  a
 2CC3  CB27          sla  a
-2CC5  CD9013        call $1390
+2CC5  CD9013        call jump_rel_a
 2CC8  00            nop
 2CC9  00            nop
 2CCA  00            nop
@@ -7955,7 +7955,7 @@
 2D9E  CD4008        call $0840
 2DA1  00            nop
 2DA2  00            nop
-2DA3  CD1003        call $0310
+2DA3  CD1003        call draw_tiles_h
 2DA6  04            inc  b
 2DA7  0A            ld   a,(bc)
 2DA8  201C          jr   nz,$2DC6
@@ -7979,7 +7979,7 @@
 2DC6  23            inc  hl
 2DC7  24            inc  h
 2DC8  FF            rst  $38
-2DC9  CD1003        call $0310
+2DC9  CD1003        call draw_tiles_h
 2DCC  09            add  hl,bc
 2DCD  03            inc  bc
 2DCE  23            inc  hl
@@ -7992,7 +7992,7 @@
 2DD8  1815          jr   $2DEF
 2DDA  1014          djnz $2DF0
 2DDC  1129FF        ld   de,$FF29
-2DDF  CD1003        call $0310
+2DDF  CD1003        call draw_tiles_h
 2DE2  0B            dec  bc
 2DE3  03            inc  bc
 2DE4  201C          jr   nz,$2E02
@@ -8007,7 +8007,7 @@
 2DF4  22101E        ld   ($1E10),hl
 2DF7  111D15        ld   de,$151D
 2DFA  FF            rst  $38
-2DFB  CD1003        call $0310
+2DFB  CD1003        call draw_tiles_h
 2DFE  0D            dec  c
 2DFF  03            inc  bc
 2E00  111012        ld   de,$1210
@@ -8022,7 +8022,7 @@
 2E13  101B          djnz $2E30
 2E15  101C          djnz $2E33
 2E17  FF            rst  $38
-2E18  CD1003        call $0310
+2E18  CD1003        call draw_tiles_h
 2E1B  0F            rrca
 2E1C  03            inc  bc
 2E1D  1D            dec  e
@@ -8038,7 +8038,7 @@
 2E30  1027          djnz $2E59
 2E32  1028          djnz $2E5C
 2E34  FF            rst  $38
-2E35  CD1003        call $0310
+2E35  CD1003        call draw_tiles_h
 2E38  110329        ld   de,$2903
 2E3B  102A          djnz $2E67
 2E3D  1010          djnz $2E4F
@@ -8054,7 +8054,7 @@
 2E50  5A            ld   e,d
 2E51  5B            ld   e,e
 2E52  FF            rst  $38
-2E53  CD1003        call $0310
+2E53  CD1003        call draw_tiles_h
 2E56  17            rla
 2E57  0A            ld   a,(bc)
 2E58  2B            dec  hl
@@ -8344,7 +8344,7 @@
 301E  FF            rst  $38
 301F  FF            rst  $38
 3020  0E05          ld   c,$05
-3022  CDA013        call $13A0
+3022  CDA013        call wait_vblank
 3025  0D            dec  c
 3026  20FA          jr   nz,$3022
 3028  C9            ret
@@ -8493,7 +8493,7 @@
 310A  FDE5          push iy
 310C  DDE5          push ix
 310E  0E14          ld   c,$14
-3110  CDA013        call $13A0
+3110  CDA013        call wait_vblank
 3113  0D            dec  c
 3114  20FA          jr   nz,$3110
 3116  3A7680        ld   a,($8076)
@@ -9799,32 +9799,32 @@
 38DB  325581        ld   ($8155),a
 38DE  C9            ret
 38DF  FF            rst  $38
-38E0  CD1003        call $0310
+38E0  CD1003        call draw_tiles_h
 38E3  0A            ld   a,(bc)
 38E4  00            nop
 38E5  E0            ret  po
 38E6  DCDDDE        call c,$DEDD
 38E9  DF            rst  $18
 38EA  FF            rst  $38
-38EB  CD1003        call $0310
+38EB  CD1003        call draw_tiles_h
 38EE  0B            dec  bc
 38EF  00            nop
 38F0  E1            pop  hl
 38F1  FF            rst  $38
-38F2  CD1003        call $0310
+38F2  CD1003        call draw_tiles_h
 38F5  0B            dec  bc
 38F6  04            inc  b
 38F7  E6FF          and  $FF
-38F9  CD1003        call $0310
+38F9  CD1003        call draw_tiles_h
 38FC  0C            inc  c
 38FD  00            nop
 38FE  E1            pop  hl
 38FF  FF            rst  $38
-3900  CD1003        call $0310
+3900  CD1003        call draw_tiles_h
 3903  0C            inc  c
 3904  04            inc  b
 3905  E6FF          and  $FF
-3907  CD1003        call $0310
+3907  CD1003        call draw_tiles_h
 390A  0D            dec  c
 390B  00            nop
 390C  E2E3E3        jp   po,$E3E3
@@ -10294,7 +10294,7 @@
 3C3E  324B80        ld   ($804B),a
 3C41  A7            and  a
 3C42  200B          jr   nz,$3C4F
-3C44  CD1003        call $0310
+3C44  CD1003        call draw_tiles_h
 3C47  1D            dec  e
 3C48  0E80          ld   c,$80
 3C4A  80            add  a,b
@@ -10304,7 +10304,7 @@
 3C4E  C9            ret
 3C4F  FE01          cp   $01
 3C51  200B          jr   nz,$3C5E
-3C53  CD1003        call $0310
+3C53  CD1003        call draw_tiles_h
 3C56  1D            dec  e
 3C57  0E85          ld   c,$85
 3C59  81            add  a,c
@@ -10314,7 +10314,7 @@
 3C5D  C9            ret
 3C5E  FE02          cp   $02
 3C60  200B          jr   nz,$3C6D
-3C62  CD1003        call $0310
+3C62  CD1003        call draw_tiles_h
 3C65  1D            dec  e
 3C66  0E86          ld   c,$86
 3C68  82            add  a,d
@@ -10322,7 +10322,7 @@
 3C6A  80            add  a,b
 3C6B  FF            rst  $38
 3C6C  C9            ret
-3C6D  CD1003        call $0310
+3C6D  CD1003        call draw_tiles_h
 3C70  1D            dec  e
 3C71  0E85          ld   c,$85
 3C73  83            add  a,e
@@ -10338,7 +10338,7 @@
 3C81  324B80        ld   ($804B),a
 3C84  A7            and  a
 3C85  200C          jr   nz,$3C93
-3C87  CD1003        call $0310
+3C87  CD1003        call draw_tiles_h
 3C8A  19            add  hl,de
 3C8B  0F            rrca
 3C8C  80            add  a,b
@@ -10350,7 +10350,7 @@
 3C92  C9            ret
 3C93  FE01          cp   $01
 3C95  200C          jr   nz,$3CA3
-3C97  CD1003        call $0310
+3C97  CD1003        call draw_tiles_h
 3C9A  19            add  hl,de
 3C9B  0F            rrca
 3C9C  85            add  a,l
@@ -10362,7 +10362,7 @@
 3CA2  C9            ret
 3CA3  FE02          cp   $02
 3CA5  200C          jr   nz,$3CB3
-3CA7  CD1003        call $0310
+3CA7  CD1003        call draw_tiles_h
 3CAA  19            add  hl,de
 3CAB  0F            rrca
 3CAC  86            add  a,(hl)
@@ -10372,7 +10372,7 @@
 3CB0  82            add  a,d
 3CB1  FF            rst  $38
 3CB2  C9            ret
-3CB3  CD1003        call $0310
+3CB3  CD1003        call draw_tiles_h
 3CB6  19            add  hl,de
 3CB7  0F            rrca
 3CB8  85            add  a,l
@@ -10414,7 +10414,7 @@
 3CE0  1E08          ld   e,$08
 3CE2  E5            push hl
 3CE3  D5            push de
-3CE4  CDA013        call $13A0
+3CE4  CDA013        call wait_vblank
 3CE7  D1            pop  de
 3CE8  E1            pop  hl
 3CE9  1D            dec  e
@@ -10555,7 +10555,7 @@
 3DCF  323381        ld   ($8133),a
 3DD2  323581        ld   ($8135),a
 3DD5  323781        ld   ($8137),a
-3DD8  CD1003        call $0310
+3DD8  CD1003        call draw_tiles_h
 3DDB  1C            inc  e
 3DDC  00            nop
 3DDD  3839          jr   c,$3E18
@@ -10581,7 +10581,7 @@
 3DFA  39            add  hl,sp
 3DFB  39            add  hl,sp
 3DFC  38FF          jr   c,$3DFD
-3DFE  CD1003        call $0310
+3DFE  CD1003        call draw_tiles_h
 3E01  12            ld   (de),a
 3E02  00            nop
 3E03  FEFD          cp   $FD
@@ -10623,7 +10623,7 @@
 3E34  CDF03E        call $3EF0
 3E37  CDE808        call $08E8
 3E3A  CDE808        call $08E8
-3E3D  CDA013        call $13A0
+3E3D  CDA013        call wait_vblank
 3E40  D1            pop  de
 3E41  1D            dec  e
 3E42  20EF          jr   nz,$3E33
@@ -10642,7 +10642,7 @@
 3E50  1E01          ld   e,$01
 3E52  D5            push de
 3E53  DDE5          push ix
-3E55  CDA013        call $13A0
+3E55  CDA013        call wait_vblank
 3E58  DDE1          pop  ix
 3E5A  D1            pop  de
 3E5B  1D            dec  e
@@ -10769,7 +10769,7 @@
 3F0D  FF            rst  $38
 3F0E  FF            rst  $38
 3F0F  FF            rst  $38
-3F10  CD1003        call $0310
+3F10  CD1003        call draw_tiles_h
 3F13  1F            rra
 3F14  00            nop
 3F15  C0            ret  nz
@@ -10811,7 +10811,7 @@
 3F56  E5            push hl
 3F57  1E01          ld   e,$01
 3F59  D5            push de
-3F5A  CDA013        call $13A0
+3F5A  CDA013        call wait_vblank
 3F5D  D1            pop  de
 3F5E  1D            dec  e
 3F5F  20F8          jr   nz,$3F59
@@ -10820,7 +10820,7 @@
 3F63  C9            ret
 3F64  FF            rst  $38
 3F65  FF            rst  $38
-3F66  CD1003        call $0310
+3F66  CD1003        call draw_tiles_h
 3F69  0C            inc  c
 3F6A  0A            ld   a,(bc)
 3F6B  1A            ld   a,(de)
@@ -10831,7 +10831,7 @@
 3F70  1624          ld   d,$24
 3F72  FF            rst  $38
 3F73  C9            ret
-3F74  CD1003        call $0310
+3F74  CD1003        call draw_tiles_h
 3F77  14            inc  d
 3F78  07            rlca
 3F79  2022          jr   nz,$3F9D
@@ -10848,13 +10848,13 @@
 3F89  C9            ret
 3F8A  FF            rst  $38
 3F8B  FF            rst  $38
-3F8C  CD1003        call $0310
+3F8C  CD1003        call draw_tiles_h
 3F8F  1004          djnz $3F95
 3F91  8B            adc  a,e
 3F92  010908        ld   bc,$0809
 3F95  03            inc  bc
 3F96  FF            rst  $38
-3F97  CD1003        call $0310
+3F97  CD1003        call draw_tiles_h
 3F9A  12            ld   (de),a
 3F9B  04            inc  b
 3F9C  1A            ld   a,(de)
@@ -10868,7 +10868,7 @@
 3FA5  FF            rst  $38
 3FA6  FF            rst  $38
 3FA7  FF            rst  $38
-3FA8  CD1003        call $0310
+3FA8  CD1003        call draw_tiles_h
 3FAB  1F            rra
 3FAC  00            nop
 3FAD  1010          djnz $3FBF
@@ -11951,7 +11951,7 @@
 46E5  FF            rst  $38
 46E6  FF            rst  $38
 46E7  FF            rst  $38
-46E8  3A3480        ld   a,($8034)
+46E8  3A3480        ld   a,(num_players)
 46EB  A7            and  a
 46EC  C8            ret  z
 46ED  3A0480        ld   a,($8004)
@@ -13075,7 +13075,7 @@
 4D40  CD754E        call $4E75
 4D43  CD084D        call $4D08
 4D46  E5            push hl
-4D47  21A013        ld   hl,$13A0
+4D47  21A013        ld   hl,wait_vblank
 4D4A  CD815C        call $5C81
 4D4D  3A1283        ld   a,($8312)
 4D50  E603          and  $03
@@ -13151,7 +13151,7 @@
 4DBF  FF            rst  $38
 4DC0  2E40          ld   l,$40
 4DC2  E5            push hl
-4DC3  21A013        ld   hl,$13A0
+4DC3  21A013        ld   hl,wait_vblank
 4DC6  CD815C        call $5C81
 4DC9  E1            pop  hl
 4DCA  2D            dec  l
@@ -13164,7 +13164,7 @@
 4DD4  325081        ld   ($8150),a
 4DD7  CD084D        call $4D08
 4DDA  E5            push hl
-4DDB  21A013        ld   hl,$13A0
+4DDB  21A013        ld   hl,wait_vblank
 4DDE  CD815C        call $5C81
 4DE1  E1            pop  hl
 4DE2  23            inc  hl

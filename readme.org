@@ -17,3 +17,5 @@ I'm now trying to do it properly, and there is a buildable version of the source
 There is a script `build.sh` that will chop the front off the `bongo_src.asm` (I need the bytes for reference, but can't compile with them). This generates `src.asm`, which is compiled by `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
 
 The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be deleted and `src.asm` will be the one-true-source of Bongo.
+
+[oof, I wish I did it right the first time... going to take forever to port over all the symbols and comments, and it's not fun because all fun bits of figuring out what it's doing is already done!]
