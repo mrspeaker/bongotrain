@@ -7,6 +7,8 @@
                 ram_loc         = $8000
                 num_players     = $8034 ; attract mode = 0, 1P = 1, 2P = 2
                 _80ff           = $80ff ; written once at init. Unused?
+                screen_xoff_col = $8100 ; OFFSET and COL for each row of tiles
+                                        ; Gets memcpy'd to $9800
 
                 credits         = $8303 ; how many credits in machine
                 stack_loc       = $83f0
@@ -59,7 +61,7 @@
 0048  3A00A0        ld   a,(port_in0)
 004B  E683          and  $83            ; 1000 0011
 004D  C8            ret  z
-004E  CD7014        call $1470
+004E  CD7014        call reset_xoff_sprites_and_clear_screen
 0051  CD1003        call draw_tiles_h
 0054                db   $09, $00       ; CREDIT FAULT
 0056                db   $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF
@@ -96,7 +98,7 @@
 0099  A7            and  a
 009A  2008          jr   nz,$00A4
 009C  CD7003        call $0370
-009F  CD7014        call $1470
+009F  CD7014        call reset_xoff_sprites_and_clear_screen
 00A2  18EF          jr   $0093
                 _play_splash:
 00A4  CDA013        call  wait_vblank
@@ -136,7 +138,7 @@
 00E2  00            nop
 00E3  00            nop
 00E4  00            nop
-00E5  CD8014        call $1480
+00E5  CD8014        call clear_screen
 00E8  21E00F        ld   hl,$0FE0
 00EB  CD4008        call $0840
 00EE  00            nop
@@ -484,7 +486,7 @@
 0348  00            nop
 0349  00            nop
 034A  00            nop
-034B  CD7014        call $1470
+034B  CD7014        call reset_xoff_sprites_and_clear_screen
 034E  210080        ld   hl,$8000
 0351  3600          ld   (hl),$00
 0353  2C            inc  l
@@ -504,7 +506,7 @@
 036D  FF            rst  $38
 036E  FF            rst  $38
 036F  FF            rst  $38
-0370  CD7014        call $1470
+0370  CD7014        call reset_xoff_sprites_and_clear_screen
 0373  212015        ld   hl,$1520
 0376  CDE301        call $01E3
 0379  21200E        ld   hl,$0E20
@@ -601,7 +603,7 @@
 0413  CDE301        call $01E3
 0416  CDE024        call $24E0
 0419  CD3004        call $0430
-041C  CD7014        call $1470
+041C  CD7014        call reset_xoff_sprites_and_clear_screen
 041F  AF            xor  a
 0420  3204B0        ld   ($B004),a
 0423  C3002D        jp   $2D00
@@ -847,7 +849,7 @@
 0592  A7            and  a
 0593  2008          jr   nz,$059D
 0595  CD7003        call $0370
-0598  CD7014        call $1470
+0598  CD7014        call reset_xoff_sprites_and_clear_screen
 059B  18E9          jr   $0586
 059D  FE01          cp   $01
 059F  2005          jr   nz,$05A6
@@ -1508,7 +1510,7 @@
 098D  CB3F          srl  a
 098F  CB3F          srl  a
 0991  E6FE          and  $FE
-0993  210081        ld   hl,$8100
+0993  210081        ld   hl,screen_xoff_col
 0996  85            add  a,l
 0997  6F            ld   l,a
 0998  3A4481        ld   a,($8144)
@@ -1664,7 +1666,7 @@
 0A8A  CB3F          srl  a
 0A8C  CB3F          srl  a
 0A8E  E6FE          and  $FE
-0A90  210081        ld   hl,$8100
+0A90  210081        ld   hl,screen_xoff_col
 0A93  85            add  a,l
 0A94  6F            ld   l,a
 0A95  3A4081        ld   a,($8140)
@@ -2632,7 +2634,7 @@
 101B  3E20          ld   a,$20
 101D  323080        ld   ($8030),a
 1020  CD801B        call $1B80
-1023  CD7014        call $1470
+1023  CD7014        call reset_xoff_sprites_and_clear_screen
 1026  21E00F        ld   hl,$0FE0
 1029  CD4008        call $0840
 102C  00            nop
@@ -3302,20 +3304,23 @@
 146C  20F5          jr   nz,$1463
 146E  C9            ret
 146F  FF            rst  $38
-1470  CD9014        call $1490
-1473  00            nop
-1474  00            nop
+
+                reset_xoff_sprites_and_clear_screen:    ; AND clear screen.
+1470  CD9014        call reset_xoff_and_cols_and_sprites ; then nop slides
+1473  00            nop                                  ; ...
+1474  00            nop                                  ; ...
 1475  00            nop
 1476  00            nop
 1477  00            nop
-1478  23            inc  hl
+1478  23            inc  hl     ; hl++?
 1479  00            nop
 147A  00            nop
 147B  00            nop
 147C  00            nop
 147D  00            nop
 147E  00            nop
-147F  00            nop
+147F  00            nop                                 ; end of weird nopslide
+                clear_screen:
 1480  210090        ld   hl,screen_ram
 1483  3610          ld   (hl),$10
 1485  2C            inc  l
@@ -3326,17 +3331,18 @@
 148C  20F5          jr   nz,$1483
 148E  C9            ret
 148F  FF            rst  $38
-1490  210081        ld   hl,$8100
+
+                ;; Lotsa calls here (via $1470)
+                reset_xoff_and_cols_and_sprites: ; sets 128 locations to 0
+1490  210081        ld   hl,screen_xoff_col
 1493  3600          ld   (hl),$00
 1495  23            inc  hl
 1496  7D            ld   a,l
-1497  FE80          cp   $80
+1497  FE80          cp   $80    ; 128
 1499  20F8          jr   nz,$1493
 149B  C9            ret
-149C  FF            rst  $38
-149D  FF            rst  $38
-149E  FF            rst  $38
-149F  FF            rst  $38
+
+149C  FF            dc   4, $ff
 
                 clear_ram:
 14A0  210080        ld   hl,$8000
@@ -3457,7 +3463,7 @@
 1550  E5            push hl
 1551  C5            push bc
 1552  D5            push de
-1553  210081        ld   hl,$8100
+1553  210081        ld   hl,screen_xoff_col
 1556  110098        ld   de,$9800
 1559  018000        ld   bc,$0080
 155C  EDB0          ldir
@@ -3519,7 +3525,7 @@
 15CD  FF            rst  $38
 15CE  FF            rst  $38
 15CF  FF            rst  $38
-15D0  CD7014        call $1470
+15D0  CD7014        call reset_xoff_sprites_and_clear_screen
 15D3  CD880F        call $0F88
 15D6  CD6016        call $1660
 15D9  3E8C          ld   a,$8C
@@ -3581,7 +3587,7 @@
 1646  CDE301        call $01E3
 1649  C9            ret
 164A  FF            rst  $38
-164B  CD7014        call $1470
+164B  CD7014        call reset_xoff_sprites_and_clear_screen
 164E  21E00F        ld   hl,$0FE0
 1651  CD4008        call $0840
 1654  00            nop
@@ -3952,7 +3958,7 @@
 1895  FF            rst  $38
 1896  FF            rst  $38
 1897  FF            rst  $38
-1898  210081        ld   hl,$8100
+1898  210081        ld   hl,screen_xoff_col
 189B  3600          ld   (hl),$00
 189D  23            inc  hl
 189E  23            inc  hl
@@ -4210,7 +4216,7 @@
 19D5  00            nop
 19D6  00            nop
 19D7  00            nop
-19D8  210081        ld   hl,$8100
+19D8  210081        ld   hl,screen_xoff_col
 19DB  3600          ld   (hl),$00
 19DD  23            inc  hl
 19DE  7D            ld   a,l
@@ -4519,7 +4525,7 @@
 1B8D  3C            inc  a
 1B8E  322280        ld   ($8022),a
 1B91  CD0017        call $1700
-1B94  CD7014        call $1470
+1B94  CD7014        call reset_xoff_sprites_and_clear_screen
 1B97  00            nop
 1B98  00            nop
 1B99  CDA003        call $03A0
@@ -5566,7 +5572,7 @@
 212B  3A0383        ld   a,(credits)
 212E  A7            and  a
 212F  C8            ret  z
-2130  CD9014        call $1490
+2130  CD9014        call reset_xoff_and_cols_and_sprites
 2133  C3A400        jp   $00A4
 2136  FF            rst  $38
 2137  FF            rst  $38
@@ -6355,7 +6361,7 @@
 254D  FF            rst  $38
 254E  FF            rst  $38
 254F  FF            rst  $38
-2550  CD7014        call $1470
+2550  CD7014        call reset_xoff_sprites_and_clear_screen
 2553  CDA013        call wait_vblank
 2556  214090        ld   hl,$9040
 2559  1E79          ld   e,$79
@@ -6374,7 +6380,7 @@
 257E  CDE825        call $25E8
 2581  15            dec  d
 2582  20F1          jr   nz,$2575
-2584  CD8014        call $1480
+2584  CD8014        call clear_screen
 2587  C9            ret
 2588  73            ld   (hl),e
 2589  2C            inc  l
@@ -7949,7 +7955,7 @@
 2D8F  3E09          ld   a,$09
 2D91  324280        ld   ($8042),a
 2D94  00            nop
-2D95  CD7014        call $1470
+2D95  CD7014        call reset_xoff_sprites_and_clear_screen
 2D98  CDB837        call $37B8
 2D9B  21E00F        ld   hl,$0FE0
 2D9E  CD4008        call $0840
@@ -8304,7 +8310,7 @@
 2FD4  FF            rst  $38
 2FD5  CD3830        call $3038
 2FD8  CDE024        call $24E0
-2FDB  CD7014        call $1470
+2FDB  CD7014        call reset_xoff_sprites_and_clear_screen
 2FDE  C9            ret
 2FDF  FF            rst  $38
 2FE0  210783        ld   hl,$8307
@@ -10489,7 +10495,7 @@
 3D48  3E06          ld   a,$06
 3D4A  324280        ld   ($8042),a
 3D4D  326580        ld   ($8065),a
-3D50  CD7014        call $1470
+3D50  CD7014        call reset_xoff_sprites_and_clear_screen
 3D53  21E00F        ld   hl,$0FE0
 3D56  CD4008        call $0840
 3D59  00            nop
@@ -12226,7 +12232,7 @@
 48B8  CDA85A        call $5AA8
 48BB  CDA85A        call $5AA8
 48BE  CDA85A        call $5AA8
-48C1  217014        ld   hl,$1470
+48C1  217014        ld   hl,reset_xoff_sprites_and_clear_screen
 48C4  CD815C        call $5C81
 48C7  CDA85A        call $5AA8
 48CA  C9            ret
@@ -14462,7 +14468,7 @@
 559C  18F0          jr   $558E
 559E  FF            rst  $38
 559F  FF            rst  $38
-55A0  217014        ld   hl,$1470
+55A0  217014        ld   hl,reset_xoff_sprites_and_clear_screen
 55A3  CD815C        call $5C81
 55A6  CDD056        call $56D0
 55A9  00            nop
@@ -15467,7 +15473,7 @@
 5AED  FF            rst  $38
 5AEE  FF            rst  $38
 5AEF  FF            rst  $38
-5AF0  217014        ld   hl,$1470
+5AF0  217014        ld   hl,reset_xoff_sprites_and_clear_screen
 5AF3  CD815C        call $5C81
 5AF6  21880F        ld   hl,$0F88
 5AF9  CD815C        call $5C81

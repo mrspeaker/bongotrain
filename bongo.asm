@@ -256,17 +256,10 @@ SOFT_RESET
 001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
 
     ;; data?
-001E: DD 19       add  ix,de
-0020: DD 19       add  ix,de
-0022: 2B          dec  hl
-0023: 10 AF       djnz $FFD4
-0025: ED 67       rrd  (hl)
-0027: DD 77 ED    ld   (ix-$13),a
-002A: 6F          ld   l,a
-002B: DD          db   $dd
-002C: DD 19       add  ix,de
-002E: ED 6F       rld  (hl)
-0030: DD          db   $dd
+001E: DD 19 DD 19 2B 10 AF
+0025: ED 67 DD 77 ED 6F DD
+002C: DD 19 ED 6F DD
+
 0031: FF ...
 
     ;;  Reset vector
