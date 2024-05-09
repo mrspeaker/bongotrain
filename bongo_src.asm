@@ -27,18 +27,18 @@
 
                 ;;; =========== START OF BG1.BIN =============
 
-                SOFT_RESET:
+                hard_reset:
 0000  A2            and  d
 0001  3201B0        ld   (int_enable),a
-0004  32FF80        ld   (_80ff),a
+0004  32FF80        ld   (_80ff),a ; unused
 0007  3EFF          ld   a,$FF
 0009  3200B8        ld   (watchdog),a
 000C  C3A014        jp   clear_ram ; jumps back here after clear
 000F  31F083        ld   sp,stack_loc
-0012  CD003F        call $3F00
+0012  CD003F        call delay_83_call_weird_a
 0015  CD4800        call init_screen
-0018  CD8822        call $2288
-001B  C38D00        jp   $008D
+0018  CD8822        call write_out_0_1
+001B  C38D00        jp   setup_then_start_game
 
                     ;; data? Looks weird. Never read/exec
 001E  DD19          db $dd,$19,$dd,$19,$2b,$10,$af,$ed
@@ -46,13 +46,14 @@
 002e  ed            db $ed,$6f,$dd,$ff,$ff,$ff,$ff,$ff
 0036  ed            db $ff,$ff
 
+                watchdog_loop:
 0038  3A00B8        ld   a,(watchdog)
-003B  18FB          jr   $0038
+003B  18FB          jr   watchdog_loop
 
 003D  FF            dc 11,$ff
 
                 init_screen:
-0048  3A00A0        ld   a,($A000)
+0048  3A00A0        ld   a,(port_in0)
 004B  E683          and  $83
 004D  C8            ret  z
 004E  CD7014        call $1470
@@ -72,7 +73,7 @@
 0066  AF            xor  a
 0067  3201B0        ld   (int_enable),a
 006A  3A00B8        ld   a,(watchdog)
-006D  CDC000        call $00C0
+006D  CDC000        call nmi_handler
 0070  3A3480        ld   a,($8034)
 0073  A7            and  a
 0074  2003          jr   nz,$0079
@@ -81,11 +82,13 @@
 007B  CD0011        call $1100
 007E  CD2024        call $2420
 0081  00            nop
-0082  3A00A0        ld   a,($A000)
+0082  3A00A0        ld   a,(port_in0)
 0085  CB4F          bit  1,a
 0087  C203C0        jp   nz,$C003
 008A  ED45          retn
 008C  FF            rst  $38
+
+                setup_then_start_game:
 008D  CD4803        call $0348
 0090  CD8030        call $3080
 0093  CDA013        call $13A0
@@ -95,6 +98,7 @@
 009C  CD7003        call $0370
 009F  CD7014        call $1470
 00A2  18EF          jr   $0093
+                _play_splash:
 00A4  CDA013        call $13A0
 00A7  3A0383        ld   a,($8303)
 00AA  FE01          cp   $01
@@ -104,9 +108,11 @@
 00B3  CD4001        call $0140
 00B6  3A3480        ld   a,($8034)
 00B9  A7            and  a
-00BA  C2E701        jp   nz,$01E7
-00BD  18E5          jr   $00A4
+00BA  C2E701        jp   nz,start_game
+00BD  18E5          jr   _play_splash
 00BF  FF            rst  $38
+
+                nmi_handler:
 00C0  D9            exx
 00C1  CD8802        call $0288
 00C4  CD5015        call $1550
@@ -114,7 +120,9 @@
 00CA  CDD001        call $01D0
 00CD  D9            exx
 00CE  C9            ret
-00CF  FF            rst  $38
+
+00CF  FF            db   $ff
+
 00D0  3E01          ld   a,$01
 00D2  329080        ld   ($8090),a
 00D5  AF            xor  a
@@ -271,7 +279,7 @@
 01CD  FF            rst  $38
 01CE  FF            rst  $38
 01CF  FF            rst  $38
-01D0  3A00A0        ld   a,($A000)
+01D0  3A00A0        ld   a,(port_in0)
 01D3  320B80        ld   ($800B),a
 01D6  3AF183        ld   a,($83F1)
 01D9  320C80        ld   ($800C),a
@@ -280,6 +288,8 @@
 01E2  C9            ret
 01E3  C38001        jp   $0180
 01E6  C9            ret
+
+                start_game:
 01E7  3E1F          ld   a,$1F
 01E9  325B80        ld   ($805B),a
 01EC  325C80        ld   ($805C),a
@@ -362,13 +372,13 @@
 028E  3D            dec  a
 028F  320683        ld   ($8306),a
 0292  C0            ret  nz
-0293  3A00A0        ld   a,($A000)
+0293  3A00A0        ld   a,(port_in0)
 0296  E603          and  $03
 0298  C8            ret  z
 0299  3E05          ld   a,$05
 029B  320683        ld   ($8306),a
 029E  C9            ret
-029F  3A00A0        ld   a,($A000)
+029F  3A00A0        ld   a,(port_in0)
 02A2  E603          and  $03
 02A4  C8            ret  z
 02A5  47            ld   b,a
@@ -846,7 +856,7 @@
 05A4  18E0          jr   $0586
 05A6  CD4001        call $0140
 05A9  18DB          jr   $0586
-05AB  C2E701        jp   nz,$01E7
+05AB  C2E701        jp   nz,start_game
 05AE  18D6          jr   $0586
 05B0  FF            rst  $38
 05B1  FF            rst  $38
@@ -5841,12 +5851,15 @@
 2281  00            nop
 2282  09            add  hl,bc
 2283  FC001E        call m,$1E00
-2286  FCFF3E        call m,$3EFF
-2289  07            rlca
+2286  FCFF          db $fc, $ff
+
+                write_out_0_1:
+2288  3E07          ld   a,07
 228A  D300          out  ($00),a
-228C  3E38          ld   a,$38
+228C  3E38          ld   a,$38  ; interuppt?
 228E  D301          out  ($01),a
 2290  C9            ret
+
 2291  FF            rst  $38
 2292  FF            rst  $38
 2293  FF            rst  $38
@@ -6149,9 +6162,9 @@
 241D  FF            rst  $38
 241E  FF            rst  $38
 241F  FF            rst  $38
-2420  3A00A8        ld   a,($A800)
+2420  3A00A8        ld   a,(port_in1)
 2423  32F183        ld   ($83F1),a
-2426  3A00B0        ld   a,($B000)
+2426  3A00B0        ld   a,(port_in2)
 2429  32F283        ld   ($83F2),a
 242C  CD4036        call $3640
 242F  C9            ret
@@ -7748,7 +7761,7 @@
 2C79  2804          jr   z,$2C7F
 2C7B  CB78          bit  7,b
 2C7D  2009          jr   nz,$2C88
-2C7F  3A00A0        ld   a,($A000)
+2C7F  3A00A0        ld   a,(port_in0)
 2C82  CB6F          bit  5,a
 2C84  C4D82E        call nz,$2ED8
 2C87  C9            ret
@@ -8069,7 +8082,7 @@
 2E8B  2806          jr   z,$2E93
 2E8D  DDCB007E      bit  7,(ix+$00)
 2E91  2004          jr   nz,$2E97
-2E93  DD2100A0      ld   ix,$A000
+2E93  DD2100A0      ld   ix,port_in0
 2E97  DDCB005E      bit  3,(ix+$00)
 2E9B  2803          jr   z,$2EA0
 2E9D  CDA82F        call $2FA8
@@ -10739,10 +10752,13 @@
 3EFD  FF            rst  $38
 3EFE  FF            rst  $38
 3EFF  FF            rst  $38
+
+                delay_83_call_weird_a:
 3F00  CD6014        call $1460
 3F03  21900E        ld   hl,$0E90
 3F06  CDE301        call $01E3
 3F09  C9            ret
+
 3F0A  FF            rst  $38
 3F0B  FF            rst  $38
 3F0C  FF            rst  $38
