@@ -46,11 +46,11 @@
 002e  ed            db $ed,$6f,$dd,$ff,$ff,$ff,$ff,$ff
 0036  ed            db $ff,$ff
 
-                watchdog_loop:
+                reset_vector:
 0038  3A00B8        ld   a,(watchdog)
-003B  18FB          jr   watchdog_loop
+003B  18FB          jr   reset_vector
 
-003D  FF            dc 11,$ff
+003D  FF            dc   11, $ff
 
                 init_screen:
 0048  3A00A0        ld   a,(port_in0)
@@ -70,6 +70,9 @@
 0062  FF            rst  $38
 0063  18E3          jr   $0048
 0065  FF            rst  $38
+
+                ;; Non-Maskable Interrupt handler. Fires every frame
+                nmi_loop:
 0066  AF            xor  a
 0067  3201B0        ld   (int_enable),a
 006A  3A00B8        ld   a,(watchdog)
@@ -85,8 +88,9 @@
 0082  3A00A0        ld   a,(port_in0)
 0085  CB4F          bit  1,a
 0087  C203C0        jp   nz,$C003
-008A  ED45          retn
-008C  FF            rst  $38
+008A  ED45          retn        ; NMI return
+
+008C  FF            db   $ff
 
                 setup_then_start_game:
 008D  CD4803        call $0348

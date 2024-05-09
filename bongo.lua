@@ -28,7 +28,7 @@
    MAME. To run this script, you need to supply it as an extra argument when
    running MAME from the command line:
 
-   `mame bongo --autoboot_script ./bongo.lua`
+   `mame bongo -autoboot_script ./bongo.lua`
 
    Where the path `./bongo.lua` points to the file you are currently reading.
 
