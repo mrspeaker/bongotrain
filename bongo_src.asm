@@ -237,8 +237,8 @@
                 port_in1        = $A800 ;
                 port_in2        = $B000 ;
                 int_enable      = $b001 ; interrupt enable
-                _               = $b006 ; set to 1 for P1 or
-                _               = $b007 ; 0 for P2... why? Controls?
+                _b006           = $b006 ; set to 1 for P1 or
+                _b007           = $b007 ; 0 for P2... why? Controls?
                 watchdog        = $b800 ; main timer?
 
                 ;;; =========== START OF BG1.BIN =============
@@ -3518,7 +3518,7 @@
 146E  C9            ret
 146F  FF            rst  $38
 
-                reset_xoff_sprites_and_clear_screen:    ; AND clear screen.
+                reset_xoff_sprites_and_clear_screen:
 1470  CD9014        call reset_xoff_and_cols_and_sprites ; then nop slides
 1473  00            nop                                  ; ...
 1474  00            nop                                  ; ...

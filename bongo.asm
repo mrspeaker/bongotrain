@@ -242,7 +242,7 @@
 
 ;;; ============ START OF BG1.BIN =============
 
-SOFT_RESET
+HARD_RESET
 0000: A2          and  d
 0001: 32 01 B0    ld   ($INT_ENABLE),a
 0004: 32 FF 80    ld   ($80FF),a
@@ -250,10 +250,10 @@ SOFT_RESET
 0009: 32 00 B8    ld   ($WATCHDOG),a
 000C: C3 A0 14    jp   $CLEAR_RAM ; jumps back here after clear
 000F: 31 F0 83    ld   sp,$STACK_LOCATION
-0012: CD 00 3F    call $DELAY_83_LOAD_A_VAL_WEIRD
+0012: CD 00 3F    call $DELAY_83_CALL_WEIRD_A
 0015: CD 48 00    call $INIT_SCREEN
-0018: CD 88 22    call $WRITE_TO_0_AND_1
-001B: C3 8D 00    jp   $SETUP_BEFORE_PLAYING
+0018: CD 88 22    call $WRITE_OUT_0_AND_1
+001B: C3 8D 00    jp   $SETUP_THEN_START_GAME
 
     ;; data?
 001E: DD 19 DD 19 2B 10 AF
@@ -273,7 +273,7 @@ INIT_SCREEN
 0048: 3A 00 A0    ld   a,($PORT_IN0) ;
 004B: E6 83       and  $83           ; 1000 0011
 004D: C8          ret  z
-004E: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+004E: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 0051: CD 10 03    call $DRAW_TILES_H
 0054: 09 00
 0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; CREDIT FAULT
@@ -301,7 +301,7 @@ NMI_LOOP
 
 008C: FF
 
-SETUP_BEFORE_PLAYING
+SETUP_THEN_START_GAME
 008D: CD 48 03    call $SETUP_MORE
 0090: CD 80 30    call $SET_HISCORE_TEXT
 _AFTER_GAME_OVER
@@ -310,7 +310,7 @@ _AFTER_GAME_OVER
 0099: A7          and  a
 009A: 20 08       jr   nz,$00A4
 009C: CD 70 03    call $RESET_ENTS_ALL
-009F: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+009F: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 00A2: 18 EF       jr   $0093
 _PLAY_SPLASH
 00A4: CD A0 13    call $WAIT_VBLANK
@@ -651,7 +651,7 @@ SETUP_MORE
 0348: 00          nop
 0349: 00          nop
 034A: 00          nop
-034B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+034B: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 034E: 21 00 80    ld   hl,$8000 ; reset $8000-$88FF? to 0
 _LP
 0351: 36 00       ld   (hl),$00
@@ -670,7 +670,7 @@ _LP
 036A: FF ...
 
 RESET_ENTS_ALL
-0370: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+0370: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
 0376: CD E3 01    call $JMP_HL_PLUS_4K ; $4520
 0379: 21 20 0E    ld   hl,$0E20 ; ATTRACT_SPLASH_BONGO
@@ -760,7 +760,7 @@ GAME_OVER
 0413: CD E3 01    call $JMP_HL_PLUS_4K
 0416: CD E0 24    call $DELAY_60_VBLANKS
 0419: CD 30 04    call $CHECK_IF_HISCORE
-041C: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+041C: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 041F: AF          xor  a
 0420: 32 04 B0    ld   ($B004),a
 0423: C3 00 2D    jp   $SET_HISCORE_AND_RESET_GAME
@@ -945,7 +945,7 @@ HISCORE_FOR_P2
 0569: FF ...
 
     ;; (free bytes?)
-_SETUP_2 ;looks a lot like SETUP_BEFORE_PLAYING - no one calls it?
+_SETUP_2 ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
 0580: CD 48 03    call $SETUP_MORE
 _SETUP_MORE_RET                 ; returns here after setup_more
 0583: CD 80 30    call $SET_HISCORE_TEXT
@@ -958,7 +958,7 @@ _PLAY_SPLASH_2
 0592: A7          and  a
 0593: 20 08       jr   nz,$059D
 0595: CD 70 03    call $RESET_ENTS_ALL
-0598: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+0598: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 059B: 18 E9       jr   $_PLAY_SPLASH_2
 059D: FE 01       cp   $01
 059F: 20 05       jr   nz,$05A6
@@ -2296,7 +2296,7 @@ BIG_RESET
 101B: 3E 20       ld   a,$20
 101D: 32 30 80    ld   ($PLAYER_MAX_X),a
 1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
-1023: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+1023: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 1026: 21 E0 0F    ld   hl,$HEADER_TEXT_DATA ; loaded by DRAW_SCREEN
 1029: CD 40 08    call $DRAW_SCREEN
 102C: 00          nop
@@ -2890,22 +2890,21 @@ DELAY_83                        ; maybe a delay?
 146F: FF
 
     ;; lotsa calls here
-CALL_RESET_XOFF_AND_COLS_AND_SPRITES
-1470: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES
-
-1473: 00          nop
-1474: 00          nop
+RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
+1470: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES ; then nop slides
+1473: 00          nop                                   ;  ...
+1474: 00          nop                                   ; ...
 1475: 00          nop
 1476: 00          nop
 1477: 00          nop
-1478: 23          inc  hl
+1478: 23          inc  hl       ; hl++ ?
 1479: 00          nop
 147A: 00          nop
 147B: 00          nop
 147C: 00          nop
 147D: 00          nop
 147E: 00          nop
-147F: 00          nop
+147F: 00          nop           ; end of weird nopslide
 
 CLEAR_SCREEN
 1480: 21 00 90    ld   hl,$SCREEN_RAM
@@ -2920,7 +2919,7 @@ CLEAR_SCREEN
 
 148F: FF
 
-    ;; Lotsa calls here (via $1470)
+    ;; Lotsa calls here (via $1470);
 RESET_XOFF_AND_COLS_AND_SPRITES     ; sets 128 locations to 0
 1490: 21 00 81    ld   hl,$SCREEN_XOFF_COL
 1493: 36 00       ld   (hl),$00
@@ -3065,7 +3064,7 @@ ANIMATE_SPLASH_PICKUPS
 15CD: FF ...
 
 ATTRACT_BONUS_SCREEN
-15D0: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+15D0: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 15D3: CD 88 0F    call $DRAW_BORDER_1
 15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
 15D9: 3E 8C       ld   a,$8C
@@ -3105,7 +3104,7 @@ ATTRACT_BONUS_SCREEN
 164A: FF
 
 CLEAR_AND_DRAW_SCREEN
-164B: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+164B: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 164E: 21 E0 0F    ld   hl,$0FE0
 1651: CD 40 08    call $DRAW_SCREEN
 1654: 00 00                     ; data
@@ -3612,7 +3611,7 @@ _DID_INIT
 1B8E: 32 22 80    ld   ($DID_INIT),a ; (except here)
 _BOTH
 1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+1B94: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 
 1B97: 00          nop
 1B98: 00          nop
@@ -3899,7 +3898,7 @@ LEVEL_BG__nTn
 2276: 03 41 00 09 FD 00 1E FD FF
 227F: 03 40 00 09 FC 00 1E FC FF
 
-WRITE_TO_0_AND_1
+WRITE_OUT_0_AND_1
 2288: 3E 07       ld   a,$07
 228A: D3 00       out  ($00),a
 228C: 3E 38       ld   a,$38
@@ -4218,7 +4217,7 @@ _I                              ; 10 loops
     ;; (it's right in the dino code - maybe was supposed to happen
     ;; if you got caught by a dino, or if you caught the dino)
 UNUSED_SPIRAL_CAGE_FILL_TRANSITION
-2550: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+2550: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 2553: CD A0 13    call $WAIT_VBLANK
 2556: 21 40 90    ld   hl,$START_OF_TILES
 2559: 1E 79       ld   e,$79
@@ -4961,7 +4960,7 @@ ENTER_HISCORE_SCREEN
 2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
 2D91: 32 42 80    ld   ($CH1_SFX),a
 2D94: 00          nop
-2D95: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+2D95: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 2D98: CD B8 37    call $37B8
 2D9B: 21 E0 0F    ld   hl,$0FE0
 2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
@@ -5184,7 +5183,7 @@ HISCORE_FWD_CURSOR
 
 2FD5: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
 2FD8: CD E0 24    call $DELAY_60_VBLANKS
-2FDB: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+2FDB: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 2FDE: C9          ret
 
 2FDF: FF          rst  $38
@@ -6759,7 +6758,7 @@ DO_CUTSCENE
 3D48: 3E 06       ld   a,$06
 3D4A: 32 42 80    ld   ($CH1_SFX),a
 3D4D: 32 65 80    ld   ($SFX_PREV),a
-3D50: CD 70 14    call $CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+3D50: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 3D53: 21 E0 0F    ld   hl,$0FE0
 3D56: CD 40 08    call $DRAW_SCREEN
 3D59: 00 00                     ; params to DRAW_SCREEN
@@ -6935,7 +6934,7 @@ ANIMATE_PLAYER_RIGHT
 
 3EF8: FF ...
 
-DELAY_83_LOAD_A_VAL_WEIRD
+DELAY_83_CALL_WEIRD_A
 3F00: CD 60 14    call $DELAY_83
 3F03: 21 90 0E    ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
                                 ; seems to do nothing
@@ -8241,7 +8240,7 @@ ATTRACT_YOUR_BEING_CHASED_FLASH
 48B8: CD A8 5A    call $FLASH_BORDER
 48BB: CD A8 5A    call $FLASH_BORDER
 48BE: CD A8 5A    call $FLASH_BORDER
-48C1: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+48C1: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 48C4: CD 81 5C    call $JMP_HL
 48C7: CD A8 5A    call $FLASH_BORDER
 48CA: C9          ret
@@ -10116,7 +10115,7 @@ _DONE
 559E: FF ...
 
 CHASED_BY_A_DINO_SCREEN
-55A0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+55A0: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 55A3: CD 81 5C    call $JMP_HL
 55A6: CD D0 56    call $DRAW_BUGGY_BORDER
 55A9: 00          nop
@@ -10703,7 +10702,7 @@ SET_SCREEN_COLOR_TO_4
 5AEC: FF ...
 
 DRAW_EXTRA_BONUS_SCREEN
-5AF0: 21 70 14    ld   hl,$CALL_RESET_XOFF_AND_COLS_AND_SPRITES
+5AF0: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
 5AF3: CD 81 5C    call $JMP_HL
 5AF6: 21 88 0F    ld   hl,$DRAW_BORDER_1
 5AF9: CD 81 5C    call $JMP_HL
