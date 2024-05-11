@@ -21,7 +21,7 @@
     TICK_MOD_3        $8000  ; timer for every 3 frames
     TICK_MOD_6        $8001  ; timer for every 6 frames
     PL_Y_LEGS_COPY    $8002  ; copy of player y legs?
-    _                 $8003  ; ? used with 8002 s bunch
+    _8003             $8003  ; ? used with 8002 s bunch
     PLAYER_NUM        $8004  ; current player
     JUMP_TRIGGERED    $8005  ; jump triggered by setting jump_tbl_idx
     SECOND_TIMER      $8006
@@ -53,7 +53,7 @@
 
     SCREEN_NUM        $8029  ; Current screen player is on
     SCREEN_NUM_P2     $802A  ; Player 2 screen
-    _                 $802C  ; ??
+    _802C             $802C  ; ??
     DINO_COUNTER      $802D  ; Ticks up when DINO_TIMER is done
     DINO_DIR          $802E  ; 01 = right, ff = left
 
@@ -74,8 +74,8 @@
     ENEMY_3_TIMER     $803C  ;
     ENEMY_4_ACTIVE    $803D  ; ...1 - active as well? two kinds of active?
     ROCK_LEFT_TIMER   $803E  ; Rock left timer
-    _                 $803F  ; ...2
-    _                 $8040  ; ?
+    _803F             $803F  ; ...2
+    _8040             $8040  ; ?
     ENEMY_6_ACTIVE    $8041  ;
 
     CH1_SFX           $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
@@ -98,9 +98,9 @@
     SPLASH_ANIM_FR    $8064  ; cycles 0-2 maybe... splash anim counter
     SFX_PREV          $8065  ; prevent retrigger effect?
 
-    _                 $8066  ; ?? OE when alive, 02 when dead?
-    _                 $8067  ; ?? used with 66
-    _                 $8068  ; ?? used with 67
+    _8066             $8066  ; ?? OE when alive, 02 when dead?
+    _8067             $8067  ; ?? used with 66
+    _8068             $8068  ; ?? used with 67
 
     EXTRA_GOT_P1      $8070  ; P1 Earned extra life
     EXTRA_GOT_P1      $8071  ; P2 Earned extra life
@@ -110,10 +110,10 @@
 
 
     ;; Bunch of unused/debugs/tmps?
-    _                 $8086  ; set in hiscore, never read
-    _                 $8090  ; set to 1, never read?
-    _                 $8093  ; set to $20 in coinage... hiscore, cursor?
-    _                 $8094  ; unused? used with 8093
+    _8086             $8086  ; set in hiscore, never read
+    _8090             $8090  ; set to 1, never read?
+    _8093             $8093  ; set to $20 in coinage... hiscore, cursor?
+    _8094             $8094  ; unused? used with 8093
 
     SCREEN_XOFF_COL   $8100  ; OFFSET and COL for each row of tiles
                              ; Gets memcpy'd to $9800
@@ -166,7 +166,7 @@
     HISCORE+2         $8302
 
     CREDITS           $8303  ; how many credits in machine
-    _                 $8305  ; Coins? dunno
+    _8305             $8305  ; Coins? dunno
     HISCORE_NAME      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
     TICK_NUM          $8312  ; adds 1 every tick
@@ -236,8 +236,8 @@
     PORT_IN1          $A800 ;
     PORT_IN2          $B000 ;
     INT_ENABLE        $b001 ; interrupt enable
-    _                 $b006 ; set to 1 for P1 or
-    _                 $b007 ; 0 for P2... why? Controls?
+    _B006             $b006 ; set to 1 for P1 or
+    _B007             $b007 ; 0 for P2... why? Controls?
     WATCHDOG          $b800 ; main timer?
 
 ;;; ============ START OF BG1.BIN =============
@@ -2359,7 +2359,7 @@ _P1_EXTRA_LIFE
 10A1: C9          ret
 10A2: FF ...
     ;; P2 extra life
-_P1_EXTRA_LIFE
+_P2_EXTRA_LIFE
 10A8: 3A 71 80    ld   a,($EXTRA_GOT_P2)
 10AB: A7          and  a
 10AC: C0          ret  nz
@@ -4401,31 +4401,31 @@ SET_PLAYER_Y_LEVEL_START
     ;; four bytes per node: [ x, y, fr, _ ]
 DINO_PATH_6
 2800: 18 E0 00 00 20 E0 01 00
-28xx: 28 E0 02 00 30 D0 04 00
-28xx: 38 D0 05 00 40 B8 05 00
-28xx: 48 B8 06 00 50 B8 04 00
-28xx: 58 B8 05 00 60 B8 06 00
-28xx: 68 B8 04 00 68 A0 05 00
-28xx: 70 A0 06 00 78 A0 04 00
-28xx: 80 A0 05 00 88 A0 06 00
-28xx: 90 A0 04 00 98 A0 05 00
-28xx: A0 88 06 00 B0 88 04 00
-28xx: B0 88 08 00 A8 88 09 00
-28xx: A0 88 0A 00 90 70 08 00
-28xx: 88 70 09 00 80 70 0A 00
-28xx: 78 70 08 00 70 70 09 00
-28xx: 68 60 0A 00 60 58 08 00
-28xx: 58 58 09 00 50 58 0A 00
-28xx: 48 58 04 00 50 58 05 00
-28xx: 58 58 06 00 60 58 04 00
-28xx: 68 58 05 00 70 48 06 00
-28xx: 78 40 04 00 80 40 05 00
-28xx: 88 40 06 00 90 40 04 00
-28xx: 98 40 05 00 A0 38 06 00
-28xx: A8 30 04 00 B0 28 05 00
-28xx: B8 28 06 00 C0 28 04 00
-28xx: C8 28 05 00 D0 28 06 00
-28xx: D8 28 04 00 E0 28 05 00
+2808: 28 E0 02 00 30 D0 04 00
+2810: 38 D0 05 00 40 B8 05 00
+2818: 48 B8 06 00 50 B8 04 00
+2820: 58 B8 05 00 60 B8 06 00
+2828: 68 B8 04 00 68 A0 05 00
+2830: 70 A0 06 00 78 A0 04 00
+2838: 80 A0 05 00 88 A0 06 00
+2840: 90 A0 04 00 98 A0 05 00
+2848: A0 88 06 00 B0 88 04 00
+2850: B0 88 08 00 A8 88 09 00
+2858: A0 88 0A 00 90 70 08 00
+2860: 88 70 09 00 80 70 0A 00
+2868: 78 70 08 00 70 70 09 00
+2870: 68 60 0A 00 60 58 08 00
+2878: 58 58 09 00 50 58 0A 00
+2880: 48 58 04 00 50 58 05 00
+2888: 58 58 06 00 60 58 04 00
+2890: 68 58 05 00 70 48 06 00
+2898: 78 40 04 00 80 40 05 00
+28A0: 88 40 06 00 90 40 04 00
+28A8: 98 40 05 00 A0 38 06 00
+28B0: A8 30 04 00 B0 28 05 00
+28B8: B8 28 06 00 C0 28 04 00
+28C0: C8 28 05 00 D0 28 06 00
+28C8: D8 28 04 00 E0 28 05 00
 
 28D0: FF ...
 
@@ -5419,7 +5419,7 @@ ROCK_FALL_LOOKUP
 31D2: 1D AD 1D AF 1D B2 1D B4
 31DA: 1D B6 1D B9 1D BB 1D BD
 31E2: 1D C0 1D C2 1D C4 1D C6
-31Ea: 1D C8 1D CA 1D CC 1D CE
+31EA: 1D C8 1D CA 1D CC 1D CE
 31F2: 1E CE 1F CE 20 CE 21 CE
 31FA: 21 CE 21 CE
 
