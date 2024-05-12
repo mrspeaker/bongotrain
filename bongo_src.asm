@@ -248,7 +248,7 @@
 0004  32FF80        ld   ($80FF),a
 0007  3EFF          ld   a,$FF
 0009  3200B8        ld   ($B800),a
-000C  C3A014        jp   $14A0
+000C  C3A014        jp   $14A0 ; jumps back here after clear
 000F  31F083        ld   sp,$83F0
 0012  CD003F        call $3F00
 0015  CD4800        call $0048
@@ -295,13 +295,13 @@
                 ;; Called once at startup
                 init_screen:
 0048  3A00A0        ld   a,($A000)
-004B  E683          and  $83
+004B  E683          and  $83 ; 1000 0011
 004D  C8            ret  z
 004E  CD7014        call $1470
 0051  CD1003        call $0310
 0054  09            add  hl,bc
 0055  00            nop
-0056  13            inc  de
+0056  13            inc  de ; CREDIT FAULT
 0057  221514        ld   ($1415),hl
 005A  19            add  hl,de
 005B  24            inc  h
@@ -323,13 +323,13 @@
 0074  2003          jr   nz,$0079
 0076  CD9001        call $0190
 0079  0601          ld   b,$01
-007B  CD0011        call $1100
+007B  CD0011        call $1100 ; update ticks...
 007E  CD2024        call $2420
 0081  00            nop
 0082  3A00A0        ld   a,($A000)
 0085  CB4F          bit  1,a
-0087  C203C0        jp   nz,$C003
-008A  ED45          retn
+0087  C203C0        jp   nz,$C003 ; c003?!
+008A  ED45          retn ; NMI return
 
 008C  FF            rst  $38
 
@@ -379,20 +379,20 @@
 00DC  47            ld   b,a
 00DD  3A3580        ld   a,($8035)
 00E0  B8            cp   b
-00E1  C8            ret  z
+00E1  C8            ret  z ; credits == credits_um
 00E2  00            nop
 00E3  00            nop
 00E4  00            nop
 00E5  CD8014        call $1480
 00E8  21E00F        ld   hl,$0FE0
 00EB  CD4008        call $0840
-00EE  00            nop
+00EE  00            nop ; params to DRAW_SCREEN
 00EF  00            nop
 00F0  CD5024        call $2450
 00F3  CD1003        call $0310
 00F6  09            add  hl,bc
 00F7  0B            dec  bc
-00F8  2022          jr   nz,$011C
+00F8  2022          jr   nz,$011C ; PRESS
 00FA  15            dec  d
 00FB  23            inc  hl
 00FC  23            inc  hl
@@ -400,7 +400,7 @@
 00FE  CD1003        call $0310
 0101  0C            inc  c
 0102  09            add  hl,bc
-0103  1F            rra
+0103  1F            rra ; ONE PLAYER
 0104  1E15          ld   e,$15
 0106  1020          djnz $0128
 0108  1C            inc  e
@@ -409,7 +409,7 @@
 010F  1003          djnz $0114
 0111  0F            rrca
 0112  8B            adc  a,e
-0113  12            ld   (de),a
+0113  12            ld   (de),a ; BUTTON
 0114  25            dec  h
 0115  24            inc  h
 0116  24            inc  h
@@ -418,7 +418,7 @@
 011A  CD1003        call $0310
 011D  19            add  hl,de
 011E  09            add  hl,bc
-011F  13            inc  de
+011F  13            inc  de ; CREDITS
 0120  221514        ld   ($1415),hl
 0123  19            add  hl,de
 0124  24            inc  h
@@ -458,7 +458,7 @@
 015E  1020          djnz $0180
 0160  1C            inc  e
 0161  112915        ld   de,$1529
-0164  22FFC9        ld   ($C9FF),hl
+0164  22FFC9        ld   ($C9FF),hl ; ONE OR TWO PLAYER
 0167  FF            rst  $38
 0168  FF            rst  $38
 0169  FF            rst  $38
@@ -504,16 +504,16 @@
 018F  FF            rst  $38
 
                 did_player_press_start:; Did player start the game?
-0190  3A0383        ld   a,($8303)
+0190  3A0383        ld   a,($8303) ; check you have credits
 0193  A7            and  a
 0194  C8            ret  z
-0195  3AF183        ld   a,($83F1)
+0195  3AF183        ld   a,($83F1) ; P1 pressed?
 0198  CB47          bit  0,a
 019A  2811          jr   z,$01AD
 019C  CD6014        call $1460
-019F  3E01          ld   a,$01
+019F  3E01          ld   a,$01 ; start the game, 1 player
 01A1  323480        ld   ($8034),a
-01A4  3A0383        ld   a,($8303)
+01A4  3A0383        ld   a,($8303) ; use a credit
 01A7  3D            dec  a
 01A8  27            daa
 01A9  320383        ld   ($8303),a
@@ -522,10 +522,10 @@
 01B0  3D            dec  a
 01B1  C8            ret  z
 01B2  3AF183        ld   a,($83F1)
-01B5  CB4F          bit  1,a
+01B5  CB4F          bit  1,a ; is P2 pressed?
 01B7  C8            ret  z
 01B8  CD6014        call $1460
-01BB  3E02          ld   a,$02
+01BB  3E02          ld   a,$02 ; start the game, 2 player
 01BD  323480        ld   ($8034),a
 01C0  3A0383        ld   a,($8303)
 01C3  3D            dec  a
@@ -561,7 +561,7 @@
 01E9  325B80        ld   ($805B),a
 01EC  325C80        ld   ($805C),a
 01EF  00            nop
-01F0  3AF283        ld   a,($83F2)
+01F0  3AF283        ld   a,($83F2) ; from dip-switch settings?
 01F3  E606          and  $06
 01F5  CB2F          sra  a
 01F7  C602          add  a,$02
@@ -569,7 +569,7 @@
 01FC  323380        ld   ($8033),a
 01FF  3A3480        ld   a,($8034)
 0202  3D            dec  a
-0203  323180        ld   ($8031),a
+0203  323180        ld   ($8031),a ; 0 = 1P, 1 = 2P
 0206  3E01          ld   a,$01
 0208  320480        ld   ($8004),a
 020B  3A3180        ld   a,($8031)
@@ -582,8 +582,8 @@
 021A  322A80        ld   ($802A),a
 021D  329080        ld   ($8090),a
                 post_death_reset:
-0220  31F083        ld   sp,$83F0
-0223  3A0480        ld   a,($8004)
+0220  31F083        ld   sp,$83F0 ; hmm. sets stack pointer?
+0223  3A0480        ld   a,($8004) ; flip flops?!
 0226  EE01          xor  $01
 0228  320480        ld   ($8004),a
 022B  213280        ld   hl,$8032
@@ -592,7 +592,7 @@
 0230  7E            ld   a,(hl)
 0231  A7            and  a
 0232  2012          jr   nz,$0246
-0234  3A0480        ld   a,($8004)
+0234  3A0480        ld   a,($8004) ; and back again?
 0237  EE01          xor  $01
 0239  320480        ld   ($8004),a
 023C  213280        ld   hl,$8032
@@ -604,22 +604,22 @@
 0246  3D            dec  a
 0247  77            ld   (hl),a
 0248  3AF183        ld   a,($83F1)
-024B  CB7F        bit  7,a
+024B  CB7F        bit  7,a ; what is this "button"?!
 024D  2811          jr   z,$0260
 024F  3A0480        ld   a,($8004)
 0252  FE01          cp   $01
 0254  200A          jr   nz,$0260
 0256  3E01          ld   a,$01
-0258  3206B0        ld   ($B006),a
+0258  3206B0        ld   ($B006),a ; a = 1 if P1,
 025B  3207B0        ld   ($B007),a
 025E  1807          jr   $0267
-0260  AF            xor  a
+0260  AF            xor  a ; 0 if P2
 0261  3206B0        ld   ($B006),a
 0264  3207B0        ld   ($B007),a
 0267  3AF283        ld   a,($83F2)
-026A  CB5F          bit  3,a
+026A  CB5F          bit  3,a ; is this INfinite Lives DIP setting? resets lives on death
 026C  2810          jr   z,$027E
-026E  3E03          ld   a,$03
+026E  3E03          ld   a,$03 ; set 3 lives
 0270  323280        ld   ($8032),a
 0273  3A3380        ld   a,($8033)
 0276  A7            and  a
@@ -668,7 +668,7 @@
 02C1  3E07          ld   a,$07
 02C3  320683        ld   ($8306),a
 02C6  3AF183        ld   a,($83F1)
-02C9  CB77          bit  6,a
+02C9  CB77          bit  6,a ; added credit
 02CB  2816          jr   z,$02E3
 02CD  3A0583        ld   a,($8305)
 02D0  A7            and  a
@@ -718,11 +718,11 @@
 0310  3A00B8        ld   a,($B800)
 0313  214090        ld   hl,$9040
 0316  C1            pop  bc
-0317  0A            ld   a,(bc)
+0317  0A            ld   a,(bc) ; y pos
 0318  03            inc  bc
 0319  85            add  a,l
 031A  6F            ld   l,a
-031B  0A            ld   a,(bc)
+031B  0A            ld   a,(bc) ; x pos
 031C  5F            ld   e,a
 031D  3E1B          ld   a,$1B
 031F  93            sub  e
@@ -737,7 +737,7 @@
 032C  19            add  hl,de
 032D  03            inc  bc
                 _lp_032E:
-032E  0A            ld   a,(bc)
+032E  0A            ld   a,(bc) ; read data until 0xff
 032F  03            inc  bc
 0330  FEFF          cp   $FF
 0332  2002          jr   nz,$0336
@@ -766,7 +766,7 @@
 0349  00            nop
 034A  00            nop
 034B  CD7014        call $1470
-034E  210080        ld   hl,$8000
+034E  210080        ld   hl,$8000 ; reset $8000-$88FF? to 0
                 _lp_0351:
 0351  3600          ld   (hl),$00
 0353  2C            inc  l
@@ -790,14 +790,14 @@
 
                 reset_ents_all:
 0370  CD7014        call $1470
-0373  212015        ld   hl,$1520
-0376  CDE301        call $01E3
-0379  21200E        ld   hl,$0E20
-037C  CDE301        call $01E3
+0373  212015        ld   hl,$1520 ; RESET_SFX_SOMETHING_1
+0376  CDE301        call $01E3 ; $4520
+0379  21200E        ld   hl,$0E20 ; ATTRACT_SPLASH_BONGO
+037C  CDE301        call $01E3 ; $4220
 037F  21C017        ld   hl,$17C0
-0382  CDE301        call $01E3
-0385  21A015        ld   hl,$15A0
-0388  CDE301        call $01E3
+0382  CDE301        call $01E3 ; $57C0
+0385  21A015        ld   hl,$15A0 ; $CHASED_BY_A_DINO_SCREEN
+0388  CDE301        call $01E3 ; $55A0
 038B  00            nop
 038C  00            nop
 038D  00            nop
@@ -897,7 +897,7 @@
 040F  FF            rst  $38
 
                 game_over:
-0410  21E816        ld   hl,$16E8
+0410  21E816        ld   hl,$16E8 ; $SFX_RESET_A_BUNCH-$4000
 0413  CDE301        call $01E3
 0416  CDE024        call $24E0
 0419  CD3004        call $0430
@@ -1034,7 +1034,7 @@
 04CB  47            ld   b,a
 04CC  3A5D80        ld   a,($805D)
 04CF  3C            inc  a
-04D0  B8            cp   b
+04D0  B8            cp   b ; have done SPEED_DELAY ticks?
 04D1  2001          jr   nz,$04D4
 04D3  AF            xor  a
 04D4  325D80        ld   ($805D),a
@@ -1054,7 +1054,7 @@
 04E9  320183        ld   ($8301),a
 04EC  3A1680        ld   a,($8016)
 04EF  320283        ld   ($8302),a
-04F2  E1            pop  hl
+04F2  E1            pop  hl ; hmm
 04F3  C9            ret
 
 04F4  FF            rst  $38
@@ -1077,7 +1077,7 @@
 0509  320183        ld   ($8301),a
 050C  3A1980        ld   a,($8019)
 050F  320283        ld   ($8302),a
-0512  E1            pop  hl
+0512  E1            pop  hl ; hmm
 0513  C9            ret
 
 0514  FF            rst  $38
@@ -1090,13 +1090,13 @@
                 ;; to $8038+, code is never called (or read?)
                 ;; wpset 0518,18,rw doesn't trigger
 0518  213880        ld   hl,$8038
-051B  3639          ld   (hl),$39
+051B  3639          ld   (hl),$39 ; 57
 051D  23            inc  hl
-051E  3639          ld   (hl),$39
+051E  3639          ld   (hl),$39 ; enemy_2_active
 0520  23            inc  hl
-0521  3639          ld   (hl),$39
+0521  3639          ld   (hl),$39 ; enemy_2_timer
 0523  23            inc  hl
-0524  3639          ld   (hl),$39
+0524  3639          ld   (hl),$39 ; enemy_3_active
 0526  23            inc  hl
 0527  3638          ld   (hl),$38
 0529  23            inc  hl
@@ -1105,7 +1105,7 @@
 052D  3639          ld   (hl),$39
 052F  23            inc  hl
 0530  3639          ld   (hl),$39
-0532  23            inc  hl
+0532  23            inc  hl ; 8040
 0533  3638          ld   (hl),$38
 0535  23            inc  hl
 0536  3639          ld   (hl),$39
@@ -1230,21 +1230,21 @@
                 ;; p2
 05D6  3A0C80        ld   a,($800C)
 05D9  CB7F          bit  7,a
-05DB  2810          jr   z,$05ED
+05DB  2810          jr   z,$05ED ; p1 too?
 05DD  3A0C80        ld   a,($800C)
-05E0  E63C          and  $3C
+05E0  E63C          and  $3C ; 0011 1100
 05E2  47            ld   b,a
 05E3  3A0B80        ld   a,($800B)
-05E6  E640          and  $40
+05E6  E640          and  $40 ; 0100 0000
 05E8  80            add  a,b
 05E9  320E80        ld   ($800E),a
 05EC  C9            ret
                 ;; p1
 05ED  3A0B80        ld   a,($800B)
-05F0  E63C          and  $3C
+05F0  E63C          and  $3C ; 0011 1100
 05F2  47            ld   b,a
 05F3  3A0B80        ld   a,($800B)
-05F6  E680          and  $80
+05F6  E680          and  $80 ; 1000 0000
 05F8  CB3F          srl  a
 05FA  80            add  a,b
 05FB  320E80        ld   ($800E),a
@@ -1279,7 +1279,7 @@
                 player_move_right:
 0618  3A1080        ld   a,($8010)
 061B  3C            inc  a
-061C  E607          and  $07
+061C  E607          and  $07 ; 0111
 061E  321080        ld   ($8010),a
 0621  210806        ld   hl,$0608
 0624  85            add  a,l
@@ -1289,7 +1289,7 @@
 062A  3C            inc  a
 062B  324581        ld   ($8145),a
 062E  3A4081        ld   a,($8140)
-0631  3C            inc  a
+0631  3C            inc  a ; move right 3px.
 0632  3C            inc  a
 0633  3C            inc  a
 0634  324081        ld   ($8140),a
@@ -1341,7 +1341,7 @@
 066A  3C            inc  a
 066B  324581        ld   ($8145),a
 066E  3A4081        ld   a,($8140)
-0671  3D            dec  a
+0671  3D            dec  a ; move left 3px
 0672  3D            dec  a
 0673  3D            dec  a
 0674  324081        ld   ($8140),a
@@ -1368,19 +1368,19 @@
 068D  C0            ret  nz
 068E  3A1280        ld   a,($8012)
 0691  A7            and  a
-0692  C0            ret  nz
+0692  C0            ret  nz ; dead, get out
 0693  3A0F80        ld   a,($800F)
 0696  A7            and  a
-0697  C0            ret  nz
+0697  C0            ret  nz ; don't do this input if jumping?
 0698  3A0E80        ld   a,($800E)
-069B  CB6F          bit  5,a
+069B  CB6F          bit  5,a ; jump pressed? 0010 0000
 069D  2817          jr   z,$06B6
 069F  CD1007        call $0710
-06A2  CB57          bit  2,a
+06A2  CB57          bit  2,a ; not left? 0000 0100
 06A4  2804          jr   z,$06AA
 06A6  CDA007        call $07A0
 06A9  C9            ret
-06AA  CB5F          bit  3,a
+06AA  CB5F          bit  3,a ; not right?
 06AC  2804          jr   z,$06B2
 06AE  CDC007        call $07C0
 06B1  C9            ret
@@ -1388,16 +1388,16 @@
 06B5  C9            ret
                 ;; no jump: left/right?
                 _no_jump:
-06B6  CB57          bit  2,a
+06B6  CB57          bit  2,a ; is left?
 06B8  2804          jr   z,$06BE
 06BA  CD5806        call $0658
 06BD  C9            ret
-06BE  CB5F          bit  3,a
+06BE  CB5F          bit  3,a ; is right?
 06C0  2804          jr   z,$06C6
 06C2  CD1806        call $0618
 06C5  C9            ret
                 ;; looks like bit 4 and 6 aren't used (up/dpwn?)
-06C6  CB67          bit  4,a
+06C6  CB67          bit  4,a ; ?
 06C8  2804          jr   z,$06CE
 06CA  00            nop
 06CB  00            nop
@@ -1423,29 +1423,29 @@
 06DB  00            nop
 06DC  00            nop
 06DD  3A0F80        ld   a,($800F)
-06E0  3D            dec  a
+06E0  3D            dec  a ; idx - 1
 06E1  320F80        ld   ($800F),a
-06E4  CB27          sla  a
-06E6  CB27          sla  a
+06E4  CB27          sla  a ; * 2
+06E6  CB27          sla  a ; * 2 = 4th byte in table row
 06E8  85            add  a,l
 06E9  6F            ld   l,a
 06EA  DD214081      ld   ix,$8140
-06EE  7E            ld   a,(hl)
-06EF  DD8600        add  a,(ix+$00)
-06F2  DD7700        ld   (ix+$00),a
-06F5  DD7704        ld   (ix+$04),a
+06EE  7E            ld   a,(hl) ; reads from the PHYS_JUMP_LOOKUP_XXX tables
+06EF  DD8600        add  a,(ix+$00) ; player x
+06F2  DD7700        ld   (ix+$00),a ; player x
+06F5  DD7704        ld   (ix+$04),a ; player_x_legs
 06F8  23            inc  hl
 06F9  7E            ld   a,(hl)
-06FA  DD7701        ld   (ix+$01),a
+06FA  DD7701        ld   (ix+$01),a ; frame
 06FD  23            inc  hl
 06FE  7E            ld   a,(hl)
-06FF  DD7705        ld   (ix+$05),a
+06FF  DD7705        ld   (ix+$05),a ; legs frame
 0702  23            inc  hl
 0703  7E            ld   a,(hl)
-0704  DD8607        add  a,(ix+$07)
+0704  DD8607        add  a,(ix+$07) ; player y legs?
 0707  DD7707        ld   (ix+$07),a
 070A  D610          sub  $10
-070C  DD7703        ld   (ix+$03),a
+070C  DD7703        ld   (ix+$03),a ; player y
 070F  C9            ret
 
                 ;; jump pressed, sets these... why?
@@ -1526,20 +1526,20 @@
 
                 ;; only runs every "tick_mod_slow" frames
                 apply_jump_physics:
-0774  3A1683        ld   a,($8316)
+0774  3A1683        ld   a,($8316) ; speeds up after round 1
 0777  E607          and  $07
 0779  C0            ret  nz
 077A  3A1280        ld   a,($8012)
 077D  A7            and  a
-077E  C0            ret  nz
-077F  3A0F80        ld   a,($800F)
+077E  C0            ret  nz ; dead, get out
+077F  3A0F80        ld   a,($800F) ; return if not mid jump tbl
 0782  A7            and  a
 0783  C8            ret  z
 0784  3E01          ld   a,$01
-0786  320580        ld   ($8005),a
+0786  320580        ld   ($8005),a ; jump was triggererd
                 ;; set the correct jump lookup table based on left, right, or none.
 0789  3A0E80        ld   a,($800E)
-078C  CB57          bit  2,a
+078C  CB57          bit  2,a ; not left?
 078E  2807          jr   z,$0797
 0790  212807        ld   hl,$0728
 0793  CDD806        call $06D8
@@ -1555,10 +1555,10 @@
 
                 ;;; jump button, but not jumping, and on ground, right
                 trigger_jump_right:
-07A0  3A0580        ld   a,($8005)
+07A0  3A0580        ld   a,($8005) ; already jumping, leave
 07A3  A7            and  a
 07A4  C0            ret  nz
-07A5  3A0F80        ld   a,($800F)
+07A5  3A0F80        ld   a,($800F) ; already jumping, leave
 07A8  A7            and  a
 07A9  C0            ret  nz
 07AA  CD8809        call $0988
@@ -1576,10 +1576,10 @@
 
                 ;;; jump button, but not jumping, and on ground, left
                 trigger_jump_left:
-07C0  3A0580        ld   a,($8005)
+07C0  3A0580        ld   a,($8005) ; already jumping, leave
 07C3  A7            and  a
 07C4  C0            ret  nz
-07C5  3A0F80        ld   a,($800F)
+07C5  3A0F80        ld   a,($800F) ; already jumping, leave
 07C8  A7            and  a
 07C9  C0            ret  nz
 07CA  CD8809        call $0988
@@ -1597,12 +1597,12 @@
 
                 ;; Right or no direction checkt
                 phys_jump_set_right_or_up_lookup:
-07E0  CB5F          bit  3,a
+07E0  CB5F          bit  3,a ; right?
 07E2  2807          jr   z,$07EB
 07E4  215007        ld   hl,$0750
 07E7  CDD806        call $06D8
 07EA  C9            ret
-07EB  214809        ld   hl,$0948
+07EB  214809        ld   hl,$0948 ; not left or right?
 07EE  CDD806        call $06D8
 07F1  C9            ret
 
@@ -1611,7 +1611,7 @@
 
                 play_jump_sfx:
 07F4  324581        ld   ($8145),a
-07F7  3E04          ld   a,$04
+07F7  3E04          ld   a,$04 ; jump sfx
 07F9  324380        ld   ($8043),a
 07FC  C9            ret
 
@@ -1630,15 +1630,15 @@
 0805  00            nop
 0806  00            nop
 0807  013A00        ld   bc,$003A
-080A  B8            cp   b
+080A  B8            cp   b ; really?
                 ;;
 080B  214090        ld   hl,$9040
-080E  C1            pop  bc
-080F  0A            ld   a,(bc)
+080E  C1            pop  bc ; stack return pointer into bc (ie, data)
+080F  0A            ld   a,(bc) ; start_y
 0810  03            inc  bc
 0811  85            add  a,l
 0812  6F            ld   l,a
-0813  0A            ld   a,(bc)
+0813  0A            ld   a,(bc) ; start_x
 0814  5F            ld   e,a
 0815  3E1B          ld   a,$1B
 0817  93            sub  e
@@ -1652,16 +1652,16 @@
 0823  19            add  hl,de
 0824  19            add  hl,de
 0825  03            inc  bc
-0826  0A            ld   a,(bc)
+0826  0A            ld   a,(bc) ; addr hi byte
 0827  5F            ld   e,a
 0828  03            inc  bc
-0829  0A            ld   a,(bc)
+0829  0A            ld   a,(bc) ; addr lo byte
 082A  57            ld   d,a
 082B  03            inc  bc
 082C  C5            push bc
                 _lp_082D:
 082D  1A            ld   a,(de)
-082E  FEFF          cp   $FF
+082E  FEFF          cp   $FF ; $FF delimited
 0830  C8            ret  z
 0831  13            inc  de
 0832  77            ld   (hl),a
@@ -1681,15 +1681,15 @@
 0840  E5            push hl
 0841  D9            exx
 0842  E1            pop  hl
-0843  54            ld   d,h
+0843  54            ld   d,h ; de = hl
 0844  5D            ld   e,l
 0845  214090        ld   hl,$9040
 0848  C1            pop  bc
-0849  0A            ld   a,(bc)
+0849  0A            ld   a,(bc) ; param 1
 084A  03            inc  bc
 084B  85            add  a,l
 084C  6F            ld   l,a
-084D  0A            ld   a,(bc)
+084D  0A            ld   a,(bc) ; param 2
 084E  03            inc  bc
 084F  C5            push bc
 0850  D5            push de
@@ -1705,13 +1705,13 @@
 085F  19            add  hl,de
 0860  19            add  hl,de
 0861  19            add  hl,de
-0862  D1            pop  de
+0862  D1            pop  de ; ret ptr
 0863  DD212C80      ld   ix,$802C
 0867  DD360020      ld   (ix+$00),$20
                 _lp_086B:
-086B  1A            ld   a,(de)
+086B  1A            ld   a,(de) ; ret
 086C  77            ld   (hl),a
-086D  13            inc  de
+086D  13            inc  de ; ret + 1
 086E  01E0FF        ld   bc,$FFE0
 0871  DD3500        dec  (ix+$00)
 0874  AF            xor  a
@@ -1732,7 +1732,7 @@
 
                 clear_jump_button:
 0888  3A0E80        ld   a,($800E)
-088B  CB6F          bit  5,a
+088B  CB6F          bit  5,a ; jump
 088D  C0            ret  nz
 088E  AF            xor  a
 088F  320580        ld   ($8005),a
@@ -1746,21 +1746,21 @@
 
                 init_player_sprite:
 0898  214081        ld   hl,$8140
-089B  3610          ld   (hl),$10
+089B  3610          ld   (hl),$10 ; x
 089D  23            inc  hl
-089E  360C          ld   (hl),$0C
+089E  360C          ld   (hl),$0C ; frame
 08A0  23            inc  hl
-08A1  3612          ld   (hl),$12
+08A1  3612          ld   (hl),$12 ; color
 08A3  23            inc  hl
-08A4  36CE          ld   (hl),$CE
+08A4  36CE          ld   (hl),$CE ; y
 08A6  23            inc  hl
-08A7  3610          ld   (hl),$10
+08A7  3610          ld   (hl),$10 ; x legs
 08A9  23            inc  hl
-08AA  360D          ld   (hl),$0D
+08AA  360D          ld   (hl),$0D ; frame legs
 08AC  23            inc  hl
-08AD  3612          ld   (hl),$12
+08AD  3612          ld   (hl),$12 ; color legs
 08AF  23            inc  hl
-08B0  36DE          ld   (hl),$DE
+08B0  36DE          ld   (hl),$DE ; y legs
 08B2  CD2018        call $1820
 08B5  C9            ret
 
@@ -1897,7 +1897,7 @@
 0955  9B            sbc  a,e
 0956  9C            sbc  a,h
 0957  00            nop
-0958  00            nop
+0958  00            nop ; -6
 0959  99            sbc  a,c
 095A  9A            sbc  a,d
 095B  FA0097        jp   m,$9700
@@ -1945,16 +1945,16 @@
                 ;;; ground check?
                 ground_check:
 0988  3A4781        ld   a,($8147)
-098B  C610          add  a,$10
-098D  CB3F          srl  a
-098F  CB3F          srl  a
-0991  E6FE          and  $FE
+098B  C610          add  a,$10 ; +  16   : the ground
+098D  CB3F          srl  a ; /  2
+098F  CB3F          srl  a ; /  2
+0991  E6FE          and  $FE ; &  1111 1110
 0993  210081        ld   hl,$8100
 0996  85            add  a,l
 0997  6F            ld   l,a
 0998  3A4481        ld   a,($8144)
 099B  96            sub  (hl)
-099C  C608          add  a,$08
+099C  C608          add  a,$08 ; offset of 8
 099E  67            ld   h,a
 099F  3A4781        ld   a,($8147)
 09A2  C610          add  a,$10
@@ -1965,9 +1965,9 @@
 09A9  E6F8          and  $F8
 09AB  FEF8          cp   $F8
 09AD  2802          jr   z,$09B1
-09AF  AF            xor  a
+09AF  AF            xor  a ; walkable tile
 09B0  C9            ret
-09B1  3E01          ld   a,$01
+09B1  3E01          ld   a,$01 ; solid tile
 09B3  C9            ret
 
 09B4  FF            rst  $38
@@ -1986,20 +1986,20 @@
                 check_if_landed_on_ground:      ; only when big fall?
 09C0  3A1280        ld   a,($8012)
 09C3  A7            and  a
-09C4  C0            ret  nz
+09C4  C0            ret  nz ; dead, get out
 09C5  3A0F80        ld   a,($800F)
 09C8  A7            and  a
 09C9  281B          jr   z,$09E6
-09CB  E60C          and  $0C
-09CD  C0            ret  nz
+09CB  E60C          and  $0C ; 1100 (only last 3 entries are falling)
+09CD  C0            ret  nz ; not falling, leave
 09CE  CD8809        call $0988
 09D1  A7            and  a
-09D2  C8            ret  z
-09D3  AF            xor  a
+09D2  C8            ret  z ; ret if in air?
+09D3  AF            xor  a ; clear jump_tbl_idx
 09D4  320F80        ld   ($800F),a
 09D7  3A4181        ld   a,($8141)
-09DA  E680          and  $80
-09DC  C60C          add  a,$0C
+09DA  E680          and  $80 ; set/clear face-left bit
+09DC  C60C          add  a,$0C ; reset to first frame
 09DE  324181        ld   ($8141),a
 09E1  3C            inc  a
 09E2  324581        ld   ($8145),a
@@ -2011,11 +2011,11 @@
 09EC  3A1180        ld   a,($8011)
 09EF  A7            and  a
 09F0  C0            ret  nz
-09F1  3E10          ld   a,$10
+09F1  3E10          ld   a,$10 ; start falling timer
 09F3  321180        ld   ($8011),a
 09F6  C9            ret
                 _on_ground:
-09F7  AF            xor  a
+09F7  AF            xor  a ; reset
 09F8  321180        ld   ($8011),a
 09FB  CD680A        call $0A68
 09FE  C9            ret
@@ -2056,7 +2056,7 @@
 0A32  FF            rst  $38
 
                 kill_player:
-0A33  00            nop
+0A33  00            nop ; weee, nopslide
 0A34  00            nop
 0A35  00            nop
 0A36  00            nop
@@ -2073,19 +2073,19 @@
                 ;; head barrier at the start of level two and dies.
                 ;; (because of falling timer here). Not sure why.
                 add_gravity_and_check_big_fall:
-0A40  3A1180        ld   a,($8011)
+0A40  3A1180        ld   a,($8011) ; did we fall too far?
 0A43  A7            and  a
 0A44  C8            ret  z
 0A45  3D            dec  a
 0A46  321180        ld   ($8011),a
 0A49  A7            and  a
 0A4A  2004          jr   nz,$0A50
-0A4C  CD330A        call $0A33
+0A4C  CD330A        call $0A33 ; yep.
 0A4F  C9            ret
                 ;; Ok, what's this... "gravity"? always pushing down 2
 0A50  3A4381        ld   a,($8143)
-0A53  3C            inc  a
-0A54  3C            inc  a
+0A53  3C            inc  a ; Why? Looks suspicious - related to bug?
+0A54  3C            inc  a ; force to ground I think
 0A55  324381        ld   ($8143),a
 0A58  C610          add  a,$10
 0A5A  324781        ld   ($8147),a
@@ -2104,7 +2104,7 @@
 
                 snap_y_to_8:
 0A68  3A4381        ld   a,($8143)
-0A6B  E6F8          and  $F8
+0A6B  E6F8          and  $F8 ; 1111 1000
 0A6D  324381        ld   ($8143),a
 0A70  C610          add  a,$10
 0A72  324781        ld   ($8147),a
@@ -2124,7 +2124,7 @@
                 check_head_hit_tile:
 0A80  3A1280        ld   a,($8012)
 0A83  A7            and  a
-0A84  C0            ret  nz
+0A84  C0            ret  nz ; player dead, get outta here
 0A85  3A4381        ld   a,($8143)
 0A88  C601          add  a,$01
 0A8A  CB3F          srl  a
@@ -2142,8 +2142,8 @@
 0AA1  6F            ld   l,a
 0AA2  CD6809        call $0968
 0AA5  7E            ld   a,(hl)
-0AA6  E6C0          and  $C0
-0AA8  FEC0          cp   $C0
+0AA6  E6C0          and  $C0 ; 1100 0000
+0AA8  FEC0          cp   $C0 ; whats a C0 tile?
 0AAA  C0            ret  nz
 0AAB  CDB80A        call $0AB8
 0AAE  C9            ret
@@ -2161,11 +2161,11 @@
                 fall_under_a_ledge:
 0AB8  3A1180        ld   a,($8011)
 0ABB  A7            and  a
-0ABC  C0            ret  nz
+0ABC  C0            ret  nz ; falling? Get outta here
 0ABD  AF            xor  a
-0ABE  320F80        ld   ($800F),a
+0ABE  320F80        ld   ($800F),a ; clear jump idx
 0AC1  3E08          ld   a,$08
-0AC3  321180        ld   ($8011),a
+0AC3  321180        ld   ($8011),a ; set low fall
 0AC6  CDA013        call $13A0
 0AC9  CDA013        call $13A0
 0ACC  C9            ret
@@ -2177,13 +2177,13 @@
                 set_level_platform_xoffs:
 0AD0  3A0480        ld   a,($8004)
 0AD3  A7            and  a
-0AD4  2005          jr   nz,$0ADB
+0AD4  2005          jr   nz,$0ADB ; p2?
 0AD6  3A2980        ld   a,($8029)
 0AD9  1803          jr   $0ADE
 0ADB  3A2A80        ld   a,($802A)
-0ADE  3D            dec  a
+0ADE  3D            dec  a ; scr - 1
 0ADF  21000B        ld   hl,$0B00
-0AE2  CB27          sla  a
+0AE2  CB27          sla  a ; scr - 1 * 2
 0AE4  85            add  a,l
 0AE5  6F            ld   l,a
 0AE6  4E            ld   c,(hl)
@@ -2314,15 +2314,15 @@
 0B7F  FF            rst  $38
 
                 move_moving_platform:
-0B80  DD7E01        ld   a,(ix+$01)
+0B80  DD7E01        ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
 0B83  DD7703        ld   (ix+$03),a
 0B86  DDCB0246      bit  0,(ix+$02)
 0B8A  200A          jr   nz,$0B96
-0B8C  FD3400        inc  (iy+$00)
+0B8C  FD3400        inc  (iy+$00) ; move right
 0B8F  FD3402        inc  (iy+$02)
 0B92  FD3404        inc  (iy+$04)
 0B95  C9            ret
-0B96  FD3500        dec  (iy+$00)
+0B96  FD3500        dec  (iy+$00) ; move left
 0B99  FD3502        dec  (iy+$02)
 0B9C  FD3504        dec  (iy+$04)
 0B9F  C9            ret
@@ -2346,22 +2346,22 @@
                 moving_platforms:
 0BB0  DD218081      ld   ix,$8180
 0BB4  FD213881      ld   iy,$8138
-0BB8  1609          ld   d,$09
-0BBA  DD7E01        ld   a,(ix+$01)
+0BB8  1609          ld   d,$09 ; loop 9 times
+0BBA  DD7E01        ld   a,(ix+$01) ; xoff + 1
 0BBD  A7            and  a
 0BBE  2826          jr   z,$0BE6
-0BC0  DD7E02        ld   a,(ix+$02)
+0BC0  DD7E02        ld   a,(ix+$02) ; xoff + 2
 0BC3  E6FE          and  $FE
 0BC5  200F          jr   nz,$0BD6
-0BC7  DD7E00        ld   a,(ix+$00)
+0BC7  DD7E00        ld   a,(ix+$00) ; xoff
 0BCA  E6FE          and  $FE
-0BCC  DD8602        add  a,(ix+$02)
+0BCC  DD8602        add  a,(ix+$02) ; xoff + 2
 0BCF  EE01          xor  $01
-0BD1  DD7702        ld   (ix+$02),a
+0BD1  DD7702        ld   (ix+$02),a ; xoff + 2
 0BD4  1806          jr   $0BDC
 0BD6  DD3502        dec  (ix+$02)
 0BD9  DD3502        dec  (ix+$02)
-0BDC  DD7E03        ld   a,(ix+$03)
+0BDC  DD7E03        ld   a,(ix+$03) ; xoff + 3
 0BDF  A7            and  a
 0BE0  CC800B        call z,$0B80
 0BE3  DD3503        dec  (ix+$03)
@@ -2482,10 +2482,10 @@
                 animate_player_to_ground_if_dead:
 0C60  3A1280        ld   a,($8012)
 0C63  A7            and  a
-0C64  C8            ret  z
+0C64  C8            ret  z ; player still alive... leave.
                 _loop:
 0C65  CDA013        call $13A0
-0C68  3A4381        ld   a,($8143)
+0C68  3A4381        ld   a,($8143) ; push player towards ground
 0C6B  3C            inc  a
 0C6C  3C            inc  a
 0C6D  3C            inc  a
@@ -2495,7 +2495,7 @@
 0C76  37            scf
 0C77  3F            ccf
 0C78  C610          add  a,$10
-0C7A  3812          jr   c,$0C8E
+0C7A  3812          jr   c,$0C8E ; deaded.
 0C7C  3A4081        ld   a,($8140)
 0C7F  67            ld   h,a
 0C80  3A4781        ld   a,($8147)
@@ -2503,11 +2503,11 @@
 0C85  6F            ld   l,a
 0C86  CD6809        call $0968
 0C89  7E            ld   a,(hl)
-0C8A  FE10          cp   $10
-0C8C  28D7          jr   z,$0C65
+0C8A  FE10          cp   $10 ; are we still in the air?
+0C8C  28D7          jr   z,$0C65 ; keep falling
 0C8E  CDC00C        call $0CC0
 0C91  AF            xor  a
-0C92  321280        ld   ($8012),a
+0C92  321280        ld   ($8012),a ; clear died
 0C95  CD2002        call $0220
 0C98  C9            ret
 
@@ -2534,10 +2534,10 @@
 0CAF  FF            rst  $38
 
                 bongo_jump_on_player_death:
-0CB0  1E03          ld   e,$03
+0CB0  1E03          ld   e,$03 ; jumps 3 times
 0CB2  CD300D        call $0D30
-0CB5  CD600D        call $0D60
-0CB8  CDA013        call $13A0
+0CB5  CD600D        call $0D60 ; why twice? Checks before re-setting
+0CB8  CDA013        call $13A0 ; (is this blocking?)
 0CBB  1D            dec  e
 0CBC  20F4          jr   nz,$0CB2
 0CBE  C9            ret
@@ -2584,7 +2584,7 @@
 
                 ;; who calls?
                 move_player_towards_ground_for_a_while:
-0D17  1608          ld   d,$08
+0D17  1608          ld   d,$08 ; 8 frames
 0D19  3A4381        ld   a,($8143)
 0D1C  3C            inc  a
 0D1D  3C            inc  a
@@ -2619,7 +2619,7 @@
                 ;; bottom right for levels where player is
                 ;; up top. Only looks correct for those levels.
                 move_bongo_redacted:
-0D40  C9            ret
+0D40  C9            ret ; just rets.
 0D41  3A4881        ld   a,($8148)
 0D44  67            ld   h,a
 0D45  324B81        ld   ($814B),a
@@ -2644,7 +2644,7 @@
 0D5F  FF            rst  $38
 
                 jump_bongo:
-0D60  CD400D        call $0D40
+0D60  CD400D        call $0D40 ; also called from UPDATE_EVERYTHING
 0D63  3A2480        ld   a,($8024)
 0D66  A7            and  a
 0D67  C8            ret  z
@@ -2799,7 +2799,7 @@
 
                 bongo_move_and_animate:
 0E40  3A2580        ld   a,($8025)
-0E43  E603          and  $03
+0E43  E603          and  $03 ; left or right
 0E45  2005          jr   nz,$0E4C
 0E47  CD880D        call $0D88
 0E4A  180C          jr   $0E58
@@ -2811,7 +2811,7 @@
                 _left:
 0E55  CD080A        call $0A08
 0E58  3A2580        ld   a,($8025)
-0E5B  CB57          bit  2,a
+0E5B  CB57          bit  2,a ; jump
 0E5D  C8            ret  z
 0E5E  CD300D        call $0D30
 0E61  C9            ret
@@ -2844,8 +2844,8 @@
 0E84  47            ld   b,a
 0E85  CD300F        call $0F30
 0E88  78            ld   a,b
-0E89  3D            dec  a
-0E8A  CB27          sla  a
+0E89  3D            dec  a ; scr #
+0E8A  CB27          sla  a ; * 2
 0E8C  21C00E        ld   hl,$0EC0
 0E8F  85            add  a,l
 0E90  6F            ld   l,a
@@ -2856,13 +2856,13 @@
 0E95  E1            pop  hl
 0E96  3A2780        ld   a,($8027)
 0E99  3C            inc  a
-0E9A  FE20          cp   $20
+0E9A  FE20          cp   $20 ; timer hit top, reset
 0E9C  2001          jr   nz,$0E9F
 0E9E  AF            xor  a
 0E9F  322780        ld   ($8027),a
 0EA2  85            add  a,l
 0EA3  6F            ld   l,a
-0EA4  7E            ld   a,(hl)
+0EA4  7E            ld   a,(hl) ; animation lookup
 0EA5  322580        ld   ($8025),a
 0EA8  C9            ret
 
@@ -3011,7 +3011,7 @@
 0F35  C608          add  a,$08
 0F37  300B          jr   nc,$0F44
 0F39  AF            xor  a
-0F3A  322580        ld   ($8025),a
+0F3A  322580        ld   ($8025),a ; stop moving
 0F3D  3EFF          ld   a,$FF
 0F3F  324881        ld   ($8148),a
 0F42  E1            pop  hl
@@ -3027,7 +3027,7 @@
 0F52  3F            ccf
 0F53  C670          add  a,$70
 0F55  D0            ret  nc
-0F56  3E01          ld   a,$01
+0F56  3E01          ld   a,$01 ; right
 0F58  322580        ld   ($8025),a
 0F5B  E1            pop  hl
 0F5C  C9            ret
@@ -3152,19 +3152,19 @@
 0FDF  FF            rst  $38
 
                 header_text_data:
-0FE0  1010          djnz $0FF2
+0FE0  1010          djnz $0FF2 ; PL1
 0FE2  1010          djnz $0FF4
 0FE4  201C          jr   nz,$1002
 0FE6  011010        ld   bc,$1010
 0FE9  1010          djnz $0FFB
-0FEB  1819          jr   $1006
+0FEB  1819          jr   $1006 ; HIGH-SCORE
 0FED  17            rla
 0FEE  182B          jr   $101B
 0FF0  23            inc  hl
 0FF1  13            inc  de
 0FF2  1F            rra
 0FF3  221510        ld   ($1015),hl
-0FF6  1010          djnz $1008
+0FF6  1010          djnz $1008 ; PL2
 0FF8  1020          djnz $101A
 0FFA  1C            inc  e
 0FFB  02            ld   (bc),a
@@ -3177,7 +3177,7 @@
                 ;; Happens after death and new round
                 big_reset:
 1000  3E50          ld   a,$50
-1002  321B80        ld   ($801B),a
+1002  321B80        ld   ($801B),a ; never read?
 1005  AF            xor  a
 1006  320E80        ld   ($800E),a
 1009  320F80        ld   ($800F),a
@@ -3190,7 +3190,7 @@
 101D  323080        ld   ($8030),a
 1020  CD801B        call $1B80
 1023  CD7014        call $1470
-1026  21E00F        ld   hl,$0FE0
+1026  21E00F        ld   hl,$0FE0 ; loaded by DRAW_SCREEN
 1029  CD4008        call $0840
 102C  00            nop
 102D  00            nop
@@ -3202,7 +3202,7 @@
 103D  CDB812        call $12B8
 1040  CDD00A        call $0AD0
 1043  CDB80D        call $0DB8
-1046  3E02          ld   a,$02
+1046  3E02          ld   a,$02 ; bottom row is red
 1048  323F81        ld   ($813F),a
                 ;;; falls through to main loop:
 
@@ -3210,10 +3210,10 @@
                 main_loop:
 104B  CDE010        call $10E0
 104E  CD3011        call $1130
-1051  CD7011        call $1170
+1051  CD7011        call $1170 ; Main logic
 1054  CDA013        call $13A0
-1057  3A00B8        ld   a,($B800)
-105A  3A0040        ld   a,($4000)
+1057  3A00B8        ld   a,($B800) ; why load? ack?
+105A  3A0040        ld   a,($4000) ; why load?
 105D  18EC          jr   $104B
 
 105F  FF            rst  $38
@@ -3254,11 +3254,11 @@
 1085  3A1580        ld   a,($8015)
 1088  37            scf
 1089  3F            ccf
-108A  D615          sub  $15
+108A  D615          sub  $15 ; bonus at ??
 108C  D8            ret  c
 108D  3E01          ld   a,$01
 108F  327080        ld   ($8070),a
-1092  3A3280        ld   a,($8032)
+1092  3A3280        ld   a,($8032) ; Bonus life
 1095  3C            inc  a
 1096  323280        ld   ($8032),a
 1099  CDA003        call $03A0
@@ -3283,7 +3283,7 @@
 10B4  D8            ret  c
 10B5  3E01          ld   a,$01
 10B7  327180        ld   ($8071),a
-10BA  3A3380        ld   a,($8033)
+10BA  3A3380        ld   a,($8033) ; bonus life p2
 10BD  3C            inc  a
 10BE  323380        ld   ($8033),a
 10C1  CDA003        call $03A0
@@ -3319,11 +3319,11 @@
 10E3  3C            inc  a
 10E4  FE03          cp   $03
 10E6  2001          jr   nz,$10E9
-10E8  AF            xor  a
+10E8  AF            xor  a ; reset a
 10E9  320080        ld   ($8000),a
-10EC  CB27          sla  a
+10EC  CB27          sla  a ; (tick % 3) * 4
 10EE  CB27          sla  a
-10F0  CD9013        call $1390
+10F0  CD9013        call $1390 ; do one of the three funcs
                 _add_score:
 10F3  CD0017        call $1700
 10F6  C9            ret
@@ -3340,7 +3340,7 @@
                 tick_ticks:                     ;
 1100  3A1283        ld   a,($8312)
 1103  3C            inc  a
-1104  321283        ld   ($8312),a
+1104  321283        ld   ($8312),a ; only place tick_num is set
 1107  CD8016        call $1680
 110A  C9            ret
 
@@ -3355,19 +3355,19 @@
 1110  F5            push af
 1111  E5            push hl
 1112  216680        ld   hl,$8066
-1115  AF            xor  a
-1116  BE            cp   (hl)
-1117  2008          jr   nz,$1121
-1119  23            inc  hl
-111A  BE            cp   (hl)
+1115  AF            xor  a ; cp: If A == N, then Z flag is set
+1116  BE            cp   (hl) ; state == 0?
+1117  2008          jr   nz,$1121 ; no, off to AND
+1119  23            inc  hl ; yep, what about $8067
+111A  BE            cp   (hl) ; == 0?
 111B  2004          jr   nz,$1121
-111D  23            inc  hl
-111E  BE            cp   (hl)
-111F  2805          jr   z,$1126
-1121  7E            ld   a,(hl)
+111D  23            inc  hl ; yep, what about $8068
+111E  BE            cp   (hl) ; == 0?
+111F  2805          jr   z,$1126 ; no, all zero - don't load
+1121  7E            ld   a,(hl) ; ...first non-zero
 1122  3600          ld   (hl),$00
-1124  C618          add  a,$18
-1126  E67F          and  $7F
+1124  C618          add  a,$18 ; 0001 1000
+1126  E67F          and  $7F ; 0111 1111
 1128  00            nop
 1129  00            nop
 112A  E1            pop  hl
@@ -3380,38 +3380,38 @@
 
                 ;;
                 update_screen_tile_animations:
-1130  3A0180        ld   a,($8001)
+1130  3A0180        ld   a,($8001) ; set tick % 6
 1133  3C            inc  a
 1134  FE06          cp   $06
 1136  2001          jr   nz,$1139
 1138  AF            xor  a
 1139  320180        ld   ($8001),a
-113C  CB27          sla  a
-113E  CB27          sla  a
-1140  CD9013        call $1390
-1143  CD023C        call $3C02
+113C  CB27          sla  a ; tick * 2
+113E  CB27          sla  a ; tick * 4
+1140  CD9013        call $1390 ; anims one-in6-times
+1143  CD023C        call $3C02 ; a = 0
 1146  C9            ret
-1147  00            nop
+1147  00            nop ; a = 1
 1148  00            nop
 1149  00            nop
 114A  C9            ret
-114B  00            nop
+114B  00            nop ; a = 2
 114C  00            nop
 114D  00            nop
 114E  C9            ret
-114F  00            nop
+114F  00            nop ; a = 3
 1150  00            nop
 1151  00            nop
 1152  C9            ret
-1153  00            nop
+1153  00            nop ; a = 4
 1154  00            nop
 1155  00            nop
 1156  C9            ret
-1157  00            nop
+1157  00            nop ; a = 5
 1158  00            nop
 1159  00            nop
 115A  C9            ret
-115B  00            nop
+115B  00            nop ; a = 6
 115C  00            nop
 115D  00            nop
 115E  C9            ret
@@ -3439,7 +3439,7 @@
 1173  CDD013        call $13D0
 1176  CDD005        call $05D0
 1179  CD8806        call $0688
-117C  CD7407        call $0774
+117C  CD7407        call $0774 ; tick_mod_slow
 117F  CD400A        call $0A40
 1182  CD600C        call $0C60
 1185  CDC009        call $09C0
@@ -3458,7 +3458,7 @@
 11AC  CD502B        call $2B50
 11AF  CDA83B        call $3BA8
 11B2  212000        ld   hl,$0020
-11B5  CDE301        call $01E3
+11B5  CDE301        call $01E3 ; $UPDATE_EVERYTHING_MORE
 11B8  C9            ret
 
 11B9  FF            rst  $38
@@ -3508,13 +3508,13 @@
                 player_pos_update:
 1200  3A4781        ld   a,($8147)
 1203  47            ld   b,a
-1204  3A0280        ld   a,($8002)
+1204  3A0280        ld   a,($8002) ; no idea what this is about
 1207  B8            cp   b
-1208  201E          jr   nz,$1228
-120A  C608          add  a,$08
-120C  CB3F          srl  a
+1208  201E          jr   nz,$1228 ; legs copy different from legs?
+120A  C608          add  a,$08 ; they are the same.. add 8
+120C  CB3F          srl  a ; ...
 120E  CB3F          srl  a
-1210  E63E          and  $3E
+1210  E63E          and  $3E ; 0011 1110 (62)
 1212  2681          ld   h,$81
 1214  6F            ld   l,a
 1215  3A0380        ld   a,($8003)
@@ -3645,7 +3645,7 @@
 12B8  CD1003        call $0310
 12BB  03            inc  bc
 12BC  00            nop
-12BD  40            ld   b,b
+12BD  40            ld   b,b ; downward spikes
 12BE  42            ld   b,d
 12BF  43            ld   b,e
 12C0  42            ld   b,d
@@ -3655,23 +3655,23 @@
 12C4  CD1003        call $0310
 12C7  09            add  hl,bc
 12C8  00            nop
-12C9  FEFD          cp   $FD
+12C9  FEFD          cp   $FD ; top left platform
 12CB  FD            db   $fd
 12CC  FD            db   $fd
 12CD  FD            db   $fd
 12CE  FCFFCD        call m,$CDFF
 12D1  1003          djnz $12D6
 12D3  1E00          ld   e,$00
-12D5  FEFD          cp   $FD
+12D5  FEFD          cp   $FD ; bottomleft platform
 12D7  FD            db   $fd
 12D8  FD            db   $fd
 12D9  FD            db   $fd
 12DA  FCFFCD        call m,$CDFF
 12DD  B0            or   b
 12DE  14            inc  d
-12DF  21E092        ld   hl,$92E0
+12DF  21E092        ld   hl,$92E0 ; screen pos (6,0)
 12E2  DD2A2080      ld   ix,($8020)
-12E6  1617          ld   d,$17
+12E6  1617          ld   d,$17 ; call 23 columns = width - 6
                 _draw_column:                   ; because first 6 are constant
 12E8  CD2813        call $1328
 12EB  00            nop
@@ -3680,15 +3680,15 @@
 12EE  15            dec  d
 12EF  20F7          jr   nz,$12E8
                 reset_enemies_and_draw_bottom_row:
-12F1  221E80        ld   ($801E),hl
+12F1  221E80        ld   ($801E),hl ; hl = 9000 when hits here on death
 12F4  CD1035        call $3510
-12F7  21500C        ld   hl,$0C50
+12F7  21500C        ld   hl,$0C50 ; $ADD_SCREEN_PICKUPS
 12FA  CDE301        call $01E3
 12FD  C3103F        jp   $3F10
 
                 ;; scrolls the screen one tile - done in a loop for the transition
                 scroll_one_column:
-1300  1E04          ld   e,$04
+1300  1E04          ld   e,$04 ; 4 loops of 2 pixels
 1302  E5            push hl
 1303  210681        ld   hl,$8106
 1306  35            dec  (hl)
@@ -3728,23 +3728,23 @@
                 draw_screen_column_from_level_data:
 1328  CD6817        call $1768
                 _lp_132B:
-132B  DD7E00        ld   a,(ix+$00)
+132B  DD7E00        ld   a,(ix+$00) ; ix + 0 (always 3?)
 132E  E5            push hl
 132F  85            add  a,l
 1330  6F            ld   l,a
-1331  DD23          inc  ix
+1331  DD23          inc  ix ; ix++
                 _draw_char:
 1333  DD7E00        ld   a,(ix+$00)
-1336  FEFF          cp   $FF
+1336  FEFF          cp   $FF ; 0xff = EOL marker
 1338  2809          jr   z,$1343
-133A  A7            and  a
+133A  A7            and  a ; 0x00 = segment marker
 133B  2814          jr   z,$1351
 133D  77            ld   (hl),a
 133E  23            inc  hl
-133F  DD23          inc  ix
+133F  DD23          inc  ix ; ix++
 1341  18F0          jr   $1333
                 _done_1343:
-1343  DD23          inc  ix
+1343  DD23          inc  ix ; ix++
 1345  E1            pop  hl
 1346  01E0FF        ld   bc,$FFE0
 1349  09            add  hl,bc
@@ -3754,8 +3754,8 @@
 134E  2693          ld   h,$93
 1350  C9            ret
                 __next_seg:
-1351  DD23          inc  ix
-1353  E1            pop  hl
+1351  DD23          inc  ix ; ix++
+1353  E1            pop  hl ; reset screen pos
 1354  18D5          jr   $132B
 
 1356  FF            rst  $38
@@ -3767,8 +3767,8 @@
 135B  00            nop
 135C  CDB014        call $14B0
 135F  DD2A2080      ld   ix,($8020)
-1363  2A1E80        ld   hl,($801E)
-1366  1615          ld   d,$15
+1363  2A1E80        ld   hl,($801E) ; must point to screen?
+1366  1615          ld   d,$15 ; 21 columns to scroll
                 _lp_1368:
 1368  CD2813        call $1328
 136B  CD0013        call $1300
@@ -3776,7 +3776,7 @@
 136F  20F7          jr   nz,$1368
                 _done_scrolling:
 1371  DD222080      ld   ($8020),ix
-1375  221E80        ld   ($801E),hl
+1375  221E80        ld   ($801E),hl ; hl = 9160 on transition (e on HIGH-SCORE)
                 _reset_for_next_level:
 1378  CDC019        call $19C0
 137B  CDB812        call $12B8
@@ -3793,13 +3793,13 @@
                 ;; "jump relative A": dispatches to address based on A
                 jump_rel_a:
 1390  D9            exx
-1391  E1            pop  hl
+1391  E1            pop  hl ; stack RET pointer
 1392  0600          ld   b,$00
 1394  4F            ld   c,a
 1395  09            add  hl,bc
 1396  E5            push hl
 1397  D9            exx
-1398  C9            ret
+1398  C9            ret ; sets PC to RET + A
 
 1399  FF            rst  $38
 139A  FF            rst  $38
@@ -3814,13 +3814,13 @@
                 wait_vblank:
 13A0  0600          ld   b,$00
 13A2  3E01          ld   a,$01
-13A4  3201B0        ld   ($B001),a
+13A4  3201B0        ld   ($B001),a ; enable interrupts
 13A7  3A00B8        ld   a,($B800)
 13AA  78            ld   a,b
 13AB  FE01          cp   $01
 13AD  20F3          jr   nz,$13A2
 13AF  AF            xor  a
-13B0  3201B0        ld   ($B001),a
+13B0  3201B0        ld   ($B001),a ; disable interrupts
 13B3  3A00B8        ld   a,($B800)
 13B6  C9            ret
 
@@ -3883,16 +3883,16 @@
 13FB  23            inc  hl
 13FC  7E            ld   a,(hl)
 13FD  3C            inc  a
-13FE  27            daa
+13FE  27            daa ; the A register is BCD corrected from flags
 13FF  77            ld   (hl),a
-1400  FE60          cp   $60
+1400  FE60          cp   $60 ; minutes
 1402  C0            ret  nz
 1403  3600          ld   (hl),$00
 1405  23            inc  hl
 1406  7E            ld   a,(hl)
 1407  3C            inc  a
 1408  27            daa
-1409  77            ld   (hl),a
+1409  77            ld   (hl),a ; store it
 140A  C9            ret
 
 140B  FF            rst  $38
@@ -3959,27 +3959,27 @@
 1466  20FB          jr   nz,$1463
 1468  24            inc  h
 1469  7C            ld   a,h
-146A  FE83          cp   $83
+146A  FE83          cp   $83 ; 1000 0011
 146C  20F5          jr   nz,$1463
 146E  C9            ret
 146F  FF            rst  $38
 
                 ;; lotsa calls here
                 reset_xoff_sprites_and_clear_screen:
-1470  CD9014        call $1490
-1473  00            nop
-1474  00            nop
+1470  CD9014        call $1490 ; then nop slides
+1473  00            nop ; ...
+1474  00            nop ; ...
 1475  00            nop
 1476  00            nop
 1477  00            nop
-1478  23            inc  hl
+1478  23            inc  hl ; hl++ ?
 1479  00            nop
 147A  00            nop
 147B  00            nop
 147C  00            nop
 147D  00            nop
 147E  00            nop
-147F  00            nop
+147F  00            nop ; end of weird nopslide
 
                 clear_screen:
 1480  210090        ld   hl,$9000
@@ -4000,7 +4000,7 @@
 1493  3600          ld   (hl),$00
 1495  23            inc  hl
 1496  7D            ld   a,l
-1497  FE80          cp   $80
+1497  FE80          cp   $80 ; 128
 1499  20F8          jr   nz,$1493
 149B  C9            ret
 
@@ -4011,13 +4011,13 @@
 
                 ;;
                 clear_ram:
-14A0  210080        ld   hl,$8000
+14A0  210080        ld   hl,$8000 ; = $8000, start of ram
 14A3  3600          ld   (hl),$00
 14A5  23            inc  hl
 14A6  7C            ld   a,h
-14A7  FE84          cp   $84
+14A7  FE84          cp   $84 ; 132
 14A9  20F8          jr   nz,$14A3
-14AB  C30F00        jp   $000F
+14AB  C30F00        jp   $000F ; Return
 14AE  FF            rst  $38
 14AF  FF            rst  $38
 
@@ -4036,9 +4036,9 @@
 14C9  3A2A80        ld   a,($802A)
 14CC  210015        ld   hl,$1500
 14CF  0600          ld   b,$00
-14D1  3D            dec  a
+14D1  3D            dec  a ; scr# - 1
 14D2  4F            ld   c,a
-14D3  CB21          sla  c
+14D3  CB21          sla  c ; * 2
 14D5  09            add  hl,bc
 14D6  4E            ld   c,(hl)
 14D7  23            inc  hl
@@ -4049,7 +4049,7 @@
 14DF  FF            rst  $38
 
                 reset_enemies_2:
-14E0  3A1583        ld   a,($8315)
+14E0  3A1583        ld   a,($8315) ; faster in round 2
 14E3  E603          and  $03
 14E5  C0            ret  nz
 14E6  CD503A        call $3A50
@@ -4142,7 +4142,7 @@
 1553  210081        ld   hl,$8100
 1556  110098        ld   de,$9800
 1559  018000        ld   bc,$0080
-155C  EDB0          ldir
+155C  EDB0          ldir ; LD (DE),(HL) repeated: copies a chunk of mem
 155E  D1            pop  de
 155F  C1            pop  bc
 1560  E1            pop  hl
@@ -4232,7 +4232,7 @@
 15F6  CD6016        call $1660
 15F9  CD1003        call $0310
 15FC  0C            inc  c
-15FD  1004          djnz $1603
+15FD  1004          djnz $1603 ; 400 ...
 15FF  00            nop
 1600  00            nop
 1601  1020          djnz $1623
@@ -4245,7 +4245,7 @@
 160E  CD6016        call $1660
 1611  CD1003        call $0310
 1614  1010          djnz $1626
-1616  0600          ld   b,$00
+1616  0600          ld   b,$00 ; 600 ...
 1618  00            nop
 1619  1020          djnz $163B
 161B  24            inc  h
@@ -4269,7 +4269,7 @@
 163A  CD6016        call $1660
 163D  CD6016        call $1660
 1640  CD6016        call $1660
-1643  219414        ld   hl,$1494
+1643  219414        ld   hl,$1494 ; $ATTRACT_CATCH_DINO
 1646  CDE301        call $01E3
 1649  C9            ret
 164A  FF            rst  $38
@@ -4278,7 +4278,7 @@
 164B  CD7014        call $1470
 164E  21E00F        ld   hl,$0FE0
 1651  CD4008        call $0840
-1654  00            nop
+1654  00            nop ; data
 1655  00            nop
 1656  CD5024        call $2450
 1659  C9            ret
@@ -4409,17 +4409,17 @@
 1708  A7            and  a
 1709  2017          jr   nz,$1722
                 ;;; player 1
-170B  3A1D80        ld   a,($801D)
+170B  3A1D80        ld   a,($801D) ; amount to add
 170E  A7            and  a
-170F  C8            ret  z
+170F  C8            ret  z ; nothing to add... leave.
 1710  4F            ld   c,a
-1711  2680          ld   h,$80
+1711  2680          ld   h,$80 ; 8014 for p1 8017 for p2
 1713  0600          ld   b,$00
 1715  2E14          ld   l,$14
 1717  CDA017        call $17A0
 171A  CD5024        call $2450
 171D  AF            xor  a
-171E  321D80        ld   ($801D),a
+171E  321D80        ld   ($801D),a ; clear
 1721  C9            ret
                 ;;; player 2
 1722  3A1D80        ld   a,($801D)
@@ -4462,18 +4462,18 @@
                 check_done_screen:
 1750  37            scf
 1751  3F            ccf
-1752  3A4381        ld   a,($8143)
-1755  C648          add  a,$48
-1757  3803          jr   c,$175C
-1759  D678          sub  $78
-175B  D0            ret  nc
+1752  3A4381        ld   a,($8143) ; Test if player is at top or bottom
+1755  C648          add  a,$48 ; Y + 72 > 255?
+1757  3803          jr   c,$175C ; ...yep, check x
+1759  D678          sub  $78 ; Y - 120 < 0?
+175B  D0            ret  nc ; ...no, can't finish level here...
                 ;; check if gone past edge of screen
 175C  3A4081        ld   a,($8140)
 175F  37            scf
 1760  3F            ccf
-1761  D6E0          sub  $E0
+1761  D6E0          sub  $E0 ; out of screen?
 1763  D8            ret  c
-1764  CD7817        call $1778
+1764  CD7817        call $1778 ; jump to next screen
 1767  C9            ret
 
                 ;;
@@ -4482,7 +4482,7 @@
 1769  3E03          ld   a,$03
 176B  85            add  a,l
 176C  6F            ld   l,a
-176D  1E1C          ld   e,$1C
+176D  1E1C          ld   e,$1C ; 24 loops
                 _lp_176F:
 176F  3610          ld   (hl),$10
 1771  23            inc  hl
@@ -4499,14 +4499,14 @@
 177E  A7            and  a
 177F  2009          jr   nz,$178A
 1781  3A2980        ld   a,($8029)
-1784  3C            inc  a
+1784  3C            inc  a ; next screen if p1
 1785  322980        ld   ($8029),a
 1788  1807          jr   $1791
 178A  3A2A80        ld   a,($802A)
-178D  3C            inc  a
+178D  3C            inc  a ; next screen if p2
 178E  322A80        ld   ($802A),a
 1791  CDE027        call $27E0
-1794  CD5813        call $1358
+1794  CD5813        call $1358 ; wipes to next
 1797  CDD00A        call $0AD0
 179A  3E02          ld   a,$02
                 ;; I think that should be call not jump. It rets anyway.
@@ -4539,7 +4539,7 @@
 17B3  FF            rst  $38
 
                 reset_jump_and_redify_bottom_row:
-17B4  323F81        ld   ($813F),a
+17B4  323F81        ld   ($813F),a ; set bottom row col
 17B7  AF            xor  a
 17B8  320F80        ld   ($800F),a
 17BB  320580        ld   ($8005),a
@@ -4938,17 +4938,17 @@
                 bonus_skip_screen:
                 ;; Draws the Bongo Tree. I thought this must have been a glitch,
                 ;; but nope: the Bongo Tree is meant to be like that!
-199C  3EF0          ld   a,$F0
+199C  3EF0          ld   a,$F0 ; right of screen (scrolls to left)
 199E  324081        ld   ($8140),a
 19A1  324481        ld   ($8144),a
-19A4  3E26          ld   a,$26
+19A4  3E26          ld   a,$26 ; top of screen
 19A6  324781        ld   ($8147),a
 19A9  3E16          ld   a,$16
 19AB  324381        ld   ($8143),a
-19AE  3E17          ld   a,$17
+19AE  3E17          ld   a,$17 ; backwards player for both head and legs, lol
 19B0  324181        ld   ($8141),a
 19B3  324581        ld   ($8145),a
-19B6  AF            xor  a
+19B6  AF            xor  a ; red and green for the bongo tree.
 19B7  324281        ld   ($8142),a
 19BA  324681        ld   ($8146),a
 19BD  C37817        jp   $1778
@@ -4959,13 +4959,13 @@
 19C3  23            inc  hl
 19C4  23            inc  hl
 19C5  23            inc  hl
-19C6  161D          ld   d,$1D
+19C6  161D          ld   d,$1D ; 29
 19C8  3610          ld   (hl),$10
 19CA  23            inc  hl
 19CB  15            dec  d
 19CC  20FA          jr   nz,$19C8
 19CE  7C            ld   a,h
-19CF  FE94          cp   $94
+19CF  FE94          cp   $94 ; 148
 19D1  20F0          jr   nz,$19C3
 19D3  00            nop
 19D4  00            nop
@@ -4997,7 +4997,7 @@
 19F0  3A4781        ld   a,($8147)
 19F3  37            scf
 19F4  3F            ccf
-19F5  C618          add  a,$18
+19F5  C618          add  a,$18 ; +24 (ground = 255-24?)
 19F7  D0            ret  nc
 19F8  CDC00C        call $0CC0
 19FB  AF            xor  a
@@ -5012,9 +5012,9 @@
 1A04  3A4081        ld   a,($8140)
 1A07  37            scf
 1A08  3F            ccf
-1A09  D610          sub  $10
-1A0B  D0            ret  nc
-1A0C  C3481B        jp   $1B48
+1A09  D610          sub  $10 ; out the start of the screen?
+1A0B  D0            ret  nc ; ... nope, you're good
+1A0C  C3481B        jp   $1B48 ; ... yep, you're dead
 1A0F  C9            ret
 
                 ;; Level data for screens 5, 10
@@ -5241,11 +5241,11 @@
 1B2B  FC001E        call m,$1E00
 1B2E  FCFF2A        call m,$2AFF
 1B31  2080          jr   nz,$1AB3
-1B33  011400        ld   bc,$0014
+1B33  011400        ld   bc,$0014 ; add 20 bytes to bg_ptr
 1B36  09            add  hl,bc
 1B37  222080        ld   ($8020),hl
 1B3A  2A1E80        ld   hl,($801E)
-1B3D  011400        ld   bc,$0014
+1B3D  011400        ld   bc,$0014 ; add 20 bytes to SCREEN_RAM_PTR
 1B40  09            add  hl,bc
 1B41  221E80        ld   ($801E),hl
 1B44  C9            ret
@@ -5274,7 +5274,7 @@
 1B6A  3C            inc  a
 1B6B  27            daa
 1B6C  77            ld   (hl),a
-1B6D  CDB02C        call $2CB0
+1B6D  CDB02C        call $2CB0 ; calls nothing based on screen
 1B70  C30010        jp   $1000
 
 1B73  FF            rst  $38
@@ -5296,13 +5296,13 @@
 1B83  A7            and  a
 1B84  200B          jr   nz,$1B91
                 _2_players:
-1B86  3A2280        ld   a,($8022)
+1B86  3A2280        ld   a,($8022) ; $8022 never used anywhere else
 1B89  A7            and  a
 1B8A  2801          jr   z,$1B8D
-1B8C  C9            ret
+1B8C  C9            ret ; p2 hasn't inited?
                 _did_init:
 1B8D  3C            inc  a
-1B8E  322280        ld   ($8022),a
+1B8E  322280        ld   ($8022),a ; (except here)
                 _both:
 1B91  CD0017        call $1700
 1B94  CD7014        call $1470
@@ -5312,7 +5312,7 @@
 1B99  CDA003        call $03A0
 1B9C  21E00F        ld   hl,$0FE0
 1B9F  CD4008        call $0840
-1BA2  00            nop
+1BA2  00            nop ; data
 1BA3  00            nop
 1BA4  CD5024        call $2450
 1BA7  3A0480        ld   a,($8004)
@@ -5320,14 +5320,14 @@
 1BAB  2010          jr   nz,$1BBD
 1BAD  CD1003        call $0310
 1BB0  100A          djnz $1BBC
-1BB2  201C          jr   nz,$1BD0
+1BB2  201C          jr   nz,$1BD0 ; PLAYER 1
 1BB4  112915        ld   de,$1529
 1BB7  221001        ld   ($0110),hl
 1BBA  FF            rst  $38
 1BBB  180E          jr   $1BCB
 1BBD  CD1003        call $0310
 1BC0  100A          djnz $1BCC
-1BC2  201C          jr   nz,$1BE0
+1BC2  201C          jr   nz,$1BE0 ; PLAYER 2
 1BC4  112915        ld   de,$1529
 1BC7  221002        ld   ($0210),hl
 1BCA  FF            rst  $38
@@ -5416,7 +5416,7 @@
 1C40  C9            ret
 
                 play_intro_jingle:
-1C41  3E0F          ld   a,$0F
+1C41  3E0F          ld   a,$0F ; intro jingle
 1C43  324480        ld   ($8044),a
 1C46  AF            xor  a
 1C47  324280        ld   ($8042),a
@@ -6169,7 +6169,7 @@
 1FFB  3B            dec  sp
 1FFC  3E3F          ld   a,$3F
 1FFE  FF            rst  $38
-1FFF  03            inc  bc
+1FFF  03            inc  bc ; ...to be continued...
                 ;;; ======END OF BG2.BIN, START OF BG3.BIN ===========
 2000  3F            ccf
 2001  43            ld   b,e
@@ -6726,10 +6726,10 @@
 22AA  3E12          ld   a,$12
 22AC  324E81        ld   ($814E),a
 22AF  325281        ld   ($8152),a
-22B2  7E            ld   a,(hl)
-22B3  E6FC          and  $FC
+22B2  7E            ld   a,(hl) ; anim height (for hiding dino)
+22B3  E6FC          and  $FC ; 1111 1100
 22B5  281D          jr   z,$22D4
-22B7  E6F8          and  $F8
+22B7  E6F8          and  $F8 ; 1111 1000
 22B9  2007          jr   nz,$22C2
 22BB  3A4C81        ld   a,($814C)
 22BE  D608          sub  $08
@@ -6780,9 +6780,9 @@
 2302  5F            ld   e,a
 2303  37            scf
 2304  3F            ccf
-2305  D60B          sub  $0B
+2305  D60B          sub  $0B ; 11 ticks till dino time
 2307  D8            ret  c
-2308  3A0480        ld   a,($8004)
+2308  3A0480        ld   a,($8004) ; start dino!
 230B  A7            and  a
 230C  2005          jr   nz,$2313
 230E  3A2980        ld   a,($8029)
@@ -6790,19 +6790,19 @@
 2313  3A2A80        ld   a,($802A)
 2316  3D            dec  a
 2317  213023        ld   hl,$2330
-231A  CB27          sla  a
-231C  85            add  a,l
+231A  CB27          sla  a ; screen # x 2
+231C  85            add  a,l ; dino_lookup + scr*2
 231D  6F            ld   l,a
 231E  4E            ld   c,(hl)
 231F  23            inc  hl
 2320  46            ld   b,(hl)
-2321  7B            ld   a,e
+2321  7B            ld   a,e ; add dino counter
 2322  D60B          sub  $0B
 2324  CB27          sla  a
 2326  CB27          sla  a
 2328  81            add  a,c
 2329  6F            ld   l,a
-232A  60            ld   h,b
+232A  60            ld   h,b ; hl points to dino x/y
 232B  CDA022        call $22A0
 232E  C9            ret
 
@@ -6810,21 +6810,21 @@
 
                 ;; location of path data for each screen
                 dino_path_lookup:
-2330  78            ld   a,b
+2330  78            ld   a,b ; DINO_PATH_1 (screen1)
 2331  23            inc  hl
 2332  78            ld   a,b
 2333  23            inc  hl
-2334  00            nop
+2334  00            nop ; DINO_PATH_2
 2335  2678          ld   h,$78
 2337  23            inc  hl
-2338  80            add  a,b
+2338  80            add  a,b ; DINO_PATH_3
 2339  2600          ld   h,$00
 233B  27            daa
-233C  70            ld   (hl),b
+233C  70            ld   (hl),b ; DINO_PATH_5
 233D  27            daa
 233E  78            ld   a,b
 233F  23            inc  hl
-2340  00            nop
+2340  00            nop ; DINO_PATH_4
 2341  2680          ld   h,$80
 2343  2600          ld   h,$00
 2345  27            daa
@@ -6835,7 +6835,7 @@
 234A  00            nop
 234B  2678          ld   h,$78
 234D  23            inc  hl
-234E  00            nop
+234E  00            nop ; DINO_PATH_6
 234F  2870          jr   z,$23C1
 2351  27            daa
 2352  78            ld   a,b
@@ -6843,7 +6843,7 @@
 2354  00            nop
 2355  2870          jr   z,$23C7
 2357  27            daa
-2358  00            nop
+2358  00            nop ; DINO_PATH_7
 2359  2A0027        ld   hl,($2700)
 235C  70            ld   (hl),b
 235D  27            daa
@@ -6851,7 +6851,7 @@
 235F  2A0027        ld   hl,($2700)
 2362  70            ld   (hl),b
 2363  27            daa
-2364  00            nop
+2364  00            nop ; (screen 27)
 2365  2800          jr   z,$2367
 2367  00            nop
 2368  00            nop
@@ -7221,13 +7221,13 @@
                 ;; through a thick horizontal band in the middle of the screen.
                 ;; ... for some reason
                 unused_draw_d4_everywhere:
-2538  111600        ld   de,$0016
+2538  111600        ld   de,$0016 ; +22 each outer loop?
 253B  0E20          ld   c,$20
 253D  211090        ld   hl,$9010
                 _j_1:                             ; 32 loops
 2540  060A          ld   b,$0A
                 _i_1:                             ; 10 loops
-2542  36D4          ld   (hl),$D4
+2542  36D4          ld   (hl),$D4 ; tile [21] (level indicator number)
 2544  23            inc  hl
 2545  05            dec  b
 2546  20FA          jr   nz,$2542
@@ -7810,14 +7810,14 @@
 27E0  3A4381        ld   a,($8143)
 27E3  37            scf
 27E4  3F            ccf
-27E5  C660          add  a,$60
+27E5  C660          add  a,$60 ; at top of screen?
 27E7  300B          jr   nc,$27F4
-27E9  3ED0          ld   a,$D0
+27E9  3ED0          ld   a,$D0 ; no, set to bottom
 27EB  324381        ld   ($8143),a
 27EE  C610          add  a,$10
 27F0  324781        ld   ($8147),a
 27F3  C9            ret
-27F4  3E28          ld   a,$28
+27F4  3E28          ld   a,$28 ; yes, set to top
 27F6  324381        ld   ($8143),a
 27F9  C610          add  a,$10
 27FB  324781        ld   ($8147),a
@@ -8037,7 +8037,7 @@
 28E5  C0            ret  nz
 28E6  3A4C81        ld   a,($814C)
 28E9  A7            and  a
-28EA  C8            ret  z
+28EA  C8            ret  z ; no dino out, leave
 28EB  47            ld   b,a
 28EC  3A2E80        ld   a,($802E)
 28EF  80            add  a,b
@@ -8053,11 +8053,11 @@
 
                 ;;
 2901  210002        ld   hl,$0200
-2904  CDE301        call $01E3
+2904  CDE301        call $01E3 ; $4200: sfx something
 2907  CD1011        call $1110
-290A  212002        ld   hl,$0220
+290A  212002        ld   hl,$0220 ; $4220 = SFX_SUMFIN_1
 290D  CDE301        call $01E3
-2910  214002        ld   hl,$0240
+2910  214002        ld   hl,$0240 ; $4240 = SFX_SUMFIN_2
 2913  CDE301        call $01E3
 2916  CD1011        call $1110
 2919  214008        ld   hl,$0840
@@ -8070,12 +8070,12 @@
                 set_dino_dir:
 2920  23            inc  hl
 2921  23            inc  hl
-2922  46            ld   b,(hl)
+2922  46            ld   b,(hl) ; read DINO_PATH_X
 2923  3A4C81        ld   a,($814C)
 2926  37            scf
 2927  3F            ccf
 2928  90            sub  b
-2929  3804          jr   c,$292F
+2929  3804          jr   c,$292F ; reset
 292B  3EFF          ld   a,$FF
 292D  1802          jr   $2931
 292F  3E01          ld   a,$01
@@ -8095,7 +8095,7 @@
 293F  FF            rst  $38
 
                 jmp_hl_pl_4k_and_mystery_8066_fn:
-2940  CDE301        call $01E3
+2940  CDE301        call $01E3 ; hl = DRAW_SCREEN
 2943  CD1011        call $1110
 2946  C9            ret
 
@@ -8163,7 +8163,7 @@
 2987  FE01          cp   $01
 2989  2006          jr   nz,$2991
 298B  3EF2          ld   a,$F2
-298D  324B93        ld   ($934B),a
+298D  324B93        ld   ($934B),a ; uncovering bonus red squares
 2990  C9            ret
 2991  FE02          cp   $02
 2993  2006          jr   nz,$299B
@@ -8197,11 +8197,11 @@
 29C8  7E            ld   a,(hl)
 29C9  328C93        ld   ($938C),a
 29CC  CDD03F        call $3FD0
-29CF  0E0A          ld   c,$0A
+29CF  0E0A          ld   c,$0A ; 10x
 29D1  3A6280        ld   a,($8062)
 29D4  47            ld   b,a
 29D5  04            inc  b
-29D6  3EA0          ld   a,$A0
+29D6  3EA0          ld   a,$A0 ; 1000 in bdc
 29D8  321D80        ld   ($801D),a
 29DB  C5            push bc
 29DC  CD0017        call $1700
@@ -8212,7 +8212,7 @@
 29E6  20E9          jr   nz,$29D1
 29E8  3A6280        ld   a,($8062)
 29EB  3C            inc  a
-29EC  FE04          cp   $04
+29EC  FE04          cp   $04 ; Cap bonus to 4x
 29EE  2002          jr   nz,$29F2
 29F0  3E03          ld   a,$03
 29F2  326280        ld   ($8062),a
@@ -8425,7 +8425,7 @@
 2ADB  7B            ld   a,e
 2ADC  A7            and  a
 2ADD  C8            ret  z
-2ADE  CD8029        call $2980
+2ADE  CD8029        call $2980 ; clear out "got" bonuses
 2AE1  1D            dec  e
 2AE2  20FA          jr   nz,$2ADE
 2AE4  C9            ret
@@ -8530,31 +8530,31 @@
 2B56  3A2980        ld   a,($8029)
 2B59  1803          jr   $2B5E
 2B5B  3A2A80        ld   a,($802A)
-2B5E  3D            dec  a
-2B5F  CB27          sla  a
-2B61  CB27          sla  a
+2B5E  3D            dec  a ; scr#-1
+2B5F  CB27          sla  a ; * 2
+2B61  CB27          sla  a ; * 2
 2B63  CD9013        call $1390
-2B66  00            nop
+2B66  00            nop ; scr 1
 2B67  00            nop
 2B68  00            nop
 2B69  C9            ret
 2B6A  CD482C        call $2C48
 2B6D  C9            ret
-2B6E  00            nop
+2B6E  00            nop ; scr 3
 2B6F  00            nop
 2B70  00            nop
 2B71  C9            ret
 2B72  CD582C        call $2C58
 2B75  C9            ret
-2B76  00            nop
+2B76  00            nop ; scr 5
 2B77  00            nop
 2B78  00            nop
 2B79  C9            ret
-2B7A  00            nop
+2B7A  00            nop ; scr 6
 2B7B  00            nop
 2B7C  00            nop
 2B7D  C9            ret
-2B7E  00            nop
+2B7E  00            nop ; scr 7
 2B7F  00            nop
 2B80  00            nop
 2B81  C9            ret
@@ -8564,61 +8564,61 @@
 2B89  C9            ret
 2B8A  CDF02B        call $2BF0
 2B8D  C9            ret
-2B8E  CD9833        call $3398
+2B8E  CD9833        call $3398 ; scr 11
 2B91  C9            ret
-2B92  CD7034        call $3470
+2B92  CD7034        call $3470 ; scr 12
 2B95  C9            ret
-2B96  CD3835        call $3538
+2B96  CD3835        call $3538 ; scr 13
 2B99  C9            ret
-2B9A  CDB835        call $35B8
+2B9A  CDB835        call $35B8 ; scr 14
 2B9D  C9            ret
-2B9E  CD5836        call $3658
+2B9E  CD5836        call $3658 ; scr 15
 2BA1  C9            ret
-2BA2  00            nop
+2BA2  00            nop ; scr 16
 2BA3  00            nop
 2BA4  00            nop
 2BA5  C9            ret
-2BA6  CD7036        call $3670
+2BA6  CD7036        call $3670 ; scr 17
 2BA9  C9            ret
-2BAA  CDD036        call $36D0
+2BAA  CDD036        call $36D0 ; scr 18
 2BAD  C9            ret
-2BAE  CD6037        call $3760
+2BAE  CD6037        call $3760 ; scr 19
 2BB1  C9            ret
-2BB2  CDE837        call $37E8
+2BB2  CDE837        call $37E8 ; scr 20
 2BB5  C9            ret
-2BB6  00            nop
+2BB6  00            nop ; scr 21
 2BB7  00            nop
 2BB8  00            nop
 2BB9  C9            ret
-2BBA  CD0838        call $3808
+2BBA  CD0838        call $3808 ; scr 22
 2BBD  C9            ret
-2BBE  CD6838        call $3868
+2BBE  CD6838        call $3868 ; scr 23
 2BC1  C9            ret
-2BC2  CD683B        call $3B68
+2BC2  CD683B        call $3B68 ; scr 24
 2BC5  C9            ret
-2BC6  CD8838        call $3888
+2BC6  CD8838        call $3888 ; scr 25
 2BC9  C9            ret
 2BCA  CD1839        call $3918
 2BCD  C9            ret
-2BCE  CD8838        call $3888
+2BCE  CD8838        call $3888 ; scr 27
 2BD1  C9            ret
-2BD2  00            nop
+2BD2  00            nop ; scr ?
 2BD3  00            nop
 2BD4  00            nop
 2BD5  C9            ret
-2BD6  00            nop
+2BD6  00            nop ; scr ?
 2BD7  00            nop
 2BD8  00            nop
 2BD9  C9            ret
-2BDA  00            nop
+2BDA  00            nop ; scr ?
 2BDB  00            nop
 2BDC  00            nop
 2BDD  C9            ret
-2BDE  00            nop
+2BDE  00            nop ; scr ?
 2BDF  00            nop
 2BE0  00            nop
 2BE1  C9            ret
-2BE2  00            nop
+2BE2  00            nop ; scr ? (32)
 2BE3  00            nop
 2BE4  00            nop
 2BE5  C9            ret
@@ -8683,9 +8683,9 @@
 2C2D  C0            ret  nz
 2C2E  3A3680        ld   a,($8036)
 2C31  3C            inc  a
-2C32  FE0E          cp   $0E
+2C32  FE0E          cp   $0E ; has rock finished falling?
 2C34  2001          jr   nz,$2C37
-2C36  AF            xor  a
+2C36  AF            xor  a ; reset
 2C37  323680        ld   ($8036),a
 2C3A  A7            and  a
 2C3B  C0            ret  nz
@@ -8745,10 +8745,10 @@
 2C7B  CB78          bit  7,b
 2C7D  2009          jr   nz,$2C88
 2C7F  3A00A0        ld   a,($A000)
-2C82  CB6F          bit  5,a
+2C82  CB6F          bit  5,a ; jump?
 2C84  C4D82E        call nz,$2ED8
 2C87  C9            ret
-2C88  CB68          bit  5,b
+2C88  CB68          bit  5,b ; jump?
 2C8A  C4D82E        call nz,$2ED8
 2C8D  C9            ret
 
@@ -8788,9 +8788,9 @@
 2CB6  3A2980        ld   a,($8029)
 2CB9  1803          jr   $2CBE
 2CBB  3A2A80        ld   a,($802A)
-2CBE  3D            dec  a
-2CBF  E607          and  $07
-2CC1  CB27          sla  a
+2CBE  3D            dec  a ; scr - 1
+2CBF  E607          and  $07 ; & 0000 0111
+2CC1  CB27          sla  a ; * 4
 2CC3  CB27          sla  a
 2CC5  CD9013        call $1390
                 ;; all nops, no calls...
@@ -8911,7 +8911,7 @@
 
                 p2_got_hiscore:
 2D58  3AF183        ld   a,($83F1)
-2D5B  CB7F          bit  7,a
+2D5B  CB7F          bit  7,a ; hmm what is bit 7 button?
 2D5D  280A          jr   z,$2D69
 2D5F  3E01          ld   a,$01
 2D61  3206B0        ld   ($B006),a
@@ -8945,21 +8945,21 @@
 
                 enter_hiscore_screen:
 2D88  F5            push af
-2D89  21E816        ld   hl,$16E8
+2D89  21E816        ld   hl,$16E8 ; 56e8 = $SFX_RESET_A_BUNCH
 2D8C  CDE301        call $01E3
-2D8F  3E09          ld   a,$09
+2D8F  3E09          ld   a,$09 ; extra life /hiscore sfx
 2D91  324280        ld   ($8042),a
 2D94  00            nop
 2D95  CD7014        call $1470
 2D98  CDB837        call $37B8
 2D9B  21E00F        ld   hl,$0FE0
-2D9E  CD4008        call $0840
-2DA1  00            nop
+2D9E  CD4008        call $0840 ; draws the hiscore screen..
+2DA1  00            nop ; params to DRAW_SCREEN
 2DA2  00            nop
 2DA3  CD1003        call $0310
 2DA6  04            inc  b
 2DA7  0A            ld   a,(bc)
-2DA8  201C          jr   nz,$2DC6
+2DA8  201C          jr   nz,$2DC6 ; PLAYER
 2DAA  112915        ld   de,$1529
 2DAD  22FFCD        ld   ($CDFF),hl
 2DB0  1003          djnz $2DB5
@@ -8976,12 +8976,12 @@
 2DC0  1018          djnz $2DDA
 2DC2  19            add  hl,de
 2DC3  17            rla
-2DC4  1815          jr   $2DDB
+2DC4  1815          jr   $2DDB ; YOU BEAT THE HIGHEST
 2DC6  23            inc  hl
 2DC7  24            inc  h
 2DC8  FF            rst  $38
 2DC9  CD1003        call $0310
-2DCC  09            add  hl,bc
+2DCC  09            add  hl,bc ; SCORE OF THE DAY
 2DCD  03            inc  bc
 2DCE  23            inc  hl
 2DCF  13            inc  de
@@ -9072,29 +9072,29 @@
 2E61  2B            dec  hl
 2E62  FF            rst  $38
 2E63  CD5024        call $2450
-2E66  3E09          ld   a,$09
-2E68  328293        ld   ($9382),a
+2E66  3E09          ld   a,$09 ; 90 seconds timer
+2E68  328293        ld   ($9382),a ; num 1 to screen
 2E6B  AF            xor  a
-2E6C  326293        ld   ($9362),a
+2E6C  326293        ld   ($9362),a ; num 2 to screen
 2E6F  327580        ld   ($8075),a
 2E72  F1            pop  af
 2E73  FD217792      ld   iy,$9277
-2E77  328491        ld   ($9184),a
+2E77  328491        ld   ($9184),a ; something else on screen...
 2E7A  CD882F        call $2F88
 2E7D  214E93        ld   hl,$934E
                 set_cursor:
 2E80  3689          ld   (hl),$89
 2E82  DD21F183      ld   ix,$83F1
-2E86  3A8491        ld   a,($9184)
-2E89  FE01          cp   $01
+2E86  3A8491        ld   a,($9184) ; read from screen set above?
+2E89  FE01          cp   $01 ; p1 (maybe)?
 2E8B  2806          jr   z,$2E93
 2E8D  DDCB007E      bit  7,(ix+$00)
 2E91  2004          jr   nz,$2E97
 2E93  DD2100A0      ld   ix,$A000
-2E97  DDCB005E      bit  3,(ix+$00)
+2E97  DDCB005E      bit  3,(ix+$00) ; right?
 2E9B  2803          jr   z,$2EA0
 2E9D  CDA82F        call $2FA8
-2EA0  DDCB0056      bit  2,(ix+$00)
+2EA0  DDCB0056      bit  2,(ix+$00) ; left?
 2EA4  2803          jr   z,$2EA9
 2EA6  CD502F        call $2F50
 2EA9  CD702C        call $2C70
@@ -9111,11 +9111,11 @@
 2EB6  3E37          ld   a,$37
 2EB8  BD            cp   l
 2EB9  2005          jr   nz,$2EC0
-2EBB  3E91          ld   a,$91
+2EBB  3E91          ld   a,$91 ; 9137 = last letter pos
 2EBD  BC            cp   h
 2EBE  2808          jr   z,$2EC8
 2EC0  E1            pop  hl
-2EC1  3689          ld   (hl),$89
+2EC1  3689          ld   (hl),$89 ; useless? Done in SET_CURSOR
 2EC3  CD0831        call $3108
 2EC6  18B8          jr   $2E80
                 _done_2EC8:
@@ -9138,24 +9138,24 @@
                 hiscore_select_letter:
 2ED8  3E10          ld   a,$10
 2EDA  329380        ld   ($8093),a
-2EDD  3E90          ld   a,$90
+2EDD  3E90          ld   a,$90 ; did we press "end"?
 2EDF  BC            cp   h
 2EE0  2012          jr   nz,$2EF4
 2EE2  3E92          ld   a,$92
 2EE4  BD            cp   l
-2EE5  2004          jr   nz,$2EEB
+2EE5  2004          jr   nz,$2EEB ; no!
 2EE7  CD102F        call $2F10
 2EEA  C9            ret
-2EEB  3ED2          ld   a,$D2
+2EEB  3ED2          ld   a,$D2 ; how about "rub"?
 2EED  BD            cp   l
-2EEE  2004          jr   nz,$2EF4
+2EEE  2004          jr   nz,$2EF4 ; nope...
 2EF0  CD202F        call $2F20
 2EF3  C9            ret
                 _enter_letter:
 2EF4  2B            dec  hl
 2EF5  7E            ld   a,(hl)
 2EF6  23            inc  hl
-2EF7  FD7700        ld   (iy+$00),a
+2EF7  FD7700        ld   (iy+$00),a ; draws letter on screen
 2EFA  11E0FF        ld   de,$FFE0
 2EFD  FD19          add  iy,de
 2EFF  C9            ret
@@ -9201,7 +9201,7 @@
 2F2E  E5            push hl
 2F2F  FDE5          push iy
 2F31  E1            pop  hl
-2F32  3E92          ld   a,$92
+2F32  3E92          ld   a,$92 ; 9297 = first letter pos
 2F34  BC            cp   h
 2F35  2005          jr   nz,$2F3C
 2F37  3E97          ld   a,$97
@@ -9236,7 +9236,7 @@
 2F5A  3E92          ld   a,$92
 2F5C  BD            cp   l
 2F5D  2004          jr   nz,$2F63
-2F5F  219090        ld   hl,$9090
+2F5F  219090        ld   hl,$9090 ; screen somewhere
 2F62  C9            ret
 2F63  3E90          ld   a,$90
 2F65  BD            cp   l
@@ -9272,7 +9272,7 @@
 
                 hiscore_clear_name:
 2F88  E5            push hl
-2F89  210783        ld   hl,$8307
+2F89  210783        ld   hl,$8307 ; default is "HI-SCORE", clearing...
 2F8C  3610          ld   (hl),$10
 2F8E  23            inc  hl
 2F8F  7D            ld   a,l
@@ -9284,7 +9284,7 @@
 2F96  FF            rst  $38
 2F97  FF            rst  $38
 2F98  FF            rst  $38
-2F99  1F            rra
+2F99  1F            rra ; weird 0x1F. Dump error?
 2F9A  FF            rst  $38
 2F9B  FF            rst  $38
 2F9C  FF            rst  $38
@@ -9313,17 +9313,17 @@
 2FB8  3E4E          ld   a,$4E
 2FBA  BD            cp   l
 2FBB  2004          jr   nz,$2FC1
-2FBD  215093        ld   hl,$9350
+2FBD  215093        ld   hl,$9350 ; wrap line 1
 2FC0  C9            ret
 2FC1  3E50          ld   a,$50
 2FC3  BD            cp   l
 2FC4  2004          jr   nz,$2FCA
-2FC6  215293        ld   hl,$9352
+2FC6  215293        ld   hl,$9352 ; wrap line 2
 2FC9  C9            ret
 2FCA  3E52          ld   a,$52
 2FCC  BD            cp   l
 2FCD  C0            ret  nz
-2FCE  214E93        ld   hl,$934E
+2FCE  214E93        ld   hl,$934E ; wrap line 3
 2FD1  C9            ret
 2FD2  FF            rst  $38
 2FD3  FF            rst  $38
@@ -9436,25 +9436,25 @@
                 ;; Writes HIGH-SCORE to bytes (later to screen)
                 set_hiscore_text:
 3080  210783        ld   hl,$8307
-3083  3618          ld   (hl),$18
+3083  3618          ld   (hl),$18 ; h
 3085  23            inc  hl
-3086  3619          ld   (hl),$19
+3086  3619          ld   (hl),$19 ; i
 3088  23            inc  hl
-3089  3617          ld   (hl),$17
+3089  3617          ld   (hl),$17 ; g
 308B  23            inc  hl
-308C  3618          ld   (hl),$18
+308C  3618          ld   (hl),$18 ; h
 308E  23            inc  hl
 308F  362B          ld   (hl),$2B
 3091  23            inc  hl
-3092  3623          ld   (hl),$23
+3092  3623          ld   (hl),$23 ; s
 3094  23            inc  hl
-3095  3613          ld   (hl),$13
+3095  3613          ld   (hl),$13 ; c
 3097  23            inc  hl
-3098  361F          ld   (hl),$1F
+3098  361F          ld   (hl),$1F ; o
 309A  23            inc  hl
-309B  3622          ld   (hl),$22
+309B  3622          ld   (hl),$22 ; r
 309D  23            inc  hl
-309E  3615          ld   (hl),$15
+309E  3615          ld   (hl),$15 ; e
                 ;; set default hiscore
 30A0  210083        ld   hl,$8300
 30A3  3600          ld   (hl),$00
@@ -9560,12 +9560,12 @@
 3125  3D            dec  a
 3126  27            daa
 3127  CC102F        call z,$2F10
-312A  77            ld   (hl),a
+312A  77            ld   (hl),a ; load a into $HISCORE_TIMER
 312B  AF            xor  a
 312C  ED6F          rld
-312E  328293        ld   ($9382),a
+312E  328293        ld   ($9382),a ; Timer countdown char 1
 3131  ED6F          rld
-3133  326293        ld   ($9362),a
+3133  326293        ld   ($9362),a ; Timer countdown char 2
 3136  ED6F          rld
 3138  DDE1          pop  ix
 313A  FDE1          pop  iy
@@ -9578,14 +9578,14 @@
                 update_enemy_1:
 3140  3A3780        ld   a,($8037)
 3143  A7            and  a
-3144  C8            ret  z
+3144  C8            ret  z ; enemy not alive, return
                 ;;  Move rock according to lookup table
 3145  3C            inc  a
 3146  FE3C          cp   $3C
 3148  2001          jr   nz,$314B
 314A  AF            xor  a
 314B  323780        ld   ($8037),a
-314E  218031        ld   hl,$3180
+314E  218031        ld   hl,$3180 ; list of [frame,y pos]
 3151  CB27          sla  a
 3153  85            add  a,l
 3154  6F            ld   l,a
@@ -9831,7 +9831,7 @@
 3266  3A3980        ld   a,($8039)
 3269  A7            and  a
 326A  C8            ret  z
-326B  3A5881        ld   a,($8158)
+326B  3A5881        ld   a,($8158) ; move left
 326E  3D            dec  a
 326F  3D            dec  a
 3270  3D            dec  a
@@ -9896,7 +9896,7 @@
 32BF  3E34          ld   a,$34
 32C1  325581        ld   ($8155),a
 32C4  3E01          ld   a,$01
-32C6  323B80        ld   ($803B),a
+32C6  323B80        ld   ($803B),a ; why enemy_3?
 32C9  C9            ret
 
 32CA  FF            rst  $38
@@ -9959,7 +9959,7 @@
 3317  FF            rst  $38
 
                 ;; blue-meanie up?
-3318  3A5781        ld   a,($8157)
+3318  3A5781        ld   a,($8157) ; move up?
 331B  3D            dec  a
 331C  3D            dec  a
 331D  325781        ld   ($8157),a
@@ -9986,7 +9986,7 @@
 333F  FF            rst  $38
 
                 ;; blue-meanie down?
-3340  3A5781        ld   a,($8157)
+3340  3A5781        ld   a,($8157) ; move down?
 3343  3C            inc  a
 3344  3C            inc  a
 3345  325781        ld   ($8157),a
@@ -10253,7 +10253,7 @@
 34B7  3E17          ld   a,$17
 34B9  325681        ld   ($8156),a
 34BC  3E01          ld   a,$01
-34BE  323B80        ld   ($803B),a
+34BE  323B80        ld   ($803B),a ; Why set enemy_3?
 34C1  C9            ret
 34C2  FF            rst  $38
 34C3  FF            rst  $38
@@ -10484,7 +10484,7 @@
 3616  3A4180        ld   a,($8041)
 3619  A7            and  a
 361A  C8            ret  z
-361B  3A5C81        ld   a,($815C)
+361B  3A5C81        ld   a,($815C) ; move right
 361E  3C            inc  a
 361F  3C            inc  a
 3620  3C            inc  a
@@ -10508,7 +10508,7 @@
                 check_buttons_for_something:
 3640  C5            push bc
 3641  3AF183        ld   a,($83F1)
-3644  E63F          and  $3F
+3644  E63F          and  $3F ; 0011 1111
 3646  4F            ld   c,a
 3647  3E0E          ld   a,$0E
 3649  D300          out  ($00),a
@@ -11120,7 +11120,7 @@
 39AF  FF            rst  $38
 
                 ;;; who calls? debug?
-39B0  3A0780        ld   a,($8007)
+39B0  3A0780        ld   a,($8007) ; woah! P1 timer is used maybe?
 39B3  323680        ld   ($8036),a
 39B6  C9            ret
 
@@ -11163,7 +11163,7 @@
 39E8  3A1583        ld   a,($8315)
 39EB  E607          and  $07
 39ED  C0            ret  nz
-39EE  3A3780        ld   a,($8037)
+39EE  3A3780        ld   a,($8037) ; bottom spear
 39F1  A7            and  a
 39F2  2819          jr   z,$3A0D
 39F4  3C            inc  a
@@ -11179,7 +11179,7 @@
 3A0A  325481        ld   ($8154),a
                 ;;
                 _middle_spear:
-3A0D  3A3980        ld   a,($8039)
+3A0D  3A3980        ld   a,($8039) ; middle spear
 3A10  A7            and  a
 3A11  2819          jr   z,$3A2C
 3A13  3C            inc  a
@@ -11195,7 +11195,7 @@
 3A29  325881        ld   ($8158),a
                 ;;
                 _top_spear:
-3A2C  3A3B80        ld   a,($803B)
+3A2C  3A3B80        ld   a,($803B) ; top spear
 3A2F  A7            and  a
 3A30  C8            ret  z
 3A31  3C            inc  a
@@ -11317,13 +11317,13 @@
                 ;; enemy 1
                 set_enemy_1_98_c0:
 3AF8  215481        ld   hl,$8154
-3AFB  3698          ld   (hl),$98
+3AFB  3698          ld   (hl),$98 ; x
 3AFD  23            inc  hl
-3AFE  3636          ld   (hl),$36
+3AFE  3636          ld   (hl),$36 ; frame
 3B00  23            inc  hl
-3B01  3617          ld   (hl),$17
+3B01  3617          ld   (hl),$17 ; color
 3B03  23            inc  hl
-3B04  36C0          ld   (hl),$C0
+3B04  36C0          ld   (hl),$C0 ; y
 3B06  23            inc  hl
 3B07  3E01          ld   a,$01
 3B09  323780        ld   ($8037),a
@@ -11335,13 +11335,13 @@
                 ;; enemy 2
                 set_enemy_2_90_c0:
 3B10  215881        ld   hl,$8158
-3B13  3690          ld   (hl),$90
+3B13  3690          ld   (hl),$90 ; x
 3B15  23            inc  hl
-3B16  3636          ld   (hl),$36
+3B16  3636          ld   (hl),$36 ; frame
 3B18  23            inc  hl
-3B19  3617          ld   (hl),$17
+3B19  3617          ld   (hl),$17 ; color
 3B1B  23            inc  hl
-3B1C  36C0          ld   (hl),$C0
+3B1C  36C0          ld   (hl),$C0 ; y
 3B1E  23            inc  hl
 3B1F  3E01          ld   a,$01
 3B21  323980        ld   ($8039),a
@@ -11353,13 +11353,13 @@
                 ;; enemy 3
                 set_enemy_3_90_c0:
 3B28  215C81        ld   hl,$815C
-3B2B  3690          ld   (hl),$90
+3B2B  3690          ld   (hl),$90 ; x
 3B2D  23            inc  hl
-3B2E  3636          ld   (hl),$36
+3B2E  3636          ld   (hl),$36 ; frame
 3B30  23            inc  hl
-3B31  3617          ld   (hl),$17
+3B31  3617          ld   (hl),$17 ; color
 3B33  23            inc  hl
-3B34  36C0          ld   (hl),$C0
+3B34  36C0          ld   (hl),$C0 ; y
 3B36  23            inc  hl
 3B37  3E01          ld   a,$01
 3B39  323B80        ld   ($803B),a
@@ -11413,23 +11413,23 @@
                 ;; interesting algorithm for collision detection!
                 player_enemy_collision:
                 ;; Check X
-3B80  FD7E00        ld   a,(iy+$00)
-3B83  DD9600        sub  (ix+$00)
+3B80  FD7E00        ld   a,(iy+$00) ; points to enemy X
+3B83  DD9600        sub  (ix+$00) ; minus player_x
 3B86  37            scf
-3B87  3F            ccf
-3B88  D60C          sub  $0C
-3B8A  3803          jr   c,$3B8F
-3B8C  C618          add  a,$18
-3B8E  D0            ret  nc
+3B87  3F            ccf ; (clear carry)
+3B88  D60C          sub  $0C ; is enemy to the right and X diff <= sprite width?
+3B8A  3803          jr   c,$3B8F ; ... yes, check Y
+3B8C  C618          add  a,$18 ; no, but enemy might be to the left: try "+ width * 2"
+3B8E  D0            ret  nc ; no collision on X, leave.
                 _check_y:
-3B8F  DD7E03        ld   a,(ix+$03)
-3B92  FD9603        sub  (iy+$03)
+3B8F  DD7E03        ld   a,(ix+$03) ; player Y pos (player_x addr + 3)
+3B92  FD9603        sub  (iy+$03) ; minus enemy Y pos (enemy Y addr + 3)
 3B95  37            scf
-3B96  3F            ccf
-3B97  D60A          sub  $0A
-3B99  3803          jr   c,$3B9E
-3B9B  C621          add  a,$21
-3B9D  D0            ret  nc
+3B96  3F            ccf ; (clear carry)
+3B97  D60A          sub  $0A ; is Y diff <= 10?
+3B99  3803          jr   c,$3B9E ; ... yes - we collided.
+3B9B  C621          add  a,$21 ; no, but is player above? Check legs.
+3B9D  D0            ret  nc ; no - no collsions on Y, leave
                 _hit:
 3B9E  CD330A        call $0A33
 3BA1  C9            ret
@@ -11476,20 +11476,20 @@
                 draw_tiles_v_copy:
 3BD8  DDE1          pop  ix
 3BDA  2600          ld   h,$00
-3BDC  DD6E00        ld   l,(ix+$00)
+3BDC  DD6E00        ld   l,(ix+$00) ; param 1
 3BDF  29            add  hl,hl
 3BE0  29            add  hl,hl
 3BE1  29            add  hl,hl
 3BE2  29            add  hl,hl
 3BE3  29            add  hl,hl
 3BE4  DD23          inc  ix
-3BE6  DD7E00        ld   a,(ix+$00)
+3BE6  DD7E00        ld   a,(ix+$00) ; param 2
 3BE9  85            add  a,l
 3BEA  6F            ld   l,a
 3BEB  014090        ld   bc,$9040
 3BEE  09            add  hl,bc
 3BEF  DD23          inc  ix
-3BF1  DD7E00        ld   a,(ix+$00)
+3BF1  DD7E00        ld   a,(ix+$00) ; read until 0xff
 3BF4  FEFF          cp   $FF
 3BF6  2804          jr   z,$3BFC
 3BF8  77            ld   (hl),a
@@ -11593,7 +11593,7 @@
 3C8A  19            add  hl,de
 3C8B  0F            rrca
 3C8C  80            add  a,b
-3C8D  80            add  a,b
+3C8D  80            add  a,b ; Flat
 3C8E  80            add  a,b
 3C8F  80            add  a,b
 3C90  80            add  a,b
@@ -11644,31 +11644,31 @@
 
                 ;; x, frame, color, y
                 cutscene_data:
-3CC0  80            add  a,b
+3CC0  80            add  a,b ; player
 3CC1  3A1170        ld   a,($7011)
-3CC4  80            add  a,b
+3CC4  80            add  a,b ; player legs
 3CC5  3B            dec  sp
 3CC6  118094        ld   de,$9480
 3CC9  05            dec  b
 3CCA  12            ld   (de),a
 3CCB  80            add  a,b
-3CCC  00            nop
+3CCC  00            nop ; dino (offscreen)
 3CCD  00            nop
 3CCE  12            ld   (de),a
 3CCF  80            add  a,b
-3CD0  00            nop
+3CD0  00            nop ; dino legs
 3CD1  00            nop
 3CD2  12            ld   (de),a
 3CD3  80            add  a,b
-3CD4  6C            ld   l,h
+3CD4  6C            ld   l,h ; bambongo 1
 3CD5  00            nop
 3CD6  12            ld   (de),a
 3CD7  80            add  a,b
-3CD8  A8            xor  b
+3CD8  A8            xor  b ; bambongo 2
 3CD9  00            nop
 3CDA  12            ld   (de),a
 3CDB  80            add  a,b
-3CDC  00            nop
+3CDC  00            nop ; unused?
 3CDD  00            nop
 3CDE  12            ld   (de),a
 3CDF  80            add  a,b
@@ -11740,12 +11740,12 @@
 3D2B  324981        ld   ($8149),a
 3D2E  23            inc  hl
 3D2F  7E            ld   a,(hl)
-3D30  325181        ld   ($8151),a
+3D30  325181        ld   ($8151),a ; how is dino the same?!
 3D33  325581        ld   ($8155),a
 3D36  325981        ld   ($8159),a
 3D39  23            inc  hl
 3D3A  7D            ld   a,l
-3D3B  E61F          and  $1F
+3D3B  E61F          and  $1F ; wrap dance at 32 bytes
 3D3D  6F            ld   l,a
 3D3E  C9            ret
 3D3F  FF            rst  $38
@@ -11766,39 +11766,39 @@
 3D50  CD7014        call $1470
 3D53  21E00F        ld   hl,$0FE0
 3D56  CD4008        call $0840
-3D59  00            nop
+3D59  00            nop ; params to DRAW_SCREEN
 3D5A  00            nop
 3D5B  CDA003        call $03A0
 3D5E  CD5024        call $2450
-3D61  214081        ld   hl,$8140
-3D64  01C03C        ld   bc,$3CC0
-3D67  1620          ld   d,$20
-3D69  0A            ld   a,(bc)
-3D6A  77            ld   (hl),a
-3D6B  23            inc  hl
-3D6C  03            inc  bc
-3D6D  15            dec  d
-3D6E  20F9          jr   nz,$3D69
+3D61  214081        ld   hl,$8140 ; destination
+3D64  01C03C        ld   bc,$3CC0 ; src location
+3D67  1620          ld   d,$20 ; 32 times do
+3D69  0A            ld   a,(bc) ; <-
+3D6A  77            ld   (hl),a ; |  (sets all sprites)
+3D6B  23            inc  hl ; |
+3D6C  03            inc  bc ; |
+3D6D  15            dec  d ; |
+3D6E  20F9          jr   nz,$3D69 ; _|
 3D70  CDA03D        call $3DA0
-3D73  1680          ld   d,$80
+3D73  1680          ld   d,$80 ; 128 x animate cutscene
 3D75  AF            xor  a
 3D76  322D80        ld   ($802D),a
 3D79  21003D        ld   hl,$3D00
                 _lp_3D7C:
-3D7C  CDE03C        call $3CE0
-3D7F  CD203D        call $3D20
-3D82  15            dec  d
-3D83  20F7          jr   nz,$3D7C
-3D85  CDB03E        call $3EB0
+3D7C  CDE03C        call $3CE0 ; draws gang <-
+3D7F  CD203D        call $3D20 ; |
+3D82  15            dec  d ; |
+3D83  20F7          jr   nz,$3D7C ; ____|
+3D85  CDB03E        call $3EB0 ; end of round cutscene
                 _cutscene_done:
-3D88  3A0480        ld   a,($8004)
-3D8B  A7            and  a
-3D8C  2008          jr   nz,$3D96
-3D8E  3E01          ld   a,$01
-3D90  322980        ld   ($8029),a
+3D88  3A0480        ld   a,($8004) ; a = $8004 - which screen to use?
+3D8B  A7            and  a ; if a != 0
+3D8C  2008          jr   nz,$3D96 ; goto screen-set 2
+3D8E  3E01          ld   a,$01 ; reset to screen 1
+3D90  322980        ld   ($8029),a ; set screen
 3D93  C30010        jp   $1000
 3D96  3E01          ld   a,$01
-3D98  322A80        ld   ($802A),a
+3D98  322A80        ld   ($802A),a ; player 2 screen
 3D9B  C30010        jp   $1000
 3D9E  C9            ret
 3D9F  FF            rst  $38
@@ -11828,13 +11828,13 @@
 3DC5  366C          ld   (hl),$6C
 3DC7  23            inc  hl
 3DC8  366D          ld   (hl),$6D
-3DCA  3E02          ld   a,$02
+3DCA  3E02          ld   a,$02 ; red
 3DCC  323181        ld   ($8131),a
 3DCF  323381        ld   ($8133),a
 3DD2  323581        ld   ($8135),a
 3DD5  323781        ld   ($8137),a
 3DD8  CD1003        call $0310
-3DDB  1C            inc  e
+3DDB  1C            inc  e ; Row of upward spikes
 3DDC  00            nop
 3DDD  3839          jr   c,$3E18
 3DDF  3A3938        ld   a,($3839)
@@ -11860,7 +11860,7 @@
 3DFB  39            add  hl,sp
 3DFC  38FF          jr   c,$3DFD
 3DFE  CD1003        call $0310
-3E01  12            ld   (de),a
+3E01  12            ld   (de),a ; real long platform
 3E02  00            nop
 3E03  FEFD          cp   $FD
 3E05  FD            db   $fd
@@ -11997,24 +11997,24 @@
 3EAF  FF            rst  $38
 
                 end_cutscene:
-3EB0  3E07          ld   a,$07
+3EB0  3E07          ld   a,$07 ; end of dance in cutscene
 3EB2  324280        ld   ($8042),a
-3EB5  215081        ld   hl,$8150
-3EB8  3618          ld   (hl),$18
+3EB5  215081        ld   hl,$8150 ; set a bunch of bytes at 8150
+3EB8  3618          ld   (hl),$18 ; x
 3EBA  23            inc  hl
-3EBB  362E          ld   (hl),$2E
+3EBB  362E          ld   (hl),$2E ; frame
 3EBD  23            inc  hl
-3EBE  3612          ld   (hl),$12
+3EBE  3612          ld   (hl),$12 ; color
 3EC0  23            inc  hl
-3EC1  3670          ld   (hl),$70
-3EC3  215C81        ld   hl,$815C
-3EC6  3611          ld   (hl),$11
+3EC1  3670          ld   (hl),$70 ; y
+3EC3  215C81        ld   hl,$815C ; and 815c
+3EC6  3611          ld   (hl),$11 ; x
 3EC8  23            inc  hl
-3EC9  3630          ld   (hl),$30
+3EC9  3630          ld   (hl),$30 ; frame
 3ECB  23            inc  hl
-3ECC  3612          ld   (hl),$12
+3ECC  3612          ld   (hl),$12 ; color
 3ECE  23            inc  hl
-3ECF  3680          ld   (hl),$80
+3ECF  3680          ld   (hl),$80 ; y
 3ED1  CDE03C        call $3CE0
 3ED4  CD603E        call $3E60
 3ED7  CD603E        call $3E60
@@ -12056,7 +12056,7 @@
 
                 delay_83_call_weird_a:
 3F00  CD6014        call $1460
-3F03  21900E        ld   hl,$0E90
+3F03  21900E        ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
                 ; seems to do nothing
 3F06  CDE301        call $01E3
 3F09  C9            ret
@@ -12071,7 +12071,7 @@
                 ;;; level tiles at the bottom of the screen
                 draw_bottom_row_numbers:
 3F10  CD1003        call $0310
-3F13  1F            rra
+3F13  1F            rra ; bottom row
 3F14  00            nop
 3F15  C0            ret  nz
 3F16  C1            pop  bc
@@ -12096,10 +12096,10 @@
 3F35  2005          jr   nz,$3F3C
 3F37  3A2980        ld   a,($8029)
 3F3A  1803          jr   $3F3F
-3F3C  3A2A80        ld   a,($802A)
+3F3C  3A2A80        ld   a,($802A) ; a = scr
 3F3F  21BF93        ld   hl,$93BF
                 _lp_3F42:
-3F42  CD553F        call $3F55
+3F42  CD553F        call $3F55 ; slow things down
 3F45  3D            dec  a
 3F46  2808          jr   z,$3F50
 3F48  36DB          ld   (hl),$DB
@@ -12133,7 +12133,7 @@
 3F66  CD1003        call $0310
 3F69  0C            inc  c
 3F6A  0A            ld   a,(bc)
-3F6B  1A            ld   a,(de)
+3F6B  1A            ld   a,(de) ; JETSOFT
 3F6C  15            dec  d
 3F6D  24            inc  h
 3F6E  23            inc  hl
@@ -12144,7 +12144,7 @@
 
                 draw_proudly_presents:
 3F74  CD1003        call $0310
-3F77  14            inc  d
+3F77  14            inc  d ; PROUDLY PRESENTS
 3F78  07            rlca
 3F79  2022          jr   nz,$3F9D
 3F7B  1F            rra
@@ -12165,14 +12165,14 @@
                 draw_copyright:
 3F8C  CD1003        call $0310
 3F8F  1004          djnz $3F95
-3F91  8B            adc  a,e
+3F91  8B            adc  a,e ; (c) 1983
 3F92  010908        ld   bc,$0809
 3F95  03            inc  bc
 3F96  FF            rst  $38
 3F97  CD1003        call $0310
 3F9A  12            ld   (de),a
 3F9B  04            inc  b
-3F9C  1A            ld   a,(de)
+3F9C  1A            ld   a,(de) ; JETSOFT
 3F9D  15            dec  d
 3F9E  24            inc  h
 3F9F  23            inc  hl
@@ -12187,7 +12187,7 @@
 
                 blank_out_bottom_row:
 3FA8  CD1003        call $0310
-3FAB  1F            rra
+3FAB  1F            rra ; Whole bunch of spaces over the level numbers
 3FAC  00            nop
 3FAD  1010          djnz $3FBF
 3FAF  1010          djnz $3FC1
@@ -12212,8 +12212,8 @@
 3FCF  FF            rst  $38
 
                 do_bonus_flashing:
-3FD0  00            nop
-3FD1  00            nop
+3FD0  00            nop ; wonder what these did originally?
+3FD1  00            nop ; 5 bytes?
 3FD2  00            nop
 3FD3  00            nop
 3FD4  00            nop
@@ -12313,13 +12313,13 @@
 4054  3F            ccf
 4055  213080        ld   hl,$8030
 4058  96            sub  (hl)
-4059  D8            ret  c
+4059  D8            ret  c ; not furthest right, no bonus
                 ;; adds the move score
-405A  47            ld   b,a
+405A  47            ld   b,a ; add position diff to score_to_add
 405B  3A1D80        ld   a,($801D)
 405E  80            add  a,b
 405F  321D80        ld   ($801D),a
-4062  3A4081        ld   a,($8140)
+4062  3A4081        ld   a,($8140) ; set new max X pos
 4065  323080        ld   ($8030),a
 4068  C9            ret
 
@@ -12485,7 +12485,7 @@
 4140  DD7E00        ld   a,(ix+$00)
 4143  A7            and  a
 4144  C8            ret  z
-4145  326680        ld   ($8066),a
+4145  326680        ld   ($8066),a ; not synth!
 4148  CB27          sla  a
 414A  210044        ld   hl,$4400
 414D  85            add  a,l
@@ -12525,7 +12525,7 @@
 4180  DD7E00        ld   a,(ix+$00)
 4183  A7            and  a
 4184  C8            ret  z
-4185  326780        ld   ($8067),a
+4185  326780        ld   ($8067),a ; 8067
 4188  CB27          sla  a
 418A  210044        ld   hl,$4400
 418D  85            add  a,l
@@ -12551,7 +12551,7 @@
                 ;; I reckon this is the tiles that say the points
                 ;; Changes the tiles, then calls $HIT_BONUS
                 hit_bonus_draw_points:
-41B0  47            ld   b,a
+41B0  47            ld   b,a ; adds bonus score
 41B1  3A1D80        ld   a,($801D)
 41B4  80            add  a,b
 41B5  321D80        ld   ($801D),a
@@ -12574,7 +12574,7 @@
 41D3  7E            ld   a,(hl)
 41D4  324F80        ld   ($804F),a
 41D7  369B          ld   (hl),$9B
-41D9  3E40          ld   a,$40
+41D9  3E40          ld   a,$40 ; 64 countdown. Never read.
 41DB  325080        ld   ($8050),a
 41DE  C3F440        jp   $40F4
 
@@ -12665,7 +12665,7 @@
 
                 pickup_tile_collision:
 4258  3A4081        ld   a,($8140)
-425B  C604          add  a,$04
+425B  C604          add  a,$04 ; lol, 4 pixels to get pickup
 425D  67            ld   h,a
 425E  3A4381        ld   a,($8143)
 4261  C618          add  a,$18
@@ -12677,28 +12677,28 @@
                 ;;
 426B  FE8C          cp   $8C
 426D  2008          jr   nz,$4277
-426F  3E20          ld   a,$20
+426F  3E20          ld   a,$20 ; 200 bonus
 4271  3610          ld   (hl),$10
 4273  CDB041        call $41B0
 4276  C9            ret
                 _crossa:
 4277  FE8D          cp   $8D
 4279  2008          jr   nz,$4283
-427B  3E40          ld   a,$40
+427B  3E40          ld   a,$40 ; 400 bonus
 427D  3610          ld   (hl),$10
 427F  CDB041        call $41B0
 4282  C9            ret
                 _ringa:
 4283  FE8E          cp   $8E
 4285  2008          jr   nz,$428F
-4287  3E60          ld   a,$60
+4287  3E60          ld   a,$60 ; 600 bonus
 4289  3610          ld   (hl),$10
 428B  CDB041        call $41B0
 428E  C9            ret
                 _vasea:
 428F  FE8F          cp   $8F
 4291  C0            ret  nz
-4292  3EA0          ld   a,$A0
+4292  3EA0          ld   a,$A0 ; 1000 bonus
 4294  3610          ld   (hl),$10
 4296  CDB041        call $41B0
 4299  C9            ret
@@ -12714,7 +12714,7 @@
                 funky_looking_set_ring:
 42A0  3E8E          ld   a,$8E
 42A2  32CB90        ld   ($90CB),a
-42A5  CD0236        call $3602
+42A5  CD0236        call $3602 ; <- that looks odd. Weird jump to middle of code
 42A8  C9            ret
 
 42A9  FF            rst  $38
@@ -12770,7 +12770,7 @@
 42EE  3E10          ld   a,$10
 42F0  00            nop
 42F1  77            ld   (hl),a
-42F2  11E0FF        ld   de,$FFE0
+42F2  11E0FF        ld   de,$FFE0 ; -32 (next line up screen)
 42F5  19            add  hl,de
 42F6  3E10          ld   a,$10
 42F8  00            nop
@@ -13051,8 +13051,8 @@
 448A  3A2980        ld   a,($8029)
 448D  1803          jr   $4492
 448F  3A2A80        ld   a,($802A)
-4492  FE1B          cp   $1B
-4494  C0            ret  nz
+4492  FE1B          cp   $1B ; are we on screen 27?
+4494  C0            ret  nz ; Nope, leave.
 4495  3E74          ld   a,$74
 4497  32A991        ld   ($91A9),a
 449A  3C            inc  a
@@ -13472,16 +13472,16 @@
 46F3  3A2980        ld   a,($8029)
 46F6  1803          jr   $46FB
 46F8  3A2A80        ld   a,($802A)
-46FB  3D            dec  a
-46FC  87            add  a,a
-46FD  87            add  a,a
+46FB  3D            dec  a ; scr - 1
+46FC  87            add  a,a ; ...
+46FD  87            add  a,a ; * 3
 46FE  CDB049        call $49B0
 4701  47            ld   b,a
 4702  3A6580        ld   a,($8065)
 4705  B8            cp   b
 4706  C8            ret  z
 4707  78            ld   a,b
-4708  324280        ld   ($8042),a
+4708  324280        ld   ($8042),a ; wat sfx is this?
 470B  326580        ld   ($8065),a
 470E  C9            ret
 470F  FF            rst  $38
@@ -13502,7 +13502,7 @@
 471E  FF            rst  $38
 471F  FF            rst  $38
 
-4720  76            halt
+4720  76            halt ; only halt in file!
 4721  0D            dec  c
 4722  FF            rst  $38
 4723  FF            rst  $38
@@ -13521,11 +13521,11 @@
 
                 ;;
                 point_hl_to_sfx_data:
-4730  CB27          sla  a
+4730  CB27          sla  a ; sfx id * 4
 4732  CB27          sla  a
 4734  CDB046        call $46B0
                 _sfx_data_lookup:
-4737  00            nop
+4737  00            nop ; sfx 0?
 4738  00            nop
 4739  00            nop
 473A  C9            ret
@@ -13584,30 +13584,30 @@
 4791  00            nop
 4792  00            nop
 4793  00            nop
-4794  7E            ld   a,(hl)
+4794  7E            ld   a,(hl) ; 1. points at sfx data
 4795  DD770D        ld   (ix+$0d),a
 4798  47            ld   b,a
 4799  23            inc  hl
-479A  7E            ld   a,(hl)
+479A  7E            ld   a,(hl) ; 2
 479B  DD7701        ld   (ix+$01),a
 479E  23            inc  hl
-479F  7E            ld   a,(hl)
+479F  7E            ld   a,(hl) ; 3
 47A0  DD7702        ld   (ix+$02),a
 47A3  05            dec  b
-47A4  2817          jr   z,$47BD
+47A4  2817          jr   z,$47BD ; branch...
 47A6  23            inc  hl
-47A7  7E            ld   a,(hl)
+47A7  7E            ld   a,(hl) ; 4
 47A8  DD7703        ld   (ix+$03),a
 47AB  23            inc  hl
-47AC  7E            ld   a,(hl)
+47AC  7E            ld   a,(hl) ; 5
 47AD  DD7704        ld   (ix+$04),a
 47B0  05            dec  b
 47B1  280A          jr   z,$47BD
 47B3  23            inc  hl
-47B4  7E            ld   a,(hl)
+47B4  7E            ld   a,(hl) ; 6
 47B5  DD7705        ld   (ix+$05),a
 47B8  23            inc  hl
-47B9  7E            ld   a,(hl)
+47B9  7E            ld   a,(hl) ; 7
 47BA  DD7706        ld   (ix+$06),a
                 _here:
 47BD  DD6602        ld   h,(ix+$02)
@@ -13691,13 +13691,13 @@
 4840  3A4280        ld   a,($8042)
 4843  A7            and  a
 4844  2005          jr   nz,$484B
-4846  CD8046        call $4680
+4846  CD8046        call $4680 ; play in ch1
 4849  1803          jr   $484E
-484B  CDD046        call $46D0
-484E  3A4380        ld   a,($8043)
+484B  CDD046        call $46D0 ; ... kill ch1?
+484E  3A4380        ld   a,($8043) ; and try ch2?
 4851  A7            and  a
 4852  2005          jr   nz,$4859
-4854  CDE048        call $48E0
+4854  CDE048        call $48E0 ; play in ch2?
 4857  1803          jr   $485C
 4859  CD2049        call $4920
 485C  3A4480        ld   a,($8044)
@@ -13939,7 +13939,7 @@
                 ;; a contains offset of sfx to play for screen
                 get_screen_tune_sfx_id:
 49B0  CDB046        call $46B0
-49B3  3E0E          ld   a,$0E
+49B3  3E0E          ld   a,$0E ; scr 1
 49B5  C9            ret
 49B6  00            nop
 49B7  3E0E          ld   a,$0E
@@ -13999,7 +13999,7 @@
 49FF  3E0D          ld   a,$0D
 4A01  C9            ret
 4A02  00            nop
-4A03  3E0C          ld   a,$0C
+4A03  3E0C          ld   a,$0C ; scr 21: best tune
 4A05  C9            ret
 4A06  00            nop
 4A07  3E0C          ld   a,$0C
@@ -14260,21 +14260,21 @@
                 ;;
                 your_being_chased_dino_sprite:
 4B50  214081        ld   hl,$8140
-4B53  3685          ld   (hl),$85
+4B53  3685          ld   (hl),$85 ; x
 4B55  23            inc  hl
-4B56  362C          ld   (hl),$2C
+4B56  362C          ld   (hl),$2C ; frame
 4B58  23            inc  hl
-4B59  3612          ld   (hl),$12
+4B59  3612          ld   (hl),$12 ; color
 4B5B  23            inc  hl
-4B5C  3690          ld   (hl),$90
+4B5C  3690          ld   (hl),$90 ; y
 4B5E  23            inc  hl
-4B5F  367E          ld   (hl),$7E
+4B5F  367E          ld   (hl),$7E ; x legs
 4B61  23            inc  hl
-4B62  3630          ld   (hl),$30
+4B62  3630          ld   (hl),$30 ; frame legs
 4B64  23            inc  hl
-4B65  3612          ld   (hl),$12
+4B65  3612          ld   (hl),$12 ; color legs
 4B67  23            inc  hl
-4B68  36A0          ld   (hl),$A0
+4B68  36A0          ld   (hl),$A0 ; y legs
 4B6A  23            inc  hl
 4B6B  C9            ret
 
@@ -14502,9 +14502,9 @@
 4C59  3A2A80        ld   a,($802A)
 4C5C  1803          jr   $4C61
 4C5E  3A2980        ld   a,($8029)
-4C61  3D            dec  a
+4C61  3D            dec  a ; scr - 1
 4C62  87            add  a,a
-4C63  87            add  a,a
+4C63  87            add  a,a ; * 3
 4C64  CD0049        call $4900
                 ;; One per screen
 4C67  CDE34C        call $4CE3
@@ -14559,8 +14559,8 @@
 4CCA  C9            ret
 4CCB  CD7840        call $4078
 4CCE  C9            ret
-4CCF  00            nop
-4CD0  00            nop
+4CCF  00            nop ; screen 27
+4CD0  00            nop ; (no pickups)
 4CD1  00            nop
 4CD2  C9            ret
 4CD3  00            nop
@@ -14591,21 +14591,21 @@
                 ;; so `l` is used as CAGE_Y
                 check_dino_cage_collision:
 4CEA  3A4C81        ld   a,($814C)
-4CED  D684          sub  $84
+4CED  D684          sub  $84 ; is dino x >= 0x84 (132)?
 4CEF  37            scf
-4CF0  3F            ccf
-4CF1  D618          sub  $18
-4CF3  D0            ret  nc
-4CF4  3A4F81        ld   a,($814F)
+4CF0  3F            ccf ; ...
+4CF1  D618          sub  $18 ; and < 132 + 24 (156) ?
+4CF3  D0            ret  nc ; no: return.
+4CF4  3A4F81        ld   a,($814F) ; yes! check y
 4CF7  CB3F          srl  a
 4CF9  CB3F          srl  a
 4CFB  CB3F          srl  a
-4CFD  47            ld   b,a
-4CFE  7D            ld   a,l
-4CFF  E61F          and  $1F
-4D01  90            sub  b
+4CFD  47            ld   b,a ; b = y / 8
+4CFE  7D            ld   a,l ; cage_y
+4CFF  E61F          and  $1F ; & 00011111 (?)
+4D01  90            sub  b ; - b
 4D02  37            scf
-4D03  3F            ccf
+4D03  3F            ccf ; (... -2)
 4D04  C3B44D        jp   $4DB4
 
 4D07  FF            rst  $38
@@ -14614,7 +14614,7 @@
 4D08  CD604D        call $4D60
 4D0B  E5            push hl
 4D0C  2B            dec  hl
-4D0D  3610          ld   (hl),$10
+4D0D  3610          ld   (hl),$10 ; column 1
 4D0F  23            inc  hl
 4D10  3676          ld   (hl),$76
 4D12  23            inc  hl
@@ -14625,7 +14625,7 @@
 4D19  367B          ld   (hl),$7B
 4D1B  01DCFF        ld   bc,$FFDC
 4D1E  09            add  hl,bc
-4D1F  3610          ld   (hl),$10
+4D1F  3610          ld   (hl),$10 ; column 2
 4D21  23            inc  hl
 4D22  3674          ld   (hl),$74
 4D24  23            inc  hl
@@ -14635,7 +14635,7 @@
 4D2A  23            inc  hl
 4D2B  3679          ld   (hl),$79
 4D2D  09            add  hl,bc
-4D2E  3610          ld   (hl),$10
+4D2E  3610          ld   (hl),$10 ; column 3
 4D30  23            inc  hl
 4D31  367E          ld   (hl),$7E
 4D33  23            inc  hl
@@ -14657,18 +14657,18 @@
                 _update_cage_fall:
 4D43  CD084D        call $4D08
 4D46  E5            push hl
-4D47  21A013        ld   hl,$13A0
+4D47  21A013        ld   hl,$13A0 ; blocks action as cage falls
 4D4A  CD815C        call $5C81
 4D4D  3A1283        ld   a,($8312)
 4D50  E603          and  $03
 4D52  20F3          jr   nz,$4D47
 4D54  E1            pop  hl
-4D55  23            inc  hl
+4D55  23            inc  hl ; move cage down
 4D56  CDEA4C        call $4CEA
-4D59  3EDC          ld   a,$DC
+4D59  3EDC          ld   a,$DC ; did cage hit ground?
 4D5B  BD            cp   l
 4D5C  C8            ret  z
-4D5D  18E4          jr   $4D43
+4D5D  18E4          jr   $4D43 ; nope, loop
 
 4D5F  FF            rst  $38
 
@@ -14690,13 +14690,13 @@
 4D73  FF            rst  $38
 
                 end_screen_logic:
-4D74  3A0480        ld   a,($8004)
+4D74  3A0480        ld   a,($8004) ; are we on end screen?
 4D77  A7            and  a
 4D78  2005          jr   nz,$4D7F
 4D7A  3A2980        ld   a,($8029)
 4D7D  1803          jr   $4D82
 4D7F  3A2A80        ld   a,($802A)
-4D82  FE1B          cp   $1B
+4D82  FE1B          cp   $1B ; // check is screen 27
 4D84  C0            ret  nz
 4D85  CD904D        call $4D90
 4D88  C9            ret
@@ -14725,7 +14725,7 @@
 4DA5  3F            ccf
 4DA6  D61C          sub  $1C
 4DA8  D0            ret  nc
-4DA9  3E01          ld   a,$01
+4DA9  3E01          ld   a,$01 ; Yep, trigger cage
 4DAB  325180        ld   ($8051),a
 4DAE  CD404D        call $4D40
 4DB1  C9            ret
@@ -14734,9 +14734,9 @@
 4DB3  FF            rst  $38
 
                 check_dino_cage_collision_cont:
-4DB4  D602          sub  $02
-4DB6  D0            ret  nc
-4DB7  C3D04D        jp   $4DD0
+4DB4  D602          sub  $02 ; less than 2 diff?
+4DB6  D0            ret  nc ; no, no Y collision
+4DB7  C3D04D        jp   $4DD0 ; yes, caged the dino
 
 4DBA  FF            rst  $38
 4DBB  FF            rst  $38
@@ -14801,7 +14801,7 @@
 
                 attract_splash_bongo:
 4E20  CD804E        call $4E80
-4E23  CD815C        call $5C81
+4E23  CD815C        call $5C81 ; hl = $DRAW_JETSOFT
 4E26  CDA85A        call $5AA8
 4E29  21743F        ld   hl,$3F74
 4E2C  CD815C        call $5C81
@@ -14815,21 +14815,21 @@
 4E43  CD815C        call $5C81
 4E46  21A83F        ld   hl,$3FA8
 4E49  CD815C        call $5C81
-4E4C  214892        ld   hl,$9248
+4E4C  214892        ld   hl,$9248 ; draw the BONGO logo
 4E4F  06A0          ld   b,$A0
 4E51  0E05          ld   c,$05
                 _lp_4E53:
-4E53  70            ld   (hl),b
+4E53  70            ld   (hl),b ; top right
 4E54  04            inc  b
 4E55  23            inc  hl
-4E56  70            ld   (hl),b
+4E56  70            ld   (hl),b ; bottom right
 4E57  04            inc  b
 4E58  111F00        ld   de,$001F
 4E5B  19            add  hl,de
-4E5C  70            ld   (hl),b
+4E5C  70            ld   (hl),b ; top left
 4E5D  04            inc  b
 4E5E  23            inc  hl
-4E5F  70            ld   (hl),b
+4E5F  70            ld   (hl),b ; bottom left
 4E60  11A1FF        ld   de,$FFA1
 4E63  19            add  hl,de
 4E64  04            inc  b
@@ -14944,16 +14944,16 @@
 4EEE  7E            ld   a,(hl)
 4EEF  FE1F          cp   $1F
 4EF1  2003          jr   nz,$4EF6
-4EF3  3610          ld   (hl),$10
+4EF3  3610          ld   (hl),$10 ; round 2 = $10
 4EF5  C9            ret
 4EF6  FE10          cp   $10
 4EF8  2003          jr   nz,$4EFD
-4EFA  360D          ld   (hl),$0D
+4EFA  360D          ld   (hl),$0D ; round 3 = $0d
 4EFC  C9            ret
-4EFD  C31C50        jp   $501C
+4EFD  C31C50        jp   $501C ; round 4+ = get 2 faster each time!
 
                 pickups_lookup:
-4F00  91            sub  c
+4F00  91            sub  c ; up to 3 pickups per screen
 4F01  5A            ld   e,d
 4F02  8C            adc  a,h
 4F03  00            nop
@@ -14962,7 +14962,7 @@
 4F06  00            nop
 4F07  00            nop
 4F08  00            nop
-4F09  91            sub  c
+4F09  91            sub  c ; pos (hi), pos (lo), pickup symbol
 4F0A  5A            ld   e,d
 4F0B  8D            adc  a,l
 4F0C  00            nop
@@ -15166,7 +15166,7 @@
 4FE7  00            nop
 4FE8  00            nop
 4FE9  00            nop
-4FEA  00            nop
+4FEA  00            nop ; Screen 27 (cage - no pickups)
 4FEB  00            nop
 4FEC  00            nop
 4FED  00            nop
@@ -15232,15 +15232,15 @@
 502F  3A2A80        ld   a,($802A)
 5032  1803          jr   $5037
 5034  3A2980        ld   a,($8029)
-5037  3D            dec  a
+5037  3D            dec  a ; Get screen x 9
 5038  47            ld   b,a
 5039  87            add  a,a
 503A  87            add  a,a
 503B  87            add  a,a
 503C  80            add  a,b
-503D  85            add  a,l
+503D  85            add  a,l ; index into PICKUPS table
 503E  6F            ld   l,a
-503F  7E            ld   a,(hl)
+503F  7E            ld   a,(hl) ; Find pickup screen addr
 5040  A7            and  a
 5041  C8            ret  z
 5042  CD0050        call $5000
@@ -15715,42 +15715,42 @@
                 attract_animate_player_up_stairs:
 52E2  CDB04E        call $4EB0
 52E5  214081        ld   hl,$8140
-52E8  36D8          ld   (hl),$D8
+52E8  36D8          ld   (hl),$D8 ; x (right of screen)
 52EA  23            inc  hl
-52EB  368D          ld   (hl),$8D
+52EB  368D          ld   (hl),$8D ; frame
 52ED  23            inc  hl
-52EE  3611          ld   (hl),$11
+52EE  3611          ld   (hl),$11 ; color
 52F0  23            inc  hl
-52F1  36E0          ld   (hl),$E0
+52F1  36E0          ld   (hl),$E0 ; y (bottom of screen)
 52F3  23            inc  hl
-52F4  36D8          ld   (hl),$D8
+52F4  36D8          ld   (hl),$D8 ; x legs
 52F6  23            inc  hl
-52F7  368D          ld   (hl),$8D
+52F7  368D          ld   (hl),$8D ; frame legs
 52F9  23            inc  hl
-52FA  3611          ld   (hl),$11
+52FA  3611          ld   (hl),$11 ; color legs
 52FC  23            inc  hl
-52FD  36F0          ld   (hl),$F0
+52FD  36F0          ld   (hl),$F0 ; y legs
 52FF  1E06          ld   e,$06
                 _jump_up_stair:
 5301  CD2853        call $5328
 5304  1D            dec  e
 5305  20FA          jr   nz,$5301
-5307  214881        ld   hl,$8148
-530A  3620          ld   (hl),$20
+5307  214881        ld   hl,$8148 ; using bongo - but it shows dino
+530A  3620          ld   (hl),$20 ; x (left of screen)
 530C  23            inc  hl
-530D  362D          ld   (hl),$2D
+530D  362D          ld   (hl),$2D ; frame
 530F  23            inc  hl
-5310  3612          ld   (hl),$12
+5310  3612          ld   (hl),$12 ; color
 5312  23            inc  hl
-5313  3628          ld   (hl),$28
+5313  3628          ld   (hl),$28 ; y (top of screen)
 5315  23            inc  hl
-5316  3619          ld   (hl),$19
+5316  3619          ld   (hl),$19 ; x legs
 5318  23            inc  hl
-5319  3630          ld   (hl),$30
+5319  3630          ld   (hl),$30 ; frame legs
 531B  23            inc  hl
-531C  3612          ld   (hl),$12
+531C  3612          ld   (hl),$12 ; color legs
 531E  23            inc  hl
-531F  3638          ld   (hl),$38
+531F  3638          ld   (hl),$38 ; y legs
 5321  CDAC53        call $53AC
 5324  C32854        jp   $5428
 5327  FF            rst  $38
@@ -15766,21 +15766,21 @@
 5331  6F            ld   l,a
 5332  DD214081      ld   ix,$8140
 5336  7E            ld   a,(hl)
-5337  DD7701        ld   (ix+$01),a
+5337  DD7701        ld   (ix+$01),a ; frame
 533A  23            inc  hl
 533B  7E            ld   a,(hl)
-533C  DD7705        ld   (ix+$05),a
+533C  DD7705        ld   (ix+$05),a ; frame leg
 533F  23            inc  hl
 5340  7E            ld   a,(hl)
-5341  DD8600        add  a,(ix+$00)
-5344  DD7700        ld   (ix+$00),a
-5347  DD7704        ld   (ix+$04),a
+5341  DD8600        add  a,(ix+$00) ; x-offset
+5344  DD7700        ld   (ix+$00),a ; x
+5347  DD7704        ld   (ix+$04),a ; x legs
 534A  23            inc  hl
 534B  7E            ld   a,(hl)
-534C  DD8603        add  a,(ix+$03)
-534F  DD7703        ld   (ix+$03),a
+534C  DD8603        add  a,(ix+$03) ; y-offset
+534F  DD7703        ld   (ix+$03),a ; y
 5352  D610          sub  $10
-5354  DD7707        ld   (ix+$07),a
+5354  DD7707        ld   (ix+$07),a ; y legs
 5357  D5            push de
 5358  212821        ld   hl,$2128
 535B  CD815C        call $5C81
@@ -15809,7 +15809,7 @@
 
                 ;; frame, frame leg, x-off, y-off
                 attract_player_up_stair_data:
-5380  8D            adc  a,l
+5380  8D            adc  a,l ; jumping up stairs
 5381  8C            adc  a,h
 5382  FCF48F        call m,$8FF4
 5385  8E            adc  a,(hl)
@@ -15835,7 +15835,7 @@
 53AB  C9            ret
 
                 attract_jump_down_stairs:
-53AC  1E06          ld   e,$06
+53AC  1E06          ld   e,$06 ; 6 stairs down
 53AE  CDB853        call $53B8
 53B1  CD9853        call $5398
 53B4  1D            dec  e
@@ -15854,21 +15854,21 @@
 53C1  6F            ld   l,a
 53C2  DD214081      ld   ix,$8140
 53C6  7E            ld   a,(hl)
-53C7  DD7701        ld   (ix+$01),a
+53C7  DD7701        ld   (ix+$01),a ; frame
 53CA  23            inc  hl
 53CB  7E            ld   a,(hl)
-53CC  DD7705        ld   (ix+$05),a
+53CC  DD7705        ld   (ix+$05),a ; frame leg
 53CF  23            inc  hl
 53D0  7E            ld   a,(hl)
-53D1  DD8600        add  a,(ix+$00)
-53D4  DD7700        ld   (ix+$00),a
-53D7  DD7704        ld   (ix+$04),a
+53D1  DD8600        add  a,(ix+$00) ; x-offset
+53D4  DD7700        ld   (ix+$00),a ; x
+53D7  DD7704        ld   (ix+$04),a ; x legs
 53DA  23            inc  hl
 53DB  7E            ld   a,(hl)
-53DC  DD8603        add  a,(ix+$03)
-53DF  DD7703        ld   (ix+$03),a
+53DC  DD8603        add  a,(ix+$03) ; y-offset
+53DF  DD7703        ld   (ix+$03),a ; y
 53E2  D610          sub  $10
-53E4  DD7707        ld   (ix+$07),a
+53E4  DD7707        ld   (ix+$07),a ; y legs
 53E7  D5            push de
 53E8  212821        ld   hl,$2128
 53EB  CD815C        call $5C81
@@ -15901,7 +15901,7 @@
 5414  1612          ld   d,$12
 5416  04            inc  b
 5417  08            ex   af,af'
-5418  14            inc  d
+5418  14            inc  d ; WHAT?! Wrong on the way down too! Head and legs flipped.
 5419  13            inc  de
 541A  04            inc  b
 541B  08            ex   af,af'
@@ -15937,10 +15937,10 @@
 543C  00            nop
 543D  E1            pop  hl
 543E  23            inc  hl
-543F  3E39          ld   a,$39
+543F  3E39          ld   a,$39 ; check if cage hit ground
 5441  BD            cp   l
 5442  20EF          jr   nz,$5433
-5444  3E38          ld   a,$38
+5444  3E38          ld   a,$38 ; caged dino sprite
 5446  324181        ld   ($8141),a
 5449  3C            inc  a
 544A  324581        ld   ($8145),a
@@ -15950,11 +15950,11 @@
 544F  FF            rst  $38
 
                 attract_dino_runs_along_ground:
-5450  DD214081      ld   ix,$8140
+5450  DD214081      ld   ix,$8140 ; this is a dino on attract screen
 5454  3E79          ld   a,$79
 5456  DDBE00        cp   (ix+$00)
 5459  C8            ret  z
-545A  DD3400        inc  (ix+$00)
+545A  DD3400        inc  (ix+$00) ; dino runs along ground
 545D  DD3404        inc  (ix+$04)
 5460  3A1283        ld   a,($8312)
 5463  E603          and  $03
@@ -15982,22 +15982,22 @@
 5493  FF            rst  $38
 
                 attract_catch_dino:
-5494  214081        ld   hl,$8140
-5497  3607          ld   (hl),$07
+5494  214081        ld   hl,$8140 ; oi! You made the player a dinosaur!
+5497  3607          ld   (hl),$07 ; x
 5499  23            inc  hl
-549A  362D          ld   (hl),$2D
+549A  362D          ld   (hl),$2D ; frame : 2d is dino?
 549C  23            inc  hl
-549D  3612          ld   (hl),$12
+549D  3612          ld   (hl),$12 ; colr
 549F  23            inc  hl
-54A0  36BF          ld   (hl),$BF
+54A0  36BF          ld   (hl),$BF ; y
 54A2  23            inc  hl
-54A3  3600          ld   (hl),$00
+54A3  3600          ld   (hl),$00 ; x legs
 54A5  23            inc  hl
-54A6  3630          ld   (hl),$30
+54A6  3630          ld   (hl),$30 ; frame legs
 54A8  23            inc  hl
-54A9  3612          ld   (hl),$12
+54A9  3612          ld   (hl),$12 ; col legs
 54AB  23            inc  hl
-54AC  36CF          ld   (hl),$CF
+54AC  36CF          ld   (hl),$CF ; y legs
 54AE  212492        ld   hl,$9224
 54B1  CD084D        call $4D08
 54B4  CD5054        call $5450
@@ -16146,14 +16146,14 @@
                 ;; bytes after the call are
                 ;; start_y, start_x, tile 1, ...tile x, 0xFF
                 draw_tiles_h_copy:
-5570  3A00B8        ld   a,($B800)
+5570  3A00B8        ld   a,($B800) ; is this ack? "A" not used
 5573  214090        ld   hl,$9040
-5576  C1            pop  bc
-5577  0A            ld   a,(bc)
+5576  C1            pop  bc ; stack return pointer into bc (ie, data)
+5577  0A            ld   a,(bc) ; start_y
 5578  03            inc  bc
 5579  85            add  a,l
 557A  6F            ld   l,a
-557B  0A            ld   a,(bc)
+557B  0A            ld   a,(bc) ; start_x
 557C  5F            ld   e,a
 557D  3E1B          ld   a,$1B
 557F  93            sub  e
@@ -16168,14 +16168,14 @@
 558C  19            add  hl,de
 558D  03            inc  bc
                 _lp_558E:
-558E  0A            ld   a,(bc)
+558E  0A            ld   a,(bc) ; each character until 0xff
 558F  03            inc  bc
 5590  FEFF          cp   $FF
 5592  2002          jr   nz,$5596
 5594  C5            push bc
                 _done_5595:
 5595  C9            ret
-5596  77            ld   (hl),a
+5596  77            ld   (hl),a ; writes to screen loc
 5597  16FF          ld   d,$FF
 5599  1EE0          ld   e,$E0
 559B  19            add  hl,de
@@ -16195,7 +16195,7 @@
 55AF  CD7055        call $5570
 55B2  08            ex   af,af'
 55B3  0B            dec  bc
-55B4  12            ld   (de),a
+55B4  12            ld   (de),a ; BEWARE
 55B5  15            dec  d
 55B6  27            daa
 55B7  112215        ld   de,$1522
@@ -16433,7 +16433,7 @@
                 ;; It's supposed to be: call $5C81 (JMP_HL)
                 ;;
                 ;; (err, did they call everything by hand without labels?!)
-56D8  CD814C        call $4C81
+56D8  CD814C        call $4C81 ; bad jump, no inner border for us :(
 56DB  C9            ret
 
 56DC  FF            rst  $38
@@ -16769,21 +16769,21 @@
                 ;; bytes after the call are:
                 ;; start_x, start_y, tile 1, ...tile id, 0xFF
                 draw_tiles_v:
-58D0  DDE1          pop  ix
+58D0  DDE1          pop  ix ; pops next addr (eg, data) from stack
 58D2  2600          ld   h,$00
-58D4  DD6E00        ld   l,(ix+$00)
+58D4  DD6E00        ld   l,(ix+$00) ; start_x
 58D7  29            add  hl,hl
 58D8  29            add  hl,hl
 58D9  29            add  hl,hl
 58DA  29            add  hl,hl
 58DB  29            add  hl,hl
-58DC  DD23          inc  ix
+58DC  DD23          inc  ix ; start_y
 58DE  DD7E00        ld   a,(ix+$00)
 58E1  85            add  a,l
 58E2  6F            ld   l,a
 58E3  014090        ld   bc,$9040
 58E6  09            add  hl,bc
-58E7  DD23          inc  ix
+58E7  DD23          inc  ix ; read data until 0xff
 58E9  DD7E00        ld   a,(ix+$00)
 58EC  FEFF          cp   $FF
 58EE  2804          jr   z,$58F4
@@ -16804,7 +16804,7 @@
 
                 draw_splash_circle_border_1:
 5900  CD7055        call $5570
-5903  010151        ld   bc,$5101
+5903  010151        ld   bc,$5101 ; start pos
 5906  52            ld   d,d
 5907  53            ld   d,e
 5908  51            ld   d,c
@@ -16834,7 +16834,7 @@
 
                 ;; left side 1
 5920  CDD058        call $58D0
-5923  010253        ld   bc,$5302
+5923  010253        ld   bc,$5302 ; start pos
 5926  52            ld   d,d
 5927  51            ld   d,c
 5928  53            ld   d,e
@@ -16864,7 +16864,7 @@
 
                 ;; right side 1
 5940  CDD058        call $58D0
-5943  1A            ld   a,(de)
+5943  1A            ld   a,(de) ; start pos
 5944  02            ld   (bc),a
 5945  51            ld   d,c
 5946  52            ld   d,d
@@ -16896,7 +16896,7 @@
 
                 ;; Bottom row 1
 5960  CD7055        call $5570
-5963  1C            inc  e
+5963  1C            inc  e ; start pos
 5964  015351        ld   bc,$5153
 5967  52            ld   d,d
 5968  53            ld   d,e
@@ -17236,7 +17236,7 @@
 
                 set_row_colors:
 5AD8  47            ld   b,a
-5AD9  210181        ld   hl,$8101
+5AD9  210181        ld   hl,$8101 ; col for row 1
 5ADC  70            ld   (hl),b
 5ADD  23            inc  hl
 5ADE  23            inc  hl
@@ -18034,7 +18034,7 @@
 5F9F  4B            ld   c,e
 5FA0  064B          ld   b,$4B
 5FA2  EE0B          xor  $0B
-5FA4  FF            rst  $38
+5FA4  FF            rst  $38 ; to 0x5fff
 5FA5  FF            rst  $38
 5FA6  FF            rst  $38
 5FA7  FF            rst  $38

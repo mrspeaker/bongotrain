@@ -18,4 +18,4 @@ There is a script `build.sh` that will chop the front off the `bongo_src.asm` (I
 
 The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be deleted and `src.asm` will be the one-true-source of Bongo.
 
-[Have currently converted the labels over to the buildable version. TODO: symbols and comments]
+[Have currently converted the labels and comments over to the buildable version. TODO: symbols and  "data blocks"]

@@ -1525,7 +1525,7 @@ GET_TILE_ADDR_FROM_XY
 ;;; ground check?
 GROUND_CHECK
 0988: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-098B: C6 10       add  a,$10    ; +  16   ; the ground
+098B: C6 10       add  a,$10    ; +  16   : the ground
 098D: CB 3F       srl  a        ; /  2
 098F: CB 3F       srl  a        ; /  2
 0991: E6 FE       and  $FE      ; &  1111 1110
@@ -9955,7 +9955,7 @@ ATTRACT_CATCH_DINO
 5494: 21 40 81    ld   hl,$PLAYER_X ; oi! You made the player a dinosaur!
 5497: 36 07       ld   (hl),$07 ; x
 5499: 23          inc  hl
-549A: 36 2D       ld   (hl),$2D ; frame ; 2d is dino?
+549A: 36 2D       ld   (hl),$2D ; frame : 2d is dino?
 549C: 23          inc  hl
 549D: 36 12       ld   (hl),$12 ; colr
 549F: 23          inc  hl

@@ -24,7 +24,6 @@ const caseFix = (f) => (line) => {
         const words = el.line.split("$");
         const sym = words[0].toLowerCase();
         el.line = sym + "= $" + words.slice(1).join("$");
-        console.log("lll", el.line);
     }
     if (el.type === t.LABEL) {
         const toks = el.line.split(" ");
@@ -148,6 +147,16 @@ const moosh = (meta, code) =>
         return ac;
     }, []);
 
+const moosh_comments = (comments, code) =>
+    code.reduce((ac, inst) => {
+        if (comments[inst.addr]) {
+            inst.line += " ; " + comments[inst.addr];
+            //ac.push(...meta[inst.addr]);
+        }
+        ac.push(inst);
+        return ac;
+    }, []);
+
 const indent = (src) => {
     const sp = [0, 0, 16, 16, 0, 16];
     return src.map((i) => {
@@ -155,18 +164,30 @@ const indent = (src) => {
     });
 };
 
+const get_inst_comments = (src) =>
+    src.reduce((ac, el) => {
+        if (el.type == t.INST) {
+            // look for comment
+            if (el.line.includes(";")) {
+                ac[el.addr] = el.line.split(";")[1].trim();
+            }
+        }
+        return ac;
+    }, {});
+
 const run = async () => {
     const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
 
-    const src = parse(src_txt.split("\n"), caseFix(parseSrcLine));
-    const dst = parse(dst_txt.split("\n"), parseDstLine);
-    console.log(src.length, dst.length);
-    console.table(src);
-    //console.table(dst);
-    const meta = get_meta(src);
-    const out = moosh(meta, dst);
-    console.log(indent(out));
+    const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
+    const dst = parse(dst_txt.split("\n"), parseDstLine); //.slice(240);
+    //console.log(src.length, dst.length);
+    //    console.table(src);
+    //    console.table(dst);
+    const comments = get_inst_comments(src);
+    // console.log(inst_comments);
+    //const meta = get_meta(src);
+    const out = moosh_comments(comments, dst);
     document.querySelector("#out").value = indent(out).join("\n");
 };
 
