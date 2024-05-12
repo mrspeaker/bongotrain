@@ -18,4 +18,35 @@ There is a script `build.sh` that will chop the front off the `bongo_src.asm` (I
 
 The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be deleted and `src.asm` will be the one-true-source of Bongo.
 
-[Have currently converted the labels and comments over to the buildable version. TODO: symbols and  "data blocks"]
+[Have currently converted the labels, comments, padding bytes over to the buildable version. TODO: symbols and  "data blocks"]
+
+
+** scratchpad
+
+#+BEGIN_SRC elisp
+(defun rst38 (start end)
+  (interactive (if (use-region-p)
+                   (list (region-beginning) (region-end))
+                 (list nil nil)))
+  (let ((c (count-lines start end))
+        (retp (string-equal
+               "C9"
+               (buffer-substring-no-properties (+ start 6) (+ start 8))))
+        (addr (buffer-substring-no-properties start (+ start 4) )))
+    (message (format "%s" retp))
+    (replace-region-contents start end
+                             (lambda ()
+                               (format "%s%s                dc   %d, $FF"
+                                       (if (not retp) ""  "");not doing this
+                                       addr c)))))
+
+(defun rst39 (start end)
+  (interactive (if (use-region-p)
+                   (list (region-beginning) (region-end))
+                 (list nil nil)))
+  (rst38 start end)
+  (goto-char start)
+  (insert "\n")
+  )
+
+  #+END_SRC
