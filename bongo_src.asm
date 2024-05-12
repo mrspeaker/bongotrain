@@ -1437,22 +1437,16 @@
 
                 ;; x-off, head-anim, leg-anim, yoff
                 phys_jump_lookup_right:          ; right?
-0750  060C          ld   b,$0C
-0752  0D            dec  c
-0753  0C            inc  c
-0754  060E          ld   b,$0E
-0756  0F            rrca
-0757  0C            inc  c
-0758  0610          ld   b,$10
-075A  110606        ld   de,$0606
-075D  1016          djnz $0775
-075F  00            nop
-0760  0610          ld   b,$10
-0762  11FA06        ld   de,$06FA
-0765  0E0F          ld   c,$0F
-0767  F4060C        call p,$0C06
-076A  0D            dec  c
-076B  F4FFFF        call p,$FFFF
+0750                db   $06,$0C,$0D,$0C
+0754                db   $06,$0E,$0F,$0C
+0758                db   $06,$10,$11,$06
+075C                db   $06,$10,$16,$00
+0760                db   $06,$10,$11,$FA
+0764                db   $06,$0E,$0F,$F4
+0768                db   $06,$0C,$0D,$F4
+
+076C  FF            rst  $38
+076D  FF            rst  $38
 076E  FF            rst  $38
 076F  FF            rst  $38
 0770  FF            rst  $38
@@ -1772,20 +1766,9 @@
 0917  FF            rst  $38
 
                 bongo_lookup3:
-0918  29            add  hl,hl
-0919  2A2B2A        ld   hl,($2A2B)
-091C  FF            rst  $38
-091D  FF            rst  $38
-091E  FF            rst  $38
-091F  FF            rst  $38
-0920  A9            xor  c
-0921  AA            xor  d
-0922  AB            xor  e
-0923  AA            xor  d
-0924  FF            rst  $38
-0925  FF            rst  $38
-0926  FF            rst  $38
-0927  FF            rst  $38
+0918                db   $29,$2A,$2B,$2A,$FF,$FF,$FF,$FF
+0920                db   $A9,$AA,$AB,$AA,$FF,$FF,$FF,$FF
+
 0928  FF            rst  $38
 0929  FF            rst  $38
 092A  FF            rst  $38
@@ -1819,27 +1802,13 @@
                 ;; jumping straight up
                 ;; x-off, head-anim, leg-anim, yoff
                 phys_jump_lookup_up:
-0948  00            nop
-0949  17            rla
-094A  180C          jr   $0958
-094C  00            nop
-094D  19            add  hl,de
-094E  1A            ld   a,(de)
-094F  0C            inc  c
-0950  00            nop
-0951  1B            dec  de
-0952  1C            inc  e
-0953  0600          ld   b,$00
-0955  9B            sbc  a,e
-0956  9C            sbc  a,h
-0957  00            nop
-0958  00            nop ; -6
-0959  99            sbc  a,c
-095A  9A            sbc  a,d
-095B  FA0097        jp   m,$9700
-095E  98            sbc  a,b
-095F  F40017        call p,$1700
-0962  18F4          jr   $0958
+0948                db   $00,$17,$18,$0C
+094C                db   $00,$19,$1A,$0C
+0950                db   $00,$1B,$1C,$06
+0954                db   $00,$9B,$9C,$00
+0958                db   $00,$99,$9A,$FA  ; -6
+095C                db   $00,$97,$98,$F4  ; -12
+0960                db   $00,$17,$18,$F4  ; -12
 
 0964  FF            rst  $38
 0965  FF            rst  $38
@@ -1878,7 +1847,7 @@
 0986  FF            rst  $38
 0987  FF            rst  $38
 
-                ;;; ground check?
+                ;;; ground check
                 ground_check:
 0988  3A4781        ld   a,($8147)
 098B  C610          add  a,$10 ; +  16   : the ground
@@ -2007,7 +1976,7 @@
                 ;; There's a bug in level one/two: if you jump of the
                 ;; edge of level one, and hold jump... it bashes invisible
                 ;; head barrier at the start of level two and dies.
-                ;; (because of falling timer here). Not sure why.
+                ;; (because of falling timer here).
                 add_gravity_and_check_big_fall:
 0A40  3A1180        ld   a,($8011) ; did we fall too far?
 0A43  A7            and  a
@@ -2038,6 +2007,9 @@
 0A66  FF            rst  $38
 0A67  FF            rst  $38
 
+                    ;; TODO: figure out what this does to gameplay.
+                    ;; what if it was removed?
+                    ;; (Is this why it "snaps upwards" on my fake platform in nTn?)
                 snap_y_to_8:
 0A68  3A4381        ld   a,($8143)
 0A6B  E6F8          and  $F8 ; 1111 1000
@@ -2144,106 +2116,19 @@
 0AFE  FF            rst  $38
 0AFF  FF            rst  $38
 
-                ;;; platform data? nah. 2 bytes per screen
-                some_data_1:
-0B00  380C          jr   c,$0B0E
-0B02  380C          jr   c,$0B10
-0B04  380C          jr   c,$0B12
-0B06  380C          jr   c,$0B14
-0B08  380C          jr   c,$0B16
-0B0A  380C          jr   c,$0B18
-0B0C  380C          jr   c,$0B1A
-0B0E  380C          jr   c,$0B1C
-0B10  380C          jr   c,$0B1E
-0B12  380C          jr   c,$0B20
-0B14  380C          jr   c,$0B22
-0B16  380C          jr   c,$0B24
-0B18  380C          jr   c,$0B26
-0B1A  380C          jr   c,$0B28
-0B1C  380C          jr   c,$0B2A
-0B1E  100C          djnz $0B2C
-0B20  380C          jr   c,$0B2E
-0B22  380C          jr   c,$0B30
-0B24  100C          djnz $0B32
-0B26  380C          jr   c,$0B34
-0B28  380C          jr   c,$0B36
-0B2A  380C          jr   c,$0B38
-0B2C  380C          jr   c,$0B3A
-0B2E  380C          jr   c,$0B3C
-0B30  380C          jr   c,$0B3E
-0B32  380C          jr   c,$0B40
-0B34  100C          djnz $0B42
+                ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
+                platform_scroll_data_addr:
+0B00                db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B0A                db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B12                db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B1A                db $38,$0C,$38,$0C,$38,$0C,$10,$0C
+0B22                db $38,$0C,$38,$0C,$10,$0C,$38,$0C
+0B2A                db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B32                db $38,$0C,$38,$0C,$10,$0C
 
-0B36  00            nop
-0B37  00            nop
-0B38  00            nop
-0B39  00            nop
-0B3A  00            nop
-0B3B  00            nop
-0B3C  00            nop
-0B3D  00            nop
-0B3E  00            nop
-0B3F  00            nop
-0B40  00            nop
-0B41  00            nop
-0B42  00            nop
-0B43  00            nop
-0B44  00            nop
-0B45  00            nop
-0B46  00            nop
-0B47  00            nop
-0B48  00            nop
-0B49  00            nop
-0B4A  00            nop
-0B4B  00            nop
-0B4C  00            nop
-0B4D  00            nop
-0B4E  00            nop
-0B4F  00            nop
-0B50  00            nop
-0B51  00            nop
-0B52  00            nop
-0B53  00            nop
-0B54  00            nop
-0B55  00            nop
-0B56  00            nop
-0B57  00            nop
-0B58  00            nop
-0B59  00            nop
-0B5A  00            nop
-0B5B  00            nop
-0B5C  00            nop
-0B5D  00            nop
-0B5E  00            nop
-0B5F  00            nop
-0B60  00            nop
-0B61  00            nop
-0B62  00            nop
-0B63  00            nop
-0B64  00            nop
-0B65  00            nop
-0B66  00            nop
-0B67  00            nop
-0B68  00            nop
-0B69  00            nop
-0B6A  00            nop
-0B6B  00            nop
-0B6C  00            nop
-0B6D  00            nop
-0B6E  00            nop
-0B6F  00            nop
-0B70  00            nop
-0B71  00            nop
-0B72  00            nop
-0B73  00            nop
-0B74  00            nop
-0B75  00            nop
-0B76  00            nop
-0B77  00            nop
-0B78  00            nop
-0B79  00            nop
-0B7A  00            nop
-0B7B  00            nop
+                ;; 70 zeros/nops. That's a lotta nops. (free bytes?)
+0B36                dc 70,$0
+
 0B7C  FF            rst  $38
 0B7D  FF            rst  $38
 0B7E  FF            rst  $38
@@ -2334,82 +2219,33 @@
 0C0E  FF            rst  $38
 0C0F  FF            rst  $38
 
-0C10  00            nop
-0C11  00            nop
-0C12  00            nop
-0C13  00            nop
-0C14  00            nop
-0C15  00            nop
-0C16  00            nop
-0C17  00            nop
-0C18  00            nop
-0C19  00            nop
-0C1A  00            nop
-0C1B  00            nop
-0C1C  F0            ret  p
-0C1D  03            inc  bc
-0C1E  80            add  a,b
-0C1F  03            inc  bc
-0C20  00            nop
-0C21  00            nop
-0C22  00            nop
-0C23  00            nop
-0C24  00            nop
-0C25  00            nop
-0C26  00            nop
-0C27  00            nop
-0C28  00            nop
-0C29  00            nop
-0C2A  00            nop
-0C2B  00            nop
-0C2C  00            nop
-0C2D  00            nop
-0C2E  00            nop
-0C2F  00            nop
-0C30  00            nop
-0C31  00            nop
-0C32  00            nop
-0C33  00            nop
+                platform_moving_data: ; All "S" levels.
+0C10                db   $00,$00,$00,$00
+0C14                db   $00,$00,$00,$00
+0C18                db   $00,$00,$00,$00
+0C1C                db   $F0,$03,$80,$03
+0C20                db   $00,$00,$00,$00
+0C24                db   $00,$00,$00,$00
+0C28                db   $00,$00,$00,$00
+0C2C                db   $00,$00,$00,$00
+0C30                db   $00,$00,$00,$00
+
 0C34  FF            rst  $38
 0C35  FF            rst  $38
 0C36  FF            rst  $38
 0C37  FF            rst  $38
-0C38  00            nop
-0C39  00            nop
-0C3A  00            nop
-0C3B  00            nop
-0C3C  00            nop
-0C3D  00            nop
-0C3E  00            nop
-0C3F  00            nop
-0C40  00            nop
-0C41  00            nop
-0C42  00            nop
-0C43  00            nop
-0C44  00            nop
-0C45  00            nop
-0C46  00            nop
-0C47  00            nop
-0C48  00            nop
-0C49  00            nop
-0C4A  00            nop
-0C4B  00            nop
-0C4C  00            nop
-0C4D  00            nop
-0C4E  00            nop
-0C4F  00            nop
-0C50  00            nop
-0C51  00            nop
-0C52  00            nop
-0C53  00            nop
-0C54  00            nop
-0C55  00            nop
-0C56  00            nop
-0C57  00            nop
-0C58  00            nop
-0C59  00            nop
-0C5A  00            nop
-0C5B  00            nop
+
+                platform_static_data: ; All non-"S" levels.
+0C38                db   $00,$00,$00,$00
+0C3C                db   $00,$00,$00,$00
+0C40                db   $00,$00,$00,$00
+0C44                db   $00,$00,$00,$00
+0C48                db   $00,$00,$00,$00
+0C4C                db   $00,$00,$00,$00
+0C50                db   $00,$00,$00,$00
+0C54                db   $00,$00,$00,$00
+0C58                db   $00,$00,$00,$00
+
 0C5C  FF            rst  $38
 0C5D  FF            rst  $38
 0C5E  FF            rst  $38
@@ -2695,43 +2531,14 @@
 0DFF  FF            rst  $38
 
                 bongo_lookup2:
-0E00  E0            ret  po
-0E01  38E0          jr   c,$0DE3
-0E03  38E0          jr   c,$0DE5
-0E05  38E0          jr   c,$0DE7
-0E07  38E0          jr   c,$0DE9
-0E09  38E0          jr   c,$0DEB
-0E0B  38E0          jr   c,$0DED
-0E0D  38E0          jr   c,$0DEF
-0E0F  38E0          jr   c,$0DF1
-0E11  38E0          jr   c,$0DF3
-0E13  38E0          jr   c,$0DF5
-0E15  38E0          jr   c,$0DF7
-0E17  38E0          jr   c,$0DF9
-0E19  38E0          jr   c,$0DFB
-0E1B  38E0          jr   c,$0DFD
-0E1D  38D0          jr   c,$0DEF
-0E1F  38E0          jr   c,$0E01
-0E21  38E0          jr   c,$0E03
-0E23  38D0          jr   c,$0DF5
-0E25  38E0          jr   c,$0E07
-0E27  38E0          jr   c,$0E09
-0E29  38E0          jr   c,$0E0B
-0E2B  38E0          jr   c,$0E0D
-0E2D  38E0          jr   c,$0E0F
-0E2F  38E0          jr   c,$0E11
-0E31  38E0          jr   c,$0E13
-0E33  38D0          jr   c,$0E05
-0E35  3800          jr   c,$0E37
-0E37  00            nop
-0E38  00            nop
-0E39  00            nop
-0E3A  00            nop
-0E3B  00            nop
-0E3C  00            nop
-0E3D  00            nop
-0E3E  FF            rst  $38
-0E3F  FF            rst  $38
+0E00                db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+0E08                db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+0E10                db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+0E18                db   $E0,$38,$E0,$38,$E0,$38,$D0,$38
+0E20                db   $E0,$38,$E0,$38,$D0,$38,$E0,$38
+0E28                db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+0E30                db   $E0,$38,$E0,$38,$D0,$38,$00,$00
+0E38                db   $00,$00,$00,$00,$00,$00,$FF,$FF
 
                 bongo_move_and_animate:
 0E40  3A2580        ld   a,($8025)
@@ -2828,60 +2635,14 @@
 
                 ;; addr lookup: 2 bytes per screen, points to BONGO_ANIM_DATA
                 bongo_anim_lookup:
-0EC0  08            ex   af,af'
-0EC1  0F            rrca
-0EC2  08            ex   af,af'
-0EC3  0F            rrca
-0EC4  68            ld   l,b
-0EC5  0F            rrca
-0EC6  08            ex   af,af'
-0EC7  0F            rrca
-0EC8  08            ex   af,af'
-0EC9  0F            rrca
-0ECA  68            ld   l,b
-0ECB  0F            rrca
-0ECC  08            ex   af,af'
-0ECD  0F            rrca
-0ECE  08            ex   af,af'
-0ECF  0F            rrca
-0ED0  68            ld   l,b
-0ED1  0F            rrca
-0ED2  08            ex   af,af'
-0ED3  0F            rrca
-0ED4  68            ld   l,b
-0ED5  0F            rrca
-0ED6  08            ex   af,af'
-0ED7  0F            rrca
-0ED8  08            ex   af,af'
-0ED9  0F            rrca
-0EDA  68            ld   l,b
-0EDB  0F            rrca
-0EDC  08            ex   af,af'
-0EDD  0F            rrca
-0EDE  08            ex   af,af'
-0EDF  0F            rrca
-0EE0  08            ex   af,af'
-0EE1  0F            rrca
-0EE2  08            ex   af,af'
-0EE3  0F            rrca
-0EE4  08            ex   af,af'
-0EE5  0F            rrca
-0EE6  08            ex   af,af'
-0EE7  0F            rrca
-0EE8  68            ld   l,b
-0EE9  0F            rrca
-0EEA  68            ld   l,b
-0EEB  0F            rrca
-0EEC  08            ex   af,af'
-0EED  0F            rrca
-0EEE  68            ld   l,b
-0EEF  0F            rrca
-0EF0  68            ld   l,b
-0EF1  0F            rrca
-0EF2  08            ex   af,af'
-0EF3  0F            rrca
-0EF4  08            ex   af,af'
-0EF5  0F            rrca
+0EC0                db   $08,$0F,$08,$0F,$68,$0F,$08,$0F
+0EC8                db   $08,$0F,$68,$0F,$08,$0F,$08,$0F
+0ED0                db   $68,$0F,$08,$0F,$68,$0F,$08,$0F
+0ED8                db   $08,$0F,$68,$0F,$08,$0F,$08,$0F
+0EE0                db   $08,$0F,$08,$0F,$08,$0F,$08,$0F
+0EE8                db   $68,$0F,$68,$0F,$08,$0F,$68,$0F
+0EF0                db   $68,$0F,$08,$0F,$08,$0F
+
 0EF6  00            nop
 0EF7  00            nop
 0EF8  00            nop
@@ -2904,31 +2665,10 @@
                 ;; this looks like bongo anim data
                 ;; 4 = jump | 2 = left | 1 = right
                 bongo_anim_data:
-0F08  010101        ld   bc,$0101
-0F0B  010605        ld   bc,$0506
-0F0E  02            ld   (bc),a
-0F0F  02            ld   (bc),a
-0F10  02            ld   (bc),a
-0F11  02            ld   (bc),a
-0F12  04            inc  b
-0F13  00            nop
-0F14  00            nop
-0F15  00            nop
-0F16  00            nop
-0F17  00            nop
-0F18  00            nop
-0F19  04            inc  b
-0F1A  02            ld   (bc),a
-0F1B  02            ld   (bc),a
-0F1C  02            ld   (bc),a
-0F1D  02            ld   (bc),a
-0F1E  05            dec  b
-0F1F  0601          ld   b,$01
-0F21  010101        ld   bc,$0101
-0F24  00            nop
-0F25  00            nop
-0F26  00            nop
-0F27  00            nop
+0F08                db   $01,$01,$01,$01,$06,$05,$02,$02
+0F10                db   $02,$02,$04,$00,$00,$00,$00,$00
+0F18                db   $00,$04,$02,$02,$02,$02,$05,$06
+0F20                db   $01,$01,$01,$01,$00,$00,$00,$00
 
 0F28  FF            rst  $38
 0F29  FF            rst  $38
@@ -2979,87 +2719,31 @@
 0F66  FF            rst  $38
 0F67  FF            rst  $38
 
-0F68  00            nop
-0F69  00            nop
-0F6A  00            nop
-0F6B  00            nop
-0F6C  04            inc  b
-0F6D  00            nop
-0F6E  00            nop
-0F6F  00            nop
-0F70  04            inc  b
-0F71  00            nop
-0F72  00            nop
-0F73  00            nop
-0F74  04            inc  b
-0F75  00            nop
-0F76  00            nop
-0F77  00            nop
-0F78  00            nop
-0F79  00            nop
-0F7A  00            nop
-0F7B  00            nop
-0F7C  04            inc  b
-0F7D  00            nop
-0F7E  00            nop
-0F7F  00            nop
-0F80  04            inc  b
-0F81  00            nop
-0F82  00            nop
-0F83  00            nop
-0F84  04            inc  b
-0F85  00            nop
-0F86  00            nop
-0F87  00            nop
+                ;; 32 bytes of something...
+0F68                db   $00,$00,$00,$00
+0F6C                db   $04,$00,$00,$00
+0F70                db   $04,$00,$00,$00
+0F74                db   $04,$00,$00,$00
+0F78                db   $00,$00,$00,$00
+0F7C                db   $04,$00,$00,$00
+0F80                db   $04,$00,$00,$00
+0F84                db   $04,$00,$00,$00
 
                 draw_border_1:
                 ;;  intro inside border top
 0F88  CD1003        call $0310
-0F8B  02            ld   (bc),a
-0F8C  02            ld   (bc),a
-0F8D  E0            ret  po
-0F8E  E7            rst  $20
-0F8F  E7            rst  $20
-0F90  E7            rst  $20
-0F91  E7            rst  $20
-0F92  E7            rst  $20
-0F93  E7            rst  $20
-0F94  E7            rst  $20
-0F95  E7            rst  $20
-0F96  E7            rst  $20
-0F97  E7            rst  $20
-0F98  E7            rst  $20
-0F99  E7            rst  $20
-0F9A  E7            rst  $20
-0F9B  E7            rst  $20
-0F9C  E7            rst  $20
-0F9D  E7            rst  $20
-0F9E  E7            rst  $20
-0F9F  E7            rst  $20
-0FA0  E7            rst  $20
-0FA1  E7            rst  $20
-0FA2  E7            rst  $20
-0FA3  E7            rst  $20
-0FA4  DF            rst  $18
-0FA5  FF            rst  $38
+0F8B                db   $02, $02
+0F8D                db   $E0,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
+0F8D                db   $E7,$E7,$E7,$E7,$E7,$E7,$E7,$DF,$FF
+
                 ;; intro inside border right
 0FA6  CDD83B        call $3BD8
-0FA9  02            ld   (bc),a
-0FAA  03            inc  bc
-0FAB  E6E6          and  $E6
-0FAD  E6E6          and  $E6
-0FAF  E6E6          and  $E6
-0FB1  E6E6          and  $E6
-0FB3  E6E6          and  $E6
-0FB5  E6E6          and  $E6
-0FB7  E6E6          and  $E6
-0FB9  E6E6          and  $E6
-0FBB  E6E6          and  $E6
-0FBD  E6E6          and  $E6
-0FBF  E6E6          and  $E6
-0FC1  E6E6          and  $E6
-0FC3  FF            rst  $38
+0FA9                db   $02, $03
+0FAB                db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6
+0FBB                db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$FF
+
 0FC4  C3D61B        jp   $1BD6
+
 0FC7  FF            rst  $38
 0FC8  FF            rst  $38
 0FC9  FF            rst  $38
@@ -3088,24 +2772,9 @@
 0FDF  FF            rst  $38
 
                 header_text_data:
-0FE0  1010          djnz $0FF2 ; PL1
-0FE2  1010          djnz $0FF4
-0FE4  201C          jr   nz,$1002
-0FE6  011010        ld   bc,$1010
-0FE9  1010          djnz $0FFB
-0FEB  1819          jr   $1006 ; HIGH-SCORE
-0FED  17            rla
-0FEE  182B          jr   $101B
-0FF0  23            inc  hl
-0FF1  13            inc  de
-0FF2  1F            rra
-0FF3  221510        ld   ($1015),hl
-0FF6  1010          djnz $1008 ; PL2
-0FF8  1020          djnz $101A
-0FFA  1C            inc  e
-0FFB  02            ld   (bc),a
-0FFC  1010          djnz $100E
-0FFE  10FF          djnz $0FFF
+0FE0                db   $10,$10,$10,$10,$20,$1C,$01,$10,$10,$10,$10 ; PL1
+0FEB                db   $18,$19,$17,$18,$2B,$23,$13,$1F,$22,$15,$10 ; HIGH-SCORE
+0FF6                db   $10,$10,$10,$20,$1C,$02,$10,$10,$10,$FF    ; PL2
 
                 ;;; === END OF BG1.BIN, START OF BG2.BIN =======
 
