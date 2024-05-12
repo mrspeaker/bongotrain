@@ -260,30 +260,14 @@
 0025                db $ED,$67,$DD,$77,$ED,$6F,$DD
 002C                db $DD,$19,$ED,$6F,$DD
 
-0031  FF            rst  $38
-0032  FF            rst  $38
-0033  FF            rst  $38
-0034  FF            rst  $38
-0035  FF            rst  $38
-0036  FF            rst  $38
-0037  FF            rst  $38
+0031                dc 7, $FF
 
                 ;;  Reset vector
                 reset_vector:
 0038  3A00B8        ld   a,($B800)
 003B  18FB          jr   $0038
 
-003D  FF            rst  $38
-003E  FF            rst  $38
-003F  FF            rst  $38
-0040  FF            rst  $38
-0041  FF            rst  $38
-0042  FF            rst  $38
-0043  FF            rst  $38
-0044  FF            rst  $38
-0045  FF            rst  $38
-0046  FF            rst  $38
-0047  FF            rst  $38
+003D                dc 11, $FF
 
                 ;; Called once at startup
                 init_screen:
@@ -295,7 +279,8 @@
 0054                db $09, $00
 0056                db $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF ; CREDIT FAULT
 0063  18E3          jr   $0048
-0065  FF            rst  $38
+
+0065  FF            db   $FF
 
                 ;; Non-Maskable Interrupt handler. Fires every frame
                 nmi_loop:
@@ -316,7 +301,7 @@
 0087  C203C0        jp   nz,$C003 ; c003?!
 008A  ED45          retn ; NMI return
 
-008C  FF            rst  $38
+008C  FF            db   $FF
 
                 setup_then_start_game:
 008D  CD4803        call $0348
@@ -342,7 +327,7 @@
 00BA  C2E701        jp   nz,$01E7
 00BD  18E5          jr   $00A4
 
-00BF  FF            rst  $38
+00BF  FF            db   $FF
 
                 nmi_int_handler:
 00C0  D9            exx
@@ -352,7 +337,8 @@
 00CA  CDD001        call $01D0
 00CD  D9            exx
 00CE  C9            ret
-00CF  FF            rst  $38
+
+00CF  FF            db   $FF
 
                 ;;;
                 attract_press_p1_screen:
@@ -396,8 +382,7 @@
 013A  323580        ld   ($8035),a
 013D  C9            ret
 
-013E  FF            rst  $38
-013F  FF            rst  $38
+013E                dc   2, $FF
 
                 ;;
                 draw_one_or_two_player:
@@ -409,32 +394,16 @@
 014B  00            nop
 014C  CDD000        call $00D0
 014F  CD1003        call $0310
-0152                db $0C,$06
-0154                db $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
-0164                db $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
-0168  FF            rst  $38
-0169  FF            rst  $38
-016A  FF            rst  $38
-016B  FF            rst  $38
-016C  FF            rst  $38
-016D  FF            rst  $38
-016E  FF            rst  $38
-016F  FF            rst  $38
+0152                db   $0C, $06
+0154                db   $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
+0164                db   $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
+                    ;; Does it fall through here?
+0168                dc   8,$FF
 
 0170  CD2000        call $0020
 0173  C9            ret
-0174  FF            rst  $38
-0175  FF            rst  $38
-0176  FF            rst  $38
-0177  FF            rst  $38
-0178  FF            rst  $38
-0179  FF            rst  $38
-017A  FF            rst  $38
-017B  FF            rst  $38
-017C  FF            rst  $38
-017D  FF            rst  $38
-017E  FF            rst  $38
-017F  FF            rst  $38
+
+0174                dc   12,$FF
 
                 ;; called a lot (via... JMP_HL_PLUS_4K)
                 ;; why? Why not just jump?
@@ -445,15 +414,8 @@
 0184  09            add  hl,bc
 0185  C1            pop  bc
 0186  E9            jp   (hl)
-0187  FF            rst  $38
-0188  FF            rst  $38
-0189  FF            rst  $38
-018A  FF            rst  $38
-018B  FF            rst  $38
-018C  FF            rst  $38
-018D  FF            rst  $38
-018E  FF            rst  $38
-018F  FF            rst  $38
+
+0187                dc   9,$FF
 
                 did_player_press_start:; Did player start the game?
 0190  3A0383        ld   a,($8303) ; check you have credits
@@ -487,11 +449,7 @@
 01C7  320383        ld   ($8303),a
 01CA  C9            ret
 
-01CB  FF            rst  $38
-01CC  FF            rst  $38
-01CD  FF            rst  $38
-01CE  FF            rst  $38
-01CF  FF            rst  $38
+01CB                dc   5,$FF
 
                 ;;;
                 copy_ports_to_buttons:
@@ -580,13 +538,7 @@
 027B  323380        ld   ($8033),a
 027E  C30010        jp   $1000
 
-0281  FF            rst  $38
-0282  FF            rst  $38
-0283  FF            rst  $38
-0284  FF            rst  $38
-0285  FF            rst  $38
-0286  FF            rst  $38
-0287  FF            rst  $38
+0281                dc   7, $FF
 
                 coinage_routine:
 0288  3A0683        ld   a,($8306)
@@ -660,10 +612,7 @@
 0308  320583        ld   ($8305),a
 030B  C9            ret
 
-030C  FF            rst  $38
-030D  FF            rst  $38
-030E  FF            rst  $38
-030F  FF            rst  $38
+030C                dc   4, $FF
 
                 ;; draw sequence of tiles at (y, x)
                 draw_tiles_h:
@@ -701,16 +650,7 @@
 033B  19            add  hl,de
 033C  18F0          jr   $032E
 
-033E  FF            rst  $38
-033F  FF            rst  $38
-0340  FF            rst  $38
-0341  FF            rst  $38
-0342  FF            rst  $38
-0343  FF            rst  $38
-0344  FF            rst  $38
-0345  FF            rst  $38
-0346  FF            rst  $38
-0347  FF            rst  $38
+033E                dc   10, $FF
 
                 ;;
                 setup_more:
@@ -733,12 +673,7 @@
 0364  329080        ld   ($8090),a
 0367  C38305        jp   $0583
 
-036A  FF            rst  $38
-036B  FF            rst  $38
-036C  FF            rst  $38
-036D  FF            rst  $38
-036E  FF            rst  $38
-036F  FF            rst  $38
+036A                dc   6, $FF
 
                 reset_ents_all:
 0370  CD7014        call $1470
@@ -755,21 +690,12 @@
 038D  00            nop
 038E  C9            ret
 
-038F  FF            rst  $38
+038F  FF            db   $FF
 
 0390  CDA013        call $13A0
 0393  18FB          jr   $0390
-0395  FF            rst  $38
-0396  FF            rst  $38
-0397  FF            rst  $38
-0398  FF            rst  $38
-0399  FF            rst  $38
-039A  FF            rst  $38
-039B  FF            rst  $38
-039C  FF            rst  $38
-039D  FF            rst  $38
-039E  FF            rst  $38
-039F  FF            rst  $38
+
+0395                dc   11, $FF
 
                 draw_lives:
 03A0  CD0804        call $0408
@@ -811,7 +737,7 @@
 03E3  32A291        ld   ($91A2),a
 03E6  C9            ret
 
-03E7  FF            rst  $38
+03E7  FF            db   $FF
 
                 clear_after_game_over:
 03E8  AF            xor  a
@@ -819,12 +745,7 @@
 03EC  323580        ld   ($8035),a
 03EF  C39300        jp   $0093
 
-03F2  FF            rst  $38
-03F3  FF            rst  $38
-03F4  FF            rst  $38
-03F5  FF            rst  $38
-03F6  FF            rst  $38
-03F7  FF            rst  $38
+03F2                dc   6, $FF
 
 03F8  0EE0          ld   c,$E0
 03FA  CDA013        call $13A0
@@ -832,21 +753,14 @@
 03FE  20FA          jr   nz,$03FA
 0400  C9            ret
 
-0401  FF            rst  $38
-0402  FF            rst  $38
-0403  FF            rst  $38
-0404  FF            rst  $38
-0405  FF            rst  $38
-0406  FF            rst  $38
-0407  FF            rst  $38
+0401                dc  7, $FF
 
                 set_lives_row_color:
 0408  3E01          ld   a,$01
 040A  320581        ld   ($8105),a
 040D  C9            ret
 
-040E  FF            rst  $38
-040F  FF            rst  $38
+040E                dc   2, $FF
 
                 game_over:
 0410  21E816        ld   hl,$16E8 ; $SFX_RESET_A_BUNCH-$4000
@@ -858,31 +772,14 @@
 0420  3204B0        ld   ($B004),a
 0423  C3002D        jp   $2D00
 
-0426  FF            rst  $38
-0427  FF            rst  $38
-0428  FF            rst  $38
-0429  FF            rst  $38
-042A  FF            rst  $38
-042B  FF            rst  $38
-042C  FF            rst  $38
-042D  FF            rst  $38
-042E  FF            rst  $38
-042F  FF            rst  $38
+0426                dc   10, $FF
 
                 check_if_hiscore:
 0430  CD4004        call $0440
 0433  CD7004        call $0470
 0436  C9            ret
 
-0437  FF            rst  $38
-0438  FF            rst  $38
-0439  FF            rst  $38
-043A  FF            rst  $38
-043B  FF            rst  $38
-043C  FF            rst  $38
-043D  FF            rst  $38
-043E  FF            rst  $38
-043F  FF            rst  $38
+0437                dc   9, $FF
 
                 check_if_hiscore_p1:
 0440  3A1680        ld   a,($8016)
@@ -910,12 +807,7 @@
 0466  DCE004        call c,$04E0
 0469  C9            ret
 
-046A  FF            rst  $38
-046B  FF            rst  $38
-046C  FF            rst  $38
-046D  FF            rst  $38
-046E  FF            rst  $38
-046F  FF            rst  $38
+046A                dc   6, $FF
 
                 check_if_hiscore_p2:
 0470  3A1980        ld   a,($8019)
@@ -943,28 +835,7 @@
 0496  DC0005        call c,$0500
 0499  C9            ret
 
-049A  FF            rst  $38
-049B  FF            rst  $38
-049C  FF            rst  $38
-049D  FF            rst  $38
-049E  FF            rst  $38
-049F  FF            rst  $38
-04A0  FF            rst  $38
-04A1  FF            rst  $38
-04A2  FF            rst  $38
-04A3  FF            rst  $38
-04A4  FF            rst  $38
-04A5  FF            rst  $38
-04A6  FF            rst  $38
-04A7  FF            rst  $38
-04A8  FF            rst  $38
-04A9  FF            rst  $38
-04AA  FF            rst  $38
-04AB  FF            rst  $38
-04AC  FF            rst  $38
-04AD  FF            rst  $38
-04AE  FF            rst  $38
-04AF  FF            rst  $38
+049A                dc   22, $FF
 
 04B0  0E01          ld   c,$01
 04B2  CDA013        call $13A0
@@ -995,9 +866,7 @@
 04D9  CDF022        call $22F0
 04DC  C9            ret
 
-04DD  FF            rst  $38
-04DE  FF            rst  $38
-04DF  FF            rst  $38
+04DD                dc   3, $FF
 
                 hiscore_for_p1:
 04E0  3A1480        ld   a,($8014)
@@ -1009,18 +878,7 @@
 04F2  E1            pop  hl ; hmm
 04F3  C9            ret
 
-04F4  FF            rst  $38
-04F5  FF            rst  $38
-04F6  FF            rst  $38
-04F7  FF            rst  $38
-04F8  FF            rst  $38
-04F9  FF            rst  $38
-04FA  FF            rst  $38
-04FB  FF            rst  $38
-04FC  FF            rst  $38
-04FD  FF            rst  $38
-04FE  FF            rst  $38
-04FF  FF            rst  $38
+04F4                dc   12, $FF
 
                 hiscore_for_p2:
 0500  3A1780        ld   a,($8017)
@@ -1032,10 +890,7 @@
 0512  E1            pop  hl ; hmm
 0513  C9            ret
 
-0514  FF            rst  $38
-0515  FF            rst  $38
-0516  FF            rst  $38
-0517  FF            rst  $38
+0514                dc   4, $FF
 
                 ;; who calls?
                 ;; This looks suspicious. 25 bytes written
@@ -1094,29 +949,7 @@
 0565  CD8808        call $0888
 0568  C9            ret
 
-0569  FF            rst  $38
-056A  FF            rst  $38
-056B  FF            rst  $38
-056C  FF            rst  $38
-056D  FF            rst  $38
-056E  FF            rst  $38
-056F  FF            rst  $38
-0570  FF            rst  $38
-0571  FF            rst  $38
-0572  FF            rst  $38
-0573  FF            rst  $38
-0574  FF            rst  $38
-0575  FF            rst  $38
-0576  FF            rst  $38
-0577  FF            rst  $38
-0578  FF            rst  $38
-0579  FF            rst  $38
-057A  FF            rst  $38
-057B  FF            rst  $38
-057C  FF            rst  $38
-057D  FF            rst  $38
-057E  FF            rst  $38
-057F  FF            rst  $38
+0569                dc   23, $FF
 
                 ;; (free bytes?)
                 _setup_2:;looks a lot like SETUP_THEN_START_GAME - no one calls it?
@@ -1142,14 +975,8 @@
 05A9  18DB          jr   $0586
 05AB  C2E701        jp   nz,$01E7
 05AE  18D6          jr   $0586
-05B0  FF            rst  $38
-05B1  FF            rst  $38
-05B2  FF            rst  $38
-05B3  FF            rst  $38
-05B4  FF            rst  $38
-05B5  FF            rst  $38
-05B6  FF            rst  $38
-05B7  FF            rst  $38
+
+05B0                dc   8, $FF
 
                 ;; who calls?
 05B8  3A0383        ld   a,($8303)
@@ -1163,17 +990,8 @@
 05C7  E1            pop  hl
 05C8  C9            ret
 
-05C9  FF            rst  $38
-05CA  FF            rst  $38
-05CB  FF            rst  $38
-05CC  FF            rst  $38
-05CD  FF            rst  $38
-05CE  FF            rst  $38
-05CF  FF            rst  $38
+05C9                dc   7, $FF
 
-                ;; could this ben not P1/P2, but "player" vs "ai" (like
-                ;; in splash screen player jump automatically)
-                ;; AND/OR, could this disable input during transition?
                 ;; (hmm, no... looks like P1/P2... but why?)
                 normalize_input:
 05D0  3A0480        ld   a,($8004)
@@ -1202,27 +1020,11 @@
 05FB  320E80        ld   ($800E),a
 05FE  C9            ret
 
-05FF  FF            rst  $38
-0600  FF            rst  $38
-0601  FF            rst  $38
-0602  FF            rst  $38
-0603  FF            rst  $38
-0604  FF            rst  $38
-0605  FF            rst  $38
-0606  FF            rst  $38
-0607  FF            rst  $38
+05FF                dc   9, $FF
 
                 player_frame_data_walk_right:
-0608                db $0C,$0E,$10,$0E,$0C,$12,$14,$12
-
-0610  FF            rst  $38
-0611  FF            rst  $38
-0612  FF            rst  $38
-0613  FF            rst  $38
-0614  FF            rst  $38
-0615  FF            rst  $38
-0616  FF            rst  $38
-0617  FF            rst  $38
+0608                db  $0C,$0E,$10,$0E,$0C,$12,$14,$12
+0610                dc   8, $FF
 
                 player_move_right:
 0618  3A1080        ld   a,($8010)
@@ -1247,27 +1049,11 @@
 063C  00            nop
 063D  C9            ret
 
-063E  FF            rst  $38
-063F  FF            rst  $38
-0640  FF            rst  $38
-0641  FF            rst  $38
-0642  FF            rst  $38
-0643  FF            rst  $38
-0644  FF            rst  $38
-0645  FF            rst  $38
-0646  FF            rst  $38
-0647  FF            rst  $38
+063E                dc   10, $FF
 
                 player_frame_data_walk_left:
 0648                db   $8C,$8E,$90,$8E,$8C,$92,$94,$92
-0650  FF            rst  $38
-0651  FF            rst  $38
-0652  FF            rst  $38
-0653  FF            rst  $38
-0654  FF            rst  $38
-0655  FF            rst  $38
-0656  FF            rst  $38
-0657  FF            rst  $38
+0650                dc   8, $FF
 
                 player_move_left:
 0658  3A1080        ld   a,($8010)
@@ -1292,16 +1078,7 @@
 067C  00            nop
 067D  C9            ret
 
-067E  FF            rst  $38
-067F  FF            rst  $38
-0680  FF            rst  $38
-0681  FF            rst  $38
-0682  FF            rst  $38
-0683  FF            rst  $38
-0684  FF            rst  $38
-0685  FF            rst  $38
-0686  FF            rst  $38
-0687  FF            rst  $38
+067E                dc   10, $FF
 
                 player_input:
 0688  3A1283        ld   a,($8312)
@@ -1352,9 +1129,7 @@
 06D3  00            nop
 06D4  C9            ret
 
-06D5  FF            rst  $38
-06D6  FF            rst  $38
-06D7  FF            rst  $38
+06D5                dc   3, $FF
 
                 ;; "Physics": do jumps according to jump lookup tables
                 player_physics:
@@ -1401,6 +1176,7 @@
 071B  F1            pop  af
 071C  C9            ret
 
+                ;; wassis?
 071D  FF            rst  $38
 071E  FF            rst  $38
 071F  FF            rst  $38
@@ -1422,18 +1198,7 @@
 073C                db $FA,$8E,$8F,$F4
 0740                db $FA,$8C,$8D,$F4
 
-0744  FF            rst  $38
-0745  FF            rst  $38
-0746  FF            rst  $38
-0747  FF            rst  $38
-0748  FF            rst  $38
-0749  FF            rst  $38
-074A  FF            rst  $38
-074B  FF            rst  $38
-074C  FF            rst  $38
-074D  FF            rst  $38
-074E  FF            rst  $38
-074F  FF            rst  $38
+0744                dc 12, $FF
 
                 ;; x-off, head-anim, leg-anim, yoff
                 phys_jump_lookup_right:          ; right?
@@ -1445,14 +1210,7 @@
 0764                db   $06,$0E,$0F,$F4
 0768                db   $06,$0C,$0D,$F4
 
-076C  FF            rst  $38
-076D  FF            rst  $38
-076E  FF            rst  $38
-076F  FF            rst  $38
-0770  FF            rst  $38
-0771  FF            rst  $38
-0772  FF            rst  $38
-0773  FF            rst  $38
+076C                dc   8, $FF
 
                 ;; only runs every "tick_mod_slow" frames
                 apply_jump_physics:
@@ -1476,12 +1234,7 @@
 0796  C9            ret
 0797  C3E007        jp   $07E0
 
-079A  FF            rst  $38
-079B  FF            rst  $38
-079C  FF            rst  $38
-079D  FF            rst  $38
-079E  FF            rst  $38
-079F  FF            rst  $38
+079A                dc   6, $FF
 
                 ;;; jump button, but not jumping, and on ground, right
                 trigger_jump_right:
@@ -1536,8 +1289,7 @@
 07EE  CDD806        call $06D8
 07F1  C9            ret
 
-07F2  FF            rst  $38
-07F3  FF            rst  $38
+07F2                dc   2, $FF
 
                 play_jump_sfx:
 07F4  324581        ld   ($8145),a
@@ -1545,9 +1297,7 @@
 07F9  324380        ld   ($8043),a
 07FC  C9            ret
 
-07FD  FF            rst  $38
-07FE  FF            rst  $38
-07FF  FF            rst  $38
+07FD                dc   3, $FF
 
                 ;; who calls? (free bytes)
                 ;; this looks similar to other DRAW_TILES code, but tile data
@@ -1599,12 +1349,8 @@
 0835  0EE0          ld   c,$E0
 0837  09            add  hl,bc
 0838  18F3          jr   $082D
-083A  FF            rst  $38
-083B  FF            rst  $38
-083C  FF            rst  $38
-083D  FF            rst  $38
-083E  FF            rst  $38
-083F  FF            rst  $38
+
+083A                dc   6, $FF
 
                 ;;
                 draw_screen:
@@ -1653,12 +1399,8 @@
                 _done_0880:
 0880  D9            exx
 0881  C9            ret
-0882  FF            rst  $38
-0883  FF            rst  $38
-0884  FF            rst  $38
-0885  FF            rst  $38
-0886  FF            rst  $38
-0887  FF            rst  $38
+
+0882                dc   6, $FF
 
                 clear_jump_button:
 0888  3A0E80        ld   a,($800E)
@@ -1668,11 +1410,7 @@
 088F  320580        ld   ($8005),a
 0892  C9            ret
 
-0893  FF            rst  $38
-0894  FF            rst  $38
-0895  FF            rst  $38
-0896  FF            rst  $38
-0897  FF            rst  $38
+0893                dc   5, $FF
 
                 init_player_sprite:
 0898  214081        ld   hl,$8140
@@ -1694,16 +1432,7 @@
 08B2  CD2018        call $1820
 08B5  C9            ret
 
-08B6  FF            rst  $38
-08B7  FF            rst  $38
-08B8  FF            rst  $38
-08B9  FF            rst  $38
-08BA  FF            rst  $38
-08BB  FF            rst  $38
-08BC  FF            rst  $38
-08BD  FF            rst  $38
-08BE  FF            rst  $38
-08BF  FF            rst  $38
+08B6                dc   10, $FF
 
                 trigger_jump_straight_up:
 08C0  3A0580        ld   a,($8005)
@@ -1721,18 +1450,7 @@
 08D6  324181        ld   ($8141),a
 08D9  C33009        jp   $0930
 
-08DC  FF            rst  $38
-08DD  FF            rst  $38
-08DE  FF            rst  $38
-08DF  FF            rst  $38
-08E0  FF            rst  $38
-08E1  FF            rst  $38
-08E2  FF            rst  $38
-08E3  FF            rst  $38
-08E4  FF            rst  $38
-08E5  FF            rst  $38
-08E6  FF            rst  $38
-08E7  FF            rst  $38
+08DC                dc   12, $FF
 
                 move_bongo_right:
 08E8  3A1283        ld   a,($8312)
@@ -1758,25 +1476,13 @@
 090E  324881        ld   ($8148),a
 0911  C9            ret
 
-0912  FF            rst  $38
-0913  FF            rst  $38
-0914  FF            rst  $38
-0915  FF            rst  $38
-0916  FF            rst  $38
-0917  FF            rst  $38
+0912                dc   6, $FF
 
                 bongo_lookup3:
 0918                db   $29,$2A,$2B,$2A,$FF,$FF,$FF,$FF
 0920                db   $A9,$AA,$AB,$AA,$FF,$FF,$FF,$FF
 
-0928  FF            rst  $38
-0929  FF            rst  $38
-092A  FF            rst  $38
-092B  FF            rst  $38
-092C  FF            rst  $38
-092D  FF            rst  $38
-092E  FF            rst  $38
-092F  FF            rst  $38
+0928                dc   8, $FF
 
                 face_backwards_and_play_jump_sfx:
 0930  3E18          ld   a,$18
@@ -1785,19 +1491,7 @@
 0937  324380        ld   ($8043),a
 093A  C9            ret
 
-093B  FF            rst  $38
-093C  FF            rst  $38
-093D  FF            rst  $38
-093E  FF            rst  $38
-093F  FF            rst  $38
-0940  FF            rst  $38
-0941  FF            rst  $38
-0942  FF            rst  $38
-0943  FF            rst  $38
-0944  FF            rst  $38
-0945  FF            rst  $38
-0946  FF            rst  $38
-0947  FF            rst  $38
+093B                dc   13, $FF
 
                 ;; jumping straight up
                 ;; x-off, head-anim, leg-anim, yoff
@@ -1810,10 +1504,7 @@
 095C                db   $00,$97,$98,$F4  ; -12
 0960                db   $00,$17,$18,$F4  ; -12
 
-0964  FF            rst  $38
-0965  FF            rst  $38
-0966  FF            rst  $38
-0967  FF            rst  $38
+0964                dc   4, $FF
 
                 ;; Get tile from x/y
                 ;; in: h = x, l = y
@@ -1838,14 +1529,7 @@
 097E  6F            ld   l,a
 097F  C9            ret
 
-0980  FF            rst  $38
-0981  FF            rst  $38
-0982  FF            rst  $38
-0983  FF            rst  $38
-0984  FF            rst  $38
-0985  FF            rst  $38
-0986  FF            rst  $38
-0987  FF            rst  $38
+0980                dc   8, $FF
 
                 ;;; ground check
                 ground_check:
@@ -1875,18 +1559,7 @@
 09B1  3E01          ld   a,$01 ; solid tile
 09B3  C9            ret
 
-09B4  FF            rst  $38
-09B5  FF            rst  $38
-09B6  FF            rst  $38
-09B7  FF            rst  $38
-09B8  FF            rst  $38
-09B9  FF            rst  $38
-09BA  FF            rst  $38
-09BB  FF            rst  $38
-09BC  FF            rst  $38
-09BD  FF            rst  $38
-09BE  FF            rst  $38
-09BF  FF            rst  $38
+09B4                dc   12, $FF
 
                 check_if_landed_on_ground:      ; only when big fall?
 09C0  3A1280        ld   a,($8012)
@@ -1925,15 +1598,7 @@
 09FB  CD680A        call $0A68
 09FE  C9            ret
 
-09FF  FF            rst  $38
-0A00  FF            rst  $38
-0A01  FF            rst  $38
-0A02  FF            rst  $38
-0A03  FF            rst  $38
-0A04  FF            rst  $38
-0A05  FF            rst  $38
-0A06  FF            rst  $38
-0A07  FF            rst  $38
+09FF                dc   9, $FF
 
                 move_bongo_left:
 0A08  3A1283        ld   a,($8312)
@@ -1958,7 +1623,8 @@
 0A2D  3D            dec  a
 0A2E  324881        ld   ($8148),a
 0A31  C9            ret
-0A32  FF            rst  $38
+
+0A32  FF            db   $FF
 
                 kill_player:
 0A33  00            nop ; weee, nopslide
@@ -1970,8 +1636,7 @@
 0A3A  321280        ld   ($8012),a
 0A3D  C9            ret
 
-0A3E  FF            rst  $38
-0A3F  FF            rst  $38
+0A3E                dc   2, $FF
 
                 ;; There's a bug in level one/two: if you jump of the
                 ;; edge of level one, and hold jump... it bashes invisible
@@ -1996,16 +1661,7 @@
 0A5A  324781        ld   ($8147),a
 0A5D  C9            ret
 
-0A5E  FF            rst  $38
-0A5F  FF            rst  $38
-0A60  FF            rst  $38
-0A61  FF            rst  $38
-0A62  FF            rst  $38
-0A63  FF            rst  $38
-0A64  FF            rst  $38
-0A65  FF            rst  $38
-0A66  FF            rst  $38
-0A67  FF            rst  $38
+0A5E                dc   10, $FF
 
                     ;; TODO: figure out what this does to gameplay.
                     ;; what if it was removed?
@@ -2018,16 +1674,7 @@
 0A72  324781        ld   ($8147),a
 0A75  C9            ret
 
-0A76  FF            rst  $38
-0A77  FF            rst  $38
-0A78  FF            rst  $38
-0A79  FF            rst  $38
-0A7A  FF            rst  $38
-0A7B  FF            rst  $38
-0A7C  FF            rst  $38
-0A7D  FF            rst  $38
-0A7E  FF            rst  $38
-0A7F  FF            rst  $38
+0A76                dc   10, $FF
 
                 check_head_hit_tile:
 0A80  3A1280        ld   a,($8012)
@@ -2056,15 +1703,7 @@
 0AAB  CDB80A        call $0AB8
 0AAE  C9            ret
 
-0AAF  FF            rst  $38
-0AB0  FF            rst  $38
-0AB1  FF            rst  $38
-0AB2  FF            rst  $38
-0AB3  FF            rst  $38
-0AB4  FF            rst  $38
-0AB5  FF            rst  $38
-0AB6  FF            rst  $38
-0AB7  FF            rst  $38
+0AAF                dc   9, $FF
 
                 fall_under_a_ledge:
 0AB8  3A1180        ld   a,($8011)
@@ -2078,9 +1717,7 @@
 0AC9  CDA013        call $13A0
 0ACC  C9            ret
 
-0ACD  FF            rst  $38
-0ACE  FF            rst  $38
-0ACF  FF            rst  $38
+0ACD                dc   3, $FF
 
                 set_level_platform_xoffs:
 0AD0  3A0480        ld   a,($8004)
@@ -2108,13 +1745,7 @@
 0AF5  CD9818        call $1898
 0AF8  C9            ret
 
-0AF9  FF            rst  $38
-0AFA  FF            rst  $38
-0AFB  FF            rst  $38
-0AFC  FF            rst  $38
-0AFD  FF            rst  $38
-0AFE  FF            rst  $38
-0AFF  FF            rst  $38
+0AF9                dc   7, $FF
 
                 ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
                 platform_scroll_data_addr:
@@ -2129,10 +1760,7 @@
                 ;; 70 zeros/nops. That's a lotta nops. (free bytes?)
 0B36                dc 70,$0
 
-0B7C  FF            rst  $38
-0B7D  FF            rst  $38
-0B7E  FF            rst  $38
-0B7F  FF            rst  $38
+0B7C                dc   4, $FF
 
                 move_moving_platform:
 0B80  DD7E01        ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
@@ -2152,17 +1780,8 @@
 0BA0  AF            xor  a
 0BA1  322D80        ld   ($802D),a
 0BA4  C9            ret
-0BA5  FF            rst  $38
-0BA6  FF            rst  $38
-0BA7  FF            rst  $38
-0BA8  FF            rst  $38
-0BA9  FF            rst  $38
-0BAA  FF            rst  $38
-0BAB  FF            rst  $38
-0BAC  FF            rst  $38
-0BAD  FF            rst  $38
-0BAE  FF            rst  $38
-0BAF  FF            rst  $38
+
+0BA5                dc   11, $FF
 
                 moving_platforms:
 0BB0  DD218081      ld   ix,$8180
@@ -2200,24 +1819,7 @@
 0BFB  20BD          jr   nz,$0BBA
 0BFD  C9            ret
 
-0BFE  FF            rst  $38
-0BFF  FF            rst  $38
-0C00  FF            rst  $38
-0C01  FF            rst  $38
-0C02  FF            rst  $38
-0C03  FF            rst  $38
-0C04  FF            rst  $38
-0C05  FF            rst  $38
-0C06  FF            rst  $38
-0C07  FF            rst  $38
-0C08  FF            rst  $38
-0C09  FF            rst  $38
-0C0A  FF            rst  $38
-0C0B  FF            rst  $38
-0C0C  FF            rst  $38
-0C0D  FF            rst  $38
-0C0E  FF            rst  $38
-0C0F  FF            rst  $38
+0BFE                dc   18, $FF
 
                 platform_moving_data: ; All "S" levels.
 0C10                db   $00,$00,$00,$00
@@ -2230,10 +1832,7 @@
 0C2C                db   $00,$00,$00,$00
 0C30                db   $00,$00,$00,$00
 
-0C34  FF            rst  $38
-0C35  FF            rst  $38
-0C36  FF            rst  $38
-0C37  FF            rst  $38
+0C34                dc   4, $FF
 
                 platform_static_data: ; All non-"S" levels.
 0C38                db   $00,$00,$00,$00
@@ -2246,10 +1845,7 @@
 0C54                db   $00,$00,$00,$00
 0C58                db   $00,$00,$00,$00
 
-0C5C  FF            rst  $38
-0C5D  FF            rst  $38
-0C5E  FF            rst  $38
-0C5F  FF            rst  $38
+0C5C                dc   4, $FF
 
                 animate_player_to_ground_if_dead:
 0C60  3A1280        ld   a,($8012)
@@ -2283,13 +1879,7 @@
 0C95  CD2002        call $0220
 0C98  C9            ret
 
-0C99  FF            rst  $38
-0C9A  FF            rst  $38
-0C9B  FF            rst  $38
-0C9C  FF            rst  $38
-0C9D  FF            rst  $38
-0C9E  FF            rst  $38
-0C9F  FF            rst  $38
+0C99                dc   7, $FF
 
                 delay_8_vblanks:
 0CA0  1E08          ld   e,$08
@@ -2297,13 +1887,8 @@
 0CA5  1D            dec  e
 0CA6  20FA          jr   nz,$0CA2
 0CA8  C9            ret
-0CA9  FF            rst  $38
-0CAA  FF            rst  $38
-0CAB  FF            rst  $38
-0CAC  FF            rst  $38
-0CAD  FF            rst  $38
-0CAE  FF            rst  $38
-0CAF  FF            rst  $38
+
+0CA9                dc   7, $FF
 
                 bongo_jump_on_player_death:
 0CB0  1E03          ld   e,$03 ; jumps 3 times
@@ -2313,6 +1898,7 @@
 0CBB  1D            dec  e
 0CBC  20F4          jr   nz,$0CB2
 0CBE  C9            ret
+
 0CBF  FF            rst  $38
 
                 do_death_sequence:
@@ -2369,8 +1955,7 @@
 0D2B  20EC          jr   nz,$0D19
 0D2D  C9            ret
 
-0D2E  FF            rst  $38
-0D2F  FF            rst  $38
+0D2E                dc   2, $FF
 
                 start_bongo_jump:
 0D30  3A2480        ld   a,($8024)
@@ -2380,11 +1965,7 @@
 0D37  322480        ld   ($8024),a
 0D3A  C9            ret
 
-0D3B  FF            rst  $38
-0D3C  FF            rst  $38
-0D3D  FF            rst  $38
-0D3E  FF            rst  $38
-0D3F  FF            rst  $38
+0D3B                dc   5, $FF
 
                 ;; Oooh, mystery function - commented out.
                 ;; Think it was going to place Bongo on the
@@ -2407,13 +1988,7 @@
 0D55  322480        ld   ($8024),a
 0D58  C9            ret
 
-0D59  FF            rst  $38
-0D5A  FF            rst  $38
-0D5B  FF            rst  $38
-0D5C  FF            rst  $38
-0D5D  FF            rst  $38
-0D5E  FF            rst  $38
-0D5F  FF            rst  $38
+0D59                dc   7, $FF
 
                 jump_bongo:
 0D60  CD400D        call $0D40 ; also called from UPDATE_EVERYTHING
@@ -2435,12 +2010,7 @@
 0D7E  324B81        ld   ($814B),a
 0D81  C9            ret
 
-0D82  FF            rst  $38
-0D83  FF            rst  $38
-0D84  FF            rst  $38
-0D85  FF            rst  $38
-0D86  FF            rst  $38
-0D87  FF            rst  $38
+0D82                dc   6, $FF
 
                 on_the_spot_bongo:   ; animate on the spot (no left/right)
 0D88  3A1283        ld   a,($8312)
@@ -2460,18 +2030,7 @@
 0DA0  324981        ld   ($8149),a
 0DA3  C9            ret
 
-0DA4  FF            rst  $38
-0DA5  FF            rst  $38
-0DA6  FF            rst  $38
-0DA7  FF            rst  $38
-0DA8  FF            rst  $38
-0DA9  FF            rst  $38
-0DAA  FF            rst  $38
-0DAB  FF            rst  $38
-0DAC  FF            rst  $38
-0DAD  FF            rst  $38
-0DAE  FF            rst  $38
-0DAF  FF            rst  $38
+0DA4                dc   12, $FF
 
                 ;; wat
 0DB0  05            dec  b
@@ -2509,26 +2068,7 @@
 0DE8  324981        ld   ($8149),a
 0DEB  C9            ret
 
-0DEC  FF            rst  $38
-0DED  FF            rst  $38
-0DEE  FF            rst  $38
-0DEF  FF            rst  $38
-0DF0  FF            rst  $38
-0DF1  FF            rst  $38
-0DF2  FF            rst  $38
-0DF3  FF            rst  $38
-0DF4  FF            rst  $38
-0DF5  FF            rst  $38
-0DF6  FF            rst  $38
-0DF7  FF            rst  $38
-0DF8  FF            rst  $38
-0DF9  FF            rst  $38
-0DFA  FF            rst  $38
-0DFB  FF            rst  $38
-0DFC  FF            rst  $38
-0DFD  FF            rst  $38
-0DFE  FF            rst  $38
-0DFF  FF            rst  $38
+0DEC                dc   20, $FF
 
                 bongo_lookup2:
 0E00                db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
@@ -2559,20 +2099,7 @@
 0E5E  CD300D        call $0D30
 0E61  C9            ret
 
-0E62  FF            rst  $38
-0E63  FF            rst  $38
-0E64  FF            rst  $38
-0E65  FF            rst  $38
-0E66  FF            rst  $38
-0E67  FF            rst  $38
-0E68  FF            rst  $38
-0E69  FF            rst  $38
-0E6A  FF            rst  $38
-0E6B  FF            rst  $38
-0E6C  FF            rst  $38
-0E6D  FF            rst  $38
-0E6E  FF            rst  $38
-0E6F  FF            rst  $38
+0E62                dc   14, $FF
 
                 bongo_animate_per_screen:
 0E70  3A1283        ld   a,($8312)
@@ -2609,29 +2136,7 @@
 0EA5  322580        ld   ($8025),a
 0EA8  C9            ret
 
-0EA9  FF            rst  $38
-0EAA  FF            rst  $38
-0EAB  FF            rst  $38
-0EAC  FF            rst  $38
-0EAD  FF            rst  $38
-0EAE  FF            rst  $38
-0EAF  FF            rst  $38
-0EB0  FF            rst  $38
-0EB1  FF            rst  $38
-0EB2  FF            rst  $38
-0EB3  FF            rst  $38
-0EB4  FF            rst  $38
-0EB5  FF            rst  $38
-0EB6  FF            rst  $38
-0EB7  FF            rst  $38
-0EB8  FF            rst  $38
-0EB9  FF            rst  $38
-0EBA  FF            rst  $38
-0EBB  FF            rst  $38
-0EBC  FF            rst  $38
-0EBD  FF            rst  $38
-0EBE  FF            rst  $38
-0EBF  FF            rst  $38
+0EA9                dc   23, $FF
 
                 ;; addr lookup: 2 bytes per screen, points to BONGO_ANIM_DATA
                 bongo_anim_lookup:
@@ -2653,14 +2158,7 @@
 0EFD  00            nop
 0EFE  00            nop
 0EFF  00            nop
-0F00  FF            rst  $38
-0F01  FF            rst  $38
-0F02  FF            rst  $38
-0F03  FF            rst  $38
-0F04  FF            rst  $38
-0F05  FF            rst  $38
-0F06  FF            rst  $38
-0F07  FF            rst  $38
+0F00                dc   8, $FF
 
                 ;; this looks like bongo anim data
                 ;; 4 = jump | 2 = left | 1 = right
@@ -2670,14 +2168,7 @@
 0F18                db   $00,$04,$02,$02,$02,$02,$05,$06
 0F20                db   $01,$01,$01,$01,$00,$00,$00,$00
 
-0F28  FF            rst  $38
-0F29  FF            rst  $38
-0F2A  FF            rst  $38
-0F2B  FF            rst  $38
-0F2C  FF            rst  $38
-0F2D  FF            rst  $38
-0F2E  FF            rst  $38
-0F2F  FF            rst  $38
+0F28                dc   8, $FF
 
                 ;;
                 bongo_run_when_player_close:
@@ -2707,17 +2198,8 @@
 0F58  322580        ld   ($8025),a
 0F5B  E1            pop  hl
 0F5C  C9            ret
-0F5D  FF            rst  $38
-0F5E  FF            rst  $38
-0F5F  FF            rst  $38
-0F60  FF            rst  $38
-0F61  FF            rst  $38
-0F62  FF            rst  $38
-0F63  FF            rst  $38
-0F64  FF            rst  $38
-0F65  FF            rst  $38
-0F66  FF            rst  $38
-0F67  FF            rst  $38
+
+0F5D                dc   11, $FF
 
                 ;; 32 bytes of something...
 0F68                db   $00,$00,$00,$00
@@ -2744,32 +2226,11 @@
 
 0FC4  C3D61B        jp   $1BD6
 
-0FC7  FF            rst  $38
-0FC8  FF            rst  $38
-0FC9  FF            rst  $38
-0FCA  FF            rst  $38
-0FCB  FF            rst  $38
-0FCC  FF            rst  $38
-0FCD  FF            rst  $38
-0FCE  FF            rst  $38
-0FCF  FF            rst  $38
-0FD0  FF            rst  $38
-
+0FC7                dc   10, $FF
 0FD1  0F            rrca
-0FD2  FF            rst  $38
-0FD3  FF            rst  $38
-0FD4  FF            rst  $38
-0FD5  FF            rst  $38
-0FD6  FF            rst  $38
-0FD7  FF            rst  $38
-0FD8  FF            rst  $38
-0FD9  FF            rst  $38
-0FDA  FF            rst  $38
-0FDB  FF            rst  $38
-0FDC  FF            rst  $38
+0FD2                dc   11, $FF
 0FDD  0F            rrca
-0FDE  FF            rst  $38
-0FDF  FF            rst  $38
+0FDE                dc   2, $FF
 
                 header_text_data:
 0FE0                db   $10,$10,$10,$10,$20,$1C,$01,$10,$10,$10,$10 ; PL1
@@ -2823,21 +2284,9 @@
 
 105F  FF            rst  $38
 1060  F0            ret  p
-1061  FF            rst  $38
-1062  FF            rst  $38
-1063  FF            rst  $38
-1064  FF            rst  $38
-1065  FF            rst  $38
-1066  FF            rst  $38
-1067  FF            rst  $38
-1068  FF            rst  $38
-1069  FF            rst  $38
-106A  FF            rst  $38
-106B  FF            rst  $38
-106C  FF            rst  $38
-106D  FF            rst  $38
-106E  FF            rst  $38
-106F  FF            rst  $38
+
+1061                dc   15, $FF
+
                 ;;; =========================================
 
                 ;;;  Extra life
@@ -2849,8 +2298,9 @@
 1079  C9            ret
 107A  CDA810        call $10A8
 107D  C9            ret
-107E  FF            rst  $38
-107F  FF            rst  $38
+
+107E                dc   2, $FF
+
                 ;; P1 extra life
                 _p1_extra_life:
 1080  3A7080        ld   a,($8070)
@@ -2870,12 +2320,9 @@
 109C  3E08          ld   a,$08
 109E  324480        ld   ($8044),a
 10A1  C9            ret
-10A2  FF            rst  $38
-10A3  FF            rst  $38
-10A4  FF            rst  $38
-10A5  FF            rst  $38
-10A6  FF            rst  $38
-10A7  FF            rst  $38
+
+10A2                dc   6, $FF
+
                 ;; P2 extra life
                 _p2_extra_life:
 10A8  3A7180        ld   a,($8071)
@@ -2896,28 +2343,7 @@
 10C6  324480        ld   ($8044),a
 10C9  C9            ret
 
-10CA  FF            rst  $38
-10CB  FF            rst  $38
-10CC  FF            rst  $38
-10CD  FF            rst  $38
-10CE  FF            rst  $38
-10CF  FF            rst  $38
-10D0  FF            rst  $38
-10D1  FF            rst  $38
-10D2  FF            rst  $38
-10D3  FF            rst  $38
-10D4  FF            rst  $38
-10D5  FF            rst  $38
-10D6  FF            rst  $38
-10D7  FF            rst  $38
-10D8  FF            rst  $38
-10D9  FF            rst  $38
-10DA  FF            rst  $38
-10DB  FF            rst  $38
-10DC  FF            rst  $38
-10DD  FF            rst  $38
-10DE  FF            rst  $38
-10DF  FF            rst  $38
+10CA                dc   22, $FF
 
                 set_tick_mod_3_and_add_score:
 10E0  3A0080        ld   a,($8000)
@@ -2939,7 +2365,7 @@
 10FB  CD1825        call $2518
 10FE  C9            ret
 
-10FF  FF            rst  $38
+10FF  FF            db   $FF
 
                 ;; Ticks the main ticks and speed timers
                 tick_ticks:                     ;
@@ -2949,11 +2375,7 @@
 1107  CD8016        call $1680
 110A  C9            ret
 
-110B  FF            rst  $38
-110C  FF            rst  $38
-110D  FF            rst  $38
-110E  FF            rst  $38
-110F  FF            rst  $38
+110B                dc   5, $FF
 
                 ;; ?? is it about dino?
                 mystery_8066_fn:
@@ -2979,9 +2401,7 @@
 112B  F1            pop  af
 112C  C9            ret
 
-112D  FF            rst  $38
-112E  FF            rst  $38
-112F  FF            rst  $38
+112D                dc   3, $FF
 
                 ;;
                 update_screen_tile_animations:
@@ -3021,23 +2441,7 @@
 115D  00            nop
 115E  C9            ret
 
-115F  FF            rst  $38
-1160  FF            rst  $38
-1161  FF            rst  $38
-1162  FF            rst  $38
-1163  FF            rst  $38
-1164  FF            rst  $38
-1165  FF            rst  $38
-1166  FF            rst  $38
-1167  FF            rst  $38
-1168  FF            rst  $38
-1169  FF            rst  $38
-116A  FF            rst  $38
-116B  FF            rst  $38
-116C  FF            rst  $38
-116D  FF            rst  $38
-116E  FF            rst  $38
-116F  FF            rst  $38
+115F                dc   17, $FF
 
                 update_everything:
 1170  CD041A        call $1A04
@@ -3066,13 +2470,7 @@
 11B5  CDE301        call $01E3 ; $UPDATE_EVERYTHING_MORE
 11B8  C9            ret
 
-11B9  FF            rst  $38
-11BA  FF            rst  $38
-11BB  FF            rst  $38
-11BC  FF            rst  $38
-11BD  FF            rst  $38
-11BE  FF            rst  $38
-11BF  FF            rst  $38
+11B9                dc   7, $FF
 
                 wrap_other_spears_left:
 11C0  3A5881        ld   a,($8158)
@@ -3105,9 +2503,8 @@
 11F7  2003          jr   nz,$11FC
 11F9  CD8839        call $3988
 11FC  C9            ret
-11FD  FF            rst  $38
-11FE  FF            rst  $38
-11FF  FF            rst  $38
+
+11FD                dc   3, $FF
 
                 ;;;
                 player_pos_update:
@@ -3147,21 +2544,7 @@
 123D  320280        ld   ($8002),a
 1240  C9            ret
 
-1241  FF            rst  $38
-1242  FF            rst  $38
-1243  FF            rst  $38
-1244  FF            rst  $38
-1245  FF            rst  $38
-1246  FF            rst  $38
-1247  FF            rst  $38
-1248  FF            rst  $38
-1249  FF            rst  $38
-124A  FF            rst  $38
-124B  FF            rst  $38
-124C  FF            rst  $38
-124D  FF            rst  $38
-124E  FF            rst  $38
-124F  FF            rst  $38
+1241                dc   15, $FF
 
                 ;;; only called from PREVENT_CLOUD_JUMP_REDACTED
                 prevent_cloud_jump_redacted_2:
@@ -3195,20 +2578,8 @@
 127D  CDB80A        call $0AB8
 1280  E1            pop  hl
 1281  C9            ret
-1282  FF            rst  $38
-1283  FF            rst  $38
-1284  FF            rst  $38
-1285  FF            rst  $38
-1286  FF            rst  $38
-1287  FF            rst  $38
-1288  FF            rst  $38
-1289  FF            rst  $38
-128A  FF            rst  $38
-128B  FF            rst  $38
-128C  FF            rst  $38
-128D  FF            rst  $38
-128E  FF            rst  $38
-128F  FF            rst  $38
+
+1282                dc   14, $FF
 
                 ;; ANOTHER commented out one!
                 ;; This stops a player jumping up through a platform
@@ -3230,20 +2601,8 @@
 12A6  15            dec  d
 12A7  20F8          jr   nz,$12A1
 12A9  C9            ret
-12AA  FF            rst  $38
-12AB  FF            rst  $38
-12AC  FF            rst  $38
-12AD  FF            rst  $38
-12AE  FF            rst  $38
-12AF  FF            rst  $38
-12B0  FF            rst  $38
-12B1  FF            rst  $38
-12B2  FF            rst  $38
-12B3  FF            rst  $38
-12B4  FF            rst  $38
-12B5  FF            rst  $38
-12B6  FF            rst  $38
-12B7  FF            rst  $38
+
+12AA                dc  14, $FF
 
                 draw_background:
                 ;; draw first 6 columns
@@ -3311,18 +2670,8 @@
 1318  20E9          jr   nz,$1303
 131A  E1            pop  hl
 131B  C9            ret
-131C  FF            rst  $38
-131D  FF            rst  $38
-131E  FF            rst  $38
-131F  FF            rst  $38
-1320  FF            rst  $38
-1321  FF            rst  $38
-1322  FF            rst  $38
-1323  FF            rst  $38
-1324  FF            rst  $38
-1325  FF            rst  $38
-1326  FF            rst  $38
-1327  FF            rst  $38
+
+131C                dc   12, $FF
 
                 ;; ix = level data
                 ;; hl = screen pos
@@ -3393,7 +2742,7 @@
 138B  CD0804        call $0408
 138E  C9            ret
 
-138F  FF            rst  $38
+138F  FF            db   $FF
 
                 ;; "jump relative A": dispatches to address based on A
                 jump_rel_a:
@@ -3406,14 +2755,7 @@
 1397  D9            exx
 1398  C9            ret ; sets PC to RET + A
 
-1399  FF            rst  $38
-139A  FF            rst  $38
-139B  FF            rst  $38
-139C  FF            rst  $38
-139D  FF            rst  $38
-139E  FF            rst  $38
-139F  FF            rst  $38
-
+1399                dc   7, $FF
 
                 ;;; Looks important. VBLANK?
                 wait_vblank:
@@ -3429,7 +2771,7 @@
 13B3  3A00B8        ld   a,($B800)
 13B6  C9            ret
 
-13B7  FF            rst  $38
+13B7  FF            db   $FF
 
                 bongo_runs_off_screen:
 13B8  214881        ld   hl,$8148
@@ -3440,19 +2782,7 @@
 13C1  20F8          jr   nz,$13BB
 13C3  C9            ret
 
-13C4  FF            rst  $38
-13C5  FF            rst  $38
-13C6  FF            rst  $38
-13C7  FF            rst  $38
-13C8  FF            rst  $38
-13C9  FF            rst  $38
-13CA  FF            rst  $38
-13CB  FF            rst  $38
-13CC  FF            rst  $38
-13CD  FF            rst  $38
-13CE  FF            rst  $38
-13CF  FF            rst  $38
-
+13C4                dc   12, $FF
 
                 update_time_timer:
 13D0  3A0680        ld   a,($8006)
@@ -3466,18 +2796,7 @@
 13E1  CD1014        call $1410
 13E4  C9            ret
 
-13E5  FF            rst  $38
-13E6  FF            rst  $38
-13E7  FF            rst  $38
-13E8  FF            rst  $38
-13E9  FF            rst  $38
-13EA  FF            rst  $38
-13EB  FF            rst  $38
-13EC  FF            rst  $38
-13ED  FF            rst  $38
-13EE  FF            rst  $38
-13EF  FF            rst  $38
-
+13E5                dc   11, $FF
 
                 update_time:
 13F0  3A0480        ld   a,($8004)
@@ -3500,11 +2819,7 @@
 1409  77            ld   (hl),a ; store it
 140A  C9            ret
 
-140B  FF            rst  $38
-140C  FF            rst  $38
-140D  FF            rst  $38
-140E  FF            rst  $38
-140F  FF            rst  $38
+140B                dc   5, $FF
 
                 ;; draws the player's time under score
                 ;; ret's immediately: must have been removed! aww :(
@@ -3544,18 +2859,7 @@
 1451  ED67          rrd
 1453  C9            ret
 
-1454  FF            rst  $38
-1455  FF            rst  $38
-1456  FF            rst  $38
-1457  FF            rst  $38
-1458  FF            rst  $38
-1459  FF            rst  $38
-145A  FF            rst  $38
-145B  FF            rst  $38
-145C  FF            rst  $38
-145D  FF            rst  $38
-145E  FF            rst  $38
-145F  FF            rst  $38
+1454                dc   12, $FF
 
                 delay_83:                       ; maybe a delay?
 1460  210080        ld   hl,$8000
@@ -3597,7 +2901,7 @@
 148C  20F5          jr   nz,$1483
 148E  C9            ret
 
-148F  FF            rst  $38
+148F  FF            db   $FF
 
                 ;; Lotsa calls here (via $1470);
                 reset_xoff_and_cols_and_sprites:    ; sets 128 locations to 0
@@ -3609,10 +2913,7 @@
 1499  20F8          jr   nz,$1493
 149B  C9            ret
 
-149C  FF            rst  $38
-149D  FF            rst  $38
-149E  FF            rst  $38
-149F  FF            rst  $38
+149C                dc   4, $FF
 
                 ;;
                 clear_ram:
@@ -3623,8 +2924,8 @@
 14A7  FE84          cp   $84 ; 132
 14A9  20F8          jr   nz,$14A3
 14AB  C30F00        jp   $000F ; Return
-14AE  FF            rst  $38
-14AF  FF            rst  $38
+
+14AE                dc   2, $FF
 
                 screen_reset:
 14B0  21E806        ld   hl,$06E8
@@ -3650,8 +2951,8 @@
 14D8  46            ld   b,(hl)
 14D9  ED432080      ld   ($8020),bc
 14DD  C9            ret
-14DE  FF            rst  $38
-14DF  FF            rst  $38
+
+14DE                dc   2, $FF
 
                 reset_enemies_2:
 14E0  3A1583        ld   a,($8315) ; faster in round 2
@@ -3662,22 +2963,7 @@
 14EC  CDC03A        call $3AC0
 14EF  C9            ret
 
-14F0  FF            rst  $38
-14F1  FF            rst  $38
-14F2  FF            rst  $38
-14F3  FF            rst  $38
-14F4  FF            rst  $38
-14F5  FF            rst  $38
-14F6  FF            rst  $38
-14F7  FF            rst  $38
-14F8  FF            rst  $38
-14F9  FF            rst  $38
-14FA  FF            rst  $38
-14FB  FF            rst  $38
-14FC  FF            rst  $38
-14FD  FF            rst  $38
-14FE  FF            rst  $38
-14FF  FF            rst  $38
+14F0                dc   16, $FF
 
                 ;; Points to the addr of each screen's level data
                 level_bg_ptr_lookup:
@@ -3719,26 +3005,7 @@
 1539  00            nop
 153A  00            nop
 153B  00            nop
-153C  FF            rst  $38
-153D  FF            rst  $38
-153E  FF            rst  $38
-153F  FF            rst  $38
-1540  FF            rst  $38
-1541  FF            rst  $38
-1542  FF            rst  $38
-1543  FF            rst  $38
-1544  FF            rst  $38
-1545  FF            rst  $38
-1546  FF            rst  $38
-1547  FF            rst  $38
-1548  FF            rst  $38
-1549  FF            rst  $38
-154A  FF            rst  $38
-154B  FF            rst  $38
-154C  FF            rst  $38
-154D  FF            rst  $38
-154E  FF            rst  $38
-154F  FF            rst  $38
+153C                dc   20, $FF
 
                 copy_xoffs_and_cols_to_screen:
 1550  E5            push hl
@@ -3753,8 +3020,7 @@
 1560  E1            pop  hl
 1561  C9            ret
 
-1562  FF            rst  $38
-1563  FF            rst  $38
+1562                dc   2, $FF
 
                 ;; Why?
                 animate_splash_pickup_nops:
@@ -3805,15 +3071,16 @@
 15BD  3E8F          ld   a,$8F
 15BF  321493        ld   ($9314),a
 15C2  C9            ret
-15C3  FF            rst  $38
+
+15C3  FF            db   $FF
+
 15C4  D5            push de
 15C5  21A81B        ld   hl,$1BA8
 15C8  CDE301        call $01E3
 15CB  D1            pop  de
 15CC  C9            ret
-15CD  FF            rst  $38
-15CE  FF            rst  $38
-15CF  FF            rst  $38
+
+15CD                dc   3, $FF
 
                 attract_bonus_screen:
 15D0  CD7014        call $1470
@@ -3877,7 +3144,8 @@
 1643  219414        ld   hl,$1494 ; $ATTRACT_CATCH_DINO
 1646  CDE301        call $01E3
 1649  C9            ret
-164A  FF            rst  $38
+
+164A  FF            db   $FF
 
                 clear_and_draw_screen:
 164B  CD7014        call $1470
@@ -3887,12 +3155,8 @@
 1655  00            nop
 1656  CD5024        call $2450
 1659  C9            ret
-165A  FF            rst  $38
-165B  FF            rst  $38
-165C  FF            rst  $38
-165D  FF            rst  $38
-165E  FF            rst  $38
-165F  FF            rst  $38
+
+165A                dc   6, $FF
 
                 animate_splash_screen:
 1660  1610          ld   d,$10
@@ -3908,8 +3172,7 @@
 1673  20ED          jr   nz,$1662
 1675  C9            ret
 
-1676  FF            rst  $38
-1677  FF            rst  $38
+1676                dc   2, $FF
 
                 ;; ? data for something?
 1678  E8            ret  pe
@@ -3957,19 +3220,7 @@
 16C0  321683        ld   ($8316),a
 16C3  C9            ret
 
-16C4  FF            rst  $38
-16C5  FF            rst  $38
-16C6  FF            rst  $38
-16C7  FF            rst  $38
-16C8  FF            rst  $38
-16C9  FF            rst  $38
-16CA  FF            rst  $38
-16CB  FF            rst  $38
-16CC  FF            rst  $38
-16CD  FF            rst  $38
-16CE  FF            rst  $38
-16CF  FF            rst  $38
-
+16C4                dc   12, $FF
 
                 draw_bonus:
 16D0  CD1003        call $0310
@@ -4002,8 +3253,8 @@
 16F9  E3            ex   (sp),hl
 16FA  E4FFC9        call po,$C9FF
 16FD  FF            rst  $38
-16FE  FF            rst  $38
-16FF  FF            rst  $38
+
+16FE                dc   2, $FF
 
                 ;; Adds whatever is in 801d
                 add_score:
@@ -4040,29 +3291,7 @@
 1735  321D80        ld   ($801D),a
 1738  C9            ret
 
-1739  FF            rst  $38
-173A  FF            rst  $38
-173B  FF            rst  $38
-173C  FF            rst  $38
-173D  FF            rst  $38
-173E  FF            rst  $38
-173F  FF            rst  $38
-1740  FF            rst  $38
-1741  FF            rst  $38
-1742  FF            rst  $38
-1743  FF            rst  $38
-1744  FF            rst  $38
-1745  FF            rst  $38
-1746  FF            rst  $38
-1747  FF            rst  $38
-1748  FF            rst  $38
-1749  FF            rst  $38
-174A  FF            rst  $38
-174B  FF            rst  $38
-174C  FF            rst  $38
-174D  FF            rst  $38
-174E  FF            rst  $38
-174F  FF            rst  $38
+1739                dc   23, $FF
 
                 check_done_screen:
 1750  37            scf
@@ -4096,7 +3325,7 @@
 1775  E1            pop  hl
 1776  C9            ret
 
-1777  FF            rst  $38
+1777  FF            db   $FF
 
                 transition_to_next_screen:
 1778  CDC017        call $17C0
@@ -4140,8 +3369,7 @@
 17B0  77            ld   (hl),a
 17B1  C9            ret
 
-17B2  FF            rst  $38
-17B3  FF            rst  $38
+17B2                dc   2, $FF
 
                 reset_jump_and_redify_bottom_row:
 17B4  323F81        ld   ($813F),a ; set bottom row col
@@ -4150,7 +3378,7 @@
 17BB  320580        ld   ($8005),a
 17BE  C9            ret
 
-17BF  FF            rst  $38
+17BF  FF            db   $FF
 
                 reset_dino:
 17C0  AF            xor  a
@@ -4159,11 +3387,7 @@
 17C7  325081        ld   ($8150),a
 17CA  C9            ret
 
-17CB  FF            rst  $38
-17CC  FF            rst  $38
-17CD  FF            rst  $38
-17CE  FF            rst  $38
-17CF  FF            rst  $38
+17CB                dc   5, $FF
 
                 draw_bonus_box:
 17D0  CD1003        call $0310
@@ -4205,11 +3429,8 @@
 1800  BC            cp   h
 1801  FF            rst  $38
 1802  C9            ret
-1803  FF            rst  $38
-1804  FF            rst  $38
-1805  FF            rst  $38
-1806  FF            rst  $38
-1807  FF            rst  $38
+
+1803                dc   5, $FF
 
                 reset_player_sprite_frame_col:
 1808  3E0C          ld   a,$0C
