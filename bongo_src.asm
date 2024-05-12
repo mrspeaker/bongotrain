@@ -256,17 +256,9 @@
 001B  C38D00        jp   $008D
 
                 ;; data?
-001E  DD19          add  ix,de
-0020  DD19          add  ix,de
-0022  2B            dec  hl
-0023  10AF          db   $10,$af
-0025  ED67          rrd
-0027  DD77ED        ld   (ix-$13),a
-002A  6F            ld   l,a
-002B  DD            db   $dd
-002C  DD19          add  ix,de
-002E  ED6F          rld
-0030  DD            db   $dd
+001E                db $DD,$19,$DD,$19,$2B,$10,$AF
+0025                db $ED,$67,$DD,$77,$ED,$6F,$DD
+002C                db $DD,$19,$ED,$6F,$DD
 
 0031  FF            rst  $38
 0032  FF            rst  $38
@@ -280,6 +272,7 @@
                 reset_vector:
 0038  3A00B8        ld   a,($B800)
 003B  18FB          jr   $0038
+
 003D  FF            rst  $38
 003E  FF            rst  $38
 003F  FF            rst  $38
@@ -299,16 +292,8 @@
 004D  C8            ret  z
 004E  CD7014        call $1470
 0051  CD1003        call $0310
-0054  09            add  hl,bc
-0055  00            nop
-0056  13            inc  de ; CREDIT FAULT
-0057  221514        ld   ($1415),hl
-005A  19            add  hl,de
-005B  24            inc  h
-005C  1016          djnz $0074
-005E  11251C        ld   de,$1C25
-0061  24            inc  h
-0062  FF            rst  $38
+0054                db $09, $00
+0056                db $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF ; CREDIT FAULT
 0063  18E3          jr   $0048
 0065  FF            rst  $38
 
@@ -386,44 +371,20 @@
 00E5  CD8014        call $1480
 00E8  21E00F        ld   hl,$0FE0
 00EB  CD4008        call $0840
-00EE  00            nop ; params to DRAW_SCREEN
-00EF  00            nop
+00EE                db $00, $00 ; params to DRAW_SCREEN
 00F0  CD5024        call $2450
 00F3  CD1003        call $0310
-00F6  09            add  hl,bc
-00F7  0B            dec  bc
-00F8  2022          jr   nz,$011C ; PRESS
-00FA  15            dec  d
-00FB  23            inc  hl
-00FC  23            inc  hl
-00FD  FF            rst  $38
+00F6                db $09, $0B
+00F8                db $20,$22,$15,$23,$23,$FF ; PRESS
 00FE  CD1003        call $0310
-0101  0C            inc  c
-0102  09            add  hl,bc
-0103  1F            rra ; ONE PLAYER
-0104  1E15          ld   e,$15
-0106  1020          djnz $0128
-0108  1C            inc  e
-0109  112915        ld   de,$1529
-010C  22FFCD        ld   ($CDFF),hl
-010F  1003          djnz $0114
-0111  0F            rrca
-0112  8B            adc  a,e
-0113  12            ld   (de),a ; BUTTON
-0114  25            dec  h
-0115  24            inc  h
-0116  24            inc  h
-0117  1F            rra
-0118  1EFF          ld   e,$FF
+0101                db $0C, $09
+0103                db $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
+010E  CD1003        call $0310
+0111                db $0F, $8B
+0113                db $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
 011A  CD1003        call $0310
-011D  19            add  hl,de
-011E  09            add  hl,bc
-011F  13            inc  de ; CREDITS
-0120  221514        ld   ($1415),hl
-0123  19            add  hl,de
-0124  24            inc  h
-0125  23            inc  hl
-0126  FF            rst  $38
+011D                db $19, $09
+011F                db $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
 0127  210383        ld   hl,$8303
 012A  AF            xor  a
 012B  ED6F          rld
@@ -448,18 +409,9 @@
 014B  00            nop
 014C  CDD000        call $00D0
 014F  CD1003        call $0310
-0152  0C            inc  c
-0153  061F          ld   b,$1F
-0155  1E15          ld   e,$15
-0157  101F          djnz $0178
-0159  221024        ld   ($2410),hl
-015C  27            daa
-015D  1F            rra
-015E  1020          djnz $0180
-0160  1C            inc  e
-0161  112915        ld   de,$1529
-0164  22FFC9        ld   ($C9FF),hl ; ONE OR TWO PLAYER
-0167  FF            rst  $38
+0152                db $0C,$06
+0154                db $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
+0164                db $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
 0168  FF            rst  $38
 0169  FF            rst  $38
 016A  FF            rst  $38
@@ -1261,12 +1213,8 @@
 0607  FF            rst  $38
 
                 player_frame_data_walk_right:
-0608  0C            inc  c
-0609  0E10          ld   c,$10
-060B  0E0C          ld   c,$0C
-060D  12            ld   (de),a
-060E  14            inc  d
-060F  12            ld   (de),a
+0608                db $0C,$0E,$10,$0E,$0C,$12,$14,$12
+
 0610  FF            rst  $38
 0611  FF            rst  $38
 0612  FF            rst  $38
@@ -1311,14 +1259,7 @@
 0647  FF            rst  $38
 
                 player_frame_data_walk_left:
-0648  8C            adc  a,h
-0649  8E            adc  a,(hl)
-064A  90            sub  b
-064B  8E            adc  a,(hl)
-064C  8C            adc  a,h
-064D  92            sub  d
-064E  94            sub  h
-064F  92            sub  d
+0648                db   $8C,$8E,$90,$8E,$8C,$92,$94,$92
 0650  FF            rst  $38
 0651  FF            rst  $38
 0652  FF            rst  $38
@@ -1473,21 +1414,16 @@
 
                 ;; x-off, head-anim, leg-anim, yoff
                 phys_jump_lookup_left:
-0728  FA8C8D        jp   m,$8D8C
-072B  0C            inc  c
-072C  FA8E8F        jp   m,$8F8E
-072F  0C            inc  c
-0730  FA9091        jp   m,$9190
-0733  06FA          ld   b,$FA
-0735  90            sub  b
-0736  96            sub  (hl)
-0737  00            nop
-0738  FA9091        jp   m,$9190
-073B  FAFA8E        jp   m,$8EFA
-073E  8F            adc  a,a
-073F  F4FA8C        call p,$8CFA
-0742  8D            adc  a,l
-0743  F4FFFF        call p,$FFFF
+0728                db $FA,$8C,$8D,$0C
+072C                db $FA,$8E,$8F,$0C
+0730                db $FA,$90,$91,$06
+0734                db $FA,$90,$96,$00
+0738                db $FA,$90,$91,$FA
+073C                db $FA,$8E,$8F,$F4
+0740                db $FA,$8C,$8D,$F4
+
+0744  FF            rst  $38
+0745  FF            rst  $38
 0746  FF            rst  $38
 0747  FF            rst  $38
 0748  FF            rst  $38
