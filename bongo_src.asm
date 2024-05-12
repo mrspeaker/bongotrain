@@ -7526,24 +7526,9 @@
 2F94  E1            pop  hl
 2F95  C9            ret
 
-2F96  FF            rst  $38
-2F97  FF            rst  $38
-2F98  FF            rst  $38
+2F96                dc   3, $FF
 2F99  1F            rra ; weird 0x1F. Dump error?
-2F9A  FF            rst  $38
-2F9B  FF            rst  $38
-2F9C  FF            rst  $38
-2F9D  FF            rst  $38
-2F9E  FF            rst  $38
-2F9F  FF            rst  $38
-2FA0  FF            rst  $38
-2FA1  FF            rst  $38
-2FA2  FF            rst  $38
-2FA3  FF            rst  $38
-2FA4  FF            rst  $38
-2FA5  FF            rst  $38
-2FA6  FF            rst  $38
-2FA7  FF            rst  $38
+2F9A                dc   14, $FF
 
                 ;;
                 hiscore_fwd_cursor:
@@ -7570,16 +7555,15 @@
 2FCD  C0            ret  nz
 2FCE  214E93        ld   hl,$934E ; wrap line 3
 2FD1  C9            ret
-2FD2  FF            rst  $38
-2FD3  FF            rst  $38
-2FD4  FF            rst  $38
+
+2FD2                dc   3, $FF
 
 2FD5  CD3830        call $3038
 2FD8  CDE024        call $24E0
 2FDB  CD7014        call $1470
 2FDE  C9            ret
 
-2FDF  FF            rst  $38
+2FDF  FF            db   $FF
 
                 copy_hiscore_name_to_screen:
 2FE0  210783        ld   hl,$8307
@@ -7616,30 +7600,16 @@
 3014  CDC030        call $30C0
 3017  CDD52F        call $2FD5
 301A  C3E803        jp   $03E8
-301D  FF            rst  $38
-301E  FF            rst  $38
-301F  FF            rst  $38
+
+301D                dc   3, $FF
+
 3020  0E05          ld   c,$05
 3022  CDA013        call $13A0
 3025  0D            dec  c
 3026  20FA          jr   nz,$3022
 3028  C9            ret
 
-3029  FF            rst  $38
-302A  FF            rst  $38
-302B  FF            rst  $38
-302C  FF            rst  $38
-302D  FF            rst  $38
-302E  FF            rst  $38
-302F  FF            rst  $38
-3030  FF            rst  $38
-3031  FF            rst  $38
-3032  FF            rst  $38
-3033  FF            rst  $38
-3034  FF            rst  $38
-3035  FF            rst  $38
-3036  FF            rst  $38
-3037  FF            rst  $38
+3029                dc   15, $FF
 
                 ;; writes some chars to screen
                 ;; actually - different screen loc than copy_msg 1!
@@ -7666,17 +7636,7 @@
 3071  326091        ld   ($9160),a
 3074  C9            ret
 
-3075  FF            rst  $38
-3076  FF            rst  $38
-3077  FF            rst  $38
-3078  FF            rst  $38
-3079  FF            rst  $38
-307A  FF            rst  $38
-307B  FF            rst  $38
-307C  FF            rst  $38
-307D  FF            rst  $38
-307E  FF            rst  $38
-307F  FF            rst  $38
+3075                dc   11, $FF
 
                 ;; Writes HIGH-SCORE to bytes (later to screen)
                 set_hiscore_text:
@@ -7710,25 +7670,7 @@
 30AB  23            inc  hl
 30AC  C9            ret
 
-30AD  FF            rst  $38
-30AE  FF            rst  $38
-30AF  FF            rst  $38
-30B0  FF            rst  $38
-30B1  FF            rst  $38
-30B2  FF            rst  $38
-30B3  FF            rst  $38
-30B4  FF            rst  $38
-30B5  FF            rst  $38
-30B6  FF            rst  $38
-30B7  FF            rst  $38
-30B8  FF            rst  $38
-30B9  FF            rst  $38
-30BA  FF            rst  $38
-30BB  FF            rst  $38
-30BC  FF            rst  $38
-30BD  FF            rst  $38
-30BE  FF            rst  $38
-30BF  FF            rst  $38
+30AD                dc   19, $FF
 
 30C0  0E00          ld   c,$00
 30C2  211083        ld   hl,$8310
@@ -7751,13 +7693,7 @@
 30DC  CDE830        call $30E8
 30DF  18F7          jr   $30D8
 
-30E1  FF            rst  $38
-30E2  FF            rst  $38
-30E3  FF            rst  $38
-30E4  FF            rst  $38
-30E5  FF            rst  $38
-30E6  FF            rst  $38
-30E7  FF            rst  $38
+30E1                dc   7, $FF
 
 30E8  160A          ld   d,$0A
 30EA  DD210F83      ld   ix,$830F
@@ -7770,15 +7706,7 @@
 30FB  320783        ld   ($8307),a
 30FE  C9            ret
 
-30FF  FF            rst  $38
-3100  FF            rst  $38
-3101  FF            rst  $38
-3102  FF            rst  $38
-3103  FF            rst  $38
-3104  FF            rst  $38
-3105  FF            rst  $38
-3106  FF            rst  $38
-3107  FF            rst  $38
+30FF                dc   9, $FF
 
                 ;;
                 hiscore_enter_timer:
@@ -7817,7 +7745,8 @@
 313C  C1            pop  bc
 313D  E1            pop  hl
 313E  C9            ret
-313F  FF            rst  $38
+
+313F  FF            db   $FF
 
                 ;; load rock pos (reset rock pos?)
                 update_enemy_1:
@@ -7841,15 +7770,7 @@
 315B  325781        ld   ($8157),a
 315E  C9            ret
 
-315F  FF            rst  $38
-3160  FF            rst  $38
-3161  FF            rst  $38
-3162  FF            rst  $38
-3163  FF            rst  $38
-3164  FF            rst  $38
-3165  FF            rst  $38
-3166  FF            rst  $38
-3167  FF            rst  $38
+315F                dc   9, $FF
 
                 ;; looks the same as 1?
                 enemy_pattern_scr_9:
@@ -7857,23 +7778,7 @@
 316B  CD4031        call $3140
 316E  C9            ret
 
-316F  FF            rst  $38
-3170  FF            rst  $38
-3171  FF            rst  $38
-3172  FF            rst  $38
-3173  FF            rst  $38
-3174  FF            rst  $38
-3175  FF            rst  $38
-3176  FF            rst  $38
-3177  FF            rst  $38
-3178  FF            rst  $38
-3179  FF            rst  $38
-317A  FF            rst  $38
-317B  FF            rst  $38
-317C  FF            rst  $38
-317D  FF            rst  $38
-317E  FF            rst  $38
-317F  FF            rst  $38
+316F                dc   17, $FF
 
                 ;; ha, every frame is a lookup (like the jump table)
                 ;; Format is: [frame, y pos]
@@ -8023,21 +7928,8 @@
 3224  3E01          ld   a,$01
 3226  323980        ld   ($8039),a
 3229  C9            ret
-322A  FF            rst  $38
-322B  FF            rst  $38
-322C  FF            rst  $38
-322D  FF            rst  $38
-322E  FF            rst  $38
-322F  FF            rst  $38
-3230  FF            rst  $38
-3231  FF            rst  $38
-3232  FF            rst  $38
-3233  FF            rst  $38
-3234  FF            rst  $38
-3235  FF            rst  $38
-3236  FF            rst  $38
-3237  FF            rst  $38
 
+322A                dc   14, $FF
 
                 wrap_bird_left_y_c4:
 3238  3A5881        ld   a,($8158)
@@ -8053,21 +7945,8 @@
 324C  C0            ret  nz
 324D  CD1032        call $3210
 3250  C9            ret
-3251  FF            rst  $38
-3252  FF            rst  $38
-3253  FF            rst  $38
-3254  FF            rst  $38
-3255  FF            rst  $38
-3256  FF            rst  $38
-3257  FF            rst  $38
-3258  FF            rst  $38
-3259  FF            rst  $38
-325A  FF            rst  $38
-325B  FF            rst  $38
-325C  FF            rst  $38
-325D  FF            rst  $38
-325E  FF            rst  $38
-325F  FF            rst  $38
+
+3251                dc   15, $FF
 
                 move_animate_bird_left:
 3260  3A1583        ld   a,($8315)
@@ -8095,41 +7974,7 @@
 3289  325981        ld   ($8159),a
 328C  C9            ret
 
-328D  FF            rst  $38
-328E  FF            rst  $38
-328F  FF            rst  $38
-3290  FF            rst  $38
-3291  FF            rst  $38
-3292  FF            rst  $38
-3293  FF            rst  $38
-3294  FF            rst  $38
-3295  FF            rst  $38
-3296  FF            rst  $38
-3297  FF            rst  $38
-3298  FF            rst  $38
-3299  FF            rst  $38
-329A  FF            rst  $38
-329B  FF            rst  $38
-329C  FF            rst  $38
-329D  FF            rst  $38
-329E  FF            rst  $38
-329F  FF            rst  $38
-32A0  FF            rst  $38
-32A1  FF            rst  $38
-32A2  FF            rst  $38
-32A3  FF            rst  $38
-32A4  FF            rst  $38
-32A5  FF            rst  $38
-32A6  FF            rst  $38
-32A7  FF            rst  $38
-32A8  FF            rst  $38
-32A9  FF            rst  $38
-32AA  FF            rst  $38
-32AB  FF            rst  $38
-32AC  FF            rst  $38
-32AD  FF            rst  $38
-32AE  FF            rst  $38
-32AF  FF            rst  $38
+328D                dc   35, $FF
 
                 set_blue_meanie_a0_d0:
 32B0  3EA0          ld   a,$A0
@@ -8144,12 +7989,7 @@
 32C6  323B80        ld   ($803B),a ; why enemy_3?
 32C9  C9            ret
 
-32CA  FF            rst  $38
-32CB  FF            rst  $38
-32CC  FF            rst  $38
-32CD  FF            rst  $38
-32CE  FF            rst  $38
-32CF  FF            rst  $38
+32CA                dc   6, $FF
 
                 update_stair_up_blue_timer:
 32D0  3A1283        ld   a,($8312)
@@ -8165,14 +8005,8 @@
 32E3  C0            ret  nz
 32E4  CDB032        call $32B0
 32E7  C9            ret
-32E8  FF            rst  $38
-32E9  FF            rst  $38
-32EA  FF            rst  $38
-32EB  FF            rst  $38
-32EC  FF            rst  $38
-32ED  FF            rst  $38
-32EE  FF            rst  $38
-32EF  FF            rst  $38
+
+32E8                dc   8, $FF
 
 32F0  3A3B80        ld   a,($803B)
 32F3  A7            and  a
@@ -8191,17 +8025,8 @@
 3308  C9            ret
 3309  CD4033        call $3340
 330C  C9            ret
-330D  FF            rst  $38
-330E  FF            rst  $38
-330F  FF            rst  $38
-3310  FF            rst  $38
-3311  FF            rst  $38
-3312  FF            rst  $38
-3313  FF            rst  $38
-3314  FF            rst  $38
-3315  FF            rst  $38
-3316  FF            rst  $38
-3317  FF            rst  $38
+
+330D                dc   11, $FF
 
                 ;; blue-meanie up?
 3318  3A5781        ld   a,($8157) ; move up?
@@ -8219,16 +8044,8 @@
 3330  3E35          ld   a,$35
 3332  325581        ld   ($8155),a
 3335  C9            ret
-3336  FF            rst  $38
-3337  FF            rst  $38
-3338  FF            rst  $38
-3339  FF            rst  $38
-333A  FF            rst  $38
-333B  FF            rst  $38
-333C  FF            rst  $38
-333D  FF            rst  $38
-333E  FF            rst  $38
-333F  FF            rst  $38
+
+3336                dc   10, $FF
 
                 ;; blue-meanie down?
 3340  3A5781        ld   a,($8157) ; move down?
@@ -8238,16 +8055,8 @@
 3348  3E34          ld   a,$34
 334A  325581        ld   ($8155),a
 334D  C9            ret
-334E  FF            rst  $38
-334F  FF            rst  $38
-3350  FF            rst  $38
-3351  FF            rst  $38
-3352  FF            rst  $38
-3353  FF            rst  $38
-3354  FF            rst  $38
-3355  FF            rst  $38
-3356  FF            rst  $38
-3357  FF            rst  $38
+
+334E                dc   10, $FF
 
                 set_bird_left_y_40:
 3358  3EF0          ld   a,$F0
@@ -8261,12 +8070,8 @@
 336C  3E01          ld   a,$01
 336E  323980        ld   ($8039),a
 3371  C9            ret
-3372  FF            rst  $38
-3373  FF            rst  $38
-3374  FF            rst  $38
-3375  FF            rst  $38
-3376  FF            rst  $38
-3377  FF            rst  $38
+
+3372                dc   6, $FF
 
                 ;; if x pos < 4 then wrap the bird
                 wrap_bird_left_y_40:
@@ -8284,39 +8089,20 @@
                 _wrap_bird_1:
 338D  CD5833        call $3358
 3390  C9            ret
-3391  FF            rst  $38
-3392  FF            rst  $38
-3393  FF            rst  $38
-3394  FF            rst  $38
-3395  FF            rst  $38
-3396  FF            rst  $38
-3397  FF            rst  $38
+
+3391                dc   7, $FF
 
 3398  CD7833        call $3378
 339B  CD6032        call $3260
 339E  C9            ret
-339F  FF            rst  $38
-33A0  FF            rst  $38
-33A1  FF            rst  $38
-33A2  FF            rst  $38
-33A3  FF            rst  $38
-33A4  FF            rst  $38
-33A5  FF            rst  $38
-33A6  FF            rst  $38
-33A7  FF            rst  $38
+
+339F                dc   9, $FF
 
 33A8  CDD032        call $32D0
 33AB  CDF032        call $32F0
 33AE  C9            ret
-33AF  FF            rst  $38
-33B0  FF            rst  $38
-33B1  FF            rst  $38
-33B2  FF            rst  $38
-33B3  FF            rst  $38
-33B4  FF            rst  $38
-33B5  FF            rst  $38
-33B6  FF            rst  $38
-33B7  FF            rst  $38
+
+33AF                dc   9, $FF
 
 33B8  3A3B80        ld   a,($803B)
 33BB  A7            and  a
@@ -8335,9 +8121,8 @@
 33D0  C9            ret
 33D1  CD0034        call $3400
 33D4  C9            ret
-33D5  FF            rst  $38
-33D6  FF            rst  $38
-33D7  FF            rst  $38
+
+33D5                dc   3, $FF
 
 33D8  3A5781        ld   a,($8157)
 33DB  3D            dec  a
@@ -8354,37 +8139,16 @@
 33F0  3E34          ld   a,$34
 33F2  325581        ld   ($8155),a
 33F5  C9            ret
-33F6  FF            rst  $38
-33F7  FF            rst  $38
-33F8  FF            rst  $38
-33F9  FF            rst  $38
-33FA  FF            rst  $38
-33FB  FF            rst  $38
-33FC  FF            rst  $38
-33FD  FF            rst  $38
-33FE  FF            rst  $38
-33FF  FF            rst  $38
+
+33F6                dc   10, $FF
 
 3400  3A5781        ld   a,($8157)
 3403  3C            inc  a
 3404  3C            inc  a
 3405  325781        ld   ($8157),a
 3408  C9            ret
-3409  FF            rst  $38
-340A  FF            rst  $38
-340B  FF            rst  $38
-340C  FF            rst  $38
-340D  FF            rst  $38
-340E  FF            rst  $38
-340F  FF            rst  $38
-3410  FF            rst  $38
-3411  FF            rst  $38
-3412  FF            rst  $38
-3413  FF            rst  $38
-3414  FF            rst  $38
-3415  FF            rst  $38
-3416  FF            rst  $38
-3417  FF            rst  $38
+
+3409                dc   15, $FF
 
 
 3418  3A3D80        ld   a,($803D)
@@ -8404,9 +8168,8 @@
 3430  C9            ret
 3431  CD5834        call $3458
 3434  C9            ret
-3435  FF            rst  $38
-3436  FF            rst  $38
-3437  FF            rst  $38
+
+3435                dc   3, $FF
 
 3438  3A5B81        ld   a,($815B)
 343B  3D            dec  a
@@ -8424,29 +8187,15 @@
 3452  325981        ld   ($8159),a
 3455  C9            ret
 
-3456  FF            rst  $38
-3457  FF            rst  $38
+3456                dc   2, $FF
 
 3458  3A5B81        ld   a,($815B)
 345B  3C            inc  a
 345C  3C            inc  a
 345D  325B81        ld   ($815B),a
 3460  C9            ret
-3461  FF            rst  $38
-3462  FF            rst  $38
-3463  FF            rst  $38
-3464  FF            rst  $38
-3465  FF            rst  $38
-3466  FF            rst  $38
-3467  FF            rst  $38
-3468  FF            rst  $38
-3469  FF            rst  $38
-346A  FF            rst  $38
-346B  FF            rst  $38
-346C  FF            rst  $38
-346D  FF            rst  $38
-346E  FF            rst  $38
-346F  FF            rst  $38
+
+3461                dc   15, $FF
 
                 ;; wats this?
 3470  CDB833        call $33B8
@@ -8454,17 +8203,8 @@
 3476  CD8834        call $3488
 3479  CDE834        call $34E8
 347C  C9            ret
-347D  FF            rst  $38
-347E  FF            rst  $38
-347F  FF            rst  $38
-3480  FF            rst  $38
-3481  FF            rst  $38
-3482  FF            rst  $38
-3483  FF            rst  $38
-3484  FF            rst  $38
-3485  FF            rst  $38
-3486  FF            rst  $38
-3487  FF            rst  $38
+
+347D                dc   11, $FF
 
                 update_stairdown_blue_right_timer:
 3488  3A1283        ld   a,($8312)
@@ -8480,14 +8220,8 @@
 349B  C0            ret  nz
 349C  CDA834        call $34A8
 349F  C9            ret
-34A0  FF            rst  $38
-34A1  FF            rst  $38
-34A2  FF            rst  $38
-34A3  FF            rst  $38
-34A4  FF            rst  $38
-34A5  FF            rst  $38
-34A6  FF            rst  $38
-34A7  FF            rst  $38
+
+34A0                dc   8, $FF
 
 34A8  3E34          ld   a,$34
 34AA  325581        ld   ($8155),a
@@ -8500,12 +8234,8 @@
 34BC  3E01          ld   a,$01
 34BE  323B80        ld   ($803B),a ; Why set enemy_3?
 34C1  C9            ret
-34C2  FF            rst  $38
-34C3  FF            rst  $38
-34C4  FF            rst  $38
-34C5  FF            rst  $38
-34C6  FF            rst  $38
-34C7  FF            rst  $38
+
+34C2                dc   6, $FF
 
 34C8  3E80          ld   a,$80
 34CA  325881        ld   ($8158),a
@@ -8518,12 +8248,8 @@
 34DC  3E01          ld   a,$01
 34DE  323D80        ld   ($803D),a
 34E1  C9            ret
-34E2  FF            rst  $38
-34E3  FF            rst  $38
-34E4  FF            rst  $38
-34E5  FF            rst  $38
-34E6  FF            rst  $38
-34E7  FF            rst  $38
+
+34E2                dc   6, $FF
 
                 update_stairdown_blue_left_timer:
 34E8  3A1283        ld   a,($8312)
@@ -8539,22 +8265,8 @@
 34FB  C0            ret  nz
 34FC  CDC834        call $34C8
 34FF  C9            ret
-3500  FF            rst  $38
-3501  FF            rst  $38
-3502  FF            rst  $38
-3503  FF            rst  $38
-3504  FF            rst  $38
-3505  FF            rst  $38
-3506  FF            rst  $38
-3507  FF            rst  $38
-3508  FF            rst  $38
-3509  FF            rst  $38
-350A  FF            rst  $38
-350B  FF            rst  $38
-350C  FF            rst  $38
-350D  FF            rst  $38
-350E  FF            rst  $38
-350F  FF            rst  $38
+
+3500                dc   16, $FF
 
                 ;;  reset a bunch of thing to 255
                 reset_enemies:
@@ -8583,11 +8295,8 @@
 3544  CD7035        call $3570
 3547  CD9035        call $3590
 354A  C9            ret
-354B  FF            rst  $38
-354C  FF            rst  $38
-354D  FF            rst  $38
-354E  FF            rst  $38
-354F  FF            rst  $38
+
+354B                dc   5, $FF
 
                 set_rock_x_60:
 3550  3E60          ld   a,$60
@@ -8601,12 +8310,8 @@
 3564  3E01          ld   a,$01
 3566  323F80        ld   ($803F),a
 3569  C9            ret
-356A  FF            rst  $38
-356B  FF            rst  $38
-356C  FF            rst  $38
-356D  FF            rst  $38
-356E  FF            rst  $38
-356F  FF            rst  $38
+
+356A                dc   6, $FF
 
                 update_rock_left_timer:
 3570  3A1683        ld   a,($8316)
@@ -8623,14 +8328,8 @@
 3584  CD5035        call $3550
 3587  C9            ret
 
-3588  FF            rst  $38
-3589  FF            rst  $38
-358A  FF            rst  $38
-358B  FF            rst  $38
-358C  FF            rst  $38
-358D  FF            rst  $38
-358E  FF            rst  $38
-358F  FF            rst  $38
+
+3588                dc   8, $FF
 
                 set_rock_3_fr_and_y:
 3590  3A3F80        ld   a,($803F)
@@ -8652,32 +8351,16 @@
 35AA  7E            ld   a,(hl)
 35AB  325F81        ld   ($815F),a
 35AE  C9            ret
-35AF  FF            rst  $38
-35B0  FF            rst  $38
-35B1  FF            rst  $38
-35B2  FF            rst  $38
-35B3  FF            rst  $38
-35B4  FF            rst  $38
-35B5  FF            rst  $38
-35B6  FF            rst  $38
-35B7  FF            rst  $38
+
+35AF                dc   9, $FF
 
 35B8  CD7035        call $3570
 35BB  CD9035        call $3590
 35BE  CD282C        call $2C28
 35C1  CD4031        call $3140
 35C4  C9            ret
-35C5  FF            rst  $38
-35C6  FF            rst  $38
-35C7  FF            rst  $38
-35C8  FF            rst  $38
-35C9  FF            rst  $38
-35CA  FF            rst  $38
-35CB  FF            rst  $38
-35CC  FF            rst  $38
-35CD  FF            rst  $38
-35CE  FF            rst  $38
-35CF  FF            rst  $38
+
+35C5                dc   11, $FF
 
                 ;; in screen 14
                 set_bird_right_y_bc:
@@ -8692,12 +8375,8 @@
 35E4  3E01          ld   a,$01
 35E6  324180        ld   ($8041),a
 35E9  C9            ret
-35EA  FF            rst  $38
-35EB  FF            rst  $38
-35EC  FF            rst  $38
-35ED  FF            rst  $38
-35EE  FF            rst  $38
-35EF  FF            rst  $38
+
+35EA                dc   6, $FF
 
                 ;; any time x < 5?
                 wrap_bird_right_y_bc:
@@ -8714,13 +8393,8 @@
 3604  C0            ret  nz
 3605  CDD035        call $35D0
 3608  C9            ret
-3609  FF            rst  $38
-360A  FF            rst  $38
-360B  FF            rst  $38
-360C  FF            rst  $38
-360D  FF            rst  $38
-360E  FF            rst  $38
-360F  FF            rst  $38
+
+3609                dc   7, $FF
 
                 move_animate_bird_right:
 3610  3A1583        ld   a,($8315)
@@ -8746,9 +8420,8 @@
 3637  3EA3          ld   a,$A3
 3639  325D81        ld   ($815D),a
 363C  C9            ret
-363D  FF            rst  $38
-363E  FF            rst  $38
-363F  FF            rst  $38
+
+363D                dc   3, $FF
 
                 check_buttons_for_something:
 3640  C5            push bc
@@ -8770,17 +8443,8 @@
 365E  CD3832        call $3238
 3661  CD6032        call $3260
 3664  C9            ret
-3665  FF            rst  $38
-3666  FF            rst  $38
-3667  FF            rst  $38
-3668  FF            rst  $38
-3669  FF            rst  $38
-366A  FF            rst  $38
-366B  FF            rst  $38
-366C  FF            rst  $38
-366D  FF            rst  $38
-366E  FF            rst  $38
-366F  FF            rst  $38
+
+3665                dc   11, $FF
 
 3670  CDB833        call $33B8
 3673  CD1834        call $3418
@@ -8789,11 +8453,8 @@
 367C  CDA836        call $36A8
 367F  CD1036        call $3610
 3682  C9            ret
-3683  FF            rst  $38
-3684  FF            rst  $38
-3685  FF            rst  $38
-3686  FF            rst  $38
-3687  FF            rst  $38
+
+3683                dc   5, $FF
 
 3688  3E10          ld   a,$10
 368A  325C81        ld   ($815C),a
@@ -8806,12 +8467,8 @@
 369C  3E01          ld   a,$01
 369E  324180        ld   ($8041),a
 36A1  C9            ret
-36A2  FF            rst  $38
-36A3  FF            rst  $38
-36A4  FF            rst  $38
-36A5  FF            rst  $38
-36A6  FF            rst  $38
-36A7  FF            rst  $38
+
+36A2                dc   6, $FF
 
 36A8  3A5C81        ld   a,($815C)
 36AB  A7            and  a
@@ -8826,21 +8483,8 @@
 36BC  C0            ret  nz
 36BD  CD8836        call $3688
 36C0  C9            ret
-36C1  FF            rst  $38
-36C2  FF            rst  $38
-36C3  FF            rst  $38
-36C4  FF            rst  $38
-36C5  FF            rst  $38
-36C6  FF            rst  $38
-36C7  FF            rst  $38
-36C8  FF            rst  $38
-36C9  FF            rst  $38
-36CA  FF            rst  $38
-36CB  FF            rst  $38
-36CC  FF            rst  $38
-36CD  FF            rst  $38
-36CE  FF            rst  $38
-36CF  FF            rst  $38
+
+36C1                dc   15, $FF
 
 36D0  CDF035        call $35F0
 36D3  CD1036        call $3610
@@ -8849,11 +8493,8 @@
 36DC  CD282C        call $2C28
 36DF  CD4031        call $3140
 36E2  C9            ret
-36E3  FF            rst  $38
-36E4  FF            rst  $38
-36E5  FF            rst  $38
-36E6  FF            rst  $38
-36E7  FF            rst  $38
+
+36E3                dc   5, $FF
 
                 set_spear_left_y_94:
 36E8  3EF0          ld   a,$F0
@@ -8867,20 +8508,8 @@
 36FC  3E01          ld   a,$01
 36FE  324180        ld   ($8041),a
 3701  C9            ret
-3702  FF            rst  $38
-3703  FF            rst  $38
-3704  FF            rst  $38
-3705  FF            rst  $38
-3706  FF            rst  $38
-3707  FF            rst  $38
-3708  FF            rst  $38
-3709  FF            rst  $38
-370A  FF            rst  $38
-370B  FF            rst  $38
-370C  FF            rst  $38
-370D  FF            rst  $38
-370E  FF            rst  $38
-370F  FF            rst  $38
+
+3702                dc   14, $FF
 
 
                 wrap_spear_left_y_94:
@@ -8897,13 +8526,8 @@
 3724  C0            ret  nz
 3725  CDE836        call $36E8
 3728  C9            ret
-3729  FF            rst  $38
-372A  FF            rst  $38
-372B  FF            rst  $38
-372C  FF            rst  $38
-372D  FF            rst  $38
-372E  FF            rst  $38
-372F  FF            rst  $38
+
+3729                dc   7, $FF
 
 3730  3A1583        ld   a,($8315)
 3733  E601          and  $01
@@ -8917,50 +8541,16 @@
 3740  3D            dec  a
 3741  325C81        ld   ($815C),a
 3744  C9            ret
-3745  FF            rst  $38
-3746  FF            rst  $38
-3747  FF            rst  $38
-3748  FF            rst  $38
-3749  FF            rst  $38
-374A  FF            rst  $38
-374B  FF            rst  $38
-374C  FF            rst  $38
-374D  FF            rst  $38
-374E  FF            rst  $38
-374F  FF            rst  $38
-3750  FF            rst  $38
-3751  FF            rst  $38
-3752  FF            rst  $38
-3753  FF            rst  $38
-3754  FF            rst  $38
-3755  FF            rst  $38
-3756  FF            rst  $38
-3757  FF            rst  $38
-3758  FF            rst  $38
-3759  FF            rst  $38
-375A  FF            rst  $38
-375B  FF            rst  $38
-375C  FF            rst  $38
-375D  FF            rst  $38
-375E  FF            rst  $38
-375F  FF            rst  $38
+
+3745                dc   27, $FF
 
 3760  CD1037        call $3710
 3763  CD3037        call $3730
 3766  CD9837        call $3798
 3769  CDB837        call $37B8
 376C  C9            ret
-376D  FF            rst  $38
-376E  FF            rst  $38
-376F  FF            rst  $38
-3770  FF            rst  $38
-3771  FF            rst  $38
-3772  FF            rst  $38
-3773  FF            rst  $38
-3774  FF            rst  $38
-3775  FF            rst  $38
-3776  FF            rst  $38
-3777  FF            rst  $38
+
+376D                dc   11, $FF
 
 3778  3EF0          ld   a,$F0
 377A  325881        ld   ($8158),a
@@ -8973,12 +8563,8 @@
 378C  3E01          ld   a,$01
 378E  323980        ld   ($8039),a
 3791  C9            ret
-3792  FF            rst  $38
-3793  FF            rst  $38
-3794  FF            rst  $38
-3795  FF            rst  $38
-3796  FF            rst  $38
-3797  FF            rst  $38
+
+3792                dc   6, $FF
 
 3798  3A5881        ld   a,($8158)
 379B  A7            and  a
@@ -8993,13 +8579,8 @@
 37AC  C0            ret  nz
 37AD  CD7837        call $3778
 37B0  C9            ret
-37B1  FF            rst  $38
-37B2  FF            rst  $38
-37B3  FF            rst  $38
-37B4  FF            rst  $38
-37B5  FF            rst  $38
-37B6  FF            rst  $38
-37B7  FF            rst  $38
+
+37B1                dc   7, $FF
 
 37B8  3A1583        ld   a,($8315)
 37BB  E601          and  $01
@@ -9015,32 +8596,7 @@
 37CA  325881        ld   ($8158),a
 37CD  C9            ret
 
-37CE  FF            rst  $38
-37CF  FF            rst  $38
-37D0  FF            rst  $38
-37D1  FF            rst  $38
-37D2  FF            rst  $38
-37D3  FF            rst  $38
-37D4  FF            rst  $38
-37D5  FF            rst  $38
-37D6  FF            rst  $38
-37D7  FF            rst  $38
-37D8  FF            rst  $38
-37D9  FF            rst  $38
-37DA  FF            rst  $38
-37DB  FF            rst  $38
-37DC  FF            rst  $38
-37DD  FF            rst  $38
-37DE  FF            rst  $38
-37DF  FF            rst  $38
-37E0  FF            rst  $38
-37E1  FF            rst  $38
-37E2  FF            rst  $38
-37E3  FF            rst  $38
-37E4  FF            rst  $38
-37E5  FF            rst  $38
-37E6  FF            rst  $38
-37E7  FF            rst  $38
+37CE                dc   26, $FF
 
 37E8  CD1037        call $3710
 37EB  CD3037        call $3730
@@ -9050,19 +8606,7 @@
 37F7  CD8834        call $3488
 37FA  C9            ret
 
-37FB  FF            rst  $38
-37FC  FF            rst  $38
-37FD  FF            rst  $38
-37FE  FF            rst  $38
-37FF  FF            rst  $38
-3800  FF            rst  $38
-3801  FF            rst  $38
-3802  FF            rst  $38
-3803  FF            rst  $38
-3804  FF            rst  $38
-3805  FF            rst  $38
-3806  FF            rst  $38
-3807  FF            rst  $38
+37FB                dc   13, $FF
 
 3808  CD7833        call $3378
 380B  CD6032        call $3260
@@ -9070,17 +8614,7 @@
 3811  CD1036        call $3610
 3814  C9            ret
 
-3815  FF            rst  $38
-3816  FF            rst  $38
-3817  FF            rst  $38
-3818  FF            rst  $38
-3819  FF            rst  $38
-381A  FF            rst  $38
-381B  FF            rst  $38
-381C  FF            rst  $38
-381D  FF            rst  $38
-381E  FF            rst  $38
-381F  FF            rst  $38
+3815                dc   11, $FF
 
                 ;; no! frame 23 is bird left.
                 set_bird_right_y_60:
@@ -9096,12 +8630,7 @@
 3836  324180        ld   ($8041),a
 3839  C9            ret
 
-383A  FF            rst  $38
-383B  FF            rst  $38
-383C  FF            rst  $38
-383D  FF            rst  $38
-383E  FF            rst  $38
-383F  FF            rst  $38
+383A                dc   6, $FF
 
                 ;; if bird < 4, wrap
                 ;; i think this is bird left not right?
@@ -9120,21 +8649,8 @@
                 _wrap_bird_2:
 3855  CD2038        call $3820
 3858  C9            ret
-3859  FF            rst  $38
-385A  FF            rst  $38
-385B  FF            rst  $38
-385C  FF            rst  $38
-385D  FF            rst  $38
-385E  FF            rst  $38
-385F  FF            rst  $38
-3860  FF            rst  $38
-3861  FF            rst  $38
-3862  FF            rst  $38
-3863  FF            rst  $38
-3864  FF            rst  $38
-3865  FF            rst  $38
-3866  FF            rst  $38
-3867  FF            rst  $38
+
+3859                dc   15, $FF
 
 3868  CD8834        call $3488
 386B  CDB833        call $33B8
@@ -9144,19 +8660,7 @@
 3877  CD6032        call $3260
 387A  C9            ret
 
-387B  FF            rst  $38
-387C  FF            rst  $38
-387D  FF            rst  $38
-387E  FF            rst  $38
-387F  FF            rst  $38
-3880  FF            rst  $38
-3881  FF            rst  $38
-3882  FF            rst  $38
-3883  FF            rst  $38
-3884  FF            rst  $38
-3885  FF            rst  $38
-3886  FF            rst  $38
-3887  FF            rst  $38
+387B                dc   13, $FF
 
 3888  CD7833        call $3378
 388B  CD6032        call $3260
@@ -9166,11 +8670,7 @@
 3897  CDD038        call $38D0
 389A  C9            ret
 
-389B  FF            rst  $38
-389C  FF            rst  $38
-389D  FF            rst  $38
-389E  FF            rst  $38
-389F  FF            rst  $38
+389B                dc   5, $FF
 
 38A0  3E60          ld   a,$60
 38A2  325781        ld   ($8157),a
@@ -9181,32 +8681,13 @@
 38AF  3E01          ld   a,$01
 38B1  323B80        ld   ($803B),a
 38B4  C9            ret
-38B5  FF            rst  $38
-38B6  FF            rst  $38
-38B7  FF            rst  $38
-38B8  FF            rst  $38
-38B9  FF            rst  $38
-38BA  FF            rst  $38
-38BB  FF            rst  $38
-38BC  FF            rst  $38
-38BD  FF            rst  $38
-38BE  FF            rst  $38
-38BF  FF            rst  $38
+
+38B5                dc   11, $FF
 
 38C0  CDA038        call $38A0
 38C3  C9            ret
-38C4  FF            rst  $38
-38C5  FF            rst  $38
-38C6  FF            rst  $38
-38C7  FF            rst  $38
-38C8  FF            rst  $38
-38C9  FF            rst  $38
-38CA  FF            rst  $38
-38CB  FF            rst  $38
-38CC  FF            rst  $38
-38CD  FF            rst  $38
-38CE  FF            rst  $38
-38CF  FF            rst  $38
+
+38C4                dc   12, $FF
 
 38D0  3A5C81        ld   a,($815C)
 38D3  D650          sub  $50
@@ -9215,7 +8696,7 @@
 38DB  325581        ld   ($8155),a
 38DE  C9            ret
 
-38DF  FF            rst  $38
+38DF  FF            db   $FF
 
                 draw_bonus_box_b:
 38E0  CD1003        call $0310
@@ -9249,7 +8730,6 @@
 390C  E2E3E3        jp   po,$E3E3
 390F  E3            ex   (sp),hl
 3910  E4FFC9        call po,$C9FF
-
 3913  FF            rst  $38
 3914  FF            rst  $38
 3915  FF            rst  $38
@@ -9261,31 +8741,7 @@
 391B  CDE839        call $39E8
 391E  C9            ret
 
-391F  FF            rst  $38
-3920  FF            rst  $38
-3921  FF            rst  $38
-3922  FF            rst  $38
-3923  FF            rst  $38
-3924  FF            rst  $38
-3925  FF            rst  $38
-3926  FF            rst  $38
-3927  FF            rst  $38
-3928  FF            rst  $38
-3929  FF            rst  $38
-392A  FF            rst  $38
-392B  FF            rst  $38
-392C  FF            rst  $38
-392D  FF            rst  $38
-392E  FF            rst  $38
-392F  FF            rst  $38
-3930  FF            rst  $38
-3931  FF            rst  $38
-3932  FF            rst  $38
-3933  FF            rst  $38
-3934  FF            rst  $38
-3935  FF            rst  $38
-3936  FF            rst  $38
-3937  FF            rst  $38
+391F                dc   25, $FF
 
                 set_spear_left_bottom:
 3938  3A5481        ld   a,($8154)
@@ -9303,15 +8759,7 @@
 3953  323780        ld   ($8037),a
 3956  C9            ret
 
-3957  FF            rst  $38
-3958  FF            rst  $38
-3959  FF            rst  $38
-395A  FF            rst  $38
-395B  FF            rst  $38
-395C  FF            rst  $38
-395D  FF            rst  $38
-395E  FF            rst  $38
-395F  FF            rst  $38
+3957                dc   9, $FF
 
                 set_spear_left_middle:
 3960  3A5881        ld   a,($8158)
@@ -9328,15 +8776,8 @@
 3979  3E01          ld   a,$01
 397B  323980        ld   ($8039),a
 397E  C9            ret
-397F  FF            rst  $38
-3980  FF            rst  $38
-3981  FF            rst  $38
-3982  FF            rst  $38
-3983  FF            rst  $38
-3984  FF            rst  $38
-3985  FF            rst  $38
-3986  FF            rst  $38
-3987  FF            rst  $38
+
+397F                dc   9, $FF
 
                 set_spear_left_top:
 3988  3A5C81        ld   a,($815C)
@@ -9354,22 +8795,14 @@
 39A3  323B80        ld   ($803B),a
 39A6  C9            ret
 
-39A7  FF            rst  $38
-39A8  FF            rst  $38
-39A9  FF            rst  $38
-39AA  FF            rst  $38
-39AB  FF            rst  $38
-39AC  FF            rst  $38
-39AD  FF            rst  $38
-39AE  FF            rst  $38
-39AF  FF            rst  $38
+39A7                dc   9, $FF
 
                 ;;; who calls? debug?
 39B0  3A0780        ld   a,($8007) ; woah! P1 timer is used maybe?
 39B3  323680        ld   ($8036),a
 39B6  C9            ret
 
-39B7  FF            rst  $38
+39B7  FF            db   $FF
 
                 ;;
                 wrap_spear_left_bottom:
@@ -9388,21 +8821,8 @@
 39D1  2003          jr   nz,$39D6
 39D3  CD3839        call $3938
 39D6  C3C011        jp   $11C0
-39D9  FF            rst  $38
-39DA  FF            rst  $38
-39DB  FF            rst  $38
-39DC  FF            rst  $38
-39DD  FF            rst  $38
-39DE  FF            rst  $38
-39DF  FF            rst  $38
-39E0  FF            rst  $38
-39E1  FF            rst  $38
-39E2  FF            rst  $38
-39E3  FF            rst  $38
-39E4  FF            rst  $38
-39E5  FF            rst  $38
-39E6  FF            rst  $38
-39E7  FF            rst  $38
+
+39D9                dc   15, $FF
 
                 update_3_spears_left:           ; screen 26
 39E8  3A1583        ld   a,($8315)
@@ -9456,12 +8876,7 @@
 3A46  325C81        ld   ($815C),a
 3A49  C9            ret
 
-3A4A  FF            rst  $38
-3A4B  FF            rst  $38
-3A4C  FF            rst  $38
-3A4D  FF            rst  $38
-3A4E  FF            rst  $38
-3A4F  FF            rst  $38
+3A4A                dc   6, $FF
 
                 ;;
                 enemy_1_reset:
@@ -9493,7 +8908,8 @@
 3A81  3E36          ld   a,$36
 3A83  325581        ld   ($8155),a
 3A86  C9            ret
-3A87  FF            rst  $38
+
+3A87  FF            db   $FF
 
                 ;;
                 enemy_2_reset:
@@ -9525,7 +8941,8 @@
 3AB9  3E36          ld   a,$36
 3ABB  325981        ld   ($8159),a
 3ABE  C9            ret
-3ABF  FF            rst  $38
+
+3ABF  FF            dc   1, $FF
 
                 ;; enemy 3
                 enemy_3_reset:
@@ -9557,7 +8974,8 @@
 3AF1  3E36          ld   a,$36
 3AF3  325D81        ld   ($815D),a
 3AF6  C9            ret
-3AF7  FF            rst  $38
+
+3AF7                dc   1, $FF
 
                 ;; enemy 1
                 set_enemy_1_98_c0:
@@ -9573,9 +8991,8 @@
 3B07  3E01          ld   a,$01
 3B09  323780        ld   ($8037),a
 3B0C  C9            ret
-3B0D  FF            rst  $38
-3B0E  FF            rst  $38
-3B0F  FF            rst  $38
+
+3B0D                dc   3, $FF
 
                 ;; enemy 2
                 set_enemy_2_90_c0:
@@ -9591,9 +9008,8 @@
 3B1F  3E01          ld   a,$01
 3B21  323980        ld   ($8039),a
 3B24  C9            ret
-3B25  FF            rst  $38
-3B26  FF            rst  $38
-3B27  FF            rst  $38
+
+3B25                dc   3, $FF
 
                 ;; enemy 3
                 set_enemy_3_90_c0:
@@ -9609,9 +9025,8 @@
 3B37  3E01          ld   a,$01
 3B39  323B80        ld   ($803B),a
 3B3C  C9            ret
-3B3D  FF            rst  $38
-3B3E  FF            rst  $38
-3B3F  FF            rst  $38
+
+3B3D                dc   3, $FF
 
 3B40  CD783B        call $3B78
 3B43  3A3680        ld   a,($8036)
@@ -9632,8 +9047,8 @@
 3B61  C0            ret  nz
 3B62  CD283B        call $3B28
 3B65  C9            ret
-3B66  FF            rst  $38
-3B67  FF            rst  $38
+
+3B66                dc   2, $FF
 
 3B68  CD403B        call $3B40
 3B6B  CDE014        call $14E0
@@ -9644,9 +9059,8 @@
 3B72  00            nop
 3B73  00            nop
 3B74  C9            ret
-3B75  FF            rst  $38
-3B76  FF            rst  $38
-3B77  FF            rst  $38
+
+3B75                dc   3, $FF
 
                 ;;
 3B78  3A1583        ld   a,($8315)
@@ -9678,12 +9092,8 @@
                 _hit:
 3B9E  CD330A        call $0A33
 3BA1  C9            ret
-3BA2  FF            rst  $38
-3BA3  FF            rst  $38
-3BA4  FF            rst  $38
-3BA5  FF            rst  $38
-3BA6  FF            rst  $38
-3BA7  FF            rst  $38
+
+3BA2                dc   6, $FF
 
                 ;; Always checks all 3 enemies. "Offscreen" enemies
                 ;; have x = 0, so the "check x" test fails.
@@ -9696,12 +9106,8 @@
 3BBA  FD215C81      ld   iy,$815C
 3BBE  CD803B        call $3B80
 3BC1  C9            ret
-3BC2  FF            rst  $38
-3BC3  FF            rst  $38
-3BC4  FF            rst  $38
-3BC5  FF            rst  $38
-3BC6  FF            rst  $38
-3BC7  FF            rst  $38
+
+3BC2                dc   6, $FF
 
                 copy_xoffs:
 3BC8  210881        ld   hl,$8108
@@ -9714,7 +9120,7 @@
 3BD4  20F5          jr   nz,$3BCB
 3BD6  C9            ret
 
-3BD7  FF            rst  $38
+3BD7                dc   1, $FF
 
                 ;; bytes after the call are:
                 ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -9744,7 +9150,7 @@
 3BFE  DDE5          push ix
 3C00  C9            ret
 
-3C01  FF            rst  $38
+3C01                dc   1, $FF
 
                 screen_tile_animations:
 3C02  3A0480        ld   a,($8004)
@@ -9931,25 +9337,7 @@
 3CEA  20F6          jr   nz,$3CE2
 3CEC  C9            ret
 
-3CED  FF            rst  $38
-3CEE  FF            rst  $38
-3CEF  FF            rst  $38
-3CF0  FF            rst  $38
-3CF1  FF            rst  $38
-3CF2  FF            rst  $38
-3CF3  FF            rst  $38
-3CF4  FF            rst  $38
-3CF5  FF            rst  $38
-3CF6  FF            rst  $38
-3CF7  FF            rst  $38
-3CF8  FF            rst  $38
-3CF9  FF            rst  $38
-3CFA  FF            rst  $38
-3CFB  FF            rst  $38
-3CFC  FF            rst  $38
-3CFD  FF            rst  $38
-3CFE  FF            rst  $38
-3CFF  FF            rst  $38
+3CED                dc   19, $FF
 
                 ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
                 dance_frame_data:
@@ -9993,15 +9381,8 @@
 3D3B  E61F          and  $1F ; wrap dance at 32 bytes
 3D3D  6F            ld   l,a
 3D3E  C9            ret
-3D3F  FF            rst  $38
-3D40  FF            rst  $38
-3D41  FF            rst  $38
-3D42  FF            rst  $38
-3D43  FF            rst  $38
-3D44  FF            rst  $38
-3D45  FF            rst  $38
-3D46  FF            rst  $38
-3D47  FF            rst  $38
+
+3D3F                dc   9, $FF
 
                 ;;; Cut sceen
                 do_cutscene:
@@ -10046,7 +9427,7 @@
 3D98  322A80        ld   ($802A),a ; player 2 screen
 3D9B  C30010        jp   $1000
 3D9E  C9            ret
-3D9F  FF            rst  $38
+3D9F                dc   1, $FF
 
                 draw_cage_and_scene:            ; for cutscene
 3DA0  211892        ld   hl,$9218
@@ -10155,17 +9536,7 @@
 3E42  20EF          jr   nz,$3E33
 3E44  C9            ret
 
-3E45  FF            rst  $38
-3E46  FF            rst  $38
-3E47  FF            rst  $38
-3E48  FF            rst  $38
-3E49  FF            rst  $38
-3E4A  FF            rst  $38
-3E4B  FF            rst  $38
-3E4C  FF            rst  $38
-3E4D  FF            rst  $38
-3E4E  FF            rst  $38
-3E4F  FF            rst  $38
+3E45                dc   11, $FF
 
                 delay_2_b:
 3E50  1E01          ld   e,$01
@@ -10179,7 +9550,7 @@
 3E5C  20F4          jr   nz,$3E52
 3E5E  C9            ret
 
-3E5F  FF            rst  $38
+3E5F                dc   1, $FF
 
                 cutscene_jump_up_and_down:
 3E60  DD214081      ld   ix,$8140
@@ -10202,44 +9573,7 @@
 3E87  20F1          jr   nz,$3E7A
 3E89  C9            ret
 
-3E8A  FF            rst  $38
-3E8B  FF            rst  $38
-3E8C  FF            rst  $38
-3E8D  FF            rst  $38
-3E8E  FF            rst  $38
-3E8F  FF            rst  $38
-3E90  FF            rst  $38
-3E91  FF            rst  $38
-3E92  FF            rst  $38
-3E93  FF            rst  $38
-3E94  FF            rst  $38
-3E95  FF            rst  $38
-3E96  FF            rst  $38
-3E97  FF            rst  $38
-3E98  FF            rst  $38
-3E99  FF            rst  $38
-3E9A  FF            rst  $38
-3E9B  FF            rst  $38
-3E9C  FF            rst  $38
-3E9D  FF            rst  $38
-3E9E  FF            rst  $38
-3E9F  FF            rst  $38
-3EA0  FF            rst  $38
-3EA1  FF            rst  $38
-3EA2  FF            rst  $38
-3EA3  FF            rst  $38
-3EA4  FF            rst  $38
-3EA5  FF            rst  $38
-3EA6  FF            rst  $38
-3EA7  FF            rst  $38
-3EA8  FF            rst  $38
-3EA9  FF            rst  $38
-3EAA  FF            rst  $38
-3EAB  FF            rst  $38
-3EAC  FF            rst  $38
-3EAD  FF            rst  $38
-3EAE  FF            rst  $38
-3EAF  FF            rst  $38
+3E8A                dc   38, $FF
 
                 end_cutscene:
 3EB0  3E07          ld   a,$07 ; end of dance in cutscene
@@ -10268,20 +9602,7 @@
 3EDE  CD223E        call $3E22
 3EE1  C9            ret
 
-3EE2  FF            rst  $38
-3EE3  FF            rst  $38
-3EE4  FF            rst  $38
-3EE5  FF            rst  $38
-3EE6  FF            rst  $38
-3EE7  FF            rst  $38
-3EE8  FF            rst  $38
-3EE9  FF            rst  $38
-3EEA  FF            rst  $38
-3EEB  FF            rst  $38
-3EEC  FF            rst  $38
-3EED  FF            rst  $38
-3EEE  FF            rst  $38
-3EEF  FF            rst  $38
+3EE2                dc   14, $FF
 
                 animate_player_right:
 3EF0  7B            ld   a,e
@@ -10290,14 +9611,7 @@
 3EF4  CD1806        call $0618
 3EF7  C9            ret
 
-3EF8  FF            rst  $38
-3EF9  FF            rst  $38
-3EFA  FF            rst  $38
-3EFB  FF            rst  $38
-3EFC  FF            rst  $38
-3EFD  FF            rst  $38
-3EFE  FF            rst  $38
-3EFF  FF            rst  $38
+3EF8                dc   8, $FF
 
                 delay_83_call_weird_a:
 3F00  CD6014        call $1460
@@ -10306,12 +9620,7 @@
 3F06  CDE301        call $01E3
 3F09  C9            ret
 
-3F0A  FF            rst  $38
-3F0B  FF            rst  $38
-3F0C  FF            rst  $38
-3F0D  FF            rst  $38
-3F0E  FF            rst  $38
-3F0F  FF            rst  $38
+3F0A                dc   6, $FF
 
                 ;;; level tiles at the bottom of the screen
                 draw_bottom_row_numbers:
@@ -10355,7 +9664,7 @@
 3F50  CDD02A        call $2AD0
 3F53  C9            ret
 
-3F54  FF            rst  $38
+3F54                dc   1, $FF
 
                 delay_2_vblank:
 3F55  F5            push af
@@ -10371,8 +9680,7 @@
 3F62  F1            pop  af
 3F63  C9            ret
 
-3F64  FF            rst  $38
-3F65  FF            rst  $38
+3F64                dc   2, $FF
 
                 draw_jetsoft:
 3F66  CD1003        call $0310
@@ -10404,8 +9712,7 @@
 3F88  FF            rst  $38
 3F89  C9            ret
 
-3F8A  FF            rst  $38
-3F8B  FF            rst  $38
+3F8A                dc   2, $FF
 
                 draw_copyright:
 3F8C  CD1003        call $0310
@@ -10426,9 +9733,7 @@
 3FA3  FF            rst  $38
 3FA4  C9            ret
 
-3FA5  FF            rst  $38
-3FA6  FF            rst  $38
-3FA7  FF            rst  $38
+3FA5                dc   3, $FF
 
                 blank_out_bottom_row:
 3FA8  CD1003        call $0310
@@ -10450,11 +9755,8 @@
 3FC7  1010          djnz $3FD9
 3FC9  FF            rst  $38
 3FCA  C9            ret
-3FCB  FF            rst  $38
-3FCC  FF            rst  $38
-3FCD  FF            rst  $38
-3FCE  FF            rst  $38
-3FCF  FF            rst  $38
+
+3FCB                dc   5, $FF
 
                 do_bonus_flashing:
 3FD0  00            nop ; wonder what these did originally?
@@ -10476,12 +9778,7 @@
 3FF6  CDEC24        call $24EC
 3FF9  C9            ret
 
-3FFA  FF            rst  $38
-3FFB  FF            rst  $38
-3FFC  FF            rst  $38
-3FFD  FF            rst  $38
-3FFE  FF            rst  $38
-3FFF  FF            rst  $38
+3FFA                dc   6, $FF
 
                 ;;; === END OF BG4.BIN, START OF BG5.BIN ======
 
@@ -10501,11 +9798,7 @@
 4017  00            nop
 4018  CD0000        call $0000
 
-401B  FF            rst  $38
-401C  FF            rst  $38
-401D  FF            rst  $38
-401E  FF            rst  $38
-401F  FF            rst  $38
+401B                dc   5, $FF
 
                 ;; Looks like more general updates
                 update_everything_more:
@@ -10516,14 +9809,8 @@
 402C  CD2050        call $5020
 402F  C9            ret
 
-4030  C9            ret
-4031  FF            rst  $38
-4032  FF            rst  $38
-4033  FF            rst  $38
-4034  FF            rst  $38
-4035  FF            rst  $38
-4036  FF            rst  $38
-4037  FF            rst  $38
+4030  C9            ret         ;?
+4031                dc   7, $FF
 
                 ;; who calls?
                 ;; What the heck is $c000?
@@ -10532,7 +9819,7 @@
 403B  CD815C        call $5C81
 403E  C9            ret
 
-403F  FF            rst  $38
+403F                dc   1, $FF
 
 
                 add_pickup_pat_8:
@@ -10541,13 +9828,7 @@
 4045  327A92        ld   ($927A),a
 4048  C9            ret
 
-4049  FF            rst  $38
-404A  FF            rst  $38
-404B  FF            rst  $38
-404C  FF            rst  $38
-404D  FF            rst  $38
-404E  FF            rst  $38
-404F  FF            rst  $38
+4049                dc   7, $FF
 
                 ;; Adds a bonus as you move right
                 ;; Keeps track of "max x" - when you go past it,
@@ -10568,29 +9849,21 @@
 4065  323080        ld   ($8030),a
 4068  C9            ret
 
-4069  FF            rst  $38
-406A  FF            rst  $38
-406B  FF            rst  $38
-406C  FF            rst  $38
-406D  FF            rst  $38
-406E  FF            rst  $38
-406F  FF            rst  $38
+4069                dc   7, $FF
 
                 add_pickup_pat_5:
 4070  3E8C          ld   a,$8C
 4072  328E91        ld   ($918E),a
 4075  C9            ret
 
-4076  FF            rst  $38
-4077  FF            rst  $38
+4076                dc   2, $FF
 
                 add_pickup_pat_6:
 4078  3E8D          ld   a,$8D
 407A  32D291        ld   ($91D2),a
 407D  C9            ret
 
-407E  FF            rst  $38
-407F  FF            rst  $38
+407E                dc   2, $FF
 
                 ;;
 4080  DD7E05        ld   a,(ix+$05)
@@ -10615,7 +9888,7 @@
 40A4  00            nop
 40A5  C9            ret
 
-40A6  FF            rst  $38
+40A6                dc   1, $FF
 
                 ;; in: h = x, y = l
                 ;; out: hl = screen pos of tile at xy
@@ -10639,7 +9912,7 @@
 40BD  6F            ld   l,a
 40BE  C9            ret
 
-40BF  FF            rst  $38
+40BF                dc   1, $FF
 
 40C0  DD7E05        ld   a,(ix+$05)
 40C3  A7            and  a
@@ -10662,8 +9935,8 @@
 40E2  D301          out  ($01),a
 40E4  00            nop
 40E5  C9            ret
-40E6  FF            rst  $38
-40E7  FF            rst  $38
+
+40E6                dc   2, $FF
 
                 add_pickup_pat_9:
 40E8  3E8F          ld   a,$8F
@@ -10671,7 +9944,8 @@
 40ED  3E8E          ld   a,$8E
 40EF  321792        ld   ($9217),a
 40F2  C9            ret
-40F3  FF            rst  $38
+
+40F3                dc   1, $FF
 
                 ;;; ; hit bonus
                 hit_bonus:
@@ -10705,8 +9979,7 @@
 4124  00            nop
 4125  C9            ret
 
-4126  FF            rst  $38
-4127  FF            rst  $38
+4126                dc   2, $FF
 
                 add_pickup_pat_10:
 4128  3E8C          ld   a,$8C
@@ -10717,14 +9990,7 @@
 4134  322B92        ld   ($922B),a
 4137  C9            ret
 
-4138  FF            rst  $38
-4139  FF            rst  $38
-413A  FF            rst  $38
-413B  FF            rst  $38
-413C  FF            rst  $38
-413D  FF            rst  $38
-413E  FF            rst  $38
-413F  FF            rst  $38
+4138                dc   8, $FF
 
                 set_synth_settings:
 4140  DD7E00        ld   a,(ix+$00)
@@ -10758,13 +10024,7 @@
 4175  32AB92        ld   ($92AB),a
 4178  C9            ret
 
-4179  FF            rst  $38
-417A  FF            rst  $38
-417B  FF            rst  $38
-417C  FF            rst  $38
-417D  FF            rst  $38
-417E  FF            rst  $38
-417F  FF            rst  $38
+4179                dc   7, $FF
 
                 related_to_mystery_8066:
 4180  DD7E00        ld   a,(ix+$00)
@@ -10823,8 +10083,7 @@
 41DB  325080        ld   ($8050),a
 41DE  C3F440        jp   $40F4
 
-41E1  FF            rst  $38
-41E2  FF            rst  $38
+41E1                dc   2, $FF
 
                 ;; How do i get here?... what is this Weird load for?
 41E3  3A0041        ld   a,($4100)
@@ -10848,8 +10107,7 @@
 41FA  321A91        ld   ($911A),a
 41FD  C9            ret
 
-41FE  FF            rst  $38
-41FF  FF            rst  $38
+41FE                dc   2, $FF
 
                 ;;
 4200  DD21A082      ld   ix,$82A0
@@ -10867,10 +10125,7 @@
 4218  32B191        ld   ($91B1),a
 421B  C9            ret
 
-421C  FF            rst  $38
-421D  FF            rst  $38
-421E  FF            rst  $38
-421F  FF            rst  $38
+421C                dc   4, $FF
 
                 sfx_sumfin_1:
 4220  DD21A882      ld   ix,$82A8
@@ -10888,10 +10143,7 @@
 4238  328E91        ld   ($918E),a
 423B  C9            ret
 
-423C  FF            rst  $38
-423D  FF            rst  $38
-423E  FF            rst  $38
-423F  FF            rst  $38
+423C                dc   4, $FF
 
                 sfx_sumfin_2:
 4240  DD21B082      ld   ix,$82B0
@@ -10905,8 +10157,7 @@
 4252  CD0041        call $4100
 4255  C9            ret
 
-4256  FF            rst  $38
-4257  FF            rst  $38
+4256                dc   2, $FF
 
                 pickup_tile_collision:
 4258  3A4081        ld   a,($8140)
@@ -10962,13 +10213,7 @@
 42A5  CD0236        call $3602 ; <- that looks odd. Weird jump to middle of code
 42A8  C9            ret
 
-42A9  FF            rst  $38
-42AA  FF            rst  $38
-42AB  FF            rst  $38
-42AC  FF            rst  $38
-42AD  FF            rst  $38
-42AE  FF            rst  $38
-42AF  FF            rst  $38
+42A9                dc   7, $FF
 
                 related_to_mystery_8066_2:
 42B0  DD7E00        ld   a,(ix+$00)
@@ -11021,11 +10266,8 @@
 42F8  00            nop
 42F9  77            ld   (hl),a
 42FA  C9            ret
-42FB  FF            rst  $38
-42FC  FF            rst  $38
-42FD  FF            rst  $38
-42FE  FF            rst  $38
-42FF  FF            rst  $38
+
+42FB                dc   5, $FF
 
                 ;; data?
 4300  F0            ret  p
@@ -11049,11 +10291,8 @@
 4315  3E9E          ld   a,$9E
 4317  327A92        ld   ($927A),a
 431A  C9            ret
-431B  FF            rst  $38
-431C  FF            rst  $38
-431D  FF            rst  $38
-431E  FF            rst  $38
-431F  FF            rst  $38
+
+431B                dc   5, $FF
 
                 sfx_something_ch_1:
 4320  DD6E07        ld   l,(ix+$07)
@@ -11082,16 +10321,7 @@
 4352  FD7704        ld   (iy+$04),a
 4355  C9            ret
 
-4356  FF            rst  $38
-4357  FF            rst  $38
-4358  FF            rst  $38
-4359  FF            rst  $38
-435A  FF            rst  $38
-435B  FF            rst  $38
-435C  FF            rst  $38
-435D  FF            rst  $38
-435E  FF            rst  $38
-435F  FF            rst  $38
+4356                dc   10, $FF
 
                 sfx_something_ch_2:
 4360  DD6E09        ld   l,(ix+$09)
@@ -11126,7 +10356,7 @@
 439B  32AB92        ld   ($92AB),a
 439E  C9            ret
 
-439F  FF            rst  $38
+439F                dc   1, $FF
 
                 ;;
                 sfx_what_1:
@@ -11156,16 +10386,7 @@
 43D2  FD7704        ld   (iy+$04),a
 43D5  C9            ret
 
-43D6  FF            rst  $38
-43D7  FF            rst  $38
-43D8  FF            rst  $38
-43D9  FF            rst  $38
-43DA  FF            rst  $38
-43DB  FF            rst  $38
-43DC  FF            rst  $38
-43DD  FF            rst  $38
-43DE  FF            rst  $38
-43DF  FF            rst  $38
+43D6                dc   10, $FF
 
 43E0  3E9F          ld   a,$9F
 43E2  32EE92        ld   ($92EE),a
@@ -11173,7 +10394,7 @@
 43E7  321792        ld   ($9217),a
 43EA  C9            ret
 
-43EB  FF            rst  $38
+43EB                dc   1, $FF
 
 43EC  3E9C          ld   a,$9C
 43EE  321792        ld   ($9217),a
@@ -11182,10 +10403,8 @@
 43F6  3E9F          ld   a,$9F
 43F8  322B92        ld   ($922B),a
 43FB  C9            ret
-43FC  FF            rst  $38
-43FD  FF            rst  $38
-43FE  FF            rst  $38
-43FF  FF            rst  $38
+
+43FC                dc   4, $FF
 
                 ;;; SFX synth settings data
                 sfx_synth_settings:
@@ -11348,25 +10567,7 @@
 44E9  328A91        ld   ($918A),a
 44EC  C9            ret
 
-44ED  FF            rst  $38
-44EE  FF            rst  $38
-44EF  FF            rst  $38
-44F0  FF            rst  $38
-44F1  FF            rst  $38
-44F2  FF            rst  $38
-44F3  FF            rst  $38
-44F4  FF            rst  $38
-44F5  FF            rst  $38
-44F6  FF            rst  $38
-44F7  FF            rst  $38
-44F8  FF            rst  $38
-44F9  FF            rst  $38
-44FA  FF            rst  $38
-44FB  FF            rst  $38
-44FC  FF            rst  $38
-44FD  FF            rst  $38
-44FE  FF            rst  $38
-44FF  FF            rst  $38
+44ED                dc   19, $FF
 
                 ;; sfx/tune player
                 ;; plays a few samples of sfx each tick
@@ -11433,22 +10634,21 @@
 4563  CD2043        call $4320
 4566  C9            ret
 
-4567  FF            rst  $38
+4567                dc   1, $FF
 
                 add_pickup_pat_3:
 4568  3E8D          ld   a,$8D
 456A  321A91        ld   ($911A),a
 456D  C9            ret
 
-456E  FF            rst  $38
-456F  FF            rst  $38
+456E                dc   2, $FF
 
                 add_pickup_pat_4:
 4570  3E8C          ld   a,$8C
 4572  32B191        ld   ($91B1),a
 4575  C9            ret
 
-4576  FF            rst  $38
+4576                dc   1, $FF
 
                 add_pickup_pat_7:
 4577  3E8E          ld   a,$8E
@@ -11515,7 +10715,8 @@
 45E0  DD770A        ld   (ix+$0a),a
 45E3  CD6043        call $4360
 45E6  C9            ret
-45E7  FF            rst  $38
+
+45E7                dc   1, $FF
 
                 ;;
                 add_pickup_pat_2:
@@ -11523,24 +10724,7 @@
 45EA  325A91        ld   ($915A),a
 45ED  C9            ret
 
-45EE  FF            rst  $38
-45EF  FF            rst  $38
-45F0  FF            rst  $38
-45F1  FF            rst  $38
-45F2  FF            rst  $38
-45F3  FF            rst  $38
-45F4  FF            rst  $38
-45F5  FF            rst  $38
-45F6  FF            rst  $38
-45F7  FF            rst  $38
-45F8  FF            rst  $38
-45F9  FF            rst  $38
-45FA  FF            rst  $38
-45FB  FF            rst  $38
-45FC  FF            rst  $38
-45FD  FF            rst  $38
-45FE  FF            rst  $38
-45FF  FF            rst  $38
+45EE                dc   18, $FF
 
                 ;; sfxsomething #7
 4600  DD7E14        ld   a,(ix+$14)
