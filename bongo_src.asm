@@ -3441,12 +3441,8 @@
 1813  324281        ld   ($8142),a
 1816  324681        ld   ($8146),a
 1819  C9            ret
-181A  FF            rst  $38
-181B  FF            rst  $38
-181C  FF            rst  $38
-181D  FF            rst  $38
-181E  FF            rst  $38
-181F  FF            rst  $38
+
+181A                dc   6, $FF
 
                 init_player_pos_for_screen:
 1820  3A0480        ld   a,($8004)
@@ -3470,11 +3466,8 @@
 1844  324781        ld   ($8147),a
 1847  CD0818        call $1808
 184A  C9            ret
-184B  FF            rst  $38
-184C  FF            rst  $38
-184D  FF            rst  $38
-184E  FF            rst  $38
-184F  FF            rst  $38
+
+184B                dc   5, $FF
 
                 ;; [x, y]
                 player_start_pos_data:
@@ -3516,14 +3509,7 @@
 188E  00            nop
 188F  00            nop
 
-1890  FF            rst  $38
-1891  FF            rst  $38
-1892  FF            rst  $38
-1893  FF            rst  $38
-1894  FF            rst  $38
-1895  FF            rst  $38
-1896  FF            rst  $38
-1897  FF            rst  $38
+1890                dc   8, $FF
 
                 reset_xoffs:
 1898  210081        ld   hl,$8100
@@ -3534,17 +3520,8 @@
 18A0  FE40          cp   $40
 18A2  20F7          jr   nz,$189B
 18A4  C9            ret
-18A5  FF            rst  $38
-18A6  FF            rst  $38
-18A7  FF            rst  $38
-18A8  FF            rst  $38
-18A9  FF            rst  $38
-18AA  FF            rst  $38
-18AB  FF            rst  $38
-18AC  FF            rst  $38
-18AD  FF            rst  $38
-18AE  FF            rst  $38
-18AF  FF            rst  $38
+
+18A5                dc   11, $FF
 
                 ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
                 ;; (all `n_n` screens).
@@ -3809,15 +3786,7 @@
 19E3  CDA013        call $13A0
 19E6  C9            ret
 
-19E7  FF            rst  $38
-19E8  FF            rst  $38
-19E9  FF            rst  $38
-19EA  FF            rst  $38
-19EB  FF            rst  $38
-19EC  FF            rst  $38
-19ED  FF            rst  $38
-19EE  FF            rst  $38
-19EF  FF            rst  $38
+19E7                dc   9, $FF
 
                 check_fall_off_bottom_scr:
 19F0  3A4781        ld   a,($8147)
@@ -3831,7 +3800,7 @@
 19FF  CD2002        call $0220
 1A02  C9            ret
 
-1A03  FF            rst  $38
+1A03  FF            db   $FF
 
                 ;; Die if you go out the screen to the left (16px)
                 check_exit_stage_left:
@@ -4075,15 +4044,15 @@
 1B40  09            add  hl,bc
 1B41  221E80        ld   ($801E),hl
 1B44  C9            ret
-1B45  FF            rst  $38
-1B46  FF            rst  $38
-1B47  FF            rst  $38
+
+1B45                dc   3, $FF
 
                 call_do_death_sequence:
 1B48  CDC00C        call $0CC0
 1B4B  CD2002        call $0220
 1B4E  C9            ret
-1B4F  FF            rst  $38
+
+1B4F  FF            db   $FF
 
                 ;; ?
 1B50  3E03          ld   a,$03
@@ -4103,19 +4072,7 @@
 1B6D  CDB02C        call $2CB0 ; calls nothing based on screen
 1B70  C30010        jp   $1000
 
-1B73  FF            rst  $38
-1B74  FF            rst  $38
-1B75  FF            rst  $38
-1B76  FF            rst  $38
-1B77  FF            rst  $38
-1B78  FF            rst  $38
-1B79  FF            rst  $38
-1B7A  FF            rst  $38
-1B7B  FF            rst  $38
-1B7C  FF            rst  $38
-1B7D  FF            rst  $38
-1B7E  FF            rst  $38
-1B7F  FF            rst  $38
+1B73                dc   13, $FF
 
                 init_score_and_screen_once:
 1B80  3A3180        ld   a,($8031)
@@ -4195,15 +4152,7 @@
 1BF5  D8            ret  c
 1BF6  1C            inc  e
 
-1BF7  FF            rst  $38
-1BF8  FF            rst  $38
-1BF9  FF            rst  $38
-1BFA  FF            rst  $38
-1BFB  FF            rst  $38
-1BFC  FF            rst  $38
-1BFD  FF            rst  $38
-1BFE  FF            rst  $38
-1BFF  FF            rst  $38
+1BF7                dc   9, $FF
 
                 delay_18_vblanks:
 1C00  1E18          ld   e,$18
@@ -4212,13 +4161,7 @@
 1C06  20FA          jr   nz,$1C02
 1C08  C9            ret
 
-1C09  FF            rst  $38
-1C0A  FF            rst  $38
-1C0B  FF            rst  $38
-1C0C  FF            rst  $38
-1C0D  FF            rst  $38
-1C0E  FF            rst  $38
-1C0F  FF            rst  $38
+1C09                dc   7, $FF
 
                 dino_caught_player_right:
 1C10  3A4081        ld   a,($8140)
@@ -4249,8 +4192,7 @@
 1C4A  CDE024        call $24E0
 1C4D  C9            ret
 
-1C4E  FF            rst  $38
-1C4F  FF            rst  $38
+1C4E                dc   2, $FF
 
                 dino_caught_player_left:
 1C50  3A4081        ld   a,($8140)
@@ -4280,12 +4222,7 @@
 1C88  E5            push hl
 1C89  C9            ret
 
-1C8A  FF            rst  $38
-1C8B  FF            rst  $38
-1C8C  FF            rst  $38
-1C8D  FF            rst  $38
-1C8E  FF            rst  $38
-1C8F  FF            rst  $38
+1C8A                dc   6, $FF
 
                 dino_got_player_left_or_right:
 1C90  3A4081        ld   a,($8140)
@@ -4300,18 +4237,7 @@
 1CA0  CD501C        call $1C50
 1CA3  C9            ret
 
-1CA4  FF            rst  $38
-1CA5  FF            rst  $38
-1CA6  FF            rst  $38
-1CA7  FF            rst  $38
-1CA8  FF            rst  $38
-1CA9  FF            rst  $38
-1CAA  FF            rst  $38
-1CAB  FF            rst  $38
-1CAC  FF            rst  $38
-1CAD  FF            rst  $38
-1CAE  FF            rst  $38
-1CAF  FF            rst  $38
+1CA4                dc   12, $FF
 
                 dino_collision:
 1CB0  3A4C81        ld   a,($814C)
@@ -4337,8 +4263,7 @@
 1CD2  CD901C        call $1C90
 1CD5  C9            ret
 
-1CD6  FF            rst  $38
-1CD7  FF            rst  $38
+1CD6                dc   2, $FF
 
                 draw_border_1_c:
 1CD8  CDD83B        call $3BD8
@@ -5227,16 +5152,7 @@
 2130  CD9014        call $1490
 2133  C3A400        jp   $00A4
                 ;;
-2136  FF            rst  $38
-2137  FF            rst  $38
-2138  FF            rst  $38
-2139  FF            rst  $38
-213A  FF            rst  $38
-213B  FF            rst  $38
-213C  FF            rst  $38
-213D  FF            rst  $38
-213E  FF            rst  $38
-213F  FF            rst  $38
+2136                dc   10, $FF
 
                 ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
                 ;; (all `nTn` and `W` levels)
@@ -5526,21 +5442,7 @@
 228E  D301          out  ($01),a
 2290  C9            ret
 
-2291  FF            rst  $38
-2292  FF            rst  $38
-2293  FF            rst  $38
-2294  FF            rst  $38
-2295  FF            rst  $38
-2296  FF            rst  $38
-2297  FF            rst  $38
-2298  FF            rst  $38
-2299  FF            rst  $38
-229A  FF            rst  $38
-229B  FF            rst  $38
-229C  FF            rst  $38
-229D  FF            rst  $38
-229E  FF            rst  $38
-229F  FF            rst  $38
+2291                dc   15, $FF
 
                 update_dino:
 22A0  7E            ld   a,(hl)
@@ -5582,7 +5484,8 @@
 22E6  325181        ld   ($8151),a
 22E9  CD2029        call $2920
 22EC  C3E023        jp   $23E0
-22EF  FF            rst  $38
+
+22EF  FF            db   $FF
 
                 dino_pathfind_nopslide:
 22F0  00            nop
@@ -5632,7 +5535,7 @@
 232B  CDA022        call $22A0
 232E  C9            ret
 
-232F  FF            rst  $38
+232F  FF            db   $FF
 
                 ;; location of path data for each screen
                 dino_path_lookup:
@@ -5800,26 +5703,7 @@
 23E8  324480        ld   ($8044),a
 23EB  C9            ret
 
-23EC  FF            rst  $38
-23ED  FF            rst  $38
-23EE  FF            rst  $38
-23EF  FF            rst  $38
-23F0  FF            rst  $38
-23F1  FF            rst  $38
-23F2  FF            rst  $38
-23F3  FF            rst  $38
-23F4  FF            rst  $38
-23F5  FF            rst  $38
-23F6  FF            rst  $38
-23F7  FF            rst  $38
-23F8  FF            rst  $38
-23F9  FF            rst  $38
-23FA  FF            rst  $38
-23FB  FF            rst  $38
-23FC  FF            rst  $38
-23FD  FF            rst  $38
-23FE  FF            rst  $38
-23FF  FF            rst  $38
+23EC                dc   20, $FF
 
                 dino_anim_lookup:
 2400  2F            cpl
@@ -5843,14 +5727,7 @@
 2416  AC            xor  h
 2417  B3            or   e
 
-2418  FF            rst  $38
-2419  FF            rst  $38
-241A  FF            rst  $38
-241B  FF            rst  $38
-241C  FF            rst  $38
-241D  FF            rst  $38
-241E  FF            rst  $38
-241F  FF            rst  $38
+2418                dc   8, $FF
 
                 ;;
                 copy_inp_to_buttons_and_check_buttons:
@@ -5866,29 +5743,8 @@
 2435  05            dec  b
 2436  20FA          jr   nz,$2432
 2438  C9            ret
-2439  FF            rst  $38
-243A  FF            rst  $38
-243B  FF            rst  $38
-243C  FF            rst  $38
-243D  FF            rst  $38
-243E  FF            rst  $38
-243F  FF            rst  $38
-2440  FF            rst  $38
-2441  FF            rst  $38
-2442  FF            rst  $38
-2443  FF            rst  $38
-2444  FF            rst  $38
-2445  FF            rst  $38
-2446  FF            rst  $38
-2447  FF            rst  $38
-2448  FF            rst  $38
-2449  FF            rst  $38
-244A  FF            rst  $38
-244B  FF            rst  $38
-244C  FF            rst  $38
-244D  FF            rst  $38
-244E  FF            rst  $38
-244F  FF            rst  $38
+
+2439                dc   23, $FF
 
                 draw_score:
 2450  AF            xor  a
@@ -5952,19 +5808,7 @@
 24CF  CD3830        call $3038
 24D2  C9            ret
 
-24D3  FF            rst  $38
-24D4  FF            rst  $38
-24D5  FF            rst  $38
-24D6  FF            rst  $38
-24D7  FF            rst  $38
-24D8  FF            rst  $38
-24D9  FF            rst  $38
-24DA  FF            rst  $38
-24DB  FF            rst  $38
-24DC  FF            rst  $38
-24DD  FF            rst  $38
-24DE  FF            rst  $38
-24DF  FF            rst  $38
+24D3                dc   13, $FF
 
                 delay_60_vblanks:
 24E0  2660          ld   h,$60
@@ -5972,9 +5816,8 @@
 24E5  24            inc  h
 24E6  20FA          jr   nz,$24E2
 24E8  C9            ret
-24E9  FF            rst  $38
-24EA  FF            rst  $38
-24EB  FF            rst  $38
+
+24E9                dc   3, $FF
 
                 delay_8_play_sound:
 24EC  C5            push bc
@@ -5988,9 +5831,7 @@
 24F9  324480        ld   ($8044),a
 24FC  C9            ret
 
-24FD  FF            rst  $38
-24FE  FF            rst  $38
-24FF  FF            rst  $38
+24FD                dc   3, $FF
 
 2500  210083        ld   hl,$8300
 2503  3600          ld   (hl),$00
@@ -5999,18 +5840,8 @@
 2507  FEE1          cp   $E1
 2509  20F8          jr   nz,$2503
 250B  C9            ret
-250C  FF            rst  $38
-250D  FF            rst  $38
-250E  FF            rst  $38
-250F  FF            rst  $38
-2510  FF            rst  $38
-2511  FF            rst  $38
-2512  FF            rst  $38
-2513  FF            rst  $38
-2514  FF            rst  $38
-2515  FF            rst  $38
-2516  FF            rst  $38
-2517  FF            rst  $38
+
+250C                dc   12, $FF
 
                 test_then_dino_collision:
 2518  3A2D80        ld   a,($802D)
@@ -6019,28 +5850,7 @@
 251E  CDB01C        call $1CB0
 2521  C9            ret
 
-2522  FF            rst  $38
-2523  FF            rst  $38
-2524  FF            rst  $38
-2525  FF            rst  $38
-2526  FF            rst  $38
-2527  FF            rst  $38
-2528  FF            rst  $38
-2529  FF            rst  $38
-252A  FF            rst  $38
-252B  FF            rst  $38
-252C  FF            rst  $38
-252D  FF            rst  $38
-252E  FF            rst  $38
-252F  FF            rst  $38
-2530  FF            rst  $38
-2531  FF            rst  $38
-2532  FF            rst  $38
-2533  FF            rst  $38
-2534  FF            rst  $38
-2535  FF            rst  $38
-2536  FF            rst  $38
-2537  FF            rst  $38
+2522                dc   22, $FF
 
                 ;; who calls? (free bytes)
                 ;; Appears to draw [21] (the 21 in a box from the level indicators)
@@ -6061,9 +5871,8 @@
 2549  0D            dec  c
 254A  C8            ret  z
 254B  18F3          jr   $2540
-254D  FF            rst  $38
-254E  FF            rst  $38
-254F  FF            rst  $38
+
+254D                dc   3, $FF
 
                 ;; (free bytes... if you don't want a cool transition)
                 ;; whoa! Draws some weird spirtal cage flood-fill thing
@@ -6100,14 +5909,7 @@
 258B  E61F          and  $1F
 258D  C8            ret  z
 258E  18F8          jr   $2588
-2590  FF            rst  $38
-2591  FF            rst  $38
-2592  FF            rst  $38
-2593  FF            rst  $38
-2594  FF            rst  $38
-2595  FF            rst  $38
-2596  FF            rst  $38
-2597  FF            rst  $38
+2590                dc   8, $FF
                 _part_three:
 2598  73            ld   (hl),e
 2599  012000        ld   bc,$0020
@@ -6116,11 +5918,7 @@
 259E  FE94          cp   $94
 25A0  C8            ret  z
 25A1  18F5          jr   $2598
-25A3  FF            rst  $38
-25A4  FF            rst  $38
-25A5  FF            rst  $38
-25A6  FF            rst  $38
-25A7  FF            rst  $38
+25A3                dc   5, $FF
                 _part_four:
 25A8  CDA013        call $13A0
 25AB  73            ld   (hl),e
@@ -6131,15 +5929,7 @@
 25B2  20F7          jr   nz,$25AB
 25B4  ED42          sbc  hl,bc
 25B6  C9            ret
-25B7  FF            rst  $38
-25B8  FF            rst  $38
-25B9  FF            rst  $38
-25BA  FF            rst  $38
-25BB  FF            rst  $38
-25BC  FF            rst  $38
-25BD  FF            rst  $38
-25BE  FF            rst  $38
-25BF  FF            rst  $38
+25B7                dc   9, $FF
                 _part_five:
 25C0  CDA013        call $13A0
 25C3  73            ld   (hl),e
@@ -6149,11 +5939,7 @@
 25C7  20FA          jr   nz,$25C3
 25C9  2B            dec  hl
 25CA  C9            ret
-25CB  FF            rst  $38
-25CC  FF            rst  $38
-25CD  FF            rst  $38
-25CE  FF            rst  $38
-25CF  FF            rst  $38
+25CB                dc   5, $FF
                 _part_six:
 25D0  CDA013        call $13A0
 25D3  73            ld   (hl),e
@@ -6164,15 +5950,7 @@
 25DB  20F3          jr   nz,$25D0
 25DD  09            add  hl,bc
 25DE  C9            ret
-25DF  FF            rst  $38
-25E0  FF            rst  $38
-25E1  FF            rst  $38
-25E2  FF            rst  $38
-25E3  FF            rst  $38
-25E4  FF            rst  $38
-25E5  FF            rst  $38
-25E6  FF            rst  $38
-25E7  FF            rst  $38
+25DF                dc   9, $FF
                 _part_seven:
 25E8  CDA013        call $13A0
 25EB  73            ld   (hl),e
@@ -6182,19 +5960,7 @@
 25EF  20FA          jr   nz,$25EB
 25F1  23            inc  hl
 25F2  C9            ret
-25F3  FF            rst  $38
-25F4  FF            rst  $38
-25F5  FF            rst  $38
-25F6  FF            rst  $38
-25F7  FF            rst  $38
-25F8  FF            rst  $38
-25F9  FF            rst  $38
-25FA  FF            rst  $38
-25FB  FF            rst  $38
-25FC  FF            rst  $38
-25FD  FF            rst  $38
-25FE  FF            rst  $38
-25FF  FF            rst  $38
+25F3                dc   13, $FF
 
                 ;; Nodes for dino to follow: 31 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
@@ -6297,18 +6063,7 @@
 2672  05            dec  b
 2673  00            nop
 
-2674  FF            rst  $38
-2675  FF            rst  $38
-2676  FF            rst  $38
-2677  FF            rst  $38
-2678  FF            rst  $38
-2679  FF            rst  $38
-267A  FF            rst  $38
-267B  FF            rst  $38
-267C  FF            rst  $38
-267D  FF            rst  $38
-267E  FF            rst  $38
-267F  FF            rst  $38
+2674                dc   12, $FF
 
                 ;; Nodes for dino to follow: 27 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
@@ -6405,26 +6160,7 @@
 26E9  2806          jr   z,$26F1
 26EB  00            nop
 
-26EC  FF            rst  $38
-26ED  FF            rst  $38
-26EE  FF            rst  $38
-26EF  FF            rst  $38
-26F0  FF            rst  $38
-26F1  FF            rst  $38
-26F2  FF            rst  $38
-26F3  FF            rst  $38
-26F4  FF            rst  $38
-26F5  FF            rst  $38
-26F6  FF            rst  $38
-26F7  FF            rst  $38
-26F8  FF            rst  $38
-26F9  FF            rst  $38
-26FA  FF            rst  $38
-26FB  FF            rst  $38
-26FC  FF            rst  $38
-26FD  FF            rst  $38
-26FE  FF            rst  $38
-26FF  FF            rst  $38
+26EC                dc   20, $FF
 
                 ;; Nodes for dino to follow: 24 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
@@ -6511,22 +6247,7 @@
 275D  2804          jr   z,$2763
 275F  00            nop
 
-2760  FF            rst  $38
-2761  FF            rst  $38
-2762  FF            rst  $38
-2763  FF            rst  $38
-2764  FF            rst  $38
-2765  FF            rst  $38
-2766  FF            rst  $38
-2767  FF            rst  $38
-2768  FF            rst  $38
-2769  FF            rst  $38
-276A  FF            rst  $38
-276B  FF            rst  $38
-276C  FF            rst  $38
-276D  FF            rst  $38
-276E  FF            rst  $38
-276F  FF            rst  $38
+2760                dc   16, $FF
 
                 ;; Nodes for dino to follow: 24 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
@@ -6622,14 +6343,7 @@
 27D6  05            dec  b
 27D7  00            nop
 
-27D8  FF            rst  $38
-27D9  FF            rst  $38
-27DA  FF            rst  $38
-27DB  FF            rst  $38
-27DC  FF            rst  $38
-27DD  FF            rst  $38
-27DE  FF            rst  $38
-27DF  FF            rst  $38
+27D8                dc   8, $FF
 
                 ;;;
                 set_player_y_level_start:
@@ -6649,7 +6363,7 @@
 27FB  324781        ld   ($8147),a
 27FE  C9            ret
                 ;;;
-27FF  FF            rst  $38
+27FF  FF            db   $FF
 
                 ;; Nodes for dino to follow
                 ;; four bytes per node: [ x, y, fr, _ ]
@@ -6840,22 +6554,7 @@
 28CD  2805          jr   z,$28D4
 28CF  00            nop
 
-28D0  FF            rst  $38
-28D1  FF            rst  $38
-28D2  FF            rst  $38
-28D3  FF            rst  $38
-28D4  FF            rst  $38
-28D5  FF            rst  $38
-28D6  FF            rst  $38
-28D7  FF            rst  $38
-28D8  FF            rst  $38
-28D9  FF            rst  $38
-28DA  FF            rst  $38
-28DB  FF            rst  $38
-28DC  FF            rst  $38
-28DD  FF            rst  $38
-28DE  FF            rst  $38
-28DF  FF            rst  $38
+28D0                dc   16, $FF
 
                 move_dino_x:
 28E0  3A1283        ld   a,($8312)
@@ -6889,8 +6588,7 @@
 2919  214008        ld   hl,$0840
 291C  1822          jr   $2940
 
-291E  FF            rst  $38
-291F  FF            rst  $38
+291E                dc   2, $FF
 
                 ;;
                 set_dino_dir:
@@ -6908,48 +6606,14 @@
 2931  322E80        ld   ($802E),a
 2934  C9            ret
 
-2935  FF            rst  $38
-2936  FF            rst  $38
-2937  FF            rst  $38
-2938  FF            rst  $38
-2939  FF            rst  $38
-293A  FF            rst  $38
-293B  FF            rst  $38
-293C  FF            rst  $38
-293D  FF            rst  $38
-293E  FF            rst  $38
-293F  FF            rst  $38
+2935                dc   11, $FF
 
                 jmp_hl_pl_4k_and_mystery_8066_fn:
 2940  CDE301        call $01E3 ; hl = DRAW_SCREEN
 2943  CD1011        call $1110
 2946  C9            ret
 
-2947  FF            rst  $38
-2948  FF            rst  $38
-2949  FF            rst  $38
-294A  FF            rst  $38
-294B  FF            rst  $38
-294C  FF            rst  $38
-294D  FF            rst  $38
-294E  FF            rst  $38
-294F  FF            rst  $38
-2950  FF            rst  $38
-2951  FF            rst  $38
-2952  FF            rst  $38
-2953  FF            rst  $38
-2954  FF            rst  $38
-2955  FF            rst  $38
-2956  FF            rst  $38
-2957  FF            rst  $38
-2958  FF            rst  $38
-2959  FF            rst  $38
-295A  FF            rst  $38
-295B  FF            rst  $38
-295C  FF            rst  $38
-295D  FF            rst  $38
-295E  FF            rst  $38
-295F  FF            rst  $38
+2947                dc   25, $FF
 
                 save_ix_and_?:
 2960  DDE5          push ix
@@ -6957,30 +6621,7 @@
 2965  DDE1          pop  ix
 2967  C9            ret
 
-2968  FF            rst  $38
-2969  FF            rst  $38
-296A  FF            rst  $38
-296B  FF            rst  $38
-296C  FF            rst  $38
-296D  FF            rst  $38
-296E  FF            rst  $38
-296F  FF            rst  $38
-2970  FF            rst  $38
-2971  FF            rst  $38
-2972  FF            rst  $38
-2973  FF            rst  $38
-2974  FF            rst  $38
-2975  FF            rst  $38
-2976  FF            rst  $38
-2977  FF            rst  $38
-2978  FF            rst  $38
-2979  FF            rst  $38
-297A  FF            rst  $38
-297B  FF            rst  $38
-297C  FF            rst  $38
-297D  FF            rst  $38
-297E  FF            rst  $38
-297F  FF            rst  $38
+2968                dc   24, $FF
 
                 got_a_bonus:
 2980  3A6080        ld   a,($8060)
@@ -7256,33 +6897,7 @@
 2AE2  20FA          jr   nz,$2ADE
 2AE4  C9            ret
 
-2AE5  FF            rst  $38
-2AE6  FF            rst  $38
-2AE7  FF            rst  $38
-2AE8  FF            rst  $38
-2AE9  FF            rst  $38
-2AEA  FF            rst  $38
-2AEB  FF            rst  $38
-2AEC  FF            rst  $38
-2AED  FF            rst  $38
-2AEE  FF            rst  $38
-2AEF  FF            rst  $38
-2AF0  FF            rst  $38
-2AF1  FF            rst  $38
-2AF2  FF            rst  $38
-2AF3  FF            rst  $38
-2AF4  FF            rst  $38
-2AF5  FF            rst  $38
-2AF6  FF            rst  $38
-2AF7  FF            rst  $38
-2AF8  FF            rst  $38
-2AF9  FF            rst  $38
-2AFA  FF            rst  $38
-2AFB  FF            rst  $38
-2AFC  FF            rst  $38
-2AFD  FF            rst  $38
-2AFE  FF            rst  $38
-2AFF  FF            rst  $38
+2AE5                dc   27, $FF
 
                 ;; who calls? (free bytes)
 2B00  3A9380        ld   a,($8093)
@@ -7299,17 +6914,7 @@
                 _done_2B14:
 2B14  C9            ret
 
-2B15  FF            rst  $38
-2B16  FF            rst  $38
-2B17  FF            rst  $38
-2B18  FF            rst  $38
-2B19  FF            rst  $38
-2B1A  FF            rst  $38
-2B1B  FF            rst  $38
-2B1C  FF            rst  $38
-2B1D  FF            rst  $38
-2B1E  FF            rst  $38
-2B1F  FF            rst  $38
+2B15                dc   11, $FF
 
                 ;; who calls? (free bytes?)
 2B20  47            ld   b,a
@@ -7331,22 +6936,8 @@
 2B3C  E60F          and  $0F
 2B3E  81            add  a,c
 2B3F  C9            ret
-2B40  FF            rst  $38
-2B41  FF            rst  $38
-2B42  FF            rst  $38
-2B43  FF            rst  $38
-2B44  FF            rst  $38
-2B45  FF            rst  $38
-2B46  FF            rst  $38
-2B47  FF            rst  $38
-2B48  FF            rst  $38
-2B49  FF            rst  $38
-2B4A  FF            rst  $38
-2B4B  FF            rst  $38
-2B4C  FF            rst  $38
-2B4D  FF            rst  $38
-2B4E  FF            rst  $38
-2B4F  FF            rst  $38
+
+2B40                dc   16, $FF
 
                 ;; Run enemy update subs, based on current screen
                 update_enemies:
@@ -7449,31 +7040,14 @@
 2BE4  00            nop
 2BE5  C9            ret
 
-2BE6  FF            rst  $38
-2BE7  FF            rst  $38
-2BE8  FF            rst  $38
-2BE9  FF            rst  $38
-2BEA  FF            rst  $38
-2BEB  FF            rst  $38
-2BEC  FF            rst  $38
-2BED  FF            rst  $38
-2BEE  FF            rst  $38
-2BEF  FF            rst  $38
+2BE6                dc   10, $FF
 
                 enemy_pattern_scr_10:
 2BF0  CDD032        call $32D0
 2BF3  CDF032        call $32F0
 2BF6  C9            ret
 
-2BF7  FF            rst  $38
-2BF8  FF            rst  $38
-2BF9  FF            rst  $38
-2BFA  FF            rst  $38
-2BFB  FF            rst  $38
-2BFC  FF            rst  $38
-2BFD  FF            rst  $38
-2BFE  FF            rst  $38
-2BFF  FF            rst  $38
+2BF7                dc   9, $FF
 
                 set_rock_1_b0_40:
 2C00  3EB0          ld   a,$B0
@@ -7488,20 +7062,7 @@
 2C16  323780        ld   ($8037),a
 2C19  C9            ret
 
-2C1A  FF            rst  $38
-2C1B  FF            rst  $38
-2C1C  FF            rst  $38
-2C1D  FF            rst  $38
-2C1E  FF            rst  $38
-2C1F  FF            rst  $38
-2C20  FF            rst  $38
-2C21  FF            rst  $38
-2C22  FF            rst  $38
-2C23  FF            rst  $38
-2C24  FF            rst  $38
-2C25  FF            rst  $38
-2C26  FF            rst  $38
-2C27  FF            rst  $38
+2C1A                dc   14, $FF
 
                 rock_fall_1:
 2C28  3A1683        ld   a,($8316)
@@ -7518,29 +7079,14 @@
 2C3C  CD002C        call $2C00
 2C3F  C9            ret
 
-2C40  FF            rst  $38
-2C41  FF            rst  $38
-2C42  FF            rst  $38
-2C43  FF            rst  $38
-2C44  FF            rst  $38
-2C45  FF            rst  $38
-2C46  FF            rst  $38
-2C47  FF            rst  $38
+2C40                dc   8, $FF
 
                 enemy_pattern_scr_2:
 2C48  CD282C        call $2C28
 2C4B  CD4031        call $3140
 2C4E  C9            ret
 
-2C4F  FF            rst  $38
-2C50  FF            rst  $38
-2C51  FF            rst  $38
-2C52  FF            rst  $38
-2C53  FF            rst  $38
-2C54  FF            rst  $38
-2C55  FF            rst  $38
-2C56  FF            rst  $38
-2C57  FF            rst  $38
+2C4F                dc   9, $FF
 
                 enemy_pattern_scr_4:
 2C58  CD282C        call $2C28
@@ -7549,17 +7095,7 @@
 2C61  CD6032        call $3260
 2C64  C9            ret
 
-2C65  FF            rst  $38
-2C66  FF            rst  $38
-2C67  FF            rst  $38
-2C68  FF            rst  $38
-2C69  FF            rst  $38
-2C6A  FF            rst  $38
-2C6B  FF            rst  $38
-2C6C  FF            rst  $38
-2C6D  FF            rst  $38
-2C6E  FF            rst  $38
-2C6F  FF            rst  $38
+2C65                dc   11, $FF
 
                 ;;
                 hiscore_check_buttons:
@@ -7578,16 +7114,7 @@
 2C8A  C4D82E        call nz,$2ED8
 2C8D  C9            ret
 
-2C8E  FF            rst  $38
-2C8F  FF            rst  $38
-2C90  FF            rst  $38
-2C91  FF            rst  $38
-2C92  FF            rst  $38
-2C93  FF            rst  $38
-2C94  FF            rst  $38
-2C95  FF            rst  $38
-2C96  FF            rst  $38
-2C97  FF            rst  $38
+2C8E                dc   10, $FF
 
                 enemy_pattern_scr_8:
 2C98  CD282C        call $2C28
@@ -7598,11 +7125,7 @@
 2CA7  CD9035        call $3590
 2CAA  C9            ret
 
-2CAB  FF            rst  $38
-2CAC  FF            rst  $38
-2CAD  FF            rst  $38
-2CAE  FF            rst  $38
-2CAF  FF            rst  $38
+2CAB                dc   5, $FF
 
                 ;; wonder what this was for? No paths call anything
                 ;; maybe a debug tool?
@@ -7661,22 +7184,7 @@
 2CEE  00            nop
 2CEF  C9            ret
 
-2CF0  FF            rst  $38
-2CF1  FF            rst  $38
-2CF2  FF            rst  $38
-2CF3  FF            rst  $38
-2CF4  FF            rst  $38
-2CF5  FF            rst  $38
-2CF6  FF            rst  $38
-2CF7  FF            rst  $38
-2CF8  FF            rst  $38
-2CF9  FF            rst  $38
-2CFA  FF            rst  $38
-2CFB  FF            rst  $38
-2CFC  FF            rst  $38
-2CFD  FF            rst  $38
-2CFE  FF            rst  $38
-2CFF  FF            rst  $38
+2CF0                dc   16, $FF
 
                 ;; HiScore somthing
                 set_hiscore_and_reset_game:
@@ -7709,20 +7217,7 @@
 2D34  CD582D        call $2D58
 2D37  C3E803        jp   $03E8
 
-2D3A  FF            rst  $38
-2D3B  FF            rst  $38
-2D3C  FF            rst  $38
-2D3D  FF            rst  $38
-2D3E  FF            rst  $38
-2D3F  FF            rst  $38
-2D40  FF            rst  $38
-2D41  FF            rst  $38
-2D42  FF            rst  $38
-2D43  FF            rst  $38
-2D44  FF            rst  $38
-2D45  FF            rst  $38
-2D46  FF            rst  $38
-2D47  FF            rst  $38
+2D3A                dc   14, $FF
 
                 p1_got_hiscore:
 2D48  AF            xor  a
@@ -7731,9 +7226,8 @@
 2D4F  3E01          ld   a,$01
 2D51  CD882D        call $2D88
 2D54  C9            ret
-2D55  FF            rst  $38
-2D56  FF            rst  $38
-2D57  FF            rst  $38
+
+2D55                dc   3, $FF
 
                 p2_got_hiscore:
 2D58  3AF183        ld   a,($83F1)
@@ -7750,24 +7244,7 @@
 2D72  CD882D        call $2D88
 2D75  C9            ret
 
-2D76  FF            rst  $38
-2D77  FF            rst  $38
-2D78  FF            rst  $38
-2D79  FF            rst  $38
-2D7A  FF            rst  $38
-2D7B  FF            rst  $38
-2D7C  FF            rst  $38
-2D7D  FF            rst  $38
-2D7E  FF            rst  $38
-2D7F  FF            rst  $38
-2D80  FF            rst  $38
-2D81  FF            rst  $38
-2D82  FF            rst  $38
-2D83  FF            rst  $38
-2D84  FF            rst  $38
-2D85  FF            rst  $38
-2D86  FF            rst  $38
-2D87  FF            rst  $38
+2D76                dc   18, $FF
 
                 enter_hiscore_screen:
 2D88  F5            push af
@@ -7948,17 +7425,8 @@
 2EC8  E1            pop  hl
 2EC9  CD102F        call $2F10
 2ECC  C9            ret
-2ECD  FF            rst  $38
-2ECE  FF            rst  $38
-2ECF  FF            rst  $38
-2ED0  FF            rst  $38
-2ED1  FF            rst  $38
-2ED2  FF            rst  $38
-2ED3  FF            rst  $38
-2ED4  FF            rst  $38
-2ED5  FF            rst  $38
-2ED6  FF            rst  $38
-2ED7  FF            rst  $38
+
+2ECD                dc   11, $FF
 
                 ;; called when entered a letter on name
                 hiscore_select_letter:
@@ -7986,22 +7454,7 @@
 2EFD  FD19          add  iy,de
 2EFF  C9            ret
 
-2F00  FF            rst  $38
-2F01  FF            rst  $38
-2F02  FF            rst  $38
-2F03  FF            rst  $38
-2F04  FF            rst  $38
-2F05  FF            rst  $38
-2F06  FF            rst  $38
-2F07  FF            rst  $38
-2F08  FF            rst  $38
-2F09  FF            rst  $38
-2F0A  FF            rst  $38
-2F0B  FF            rst  $38
-2F0C  FF            rst  $38
-2F0D  FF            rst  $38
-2F0E  FF            rst  $38
-2F0F  FF            rst  $38
+2F00                dc   16, $FF
 
                 pop_hls_then_copy_hiscore_name:
 2F10  AF            xor  a
@@ -8011,12 +7464,7 @@
 2F16  CDE02F        call $2FE0
 2F19  C9            ret
 
-2F1A  FF            rst  $38
-2F1B  FF            rst  $38
-2F1C  FF            rst  $38
-2F1D  FF            rst  $38
-2F1E  FF            rst  $38
-2F1F  FF            rst  $38
+2F1A                dc   6, $FF
 
                 hiscore_rub_letter:
 2F20  112000        ld   de,$0020
@@ -8040,17 +7488,7 @@
 2F43  E1            pop  hl
 2F44  C9            ret
 
-2F45  FF            rst  $38
-2F46  FF            rst  $38
-2F47  FF            rst  $38
-2F48  FF            rst  $38
-2F49  FF            rst  $38
-2F4A  FF            rst  $38
-2F4B  FF            rst  $38
-2F4C  FF            rst  $38
-2F4D  FF            rst  $38
-2F4E  FF            rst  $38
-2F4F  FF            rst  $38
+2F45                dc   11, $FF
 
                 hiscore_back_cursor:
 2F50  3610          ld   (hl),$10
@@ -8075,26 +7513,7 @@
 2F70  219290        ld   hl,$9092
 2F73  C9            ret
 
-2F74  FF            rst  $38
-2F75  FF            rst  $38
-2F76  FF            rst  $38
-2F77  FF            rst  $38
-2F78  FF            rst  $38
-2F79  FF            rst  $38
-2F7A  FF            rst  $38
-2F7B  FF            rst  $38
-2F7C  FF            rst  $38
-2F7D  FF            rst  $38
-2F7E  FF            rst  $38
-2F7F  FF            rst  $38
-2F80  FF            rst  $38
-2F81  FF            rst  $38
-2F82  FF            rst  $38
-2F83  FF            rst  $38
-2F84  FF            rst  $38
-2F85  FF            rst  $38
-2F86  FF            rst  $38
-2F87  FF            rst  $38
+2F74                dc   20, $FF
 
                 hiscore_clear_name:
 2F88  E5            push hl

@@ -176,19 +176,19 @@ const get_inst_comments = (src) =>
     }, {});
 
 const run = async () => {
-    const src_txt = await get_file("./bongo.asm");
+    //const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
 
-    const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
+    //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
     const dst = parse(dst_txt.split("\n"), parseDstLine); //.slice(240);
     //console.log(src.length, dst.length);
-    //    console.table(src);
-    //    console.table(dst);
-    const comments = get_inst_comments(src);
+    //console.table(src);
+    console.table(dst);
+    //const comments = get_inst_comments(src);
     // console.log(inst_comments);
     //const meta = get_meta(src);
-    const out = moosh_comments(comments, dst);
-    document.querySelector("#out").value = indent(out).join("\n");
+    //const out = moosh_comments(comments, dst);
+    //document.querySelector("#out").value = indent(out).join("\n");
 };
 
 run();
