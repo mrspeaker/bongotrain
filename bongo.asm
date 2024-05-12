@@ -1631,7 +1631,7 @@ KILL_PLAYER
     ;; There's a bug in level one/two: if you jump of the
     ;; edge of level one, and hold jump... it bashes invisible
     ;; head barrier at the start of level two and dies.
-    ;; (because of falling timer here). Not sure why.
+    ;; (because of falling timer here).
 ADD_GRAVITY_AND_CHECK_BIG_FALL
 0A40: 3A 11 80    ld   a,($FALLING_TIMER) ; did we fall too far?
 0A43: A7          and  a
@@ -1714,7 +1714,7 @@ SET_LEVEL_PLATFORM_XOFFS
 0AD9: 18 03       jr   $0ADE
 0ADB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
 0ADE: 3D          dec  a        ; scr - 1
-0ADF: 21 00 0B    ld   hl,$SOME_DATA_1
+0ADF: 21 00 0B    ld   hl,$PLATFORM_SCROLL_DATA_ADDR
 0AE2: CB 27       sla  a        ; scr - 1 * 2
 0AE4: 85          add  a,l
 0AE5: 6F          ld   l,a
@@ -1734,15 +1734,15 @@ SET_LEVEL_PLATFORM_XOFFS
 
 0AF9: FF ...
 
-;;; platform data? nah. 2 bytes per screen
-SOME_DATA_1
-0B00: 38 0C 38 0C 38 0C 38 0C
-0B0A: 38 0C 38 0C 38 0C 38 0C
-0B12: 38 0C 38 0C 38 0C 38 0C
-0B1A: 38 0C 38 0C 10 0C 38 0C
-0B22: 38 0C 10 0C 38 0C 38 0C
-0B2A: 38 0C 38 0C 38 0C 38 0C
-0B32: 38 0C 10 0C
+;;; platform data. points to either $0c10 (moving) or $0c38 (static)
+PLATFORM_SCROLL_DATA_ADDR
+0B00 db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B0A db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B12 db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B1A db $38,$0C,$38,$0C,$38,$0C,$10,$0C ; 16 is $10
+0B22 db $38,$0C,$38,$0C,$10,$0C,$38,$0C ; 19 is $10
+0B2A db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B32 db $38,$0C,$38,$0C,$10,$0C ; 27 is $10.... all S levels.
 
 0B36: 00 ...
 0B7C: FF ...
@@ -1805,82 +1805,33 @@ MOVING_PLATFORMS
 
 0BFE: FF ...
 
-0C10: 00          nop
-0C11: 00          nop
-0C12: 00          nop
-0C13: 00          nop
-0C14: 00          nop
-0C15: 00          nop
-0C16: 00          nop
-0C17: 00          nop
-0C18: 00          nop
-0C19: 00          nop
-0C1A: 00          nop
-0C1B: 00          nop
-0C1C: F0          ret  p
-0C1D: 03          inc  bc
-0C1E: 80          add  a,b
-0C1F: 03          inc  bc
-0C20: 00          nop
-0C21: 00          nop
-0C22: 00          nop
-0C23: 00          nop
-0C24: 00          nop
-0C25: 00          nop
-0C26: 00          nop
-0C27: 00          nop
-0C28: 00          nop
-0C29: 00          nop
-0C2A: 00          nop
-0C2B: 00          nop
-0C2C: 00          nop
-0C2D: 00          nop
-0C2E: 00          nop
-0C2F: 00          nop
-0C30: 00          nop
-0C31: 00          nop
-0C32: 00          nop
-0C33: 00          nop
+                platform_moving_data: ; All "S" levels.
+0C10: $00,$00,$00,$00
+0C14: $00,$00,$00,$00
+0C18: $00,$00,$00,$00
+0C1C: $F0,$03,$80,$03
+0C20: $00,$00,$00,$00
+0C24: $00,$00,$00,$00
+0C28: $00,$00,$00,$00
+0C2C: $00,$00,$00,$00
+0C30: $00,$00,$00,$00
+
 0C34: FF          rst  $38
 0C35: FF          rst  $38
 0C36: FF          rst  $38
 0C37: FF          rst  $38
-0C38: 00          nop
-0C39: 00          nop
-0C3A: 00          nop
-0C3B: 00          nop
-0C3C: 00          nop
-0C3D: 00          nop
-0C3E: 00          nop
-0C3F: 00          nop
-0C40: 00          nop
-0C41: 00          nop
-0C42: 00          nop
-0C43: 00          nop
-0C44: 00          nop
-0C45: 00          nop
-0C46: 00          nop
-0C47: 00          nop
-0C48: 00          nop
-0C49: 00          nop
-0C4A: 00          nop
-0C4B: 00          nop
-0C4C: 00          nop
-0C4D: 00          nop
-0C4E: 00          nop
-0C4F: 00          nop
-0C50: 00          nop
-0C51: 00          nop
-0C52: 00          nop
-0C53: 00          nop
-0C54: 00          nop
-0C55: 00          nop
-0C56: 00          nop
-0C57: 00          nop
-0C58: 00          nop
-0C59: 00          nop
-0C5A: 00          nop
-0C5B: 00          nop
+
+    ;; non S levels xoff - static
+0C38: 00,$00,$00,$00
+0C3C: 00,$00,$00,$00
+0C40: 00,$00,$00,$00
+0C44: 00,$00,$00,$00
+0C48: 00,$00,$00,$00
+0C4C: 00,$00,$00,$00
+0C50: 00,$00,$00,$00
+0C54: 00,$00,$00,$00
+0C58: 00,$00,$00,$00
+
 0C5C: FF          rst  $38
 0C5D: FF          rst  $38
 0C5E: FF          rst  $38
@@ -2221,6 +2172,7 @@ BONGO_RUN_WHEN_PLAYER_CLOSE
 0F5C: C9          ret
 0F5D: FF ...
 
+    ;; 32 bytes of something
 0F68: 00          nop
 0F69: 00          nop
 0F6A: 00          nop
