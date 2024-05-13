@@ -3140,37 +3140,20 @@
 
                 draw_bonus:
 16D0  CD1003        call $0310
-16D3  0A            ld   a,(bc)
-16D4  00            nop
-16D5  E0            ret  po
-16D6  DCDDDE        call c,$DEDD
-16D9  DF            rst  $18
-16DA  FF            rst  $38
+16D3                db   $0A,$00
+16D5                db   $E0,$DC,$DD,$DE,$DF,$FF
 16DB  CD1003        call $0310
-16DE  0B            dec  bc
-16DF  00            nop
-16E0  E1            pop  hl
-16E1  E5            push hl
-16E2  E5            push hl
-16E3  E5            push hl
-16E4  E6FF          and  $FF
+16DE                db   $0B,$00
+16E0                db   $E1,$E5,$E5,$E5,$E6,$FF
 16E6  CD1003        call $0310
-16E9  0C            inc  c
-16EA  00            nop
-16EB  E1            pop  hl
-16EC  E5            push hl
-16ED  E5            push hl
-16EE  E5            push hl
-16EF  E6FF          and  $FF
+16E9                db   $0C,$00
+16EB                db   $E1,$E5,$E5,$E5,$E6,$FF
 16F1  CD1003        call $0310
-16F4  0D            dec  c
-16F5  00            nop
-16F6  E2E3E3        jp   po,$E3E3
-16F9  E3            ex   (sp),hl
-16FA  E4FFC9        call po,$C9FF
-16FD  FF            rst  $38
+16F4                db   $0D,$00
+16F6                db   $E2,$E3,$E3,$E3,$E4,$FF
+16FC  C9            ret
 
-16FE                dc   2, $FF
+16FD                dc   3, $FF
 
                 ;; Adds whatever is in 801d
                 add_score:
@@ -3307,43 +3290,23 @@
 
                 draw_bonus_box:
 17D0  CD1003        call $0310
-17D3  0A            ld   a,(bc)
-17D4  00            nop
-17D5  B8            cp   b
-17D6  B4            or   h
-17D7  B5            or   l
-17D8  B6            or   (hl)
-17D9  B7            or   a
-17DA  FF            rst  $38
+17D3                db   $0A,$00
+17D5                db   $B8,$B4,$B5,$B6,$B7,$FF
 17DB  CD1003        call $0310
-17DE  0B            dec  bc
-17DF  00            nop
-17E0  B9            cp   c
-17E1  FF            rst  $38
+17DE                db   $0B,$00
+17E0                db   $B9,$FF
 17E2  CD1003        call $0310
-17E5  0B            dec  bc
-17E6  04            inc  b
-17E7  BE            cp   (hl)
-17E8  FF            rst  $38
+17E5                db   $0B,$04
+17E7                db   $BE,$FF
 17E9  CD1003        call $0310
-17EC  0C            inc  c
-17ED  00            nop
-17EE  B9            cp   c
-17EF  FF            rst  $38
+17EC                db   $0C,$00
+17EE                db   $B9,$FF
 17F0  CD1003        call $0310
-17F3  0C            inc  c
-17F4  04            inc  b
-17F5  BE            cp   (hl)
-17F6  FF            rst  $38
+17F3                db   $0C,$04
+17F5                db   $BE,$FF
 17F7  CD1003        call $0310
-17FA  0D            dec  c
-17FB  00            nop
-17FC  BA            cp   d
-17FD  BB            cp   e
-17FE  BB            cp   e
-17FF  BB            cp   e
-1800  BC            cp   h
-1801  FF            rst  $38
+17FA                db   $0D,$00
+17FC                db   $BA,$BB,$BB,$BB,$BC,$FF
 1802  C9            ret
 
 1803                dc   5, $FF
@@ -3387,44 +3350,35 @@
 
                 ;; [x, y]
                 player_start_pos_data:
-1850  20D0          jr   nz,$1822
-1852  20D0          jr   nz,$1824
-1854  20D0          jr   nz,$1826
-1856  20D0          jr   nz,$1828
-1858  20D0          jr   nz,$182A
-185A  2026          jr   nz,$1882
-185C  2026          jr   nz,$1884
-185E  20D0          jr   nz,$1830
-1860  20D0          jr   nz,$1832
-1862  20D0          jr   nz,$1834
-1864  2026          jr   nz,$188C
-1866  2026          jr   nz,$188E
-1868  20D0          jr   nz,$183A
-186A  20D0          jr   nz,$183C
-186C  20D0          jr   nz,$183E
-186E  20D0          jr   nz,$1840
-1870  2026          jr   nz,$1898
-1872  20D0          jr   nz,$1844
-1874  20D0          jr   nz,$1846
-1876  2026          jr   nz,$189E
-1878  20D0          jr   nz,$184A
-187A  2026          jr   nz,$18A2
-187C  2026          jr   nz,$18A4
-187E  20D0          jr   nz,$1850
-1880  2026          jr   nz,$18A8
-1882  2026          jr   nz,$18AA
-1884  20D0          jr   nz,$1856
-1886  00            nop
-1887  00            nop
-1888  00            nop
-1889  00            nop
-188A  00            nop
-188B  00            nop
-188C  00            nop
-188D  00            nop
-188E  00            nop
-188F  00            nop
+1850                db   $20,$D0
+1852                db   $20,$D0
+1854                db   $20,$D0
+1856                db   $20,$D0
+1858                db   $20,$D0
+185A                db   $20,$26
+185C                db   $20,$26
+185E                db   $20,$D0
+1860                db   $20,$D0
+1862                db   $20,$D0
+1864                db   $20,$26
+1866                db   $20,$26
+1868                db   $20,$D0
+186A                db   $20,$D0
+186C                db   $20,$D0
+186E                db   $20,$D0
+1870                db   $20,$26
+1872                db   $20,$D0
+1874                db   $20,$D0
+1876                db   $20,$26
+1878                db   $20,$D0
+187A                db   $20,$26
+187C                db   $20,$26
+187E                db   $20,$D0
+1880                db   $20,$26
+1882                db   $20,$26
+1884                db   $20,$D0
 
+1886                dc   10, $00
 1890                dc   8, $FF
 
                 reset_xoffs:
@@ -3626,31 +3580,24 @@
                 _both:
 1B91  CD0017        call $1700
 1B94  CD7014        call $1470
-
+                ;;
 1B97  00            nop
 1B98  00            nop
 1B99  CDA003        call $03A0
 1B9C  21E00F        ld   hl,$0FE0
 1B9F  CD4008        call $0840
-1BA2  00            nop ; data
-1BA3  00            nop
+1BA2                db   $00,$00 ; data
 1BA4  CD5024        call $2450
 1BA7  3A0480        ld   a,($8004)
 1BAA  A7            and  a
 1BAB  2010          jr   nz,$1BBD
 1BAD  CD1003        call $0310
-1BB0  100A          djnz $1BBC
-1BB2  201C          jr   nz,$1BD0 ; PLAYER 1
-1BB4  112915        ld   de,$1529
-1BB7  221001        ld   ($0110),hl
-1BBA  FF            rst  $38
+1BB0                db   $10,$0A
+1BB2                db   $20,$1C,$11,$29,$15,$22,$10,$01,$FF ;  PLAYER 1
 1BBB  180E          jr   $1BCB
 1BBD  CD1003        call $0310
-1BC0  100A          djnz $1BCC
-1BC2  201C          jr   nz,$1BE0 ; PLAYER 2
-1BC4  112915        ld   de,$1529
-1BC7  221002        ld   ($0210),hl
-1BCA  FF            rst  $38
+1BC0                db   $10,$0A
+1BC2                db   $20,$1C,$11,$29,$15,$22,$10,$02,$FF ;  PLAYER 2
 1BCB  CD411C        call $1C41
 1BCE  C9            ret
 
@@ -4084,26 +4031,13 @@
 23EC                dc   20, $FF
 
                 dino_anim_lookup:
-2400  2F            cpl
-2401  00            nop
-2402  2E00          ld   l,$00
-2404  2D            dec  l
-2405  00            nop
-2406  2C            inc  l
-2407  00            nop
-2408  2D            dec  l
-2409  302C          jr   nc,$2437
-240B  312D32        ld   sp,$322D
-240E  2C            inc  l
-240F  33            inc  sp
-2410  AD            xor  l
-2411  B0            or   b
-2412  AC            xor  h
-2413  B1            or   c
-2414  AD            xor  l
-2415  B2            or   d
-2416  AC            xor  h
-2417  B3            or   e
+2400                db   $2F,$00,$2E,$00
+2404                db   $2D,$00,$2C,$00
+2408                db   $2D,$30,$2C,$31
+240C                db   $2D,$32
+240E                db   $2C,$33,$AD,$B0
+2412                db   $AC,$B1,$AD,$B2
+2416                db   $AC,$B3
 
 2418                dc   8, $FF
 
@@ -5881,7 +5815,6 @@
 3584  CD5035        call $3550
 3587  C9            ret
 
-
 3588                dc   8, $FF
 
                 set_rock_3_fr_and_y:
@@ -6253,41 +6186,26 @@
 
                 draw_bonus_box_b:
 38E0  CD1003        call $0310
-38E3  0A            ld   a,(bc)
-38E4  00            nop
-38E5  E0            ret  po
-38E6  DCDDDE        call c,$DEDD
-38E9  DF            rst  $18
-38EA  FF            rst  $38
+38E3                db   $0A,$00
+38E5                db   $E0,$DC,$DD,$DE,$DF,$FF
 38EB  CD1003        call $0310
-38EE  0B            dec  bc
-38EF  00            nop
-38F0  E1            pop  hl
-38F1  FF            rst  $38
+38EE                db   $0B,$00
+38F0                db   $E1,$FF
 38F2  CD1003        call $0310
-38F5  0B            dec  bc
-38F6  04            inc  b
-38F7  E6FF          and  $FF
+38F5                db   $0B,$04
+38F7                db   $E6,$FF
 38F9  CD1003        call $0310
-38FC  0C            inc  c
-38FD  00            nop
-38FE  E1            pop  hl
-38FF  FF            rst  $38
+38FC                db   $0C,$00
+38FE                db   $E1,$FF
 3900  CD1003        call $0310
-3903  0C            inc  c
-3904  04            inc  b
-3905  E6FF          and  $FF
+3903                db   $0C,$04
+3905                db   $E6,$FF
 3907  CD1003        call $0310
-390A  0D            dec  c
-390B  00            nop
-390C  E2E3E3        jp   po,$E3E3
-390F  E3            ex   (sp),hl
-3910  E4FFC9        call po,$C9FF
-3913  FF            rst  $38
-3914  FF            rst  $38
-3915  FF            rst  $38
-3916  FF            rst  $38
-3917  FF            rst  $38
+390A                db   $0D,$00
+390C                db   $E2,$E3,$E3,$E3,$E4,$FF
+3912  C9            ret
+
+3913                dc   5, $FF
 
                 enemy_pattern_scr_26:
 3918  CDB839        call $39B8
@@ -6742,46 +6660,30 @@
 3C41  A7            and  a
 3C42  200B          jr   nz,$3C4F
 3C44  CD1003        call $0310
-3C47  1D            dec  e
-3C48  0E80          ld   c,$80
-3C4A  80            add  a,b
-3C4B  80            add  a,b
-3C4C  80            add  a,b
-3C4D  FF            rst  $38
+3C47                db   $1D,$0E
+3C49                db   $80,$80,$80,$80,$FF ;  red dash line
 3C4E  C9            ret
 
                 bubble_lava_1:
 3C4F  FE01          cp   $01
 3C51  200B          jr   nz,$3C5E
 3C53  CD1003        call $0310
-3C56  1D            dec  e
-3C57  0E85          ld   c,$85
-3C59  81            add  a,c
-3C5A  87            add  a,a
-3C5B  81            add  a,c
-3C5C  FF            rst  $38
+3C56                db   $1D,$0E
+3C58                db   $85,$81,$87,$81,$FF
 3C5D  C9            ret
 
                 bubble_lava_2:
 3C5E  FE02          cp   $02
 3C60  200B          jr   nz,$3C6D
 3C62  CD1003        call $0310
-3C65  1D            dec  e
-3C66  0E86          ld   c,$86
-3C68  82            add  a,d
-3C69  88            adc  a,b
-3C6A  80            add  a,b
-3C6B  FF            rst  $38
+3C65                db   $1D,$0E
+3C67                db   $86,$82,$88,$80,$FF
 3C6C  C9            ret
 
                 bubble_lava_3:
 3C6D  CD1003        call $0310
-3C70  1D            dec  e
-3C71  0E85          ld   c,$85
-3C73  83            add  a,e
-3C74  87            add  a,a
-3C75  82            add  a,d
-3C76  FF            rst  $38
+3C70                db   $1D,$0E
+3C72                db   $85,$83,$87,$82,$FF
 3C77  C9            ret
 
                 bubble_lava_var:
@@ -6794,57 +6696,33 @@
 3C84  A7            and  a
 3C85  200C          jr   nz,$3C93
 3C87  CD1003        call $0310
-3C8A  19            add  hl,de
-3C8B  0F            rrca
-3C8C  80            add  a,b
-3C8D  80            add  a,b ; Flat
-3C8E  80            add  a,b
-3C8F  80            add  a,b
-3C90  80            add  a,b
-3C91  FF            rst  $38
+3C8A                db   $19,$0F
+3C8D                db   $80,$80,$80,$80,$80,$FF ;  Flat
 3C92  C9            ret
 
                 bubble_lava_var_1:
 3C93  FE01          cp   $01
 3C95  200C          jr   nz,$3CA3
 3C97  CD1003        call $0310
-3C9A  19            add  hl,de
-3C9B  0F            rrca
-3C9C  85            add  a,l
-3C9D  81            add  a,c
-3C9E  84            add  a,h
-3C9F  81            add  a,c
-3CA0  87            add  a,a
-3CA1  FF            rst  $38
+3C9A                db   $19,$0F
+3C9C                db   $85,$81,$84,$81,$87,$FF
 3CA2  C9            ret
 
                 bubble_lava_var_2:
 3CA3  FE02          cp   $02
 3CA5  200C          jr   nz,$3CB3
 3CA7  CD1003        call $0310
-3CAA  19            add  hl,de
-3CAB  0F            rrca
-3CAC  86            add  a,(hl)
-3CAD  82            add  a,d
-3CAE  88            adc  a,b
-3CAF  86            add  a,(hl)
-3CB0  82            add  a,d
-3CB1  FF            rst  $38
+3CAA                db   $19,$0F
+3CAC                db   $86,$82,$88,$86,$82,$FF
 3CB2  C9            ret
 
                 bubble_lava_var_3:
 3CB3  CD1003        call $0310
-3CB6  19            add  hl,de
-3CB7  0F            rrca
-3CB8  85            add  a,l
-3CB9  83            add  a,e
-3CBA  80            add  a,b
-3CBB  83            add  a,e
-3CBC  87            add  a,a
-3CBD  FF            rst  $38
+3CB6                db   $19,$0F
+3CB9                db   $85,$83,$80,$83,$87,$FF
 3CBE  C9            ret
 
-3CBF  FF            rst  $38
+3CBF  FF            db   $FF
 
                 ;; x, frame, color, y
                 cutscene_data:
@@ -7147,53 +7025,25 @@
 
                 draw_jetsoft:
 3F66  CD1003        call $0310
-3F69  0C            inc  c
-3F6A  0A            ld   a,(bc)
-3F6B  1A            ld   a,(de) ; JETSOFT
-3F6C  15            dec  d
-3F6D  24            inc  h
-3F6E  23            inc  hl
-3F6F  1F            rra
-3F70  1624          ld   d,$24
-3F72  FF            rst  $38
+3F69                db   $0C,$0A
+3F6B                db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
 3F73  C9            ret
 
                 draw_proudly_presents:
 3F74  CD1003        call $0310
-3F77  14            inc  d ; PROUDLY PRESENTS
-3F78  07            rlca
-3F79  2022          jr   nz,$3F9D
-3F7B  1F            rra
-3F7C  25            dec  h
-3F7D  14            inc  d
-3F7E  1C            inc  e
-3F7F  29            add  hl,hl
-3F80  1020          djnz $3FA2
-3F82  221523        ld   ($2315),hl
-3F85  15            dec  d
-3F86  1E24          ld   e,$24
-3F88  FF            rst  $38
+3F77                db   $14,$07 ;  PROUDLY PRESENTS
+3F79                db   $20,$22,$1F,$25,$14,$1C,$29,$10,$20,$22,$15,$23,$15,$1E,$24,$FF
 3F89  C9            ret
 
 3F8A                dc   2, $FF
 
                 draw_copyright:
 3F8C  CD1003        call $0310
-3F8F  1004          djnz $3F95
-3F91  8B            adc  a,e ; (c) 1983
-3F92  010908        ld   bc,$0809
-3F95  03            inc  bc
-3F96  FF            rst  $38
+3F8F                db   $10,$04
+3F91                db   $8B,$01,$09,$08,$03,$FF ;  (c) 1983
 3F97  CD1003        call $0310
-3F9A  12            ld   (de),a
-3F9B  04            inc  b
-3F9C  1A            ld   a,(de) ; JETSOFT
-3F9D  15            dec  d
-3F9E  24            inc  h
-3F9F  23            inc  hl
-3FA0  1F            rra
-3FA1  1624          ld   d,$24
-3FA3  FF            rst  $38
+3F9A                db   $12,$04
+3F9C                db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
 3FA4  C9            ret
 
 3FA5                dc   3, $FF
@@ -10701,16 +10551,7 @@
 57B2  0602          ld   b,$02
 57B4  02            ld   (bc),a
 57B5  04            inc  b
-57B6  FF            rst  $38
-57B7  FF            rst  $38
-57B8  FF            rst  $38
-57B9  FF            rst  $38
-57BA  FF            rst  $38
-57BB  FF            rst  $38
-57BC  FF            rst  $38
-57BD  FF            rst  $38
-57BE  FF            rst  $38
-57BF  FF            rst  $38
+57B6                dc   10, $FF
 
                 call_draw_extra_bonus_screen:
 57C0  C3F05A        jp   $5AF0
