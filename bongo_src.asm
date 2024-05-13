@@ -3730,32 +3730,11 @@
 
                 draw_border_1_b:
 1BD6  CD1003        call $0310
-1BD9  1B            dec  de
-1BDA  02            ld   (bc),a
-1BDB  E2E3E3        jp   po,$E3E3
-1BDE  E3            ex   (sp),hl
-1BDF  E3            ex   (sp),hl
-1BE0  E3            ex   (sp),hl
-1BE1  E3            ex   (sp),hl
-1BE2  E3            ex   (sp),hl
-1BE3  E3            ex   (sp),hl
-1BE4  E3            ex   (sp),hl
-1BE5  E3            ex   (sp),hl
-1BE6  E3            ex   (sp),hl
-1BE7  E3            ex   (sp),hl
-1BE8  E3            ex   (sp),hl
-1BE9  E3            ex   (sp),hl
-1BEA  E3            ex   (sp),hl
-1BEB  E3            ex   (sp),hl
-1BEC  E3            ex   (sp),hl
-1BED  E3            ex   (sp),hl
-1BEE  E3            ex   (sp),hl
-1BEF  E3            ex   (sp),hl
-1BF0  E3            ex   (sp),hl
-1BF1  E3            ex   (sp),hl
-1BF2  E4FFC3        call po,$C3FF
-1BF5  D8            ret  c
-1BF6  1C            inc  e
+1BD9                db   $1B,$02
+1BDB                db   $E2,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3
+1BEB                db   $E3,$E3,$E3,$E3,$E3,$E3,$E3,$E4,$FF
+
+1BF4  C3D81C        jp   $1CD8
 
 1BF7                dc   9, $FF
 
@@ -3872,33 +3851,9 @@
 
                 draw_border_1_c:
 1CD8  CDD83B        call $3BD8
-1CDB  19            add  hl,de
-1CDC  03            inc  bc
-1CDD  E1            pop  hl
-1CDE  E1            pop  hl
-1CDF  E1            pop  hl
-1CE0  E1            pop  hl
-1CE1  E1            pop  hl
-1CE2  E1            pop  hl
-1CE3  E1            pop  hl
-1CE4  E1            pop  hl
-1CE5  E1            pop  hl
-1CE6  E1            pop  hl
-1CE7  E1            pop  hl
-1CE8  E1            pop  hl
-1CE9  E1            pop  hl
-1CEA  E1            pop  hl
-1CEB  E1            pop  hl
-1CEC  E1            pop  hl
-1CED  E1            pop  hl
-1CEE  E1            pop  hl
-1CEF  E1            pop  hl
-1CF0  E1            pop  hl
-1CF1  E1            pop  hl
-1CF2  E1            pop  hl
-1CF3  E1            pop  hl
-1CF4  E1            pop  hl
-1CF5  FF            rst  $38
+1CDB                db   $19,$03
+1CDD                db   $E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1
+1CED                db   $E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$FF
 1CF6  C9            ret
 
 1CF7                dc   9, $FF
@@ -4034,6 +3989,7 @@
 2276                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
 227F                db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
+                write_out_0_and_1:
 2288  3E07          ld   a,$07
 228A  D300          out  ($00),a
 228C  3E38          ld   a,$38
@@ -4137,161 +4093,53 @@
 
                 ;; location of path data for each screen
                 dino_path_lookup:
-2330  78            ld   a,b ; DINO_PATH_1 (screen1)
-2331  23            inc  hl
-2332  78            ld   a,b
-2333  23            inc  hl
-2334  00            nop ; DINO_PATH_2
-2335  2678          ld   h,$78
-2337  23            inc  hl
-2338  80            add  a,b ; DINO_PATH_3
-2339  2600          ld   h,$00
-233B  27            daa
-233C  70            ld   (hl),b ; DINO_PATH_5
-233D  27            daa
-233E  78            ld   a,b
-233F  23            inc  hl
-2340  00            nop ; DINO_PATH_4
-2341  2680          ld   h,$80
-2343  2600          ld   h,$00
-2345  27            daa
-2346  70            ld   (hl),b
-2347  27            daa
-2348  78            ld   a,b
-2349  23            inc  hl
-234A  00            nop
-234B  2678          ld   h,$78
-234D  23            inc  hl
-234E  00            nop ; DINO_PATH_6
-234F  2870          jr   z,$23C1
-2351  27            daa
-2352  78            ld   a,b
-2353  23            inc  hl
-2354  00            nop
-2355  2870          jr   z,$23C7
-2357  27            daa
-2358  00            nop ; DINO_PATH_7
-2359  2A0027        ld   hl,($2700)
-235C  70            ld   (hl),b
-235D  27            daa
-235E  00            nop
-235F  2A0027        ld   hl,($2700)
-2362  70            ld   (hl),b
-2363  27            daa
-2364  00            nop ; (screen 27)
-2365  2800          jr   z,$2367
-2367  00            nop
-2368  00            nop
-2369  00            nop
-236A  00            nop
-236B  00            nop
-236C  00            nop
-236D  00            nop
-236E  00            nop
-236F  00            nop
-2370  FF            rst  $38
-2371  FF            rst  $38
-2372  FF            rst  $38
-2373  FF            rst  $38
-2374  FF            rst  $38
-2375  FF            rst  $38
-2376  FF            rst  $38
-2377  FF            rst  $38
+2330                db   $78,$23 ;  DINO_PATH_1 (screen1)
+2332                db   $78,$23
+2334                db   $00,$26 ;  DINO_PATH_2
+2336                db   $78,$23
+2338                db   $80,$26 ;  DINO_PATH_3
+2340                db   $00,$27 ;  DINO_PATH_4
+233C                db   $70,$27 ;  DINO_PATH_5
+233E                db   $78,$23
+2340                db   $00,$26
+2342                db   $80,$26
+2344                db   $00,$27
+2346                db   $70,$27
+2348                db   $78,$23
+234A                db   $00,$26
+234C                db   $78,$23
+234E                db   $00,$28 ;  DINO_PATH_6
+2350                db   $70,$27
+2352                db   $78,$23
+2354                db   $00,$28
+2356                db   $70,$27
+2358                db   $00,$2A ;  DINO_PATH_7
+235A                db   $00,$27
+235C                db   $70,$27
+235E                db   $00,$2A
+2360                db   $00,$27
+2362                db   $70,$27
+2364                db   $00,$28 ;  (screen 27)
+
+2366                dc   10, $0
+2370                dc   8, $FF
 
                 ;; Nodes for dino to follow: 25 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_1:
-2378  18E0          jr   $235A
-237A  00            nop
-237B  00            nop
-237C  1C            inc  e
-237D  E0            ret  po
-237E  010020        ld   bc,$2000
-2381  E0            ret  po
-2382  02            ld   (bc),a
-2383  00            nop
-2384  28E0          jr   z,$2366
-2386  03            inc  bc
-2387  00            nop
-2388  30E0          jr   nc,$236A
-238A  02            ld   (bc),a
-238B  00            nop
-238C  38E0          jr   c,$236E
-238E  010048        ld   bc,$4800
-2391  C8            ret  z
-2392  00            nop
-2393  00            nop
-2394  50            ld   d,b
-2395  C8            ret  z
-2396  010058        ld   bc,$5800
-2399  C8            ret  z
-239A  02            ld   (bc),a
-239B  00            nop
-239C  60            ld   h,b
-239D  C8            ret  z
-239E  03            inc  bc
-239F  00            nop
-23A0  68            ld   l,b
-23A1  C8            ret  z
-23A2  02            ld   (bc),a
-23A3  00            nop
-23A4  70            ld   (hl),b
-23A5  C8            ret  z
-23A6  03            inc  bc
-23A7  00            nop
-23A8  80            add  a,b
-23A9  C8            ret  z
-23AA  07            rlca
-23AB  00            nop
-23AC  88            adc  a,b
-23AD  C8            ret  z
-23AE  05            dec  b
-23AF  00            nop
-23B0  98            sbc  a,b
-23B1  C8            ret  z
-23B2  03            inc  bc
-23B3  00            nop
-23B4  A0            and  b
-23B5  C8            ret  z
-23B6  02            ld   (bc),a
-23B7  00            nop
-23B8  A8            xor  b
-23B9  C8            ret  z
-23BA  03            inc  bc
-23BB  00            nop
-23BC  B0            or   b
-23BD  C8            ret  z
-23BE  02            ld   (bc),a
-23BF  00            nop
-23C0  B8            cp   b
-23C1  C8            ret  z
-23C2  03            inc  bc
-23C3  00            nop
-23C4  C0            ret  nz
-23C5  C8            ret  z
-23C6  0100D0        ld   bc,$D000
-23C9  D0            ret  nc
-23CA  07            rlca
-23CB  00            nop
-23CC  D8            ret  c
-23CD  D0            ret  nc
-23CE  05            dec  b
-23CF  00            nop
-23D0  E0            ret  po
-23D1  D0            ret  nc
-23D2  0600          ld   b,$00
-23D4  E8            ret  pe
-23D5  D0            ret  nc
-23D6  05            dec  b
-23D7  00            nop
-23D8  F0            ret  p
-23D9  D0            ret  nc
-23DA  04            inc  b
-23DB  00            nop
-23DC  FF            rst  $38
-23DD  FF            rst  $38
-23DE  FF            rst  $38
-23DF  FF            rst  $38
+2378                db   $18,$E0,$00,$00,$1C,$E0,$01,$00
+2380                db   $20,$E0,$02,$00,$28,$E0,$03,$00
+2388                db   $30,$E0,$02,$00,$38,$E0,$01,$00
+2390                db   $48,$C8,$00,$00,$50,$C8,$01,$00
+2398                db   $58,$C8,$02,$00,$60,$C8,$03,$00
+23A0                db   $68,$C8,$02,$00,$70,$C8,$03,$00
+23A8                db   $80,$C8,$07,$00,$88,$C8,$05,$00
+23B0                db   $98,$C8,$03,$00,$A0,$C8,$02,$00
+23B8                db   $A8,$C8,$03,$00,$B0,$C8,$02,$00
+23C0                db   $B8,$C8,$03,$00,$C0,$C8,$01,$00
+23C8                db   $D0,$D0,$07,$00,$D8,$D0,$05,$00
+23D0                db   $E0,$D0,$06,$00,$E8,$D0,$05,$00
+23D8                db   $F0,$D0,$04,$00,$FF,$FF,$FF,$FF
 
                 ;;
 23E0  3A4C81        ld   a,($814C)
@@ -4563,383 +4411,78 @@
                 ;; Nodes for dino to follow: 31 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_2:
-2600  18E0          jr   $25E2
-2602  00            nop
-2603  00            nop
-2604  1C            inc  e
-2605  E0            ret  po
-2606  010020        ld   bc,$2000
-2609  E0            ret  po
-260A  02            ld   (bc),a
-260B  00            nop
-260C  28E0          jr   z,$25EE
-260E  03            inc  bc
-260F  00            nop
-2610  30E0          jr   nc,$25F2
-2612  02            ld   (bc),a
-2613  00            nop
-2614  38E0          jr   c,$25F6
-2616  010040        ld   bc,$4000
-2619  D8            ret  c
-261A  02            ld   (bc),a
-261B  00            nop
-261C  48            ld   c,b
-261D  D0            ret  nc
-261E  04            inc  b
-261F  00            nop
-2620  50            ld   d,b
-2621  C8            ret  z
-2622  00            nop
-2623  00            nop
-2624  58            ld   e,b
-2625  C8            ret  z
-2626  010060        ld   bc,$6000
-2629  C8            ret  z
-262A  02            ld   (bc),a
-262B  00            nop
-262C  68            ld   l,b
-262D  CC0300        call z,$0003
-2630  70            ld   (hl),b
-2631  CC0200        call z,$0002
-2634  70            ld   (hl),b
-2635  C0            ret  nz
-2636  04            inc  b
-2637  00            nop
-2638  80            add  a,b
-2639  B0            or   b
-263A  00            nop
-263B  00            nop
-263C  88            adc  a,b
-263D  B0            or   b
-263E  010090        ld   bc,$9000
-2641  B0            or   b
-2642  07            rlca
-2643  00            nop
-2644  98            sbc  a,b
-2645  B8            cp   b
-2646  04            inc  b
-2647  00            nop
-2648  A0            and  b
-2649  C0            ret  nz
-264A  05            dec  b
-264B  00            nop
-264C  A8            xor  b
-264D  B8            cp   b
-264E  0600          ld   b,$00
-2650  B0            or   b
-2651  B8            cp   b
-2652  05            dec  b
-2653  00            nop
-2654  B8            cp   b
-2655  B8            cp   b
-2656  04            inc  b
-2657  00            nop
-2658  C0            ret  nz
-2659  C8            ret  z
-265A  07            rlca
-265B  00            nop
-265C  C8            ret  z
-265D  C8            ret  z
-265E  05            dec  b
-265F  00            nop
-2660  D0            ret  nc
-2661  D0            ret  nc
-2662  0600          ld   b,$00
-2664  D8            ret  c
-2665  D0            ret  nc
-2666  04            inc  b
-2667  00            nop
-2668  E0            ret  po
-2669  D0            ret  nc
-266A  05            dec  b
-266B  00            nop
-266C  E8            ret  pe
-266D  D0            ret  nc
-266E  0600          ld   b,$00
-2670  F0            ret  p
-2671  D0            ret  nc
-2672  05            dec  b
-2673  00            nop
+2600                db   $18,$E0,$00,$00,$1C,$E0,$01,$00
+2608                db   $20,$E0,$02,$00,$28,$E0,$03,$00
+2610                db   $30,$E0,$02,$00,$38,$E0,$01,$00
+2618                db   $40,$D8,$02,$00,$48,$D0,$04,$00
+2620                db   $50,$C8,$00,$00,$58,$C8,$01,$00
+2628                db   $60,$C8,$02,$00,$68,$CC,$03,$00
+2630                db   $70,$CC,$02,$00,$70,$C0,$04,$00
+2638                db   $80,$B0,$00,$00,$88,$B0,$01,$00
+2640                db   $90,$B0,$07,$00,$98,$B8,$04,$00
+2648                db   $A0,$C0,$05,$00,$A8,$B8,$06,$00
+2650                db   $B0,$B8,$05,$00,$B8,$B8,$04,$00
+2658                db   $C0,$C8,$07,$00,$C8,$C8,$05,$00
+2660                db   $D0,$D0,$06,$00,$D8,$D0,$04,$00
+2668                db   $E0,$D0,$05,$00,$E8,$D0,$06,$00
+2670                db   $F0,$D0,$05,$00
 
 2674                dc   12, $FF
 
                 ;; Nodes for dino to follow: 27 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_3:
-2680  18E0          jr   $2662
-2682  00            nop
-2683  00            nop
-2684  20E0          jr   nz,$2666
-2686  010028        ld   bc,$2800
-2689  E0            ret  po
-268A  02            ld   (bc),a
-268B  00            nop
-268C  30D0          jr   nc,$265E
-268E  04            inc  b
-268F  00            nop
-2690  38C0          jr   c,$2652
-2692  05            dec  b
-2693  00            nop
-2694  48            ld   c,b
-2695  B8            cp   b
-2696  0600          ld   b,$00
-2698  50            ld   d,b
-2699  B8            cp   b
-269A  04            inc  b
-269B  00            nop
-269C  58            ld   e,b
-269D  A8            xor  b
-269E  05            dec  b
-269F  00            nop
-26A0  58            ld   e,b
-26A1  A0            and  b
-26A2  0600          ld   b,$00
-26A4  60            ld   h,b
-26A5  A0            and  b
-26A6  04            inc  b
-26A7  00            nop
-26A8  68            ld   l,b
-26A9  90            sub  b
-26AA  05            dec  b
-26AB  00            nop
-26AC  70            ld   (hl),b
-26AD  88            adc  a,b
-26AE  0600          ld   b,$00
-26B0  78            ld   a,b
-26B1  88            adc  a,b
-26B2  04            inc  b
-26B3  00            nop
-26B4  80            add  a,b
-26B5  78            ld   a,b
-26B6  05            dec  b
-26B7  00            nop
-26B8  88            adc  a,b
-26B9  70            ld   (hl),b
-26BA  0600          ld   b,$00
-26BC  90            sub  b
-26BD  70            ld   (hl),b
-26BE  04            inc  b
-26BF  00            nop
-26C0  98            sbc  a,b
-26C1  60            ld   h,b
-26C2  05            dec  b
-26C3  00            nop
-26C4  A0            and  b
-26C5  58            ld   e,b
-26C6  0600          ld   b,$00
-26C8  A8            xor  b
-26C9  58            ld   e,b
-26CA  04            inc  b
-26CB  00            nop
-26CC  B0            or   b
-26CD  48            ld   c,b
-26CE  05            dec  b
-26CF  00            nop
-26D0  B8            cp   b
-26D1  40            ld   b,b
-26D2  0600          ld   b,$00
-26D4  C0            ret  nz
-26D5  40            ld   b,b
-26D6  04            inc  b
-26D7  00            nop
-26D8  C8            ret  z
-26D9  3005          jr   nc,$26E0
-26DB  00            nop
-26DC  D0            ret  nc
-26DD  2806          jr   z,$26E5
-26DF  00            nop
-26E0  D8            ret  c
-26E1  2804          jr   z,$26E7
-26E3  00            nop
-26E4  E0            ret  po
-26E5  2805          jr   z,$26EC
-26E7  00            nop
-26E8  E8            ret  pe
-26E9  2806          jr   z,$26F1
-26EB  00            nop
+2680                db   $18,$E0,$00,$00,$20,$E0,$01,$00
+2688                db   $28,$E0,$02,$00,$30,$D0,$04,$00
+2690                db   $38,$C0,$05,$00,$48,$B8,$06,$00
+2698                db   $50,$B8,$04,$00,$58,$A8,$05,$00
+26A0                db   $58,$A0,$06,$00,$60,$A0,$04,$00
+26A8                db   $68,$90,$05,$00,$70,$88,$06,$00
+26B0                db   $78,$88,$04,$00,$80,$78,$05,$00
+26B8                db   $88,$70,$06,$00,$90,$70,$04,$00
+26C0                db   $98,$60,$05,$00,$A0,$58,$06,$00
+26C8                db   $A8,$58,$04,$00,$B0,$48,$05,$00
+26D0                db   $B8,$40,$06,$00,$C0,$40,$04,$00
+26D8                db   $C8,$30,$05,$00,$D0,$28,$06,$00
+26E0                db   $D8,$28,$04,$00,$E0,$28,$05,$00
+26E8                db   $E8,$28,$06,$00
 
 26EC                dc   20, $FF
 
                 ;; Nodes for dino to follow: 24 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_4:
-2700  1838          jr   $273A
-2702  00            nop
-2703  00            nop
-2704  2038          jr   nz,$273E
-2706  010028        ld   bc,$2800
-2709  3802          jr   c,$270D
-270B  00            nop
-270C  3038          jr   nc,$2746
-270E  03            inc  bc
-270F  00            nop
-2710  3838          jr   c,$274A
-2712  07            rlca
-2713  00            nop
-2714  40            ld   b,b
-2715  40            ld   b,b
-2716  04            inc  b
-2717  00            nop
-2718  48            ld   c,b
-2719  40            ld   b,b
-271A  05            dec  b
-271B  00            nop
-271C  50            ld   d,b
-271D  40            ld   b,b
-271E  0600          ld   b,$00
-2720  58            ld   e,b
-2721  40            ld   b,b
-2722  04            inc  b
-2723  00            nop
-2724  68            ld   l,b
-2725  58            ld   e,b
-2726  05            dec  b
-2727  00            nop
-2728  70            ld   (hl),b
-2729  58            ld   e,b
-272A  0600          ld   b,$00
-272C  78            ld   a,b
-272D  58            ld   e,b
-272E  04            inc  b
-272F  00            nop
-2730  80            add  a,b
-2731  58            ld   e,b
-2732  05            dec  b
-2733  00            nop
-2734  88            adc  a,b
-2735  58            ld   e,b
-2736  0600          ld   b,$00
-2738  90            sub  b
-2739  58            ld   e,b
-273A  04            inc  b
-273B  00            nop
-273C  98            sbc  a,b
-273D  58            ld   e,b
-273E  05            dec  b
-273F  00            nop
-2740  A0            and  b
-2741  58            ld   e,b
-2742  0600          ld   b,$00
-2744  A8            xor  b
-2745  58            ld   e,b
-2746  04            inc  b
-2747  00            nop
-2748  B8            cp   b
-2749  40            ld   b,b
-274A  05            dec  b
-274B  00            nop
-274C  C0            ret  nz
-274D  40            ld   b,b
-274E  0600          ld   b,$00
-2750  C8            ret  z
-2751  40            ld   b,b
-2752  04            inc  b
-2753  00            nop
-2754  D0            ret  nc
-2755  3005          jr   nc,$275C
-2757  00            nop
-2758  D8            ret  c
-2759  48            ld   c,b
-275A  0600          ld   b,$00
-275C  E0            ret  po
-275D  2804          jr   z,$2763
-275F  00            nop
+2700                db   $18,$38,$00,$00,$20,$38,$01,$00
+2708                db   $28,$38,$02,$00,$30,$38,$03,$00
+2710                db   $38,$38,$07,$00,$40,$40,$04,$00
+2718                db   $48,$40,$05,$00,$50,$40,$06,$00
+2720                db   $58,$40,$04,$00,$68,$58,$05,$00
+2728                db   $70,$58,$06,$00,$78,$58,$04,$00
+2730                db   $80,$58,$05,$00,$88,$58,$06,$00
+2738                db   $90,$58,$04,$00,$98,$58,$05,$00
+2740                db   $A0,$58,$06,$00,$A8,$58,$04,$00
+2748                db   $B8,$40,$05,$00,$C0,$40,$06,$00
+2750                db   $C8,$40,$04,$00,$D0,$30,$05,$00
+2758                db   $D8,$48,$06,$00,$E0,$28,$04,$00
 
 2760                dc   16, $FF
 
                 ;; Nodes for dino to follow: 24 nodes,
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_5:
-2770  1838          jr   $27AA
-2772  00            nop
-2773  00            nop
-2774  2038          jr   nz,$27AE
-2776  010028        ld   bc,$2800
-2779  3802          jr   c,$277D
-277B  00            nop
-277C  3038          jr   nc,$27B6
-277E  03            inc  bc
-277F  00            nop
-2780  3838          jr   c,$27BA
-2782  02            ld   (bc),a
-2783  00            nop
-2784  40            ld   b,b
-2785  3807          jr   c,$278E
-2787  00            nop
-2788  48            ld   c,b
-2789  40            ld   b,b
-278A  04            inc  b
-278B  00            nop
-278C  50            ld   d,b
-278D  40            ld   b,b
-278E  05            dec  b
-278F  00            nop
-2790  58            ld   e,b
-2791  40            ld   b,b
-2792  0600          ld   b,$00
-2794  60            ld   h,b
-2795  58            ld   e,b
-2796  04            inc  b
-2797  00            nop
-2798  68            ld   l,b
-2799  58            ld   e,b
-279A  05            dec  b
-279B  00            nop
-279C  70            ld   (hl),b
-279D  58            ld   e,b
-279E  0600          ld   b,$00
-27A0  78            ld   a,b
-27A1  70            ld   (hl),b
-27A2  04            inc  b
-27A3  00            nop
-27A4  80            add  a,b
-27A5  70            ld   (hl),b
-27A6  05            dec  b
-27A7  00            nop
-27A8  88            adc  a,b
-27A9  70            ld   (hl),b
-27AA  0600          ld   b,$00
-27AC  90            sub  b
-27AD  88            adc  a,b
-27AE  04            inc  b
-27AF  00            nop
-27B0  98            sbc  a,b
-27B1  88            adc  a,b
-27B2  05            dec  b
-27B3  00            nop
-27B4  A0            and  b
-27B5  88            adc  a,b
-27B6  0600          ld   b,$00
-27B8  A8            xor  b
-27B9  A0            and  b
-27BA  04            inc  b
-27BB  00            nop
-27BC  B0            or   b
-27BD  A0            and  b
-27BE  05            dec  b
-27BF  00            nop
-27C0  B8            cp   b
-27C1  A0            and  b
-27C2  0600          ld   b,$00
-27C4  C0            ret  nz
-27C5  B8            cp   b
-27C6  04            inc  b
-27C7  00            nop
-27C8  C8            ret  z
-27C9  B8            cp   b
-27CA  05            dec  b
-27CB  00            nop
-27CC  D0            ret  nc
-27CD  B8            cp   b
-27CE  0600          ld   b,$00
-27D0  D8            ret  c
-27D1  D0            ret  nc
-27D2  04            inc  b
-27D3  00            nop
-27D4  E0            ret  po
-27D5  D0            ret  nc
-27D6  05            dec  b
-27D7  00            nop
+2770                db   $18,$38,$00,$00,$20,$38,$01,$00
+2778                db   $28,$38,$02,$00,$30,$38,$03,$00
+2780                db   $38,$38,$02,$00,$40,$38,$07,$00
+2788                db   $48,$40,$04,$00,$50,$40,$05,$00
+2790                db   $58,$40,$06,$00,$60,$58,$04,$00
+2798                db   $68,$58,$05,$00,$70,$58,$06,$00
+27A0                db   $78,$70,$04,$00,$80,$70,$05,$00
+27A8                db   $88,$70,$06,$00,$90,$88,$04,$00
+27B0                db   $98,$88,$05,$00,$A0,$88,$06,$00
+27B8                db   $A8,$A0,$04,$00,$B0,$A0,$05,$00
+27C0                db   $B8,$A0,$06,$00,$C0,$B8,$04,$00
+27C8                db   $C8,$B8,$05,$00,$D0,$B8,$06,$00
+27D0                db   $D8,$D0,$04,$00,$E0,$D0,$05,$00
 
 27D8                dc   8, $FF
 
@@ -4966,191 +4509,32 @@
                 ;; Nodes for dino to follow
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_6:
-2800  18E0          jr   $27E2
-2802  00            nop
-2803  00            nop
-2804  20E0          jr   nz,$27E6
-2806  010028        ld   bc,$2800
-2809  E0            ret  po
-280A  02            ld   (bc),a
-280B  00            nop
-280C  30D0          jr   nc,$27DE
-280E  04            inc  b
-280F  00            nop
-2810  38D0          jr   c,$27E2
-2812  05            dec  b
-2813  00            nop
-2814  40            ld   b,b
-2815  B8            cp   b
-2816  05            dec  b
-2817  00            nop
-2818  48            ld   c,b
-2819  B8            cp   b
-281A  0600          ld   b,$00
-281C  50            ld   d,b
-281D  B8            cp   b
-281E  04            inc  b
-281F  00            nop
-2820  58            ld   e,b
-2821  B8            cp   b
-2822  05            dec  b
-2823  00            nop
-2824  60            ld   h,b
-2825  B8            cp   b
-2826  0600          ld   b,$00
-2828  68            ld   l,b
-2829  B8            cp   b
-282A  04            inc  b
-282B  00            nop
-282C  68            ld   l,b
-282D  A0            and  b
-282E  05            dec  b
-282F  00            nop
-2830  70            ld   (hl),b
-2831  A0            and  b
-2832  0600          ld   b,$00
-2834  78            ld   a,b
-2835  A0            and  b
-2836  04            inc  b
-2837  00            nop
-2838  80            add  a,b
-2839  A0            and  b
-283A  05            dec  b
-283B  00            nop
-283C  88            adc  a,b
-283D  A0            and  b
-283E  0600          ld   b,$00
-2840  90            sub  b
-2841  A0            and  b
-2842  04            inc  b
-2843  00            nop
-2844  98            sbc  a,b
-2845  A0            and  b
-2846  05            dec  b
-2847  00            nop
-2848  A0            and  b
-2849  88            adc  a,b
-284A  0600          ld   b,$00
-284C  B0            or   b
-284D  88            adc  a,b
-284E  04            inc  b
-284F  00            nop
-2850  B0            or   b
-2851  88            adc  a,b
-2852  08            ex   af,af'
-2853  00            nop
-2854  A8            xor  b
-2855  88            adc  a,b
-2856  09            add  hl,bc
-2857  00            nop
-2858  A0            and  b
-2859  88            adc  a,b
-285A  0A            ld   a,(bc)
-285B  00            nop
-285C  90            sub  b
-285D  70            ld   (hl),b
-285E  08            ex   af,af'
-285F  00            nop
-2860  88            adc  a,b
-2861  70            ld   (hl),b
-2862  09            add  hl,bc
-2863  00            nop
-2864  80            add  a,b
-2865  70            ld   (hl),b
-2866  0A            ld   a,(bc)
-2867  00            nop
-2868  78            ld   a,b
-2869  70            ld   (hl),b
-286A  08            ex   af,af'
-286B  00            nop
-286C  70            ld   (hl),b
-286D  70            ld   (hl),b
-286E  09            add  hl,bc
-286F  00            nop
-2870  68            ld   l,b
-2871  60            ld   h,b
-2872  0A            ld   a,(bc)
-2873  00            nop
-2874  60            ld   h,b
-2875  58            ld   e,b
-2876  08            ex   af,af'
-2877  00            nop
-2878  58            ld   e,b
-2879  58            ld   e,b
-287A  09            add  hl,bc
-287B  00            nop
-287C  50            ld   d,b
-287D  58            ld   e,b
-287E  0A            ld   a,(bc)
-287F  00            nop
-2880  48            ld   c,b
-2881  58            ld   e,b
-2882  04            inc  b
-2883  00            nop
-2884  50            ld   d,b
-2885  58            ld   e,b
-2886  05            dec  b
-2887  00            nop
-2888  58            ld   e,b
-2889  58            ld   e,b
-288A  0600          ld   b,$00
-288C  60            ld   h,b
-288D  58            ld   e,b
-288E  04            inc  b
-288F  00            nop
-2890  68            ld   l,b
-2891  58            ld   e,b
-2892  05            dec  b
-2893  00            nop
-2894  70            ld   (hl),b
-2895  48            ld   c,b
-2896  0600          ld   b,$00
-2898  78            ld   a,b
-2899  40            ld   b,b
-289A  04            inc  b
-289B  00            nop
-289C  80            add  a,b
-289D  40            ld   b,b
-289E  05            dec  b
-289F  00            nop
-28A0  88            adc  a,b
-28A1  40            ld   b,b
-28A2  0600          ld   b,$00
-28A4  90            sub  b
-28A5  40            ld   b,b
-28A6  04            inc  b
-28A7  00            nop
-28A8  98            sbc  a,b
-28A9  40            ld   b,b
-28AA  05            dec  b
-28AB  00            nop
-28AC  A0            and  b
-28AD  3806          jr   c,$28B5
-28AF  00            nop
-28B0  A8            xor  b
-28B1  3004          jr   nc,$28B7
-28B3  00            nop
-28B4  B0            or   b
-28B5  2805          jr   z,$28BC
-28B7  00            nop
-28B8  B8            cp   b
-28B9  2806          jr   z,$28C1
-28BB  00            nop
-28BC  C0            ret  nz
-28BD  2804          jr   z,$28C3
-28BF  00            nop
-28C0  C8            ret  z
-28C1  2805          jr   z,$28C8
-28C3  00            nop
-28C4  D0            ret  nc
-28C5  2806          jr   z,$28CD
-28C7  00            nop
-28C8  D8            ret  c
-28C9  2804          jr   z,$28CF
-28CB  00            nop
-28CC  E0            ret  po
-28CD  2805          jr   z,$28D4
-28CF  00            nop
+2800                db   $18,$E0,$00,$00,$20,$E0,$01,$00
+2808                db   $28,$E0,$02,$00,$30,$D0,$04,$00
+2810                db   $38,$D0,$05,$00,$40,$B8,$05,$00
+2818                db   $48,$B8,$06,$00,$50,$B8,$04,$00
+2820                db   $58,$B8,$05,$00,$60,$B8,$06,$00
+2828                db   $68,$B8,$04,$00,$68,$A0,$05,$00
+2830                db   $70,$A0,$06,$00,$78,$A0,$04,$00
+2838                db   $80,$A0,$05,$00,$88,$A0,$06,$00
+2840                db   $90,$A0,$04,$00,$98,$A0,$05,$00
+2848                db   $A0,$88,$06,$00,$B0,$88,$04,$00
+2850                db   $B0,$88,$08,$00,$A8,$88,$09,$00
+2858                db   $A0,$88,$0A,$00,$90,$70,$08,$00
+2860                db   $88,$70,$09,$00,$80,$70,$0A,$00
+2868                db   $78,$70,$08,$00,$70,$70,$09,$00
+2870                db   $68,$60,$0A,$00,$60,$58,$08,$00
+2878                db   $58,$58,$09,$00,$50,$58,$0A,$00
+2880                db   $48,$58,$04,$00,$50,$58,$05,$00
+2888                db   $58,$58,$06,$00,$60,$58,$04,$00
+2890                db   $68,$58,$05,$00,$70,$48,$06,$00
+2898                db   $78,$40,$04,$00,$80,$40,$05,$00
+28A0                db   $88,$40,$06,$00,$90,$40,$04,$00
+28A8                db   $98,$40,$05,$00,$A0,$38,$06,$00
+28B0                db   $A8,$30,$04,$00,$B0,$28,$05,$00
+28B8                db   $B8,$28,$06,$00,$C0,$28,$04,$00
+28C0                db   $C8,$28,$05,$00,$D0,$28,$06,$00
+28C8                db   $D8,$28,$04,$00,$E0,$28,$05,$00
 
 28D0                dc   16, $FF
 
@@ -5290,196 +4674,32 @@
                 ;; Nodes for dino to follow
                 ;; four bytes per node: [ x, y, fr, _ ]
                 dino_path_7:
-2A00  18E0          jr   $29E2
-2A02  00            nop
-2A03  00            nop
-2A04  20E0          jr   nz,$29E6
-2A06  010028        ld   bc,$2800
-2A09  E0            ret  po
-2A0A  02            ld   (bc),a
-2A0B  00            nop
-2A0C  30E0          jr   nc,$29EE
-2A0E  03            inc  bc
-2A0F  00            nop
-2A10  38D0          jr   c,$29E2
-2A12  04            inc  b
-2A13  00            nop
-2A14  40            ld   b,b
-2A15  C0            ret  nz
-2A16  05            dec  b
-2A17  00            nop
-2A18  48            ld   c,b
-2A19  B8            cp   b
-2A1A  0600          ld   b,$00
-2A1C  48            ld   c,b
-2A1D  B8            cp   b
-2A1E  04            inc  b
-2A1F  00            nop
-2A20  50            ld   d,b
-2A21  B8            cp   b
-2A22  05            dec  b
-2A23  00            nop
-2A24  58            ld   e,b
-2A25  B8            cp   b
-2A26  0600          ld   b,$00
-2A28  60            ld   h,b
-2A29  B8            cp   b
-2A2A  04            inc  b
-2A2B  00            nop
-2A2C  68            ld   l,b
-2A2D  B0            or   b
-2A2E  00            nop
-2A2F  00            nop
-2A30  70            ld   (hl),b
-2A31  B0            or   b
-2A32  010078        ld   bc,$7800
-2A35  B0            or   b
-2A36  02            ld   (bc),a
-2A37  00            nop
-2A38  80            add  a,b
-2A39  B0            or   b
-2A3A  03            inc  bc
-2A3B  00            nop
-2A3C  88            adc  a,b
-2A3D  B8            cp   b
-2A3E  02            ld   (bc),a
-2A3F  00            nop
-2A40  98            sbc  a,b
-2A41  B8            cp   b
-2A42  03            inc  bc
-2A43  00            nop
-2A44  A8            xor  b
-2A45  B8            cp   b
-2A46  02            ld   (bc),a
-2A47  00            nop
-2A48  B0            or   b
-2A49  B0            or   b
-2A4A  03            inc  bc
-2A4B  00            nop
-2A4C  B8            cp   b
-2A4D  B0            or   b
-2A4E  02            ld   (bc),a
-2A4F  00            nop
-2A50  C0            ret  nz
-2A51  B0            or   b
-2A52  03            inc  bc
-2A53  00            nop
-2A54  C8            ret  z
-2A55  A0            and  b
-2A56  04            inc  b
-2A57  00            nop
-2A58  D0            ret  nc
-2A59  90            sub  b
-2A5A  05            dec  b
-2A5B  00            nop
-2A5C  D8            ret  c
-2A5D  88            adc  a,b
-2A5E  0600          ld   b,$00
-2A60  E0            ret  po
-2A61  88            adc  a,b
-2A62  08            ex   af,af'
-2A63  00            nop
-2A64  D0            ret  nc
-2A65  88            adc  a,b
-2A66  09            add  hl,bc
-2A67  00            nop
-2A68  D8            ret  c
-2A69  80            add  a,b
-2A6A  0A            ld   a,(bc)
-2A6B  00            nop
-2A6C  C0            ret  nz
-2A6D  70            ld   (hl),b
-2A6E  08            ex   af,af'
-2A6F  00            nop
-2A70  B8            cp   b
-2A71  70            ld   (hl),b
-2A72  09            add  hl,bc
-2A73  00            nop
-2A74  B0            or   b
-2A75  70            ld   (hl),b
-2A76  0A            ld   a,(bc)
-2A77  00            nop
-2A78  90            sub  b
-2A79  70            ld   (hl),b
-2A7A  08            ex   af,af'
-2A7B  00            nop
-2A7C  80            add  a,b
-2A7D  70            ld   (hl),b
-2A7E  09            add  hl,bc
-2A7F  00            nop
-2A80  78            ld   a,b
-2A81  70            ld   (hl),b
-2A82  0A            ld   a,(bc)
-2A83  00            nop
-2A84  70            ld   (hl),b
-2A85  70            ld   (hl),b
-2A86  08            ex   af,af'
-2A87  00            nop
-2A88  68            ld   l,b
-2A89  70            ld   (hl),b
-2A8A  09            add  hl,bc
-2A8B  00            nop
-2A8C  60            ld   h,b
-2A8D  60            ld   h,b
-2A8E  0A            ld   a,(bc)
-2A8F  00            nop
-2A90  58            ld   e,b
-2A91  58            ld   e,b
-2A92  08            ex   af,af'
-2A93  00            nop
-2A94  50            ld   d,b
-2A95  58            ld   e,b
-2A96  04            inc  b
-2A97  00            nop
-2A98  58            ld   e,b
-2A99  58            ld   e,b
-2A9A  05            dec  b
-2A9B  00            nop
-2A9C  60            ld   h,b
-2A9D  48            ld   c,b
-2A9E  0600          ld   b,$00
-2AA0  68            ld   l,b
-2AA1  40            ld   b,b
-2AA2  04            inc  b
-2AA3  00            nop
-2AA4  70            ld   (hl),b
-2AA5  40            ld   b,b
-2AA6  05            dec  b
-2AA7  00            nop
-2AA8  78            ld   a,b
-2AA9  40            ld   b,b
-2AAA  0600          ld   b,$00
-2AAC  80            add  a,b
-2AAD  40            ld   b,b
-2AAE  04            inc  b
-2AAF  00            nop
-2AB0  90            sub  b
-2AB1  40            ld   b,b
-2AB2  05            dec  b
-2AB3  00            nop
-2AB4  B0            or   b
-2AB5  40            ld   b,b
-2AB6  0600          ld   b,$00
-2AB8  B8            cp   b
-2AB9  40            ld   b,b
-2ABA  04            inc  b
-2ABB  00            nop
-2ABC  C0            ret  nz
-2ABD  40            ld   b,b
-2ABE  05            dec  b
-2ABF  00            nop
-2AC0  C8            ret  z
-2AC1  40            ld   b,b
-2AC2  0600          ld   b,$00
-2AC4  D0            ret  nc
-2AC5  3804          jr   c,$2ACB
-2AC7  00            nop
-2AC8  D8            ret  c
-2AC9  3005          jr   nc,$2AD0
-2ACB  00            nop
-2ACC  E0            ret  po
-2ACD  2806          jr   z,$2AD5
-2ACF  00            nop
+2A00                db   $18,$E0,$00,$00,$20,$E0,$01,$00
+2A08                db   $28,$E0,$02,$00,$30,$E0,$03,$00
+2A10                db   $38,$D0,$04,$00,$40,$C0,$05,$00
+2A18                db   $48,$B8,$06,$00,$48,$B8,$04,$00
+2A20                db   $50,$B8,$05,$00,$58,$B8,$06,$00
+2A28                db   $60,$B8,$04,$00,$68,$B0,$00,$00
+2A30                db   $70,$B0,$01,$00,$78,$B0,$02,$00
+2A38                db   $80,$B0,$03,$00,$88,$B8,$02,$00
+2A40                db   $98,$B8,$03,$00,$A8,$B8,$02,$00
+2A48                db   $B0,$B0,$03,$00,$B8,$B0,$02,$00
+2A50                db   $C0,$B0,$03,$00,$C8,$A0,$04,$00
+2A58                db   $D0,$90,$05,$00,$D8,$88,$06,$00
+2A60                db   $E0,$88,$08,$00,$D0,$88,$09,$00
+2A68                db   $D8,$80,$0A,$00,$C0,$70,$08,$00
+2A70                db   $B8,$70,$09,$00,$B0,$70,$0A,$00
+2A78                db   $90,$70,$08,$00,$80,$70,$09,$00
+2A80                db   $78,$70,$0A,$00,$70,$70,$08,$00
+2A88                db   $68,$70,$09,$00,$60,$60,$0A,$00
+2A90                db   $58,$58,$08,$00,$50,$58,$04,$00
+2A98                db   $58,$58,$05,$00,$60,$48,$06,$00
+2AA0                db   $68,$40,$04,$00,$70,$40,$05,$00
+2AA8                db   $78,$40,$06,$00,$80,$40,$04,$00
+2AB0                db   $90,$40,$05,$00,$B0,$40,$06,$00
+2AB8                db   $B8,$40,$04,$00,$C0,$40,$05,$00
+2AC0                db   $C8,$40,$06,$00,$D0,$38,$04,$00
+2AC8                db   $D8,$30,$05,$00,$E0,$28,$06,$00
 
                 draw_bonus_state:
 2AD0  CDD016        call $16D0
@@ -5855,123 +5075,39 @@
 2D98  CDB837        call $37B8
 2D9B  21E00F        ld   hl,$0FE0
 2D9E  CD4008        call $0840 ; draws the hiscore screen..
-2DA1  00            nop ; params to DRAW_SCREEN
-2DA2  00            nop
+2DA1  00            db   $00, $00 ; params to DRAW_SCREEN
 2DA3  CD1003        call $0310
-2DA6  04            inc  b
-2DA7  0A            ld   a,(bc)
-2DA8  201C          jr   nz,$2DC6 ; PLAYER
-2DAA  112915        ld   de,$1529
-2DAD  22FFCD        ld   ($CDFF),hl
-2DB0  1003          djnz $2DB5
-2DB2  07            rlca
-2DB3  03            inc  bc
-2DB4  29            add  hl,hl
-2DB5  1F            rra
-2DB6  25            dec  h
-2DB7  1012          djnz $2DCB
-2DB9  15            dec  d
-2DBA  112410        ld   de,$1024
-2DBD  24            inc  h
-2DBE  1815          jr   $2DD5
-2DC0  1018          djnz $2DDA
-2DC2  19            add  hl,de
-2DC3  17            rla
-2DC4  1815          jr   $2DDB ; YOU BEAT THE HIGHEST
-2DC6  23            inc  hl
-2DC7  24            inc  h
-2DC8  FF            rst  $38
+2DA6                db   $04,$0A
+2DA8                db   $20,$1C,$11,$29,$15,$22,$FF ;  PLAYER
+2DAF  CD1003        call $0310
+2DB2                db   $07,$03
+2DB4                db   $29,$1F,$25,$10,$12,$15,$11,$24,$10,$24,$18,$15,$10,$18,$19,$17
+2DC4                db   $18,$15,$23,$24,$FF ;  YOU BEAT THE HIGHEST
 2DC9  CD1003        call $0310
-2DCC  09            add  hl,bc ; SCORE OF THE DAY
-2DCD  03            inc  bc
-2DCE  23            inc  hl
-2DCF  13            inc  de
-2DD0  1F            rra
-2DD1  221510        ld   ($1015),hl
-2DD4  1F            rra
-2DD5  1610          ld   d,$10
-2DD7  24            inc  h
-2DD8  1815          jr   $2DEF
-2DDA  1014          djnz $2DF0
-2DDC  1129FF        ld   de,$FF29
+2DCC                db   $09,$03 ;  SCORE OF THE DAY
+2DCE                db   $23,$13,$1F,$22,$15,$10,$1F,$16,$10,$24,$18,$15,$10,$14,$11,$29,$FF
 2DDF  CD1003        call $0310
-2DE2  0B            dec  bc
-2DE3  03            inc  bc
-2DE4  201C          jr   nz,$2E02
-2DE6  15            dec  d
-2DE7  112315        ld   de,$1523
-2DEA  1015          djnz $2E01
-2DEC  1E24          ld   e,$24
-2DEE  15            dec  d
-2DEF  221029        ld   ($2910),hl
-2DF2  1F            rra
-2DF3  25            dec  h
-2DF4  22101E        ld   ($1E10),hl
-2DF7  111D15        ld   de,$151D
-2DFA  FF            rst  $38
+2DE2                db   $0B,$03
+2DE4                db   $20,$1C,$15,$11,$23,$15,$10,$15,$1E,$24,$15,$22,$10,$29,$1F,$25
+2DF4                db   $22,$10,$1E,$11,$1D,$15,$FF
 2DFB  CD1003        call $0310
-2DFE  0D            dec  c
-2DFF  03            inc  bc
+2DFE                db   $0D,$03
                 ;; drawing the alphabet A-L
-2E00  111012        ld   de,$1210
-2E03  1013          djnz $2E18
-2E05  1014          djnz $2E1B
-2E07  1015          djnz $2E1E
-2E09  1016          djnz $2E21
-2E0B  1017          djnz $2E24
-2E0D  1018          djnz $2E27
-2E0F  1019          djnz $2E2A
-2E11  101A          djnz $2E2D
-2E13  101B          djnz $2E30
-2E15  101C          djnz $2E33
-2E17  FF            rst  $38
+2E00                db   $11,$10,$12,$10,$13,$10,$14,$10,$15,$10,$16,$10,$17,$10,$18,$10,$19
+2E11                db   $10,$1A,$10,$1B,$10,$1C,$FF
 2E18  CD1003        call $0310
-2E1B  0F            rrca
-2E1C  03            inc  bc
+2E1B                db   $0F,$03
                 ;; drawing the alphabet M-X
-2E1D  1D            dec  e
-2E1E  101E          djnz $2E3E
-2E20  101F          djnz $2E41
-2E22  1020          djnz $2E44
-2E24  1021          djnz $2E47
-2E26  1022          djnz $2E4A
-2E28  1023          djnz $2E4D
-2E2A  1024          djnz $2E50
-2E2C  1025          djnz $2E53
-2E2E  1026          djnz $2E56
-2E30  1027          djnz $2E59
-2E32  1028          djnz $2E5C
-2E34  FF            rst  $38
+2E1D                db   $1D,$10,$1E,$10,$1F,$10,$20,$10,$21,$10,$22,$10,$23,$10,$24,$10,$25
+2E2E                db   $10,$26,$10,$27,$10,$28,$FF
 2E35  CD1003        call $0310
-2E38  110329        ld   de,$2903
-2E3B  102A          djnz $2E67
-2E3D  1010          djnz $2E4F
-2E3F  1010          djnz $2E51
-2E41  1010          djnz $2E53
-2E43  1051          djnz $2E96
-2E45  1052          djnz $2E99
-2E47  1053          djnz $2E9C
-2E49  1010          djnz $2E5B
-2E4B  1010          djnz $2E5D
-2E4D  1058          djnz $2EA7
-2E4F  59            ld   e,c
-2E50  5A            ld   e,d
-2E51  5B            ld   e,e
-2E52  FF            rst  $38
+2E38                db   $11,$03
+                ;; Y,Z... characters
+2E3A                db   $29,$10,$2A,$10,$10,$10,$10,$10,$10,$10,$51,$10,$52,$10,$53,$10,$10
+2E4B                db   $10,$10,$10,$58,$59,$5A,$5B,$FF
 2E53  CD1003        call $0310
-2E56  17            rla
-2E57  0A            ld   a,(bc)
-2E58  2B            dec  hl
-2E59  2B            dec  hl
-2E5A  2B            dec  hl
-2E5B  2B            dec  hl
-2E5C  2B            dec  hl
-2E5D  2B            dec  hl
-2E5E  2B            dec  hl
-2E5F  2B            dec  hl
-2E60  2B            dec  hl
-2E61  2B            dec  hl
-2E62  FF            rst  $38
+2E56                db   $17,$0A
+2E58                db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
 2E63  CD5024        call $2450
 2E66  3E09          ld   a,$09 ; 90 seconds timer
 2E68  328293        ld   ($9382),a ; num 1 to screen
@@ -6381,138 +5517,25 @@
                 ;; ha, every frame is a lookup (like the jump table)
                 ;; Format is: [frame, y pos]
                 rock_fall_lookup:
-3180  00            nop
-3181  00            nop
-3182  1D            dec  e
-3183  52            ld   d,d
-3184  1D            dec  e
-3185  54            ld   d,h
-3186  1D            dec  e
-3187  56            ld   d,(hl)
-3188  1D            dec  e
-3189  58            ld   e,b
-318A  1D            dec  e
-318B  5A            ld   e,d
-318C  1D            dec  e
-318D  5C            ld   e,h
-318E  1D            dec  e
-318F  5E            ld   e,(hl)
-3190  1D            dec  e
-3191  60            ld   h,b
-3192  1D            dec  e
-3193  62            ld   h,d
-3194  1D            dec  e
-3195  64            ld   h,h
-3196  1D            dec  e
-3197  66            ld   h,(hl)
-3198  1D            dec  e
-3199  68            ld   l,b
-319A  1D            dec  e
-319B  6A            ld   l,d
-319C  1D            dec  e
-319D  6C            ld   l,h
-319E  1D            dec  e
-319F  6E            ld   l,(hl)
-31A0  1D            dec  e
-31A1  71            ld   (hl),c
-31A2  1D            dec  e
-31A3  73            ld   (hl),e
-31A4  1D            dec  e
-31A5  75            ld   (hl),l
-31A6  1D            dec  e
-31A7  78            ld   a,b
-31A8  1D            dec  e
-31A9  7A            ld   a,d
-31AA  1D            dec  e
-31AB  7C            ld   a,h
-31AC  1D            dec  e
-31AD  7F            ld   a,a
-31AE  1D            dec  e
-31AF  81            add  a,c
-31B0  1D            dec  e
-31B1  83            add  a,e
-31B2  1D            dec  e
-31B3  86            add  a,(hl)
-31B4  1D            dec  e
-31B5  88            adc  a,b
-31B6  1D            dec  e
-31B7  8A            adc  a,d
-31B8  1D            dec  e
-31B9  8D            adc  a,l
-31BA  1D            dec  e
-31BB  8F            adc  a,a
-31BC  1D            dec  e
-31BD  91            sub  c
-31BE  1D            dec  e
-31BF  94            sub  h
-31C0  1D            dec  e
-31C1  96            sub  (hl)
-31C2  1D            dec  e
-31C3  98            sbc  a,b
-31C4  1D            dec  e
-31C5  9B            sbc  a,e
-31C6  1D            dec  e
-31C7  9D            sbc  a,l
-31C8  1D            dec  e
-31C9  9F            sbc  a,a
-31CA  1D            dec  e
-31CB  A2            and  d
-31CC  1D            dec  e
-31CD  A4            and  h
-31CE  1D            dec  e
-31CF  A6            and  (hl)
-31D0  1D            dec  e
-31D1  AB            xor  e
-31D2  1D            dec  e
-31D3  AD            xor  l
-31D4  1D            dec  e
-31D5  AF            xor  a
-31D6  1D            dec  e
-31D7  B2            or   d
-31D8  1D            dec  e
-31D9  B4            or   h
-31DA  1D            dec  e
-31DB  B6            or   (hl)
-31DC  1D            dec  e
-31DD  B9            cp   c
-31DE  1D            dec  e
-31DF  BB            cp   e
-31E0  1D            dec  e
-31E1  BD            cp   l
-31E2  1D            dec  e
-31E3  C0            ret  nz
-31E4  1D            dec  e
-31E5  C21DC4        jp   nz,$C41D
-31E8  1D            dec  e
-31E9  C61D          add  a,$1D
-31EB  C8            ret  z
-31EC  1D            dec  e
-31ED  CA1DCC        jp   z,$CC1D
-31F0  1D            dec  e
-31F1  CE1E          adc  a,$1E
-31F3  CE1F          adc  a,$1F
-31F5  CE20          adc  a,$20
-31F7  CE21          adc  a,$21
-31F9  CE21          adc  a,$21
-31FB  CE21          adc  a,$21
-31FD  CEFF          adc  a,$FF
-31FF  FF            rst  $38
-3200  FF            rst  $38
-3201  FF            rst  $38
-3202  FF            rst  $38
-3203  FF            rst  $38
-3204  FF            rst  $38
-3205  FF            rst  $38
-3206  FF            rst  $38
-3207  FF            rst  $38
-3208  FF            rst  $38
-3209  FF            rst  $38
-320A  FF            rst  $38
-320B  FF            rst  $38
-320C  FF            rst  $38
-320D  FF            rst  $38
-320E  FF            rst  $38
-320F  FF            rst  $38
+3180                db   $00,$00
+3182                db   $1D,$52,$1D,$54,$1D,$56,$1D,$58
+318A                db   $1D,$5A,$1D,$5C,$1D,$5E,$1D,$60
+3192                db   $1D,$62,$1D,$64,$1D,$66,$1D,$68
+319A                db   $1D,$6A,$1D,$6C,$1D,$6E,$1D,$71
+31A2                db   $1D,$73,$1D,$75,$1D,$78,$1D,$7A
+31AA                db   $1D,$7C,$1D,$7F,$1D,$81,$1D,$83
+31B2                db   $1D,$86,$1D,$88,$1D,$8A,$1D,$8D
+31BA                db   $1D,$8F,$1D,$91,$1D,$94,$1D,$96
+31C2                db   $1D,$98,$1D,$9B,$1D,$9D,$1D,$9F
+31CA                db   $1D,$A2,$1D,$A4,$1D,$A6,$1D,$AB
+31D2                db   $1D,$AD,$1D,$AF,$1D,$B2,$1D,$B4
+31DA                db   $1D,$B6,$1D,$B9,$1D,$BB,$1D,$BD
+31E2                db   $1D,$C0,$1D,$C2,$1D,$C4,$1D,$C6
+31EA                db   $1D,$C8,$1D,$CA,$1D,$CC,$1D,$CE
+31F2                db   $1E,$CE,$1F,$CE,$20,$CE,$21,$CE
+31FA                db   $21,$CE,$21,$CE
+
+31FE                dc   18, $FF
 
                 set_bird_left_y_c4:
 3210  3EF0          ld   a,$F0
@@ -7893,34 +6916,14 @@
 
                 ;; x, frame, color, y
                 cutscene_data:
-3CC0  80            add  a,b ; player
-3CC1  3A1170        ld   a,($7011)
-3CC4  80            add  a,b ; player legs
-3CC5  3B            dec  sp
-3CC6  118094        ld   de,$9480
-3CC9  05            dec  b
-3CCA  12            ld   (de),a
-3CCB  80            add  a,b
-3CCC  00            nop ; dino (offscreen)
-3CCD  00            nop
-3CCE  12            ld   (de),a
-3CCF  80            add  a,b
-3CD0  00            nop ; dino legs
-3CD1  00            nop
-3CD2  12            ld   (de),a
-3CD3  80            add  a,b
-3CD4  6C            ld   l,h ; bambongo 1
-3CD5  00            nop
-3CD6  12            ld   (de),a
-3CD7  80            add  a,b
-3CD8  A8            xor  b ; bambongo 2
-3CD9  00            nop
-3CDA  12            ld   (de),a
-3CDB  80            add  a,b
-3CDC  00            nop ; unused?
-3CDD  00            nop
-3CDE  12            ld   (de),a
-3CDF  80            add  a,b
+3CC0                db   $80,$3A,$11,$70 ;  player
+3CC4                db   $80,$3B,$11,$80 ;  player legs
+3CC8                db   $94,$05,$12,$80 ;  bongo
+3CCC                db   $00,$00,$12,$80 ;  dino (offscreen)
+3CD0                db   $00,$00,$12,$80 ;  dino legs
+3CD4                db   $6C,$00,$12,$80 ;  bambongo 1
+3CD8                db   $A8,$00,$12,$80 ;  bambongo 2
+3CDC                db   $00,$00,$12,$80 ;  unused?
 
                 ;; CUTSCENE something
                 wait_vblank_8:
@@ -7939,26 +6942,14 @@
 
                 ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
                 dance_frame_data:
-3D00  3C            inc  a
-3D01  3D            dec  a
-3D02  0601          ld   b,$01
-3D04  3A3B05        ld   a,($053B)
-3D07  00            nop
-3D08  3C            inc  a
-3D09  3D            dec  a
-3D0A  0601          ld   b,$01
-3D0C  3A3B07        ld   a,($073B)
-3D0F  02            ld   (bc),a
-3D10  3E3F          ld   a,$3F
-3D12  08            ex   af,af'
-3D13  03            inc  bc
-3D14  3A3B07        ld   a,($073B)
-3D17  02            ld   (bc),a
-3D18  3E3F          ld   a,$3F
-3D1A  08            ex   af,af'
-3D1B  03            inc  bc
-3D1C  3A3B05        ld   a,($053B)
-3D1F  00            nop
+3D00                db   $3C,$3D,$06,$01
+3D04                db   $3A,$3B,$05,$00
+3D08                db   $3C,$3D,$06,$01
+3D0C                db   $3A,$3B,$07,$02
+3D10                db   $3E,$3F,$08,$03
+3D14                db   $3A,$3B,$07,$02
+3D18                db   $3E,$3F,$08,$03
+3D1C                db   $3A,$3B,$05,$00
 
                 update_dance_frames:
 3D20  7E            ld   a,(hl)
@@ -7997,22 +6988,22 @@
 3D61  214081        ld   hl,$8140 ; destination
 3D64  01C03C        ld   bc,$3CC0 ; src location
 3D67  1620          ld   d,$20 ; 32 times do
-3D69  0A            ld   a,(bc) ; <-
-3D6A  77            ld   (hl),a ; |  (sets all sprites)
-3D6B  23            inc  hl ; |
-3D6C  03            inc  bc ; |
-3D6D  15            dec  d ; |
-3D6E  20F9          jr   nz,$3D69 ; _|
+3D69  0A            ld   a,(bc) ;      <-
+3D6A  77            ld   (hl),a ;       |  (sets all sprites)
+3D6B  23            inc  hl     ;       |
+3D6C  03            inc  bc     ;       |
+3D6D  15            dec  d      ;       |
+3D6E  20F9          jr   nz,$3D69 ;    _|
 3D70  CDA03D        call $3DA0
 3D73  1680          ld   d,$80 ; 128 x animate cutscene
 3D75  AF            xor  a
 3D76  322D80        ld   ($802D),a
 3D79  21003D        ld   hl,$3D00
                 _lp_3D7C:
-3D7C  CDE03C        call $3CE0 ; draws gang <-
-3D7F  CD203D        call $3D20 ; |
-3D82  15            dec  d ; |
-3D83  20F7          jr   nz,$3D7C ; ____|
+3D7C  CDE03C        call $3CE0    ; draws gang <-
+3D7F  CD203D        call $3D20    ;             |
+3D82  15            dec  d        ;             |
+3D83  20F7          jr   nz,$3D7C ;         ____|
 3D85  CDB03E        call $3EB0 ; end of round cutscene
                 _cutscene_done:
 3D88  3A0480        ld   a,($8004) ; a = $8004 - which screen to use?
@@ -8058,62 +7049,16 @@
 3DD2  323581        ld   ($8135),a
 3DD5  323781        ld   ($8137),a
 3DD8  CD1003        call $0310
-3DDB  1C            inc  e ; Row of upward spikes
-3DDC  00            nop
-3DDD  3839          jr   c,$3E18
-3DDF  3A3938        ld   a,($3839)
-3DE2  39            add  hl,sp
-3DE3  3C            inc  a
-3DE4  3D            dec  a
-3DE5  39            add  hl,sp
-3DE6  3A3838        ld   a,($3838)
-3DE9  3C            inc  a
-3DEA  3C            inc  a
-3DEB  3D            dec  a
-3DEC  3C            inc  a
-3DED  39            add  hl,sp
-3DEE  3A3839        ld   a,($3938)
-3DF1  3839          jr   c,$3E2C
-3DF3  3D            dec  a
-3DF4  3C            inc  a
-3DF5  39            add  hl,sp
-3DF6  383A          jr   c,$3E32
-3DF8  3D            dec  a
-3DF9  3C            inc  a
-3DFA  39            add  hl,sp
-3DFB  39            add  hl,sp
-3DFC  38FF          jr   c,$3DFD
+3DDB                db   $1C,$00 ;  Row of upward spikes
+3DDD                db   $38,$39,$3A,$39,$38,$39,$3C,$3D,$39,$3A,$38,$38,$3C,$3C,$3D,$3C
+3DED                db   $39,$3A,$38,$39,$38,$39,$3D,$3C,$39,$38,$3A,$3D,$3C,$39,$39,$38,$FF
 3DFE  CD1003        call $0310
-3E01  12            ld   (de),a ; real long platform
-3E02  00            nop
-3E03  FEFD          cp   $FD
-3E05  FD            db   $fd
-3E06  FD            db   $fd
-3E07  FD            db   $fd
-3E08  FD            db   $fd
-3E09  FD            db   $fd
-3E0A  FD            db   $fd
-3E0B  FD            db   $fd
-3E0C  FD            db   $fd
-3E0D  FD            db   $fd
-3E0E  FD            db   $fd
-3E0F  FD            db   $fd
-3E10  FD            db   $fd
-3E11  FD            db   $fd
-3E12  FD            db   $fd
-3E13  FD            db   $fd
-3E14  FD            db   $fd
-3E15  FD            db   $fd
-3E16  FD            db   $fd
-3E17  FD            db   $fd
-3E18  FD            db   $fd
-3E19  FD            db   $fd
-3E1A  FD            db   $fd
-3E1B  FD            db   $fd
-3E1C  FD            db   $fd
-3E1D  FD            db   $fd
-3E1E  FCFFC9        call m,$C9FF
-3E21  FF            rst  $38
+3E01                db   $12,$00 ;  real long platform
+3E03                db   $FE,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD
+3E13                db   $FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FC,$FF
+3E20  C9            ret
+
+3E21  FF            db   $FF
 
                 cutscene_run_offscreen:
 3E22  3E0C          ld   a,$0C
@@ -8223,27 +7168,15 @@
                 ;;; level tiles at the bottom of the screen
                 draw_bottom_row_numbers:
 3F10  CD1003        call $0310
-3F13  1F            rra ; bottom row
-3F14  00            nop
-3F15  C0            ret  nz
-3F16  C1            pop  bc
-3F17  C2C3C4        jp   nz,$C4C3
-3F1A  C5            push bc
-3F1B  C6C7          add  a,$C7
-3F1D  C8            ret  z
-3F1E  C9            ret
-3F1F  CACBCC        jp   z,$CCCB
-3F22  CDCECF        call $CFCE
-3F25  D0            ret  nc
-3F26  D1            pop  de
-3F27  D2D3D4        jp   nc,$D4D3
-3F2A  D5            push de
-3F2B  D6D7          sub  $D7
-3F2D  D8            ret  c
-3F2E  D9            exx
-3F2F  DAFF3A        jp   c,$3AFF
-3F32  04            inc  b
-3F33  80            add  a,b
+3F13                db   $1F,$00 ;  bottom row
+3F15                db   $C0,$C1,$C2,$C3,$C4,$C5,$C6,$C7
+3F1D                db   $C8,$C9,$CA,$CB,$CC,$CD,$CE,$CF
+3F25                db   $D0,$D1,$D2,$D3,$D4,$D5,$D6,$D7
+3F2D                db   $D8,$D9,$DA,$FF
+
+                ;; falls through after drawing
+                _animate_red_level_indicator:
+3F31  3A0480        ld   a,($8004)
 3F34  A7            and  a
 3F35  2005          jr   nz,$3F3C
 3F37  3A2980        ld   a,($8029)
@@ -8335,23 +7268,9 @@
 
                 blank_out_bottom_row:
 3FA8  CD1003        call $0310
-3FAB  1F            rra ; Whole bunch of spaces over the level numbers
-3FAC  00            nop
-3FAD  1010          djnz $3FBF
-3FAF  1010          djnz $3FC1
-3FB1  1010          djnz $3FC3
-3FB3  1010          djnz $3FC5
-3FB5  1010          djnz $3FC7
-3FB7  1010          djnz $3FC9
-3FB9  1010          djnz $3FCB
-3FBB  1010          djnz $3FCD
-3FBD  1010          djnz $3FCF
-3FBF  1010          djnz $3FD1
-3FC1  1010          djnz $3FD3
-3FC3  1010          djnz $3FD5
-3FC5  1010          djnz $3FD7
-3FC7  1010          djnz $3FD9
-3FC9  FF            rst  $38
+3FAB                db   $1F,$00 ;  Whole bunch of spaces over the level numbers
+3FAD                db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
+3FBD                db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$FF
 3FCA  C9            ret
 
 3FCB                dc   5, $FF

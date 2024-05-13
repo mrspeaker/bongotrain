@@ -66,17 +66,29 @@ The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be delet
 
   (defun bon-bytes ()
     (interactive)
-    (replace-pattern-map "[0-9A-F]+:" (lambda (line) line))
+    (replace-pattern-map "[0-9A-F]+:" 'parse-b-line)
     )
 
   (defun parse-b-line(line)
-    (let ((toks (s-split " " line)))
-      (concat (s-chop-right 1 (car toks))
-              "                "
-          (s-join ","
-                  (seq-map (lambda (l) (concat "$" l))
-                           (seq-drop toks 1)
-                  )))))
+    (let* ((comms (s-split ";" line))
+           (toks (s-split " " (s-trim (car comms))))
+           (head (s-chop-right 1 (car toks))))
+      (concat head
+              "                db   "
+              (s-join ","
+                      (seq-map (lambda (l) (concat "$" l))
+                               (cdr toks)
+                               ))
+              (if (< 1 (length comms))
+                  (concat " ; " (cadr comms))
+                ""))))
 
   (parse-b-line "1234: 12 32 41 23 FF")
+
   #+END_SRC
+  (cdr (s-split ";" "asd ; asdf"))
+
+1234: 23 42 52 12 55 FF ; one two thre
+4342: 43 24 43
+2341: 32 12 53 33 13  ; foor five siz
+dfasd
