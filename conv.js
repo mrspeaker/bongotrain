@@ -175,15 +175,34 @@ const get_inst_comments = (src) =>
         return ac;
     }, {});
 
+const get_missing_labels = (src, dst) => {
+    const src_labels = src.filter((el) => el.type === t.LABEL && el.inst);
+    const dst_labels = dst.filter((el) => el.type === t.LABEL && el.inst);
+    console.log(src_labels.length, dst_labels.length);
+    return src_labels.reduce((ac, s, i) => {
+        //        , dst_labels.length];
+        if (
+            i > 0 &&
+            !ac &&
+            (!s.inst || s.inst.addr !== dst_labels?.[i].inst?.addr)
+        ) {
+            return [i, s, dst_labels[i]];
+        }
+        return ac;
+    }, null);
+};
+
 const run = async () => {
-    //const src_txt = await get_file("./bongo.asm");
+    const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
 
-    //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
+    const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
     const dst = parse(dst_txt.split("\n"), parseDstLine); //.slice(240);
+
+    console.log(get_missing_labels(src, dst));
     //console.log(src.length, dst.length);
     //console.table(src);
-    console.table(dst);
+    //console.table(dst);
     //const comments = get_inst_comments(src);
     // console.log(inst_comments);
     //const meta = get_meta(src);

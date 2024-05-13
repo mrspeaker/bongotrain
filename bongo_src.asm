@@ -7326,7 +7326,7 @@
 402C  CD2050        call $5020
 402F  C9            ret
 
-4030  C9            ret         ;?
+4030  C9            ret         ;? extra ret
 4031                dc   7, $FF
 
                 ;; who calls?
@@ -10395,21 +10395,15 @@
 
                 ;; frame, frame leg, x-off, y-off
                 attract_player_up_stair_data:
-5380  8D            adc  a,l ; jumping up stairs
-5381  8C            adc  a,h
-5382  FCF48F        call m,$8FF4
-5385  8E            adc  a,(hl)
-5386  FCF691        call m,$91F6
-5389  90            sub  b
-538A  FCF896        call m,$96F8
-538D  92            sub  d
-538E  FCF894        call m,$94F8
-5391  93            sub  e
-5392  FC068D        call m,$8D06
-5395  8C            adc  a,h
-5396  FC083A        call m,$3A08
-5399  49            ld   c,c
-539A  81            add  a,c
+5380                db   $8D,$8C,$FC,$F4 ;  jumping up stairs
+5384                db   $8F,$8E,$FC,$F6
+5388                db   $91,$90,$FC,$F8
+538C                db   $96,$92,$FC,$F8
+5390                db   $94,$93,$FC,$06 ;  frames are swapped!  head on the bottom!
+5394                db   $8D,$8C,$FC,$08
+
+                attract_animate_dino_head:
+5398  3A4981        ld   a,($8149)
 539B  FE2D          cp   $2D
 539D  2007          jr   nz,$53A6
 539F  3E2C          ld   a,$2C
@@ -10417,6 +10411,7 @@
 53A4  1805          jr   $53AB
 53A6  3E2D          ld   a,$2D
 53A8  324981        ld   ($8149),a
+
                 _done_54AB:
 53AB  C9            ret
 
@@ -12574,3 +12569,5 @@
 5FA4  FF            rst  $38
 
 5FA5                dc   91, $FF ; to 0x5fff
+
+                ;;; ======= END OF BG6.BIN ======

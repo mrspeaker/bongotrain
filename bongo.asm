@@ -1736,13 +1736,13 @@ SET_LEVEL_PLATFORM_XOFFS
 
 ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
 PLATFORM_SCROLL_DATA_ADDR
-0B00 db $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B0A db $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B12 db $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B1A db $38,$0C,$38,$0C,$38,$0C,$10,$0C ; 16 is $10
-0B22 db $38,$0C,$38,$0C,$10,$0C,$38,$0C ; 19 is $10
-0B2A db $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B32 db $38,$0C,$38,$0C,$10,$0C ; 27 is $10.... all S levels.
+0B00: $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B0A: $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B12: $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B1A: $38,$0C,$38,$0C,$38,$0C,$10,$0C ; 16 is $10
+0B22: $38,$0C,$38,$0C,$10,$0C,$38,$0C ; 19 is $10
+0B2A: $38,$0C,$38,$0C,$38,$0C,$38,$0C
+0B32: $38,$0C,$38,$0C,$10,$0C ; 27 is $10.... all S levels.
 
 0B36: 00 ...
 0B7C: FF ...
@@ -1805,7 +1805,7 @@ MOVING_PLATFORMS
 
 0BFE: FF ...
 
-                platform_moving_data: ; All "S" levels.
+platform_moving_data: ; All "S" levels.
 0C10: $00,$00,$00,$00
 0C14: $00,$00,$00,$00
 0C18: $00,$00,$00,$00
@@ -1821,7 +1821,7 @@ MOVING_PLATFORMS
 0C36: FF          rst  $38
 0C37: FF          rst  $38
 
-    ;; non S levels xoff - static
+platform_static_data ; All non-"S" levels.
 0C38: 00,$00,$00,$00
 0C3C: 00,$00,$00,$00
 0C40: 00,$00,$00,$00
