@@ -2033,13 +2033,7 @@
 0DA4                dc   12, $FF
 
                 ;; wat
-0DB0  05            dec  b
-0DB1  0607          ld   b,$07
-0DB3  08            ex   af,af'
-0DB4  FF            rst  $38
-0DB5  FF            rst  $38
-0DB6  FF            rst  $38
-0DB7  FF            rst  $38
+0DB0                db   $05,$06,$07,$08,$FF,$FF,$FF,$FF
 
                 draw_bongo:
 0DB8  AF            xor  a
@@ -2148,16 +2142,7 @@
 0EE8                db   $68,$0F,$68,$0F,$08,$0F,$68,$0F
 0EF0                db   $68,$0F,$08,$0F,$08,$0F
 
-0EF6  00            nop
-0EF7  00            nop
-0EF8  00            nop
-0EF9  00            nop
-0EFA  00            nop
-0EFB  00            nop
-0EFC  00            nop
-0EFD  00            nop
-0EFE  00            nop
-0EFF  00            nop
+0EF6                dc   10, $00
 0F00                dc   8, $FF
 
                 ;; this looks like bongo anim data
@@ -2951,44 +2936,15 @@
 
                 ;; Points to the addr of each screen's level data
                 level_bg_ptr_lookup:
-1500  B0            or   b
-1501  18B0          jr   $14B3
-1503  1840          jr   $1545
-1505  21B018        ld   hl,$18B0
-1508  101A          djnz $1524
-150A  40            ld   b,b
-150B  21701E        ld   hl,$1E70
-150E  B0            or   b
-150F  1840          jr   $1551
-1511  21101A        ld   hl,$1A10
-1514  40            ld   b,b
-1515  21701E        ld   hl,$1E70
-1518  B0            or   b
-1519  1840          jr   $155B
-151B  21B018        ld   hl,$18B0
-151E  00            nop
-151F  1D            dec  e
-1520  70            ld   (hl),b
-1521  1EB0          ld   e,$B0
-1523  1800          jr   $1525
-1525  1D            dec  e
-1526  70            ld   (hl),b
-1527  1EE0          ld   e,$E0
-1529  1F            rra
-152A  40            ld   b,b
-152B  21701E        ld   hl,$1E70
-152E  E0            ret  po
-152F  1F            rra
-1530  40            ld   b,b
-1531  21701E        ld   hl,$1E70
-1534  00            nop
-1535  1D            dec  e
-1536  00            nop
-1537  00            nop
-1538  00            nop
-1539  00            nop
-153A  00            nop
-153B  00            nop
+1500                db   $B0,$18,$B0,$18,$40,$21,$B0,$18
+1508                db   $10,$1A,$40,$21,$70,$1E,$B0,$18
+1510                db   $40,$21,$10,$1A,$40,$21,$70,$1E
+1518                db   $B0,$18,$40,$21,$B0,$18,$00,$1D
+1520                db   $70,$1E,$B0,$18,$00,$1D,$70,$1E
+1528                db   $E0,$1F,$40,$21,$70,$1E,$E0,$1F
+1530                db   $40,$21,$70,$1E,$00,$1D
+1536                dc   6, $00
+
 153C                dc   20, $FF
 
                 copy_xoffs_and_cols_to_screen:
@@ -3074,53 +3030,29 @@
 15DB  320893        ld   ($9308),a
 15DE  CD6016        call $1660
 15E1  CD1003        call $0310
-15E4  08            ex   af,af'
-15E5  1002          djnz $15E9
-15E7  00            nop
-15E8  00            nop
-15E9  1020          djnz $160B
-15EB  24            inc  h
-15EC  23            inc  hl
-15ED  FF            rst  $38
+15E4                db   $08,$10
+15E6                db   $02,$00,$00,$10,$20,$24,$23,$FF ;  200
 15EE  CD6016        call $1660
 15F1  3E8D          ld   a,$8D
 15F3  320C93        ld   ($930C),a
 15F6  CD6016        call $1660
 15F9  CD1003        call $0310
-15FC  0C            inc  c
-15FD  1004          djnz $1603 ; 400 ...
-15FF  00            nop
-1600  00            nop
-1601  1020          djnz $1623
-1603  24            inc  h
-1604  23            inc  hl
-1605  FF            rst  $38
+15FC                db   $0C,$10
+15FD                db   $04,$00,$00,$10,$20,$24,$23,$FF ;  400 ...
 1606  CD6016        call $1660
 1609  3E8E          ld   a,$8E
 160B  321093        ld   ($9310),a
 160E  CD6016        call $1660
 1611  CD1003        call $0310
-1614  1010          djnz $1626
-1616  0600          ld   b,$00 ; 600 ...
-1618  00            nop
-1619  1020          djnz $163B
-161B  24            inc  h
-161C  23            inc  hl
-161D  FF            rst  $38
+1614                db   $10,$10
+1616                db   $06,$00,$00,$10,$20,$24,$23,$FF ;  600 ...8
 161E  CD6016        call $1660
 1621  3E8F          ld   a,$8F
 1623  321493        ld   ($9314),a
 1626  CD6016        call $1660
 1629  CD1003        call $0310
-162C  14            inc  d
-162D  1001          djnz $1630
-162F  00            nop
-1630  00            nop
-1631  00            nop
-1632  1020          djnz $1654
-1634  24            inc  h
-1635  23            inc  hl
-1636  FF            rst  $38
+162C                db   $14,$10
+162E                db   $01,$00,$00,$00,$10,$20,$24,$23,$FF ;  1000 ...8
 1637  CD6016        call $1660
 163A  CD6016        call $1660
 163D  CD6016        call $1660
@@ -7925,105 +7857,24 @@
 
                 ;;; SFX synth settings data
                 sfx_synth_settings:
-4400  03            inc  bc
-4401  24            inc  h
-4402  03            inc  bc
-4403  F602          or   $02
-4405  CC02A4        call z,$A402
-4408  02            ld   (bc),a
-4409  7E            ld   a,(hl)
-440A  02            ld   (bc),a
-440B  5A            ld   e,d
-440C  02            ld   (bc),a
-440D  3802          jr   c,$4411
-440F  1802          jr   $4413
-4411  FA01DE        jp   m,$DE01
-4414  01C301        ld   bc,$01C3
-4417  AA            xor  d
-4418  019201        ld   bc,$0192
-441B  7B            ld   a,e
-441C  016601        ld   bc,$0166
-441F  52            ld   d,d
-4420  013F01        ld   bc,$013F
-4423  2D            dec  l
-4424  011C01        ld   bc,$011C
-4427  0C            inc  c
-4428  010000        ld   bc,$0000
-442B  EF            rst  $28
-442C  00            nop
-442D  E200D5        jp   po,$D500
-4430  00            nop
-4431  C9            ret
-4432  00            nop
-4433  BE            cp   (hl)
-4434  00            nop
-4435  B3            or   e
-4436  00            nop
-4437  A9            xor  c
-4438  00            nop
-4439  A0            and  b
-443A  00            nop
-443B  96            sub  (hl)
-443C  00            nop
-443D  8E            adc  a,(hl)
-443E  00            nop
-443F  86            add  a,(hl)
-4440  00            nop
-4441  7F            ld   a,a
-4442  00            nop
-4443  78            ld   a,b
-4444  00            nop
-4445  71            ld   (hl),c
-4446  00            nop
-4447  6B            ld   l,e
-4448  00            nop
-4449  64            ld   h,h
-444A  00            nop
-444B  5F            ld   e,a
-444C  00            nop
-444D  59            ld   e,c
-444E  00            nop
-444F  54            ld   d,h
-4450  00            nop
-4451  50            ld   d,b
-4452  00            nop
-4453  4B            ld   c,e
-4454  00            nop
-4455  47            ld   b,a
-4456  00            nop
-4457  43            ld   b,e
-4458  00            nop
-4459  3F            ccf
-445A  00            nop
-445B  3C            inc  a
-445C  00            nop
-445D  3800          jr   c,$445F
-445F  35            dec  (hl)
-4460  00            nop
-4461  32002F        ld   ($2F00),a
-4464  00            nop
-4465  2C            inc  l
-4466  00            nop
-4467  2A0028        ld   hl,($2800)
-446A  00            nop
-446B  25            dec  h
-446C  00            nop
-446D  23            inc  hl
-446E  00            nop
-446F  21001F        ld   hl,$1F00
-4472  00            nop
-4473  1E00          ld   e,$00
-4475  00            nop
-4476  010401        ld   bc,$0104
-4479  07            rlca
-447A  01FFFF        ld   bc,$FFFF
-447D  FF            rst  $38
-447E  FF            rst  $38
-447F  FF            rst  $38
-4480  FF            rst  $38
-4481  FF            rst  $38
-4482  FF            rst  $38
-4483  FF            rst  $38
+4400                db   $03,$24,$03,$F6,$02,$CC,$02,$A4
+4408                db   $02,$7E,$02,$5A,$02,$38,$02,$18
+4410                db   $02,$FA,$01,$DE,$01,$C3,$01,$AA
+4418                db   $01,$92,$01,$7B,$01,$66,$01,$52
+4420                db   $01,$3F,$01,$2D,$01,$1C,$01,$0C
+4428                db   $01,$00,$00,$EF,$00,$E2,$00,$D5
+4430                db   $00,$C9,$00,$BE,$00,$B3,$00,$A9
+4438                db   $00,$A0,$00,$96,$00,$8E,$00,$86
+4440                db   $00,$7F,$00,$78,$00,$71,$00,$6B
+4448                db   $00,$64,$00,$5F,$00,$59,$00,$54
+4450                db   $00,$50,$00,$4B,$00,$47,$00,$43
+4458                db   $00,$3F,$00,$3C,$00,$38,$00,$35
+4460                db   $00,$32,$00,$2F,$00,$2C,$00,$2A
+4468                db   $00,$28,$00,$25,$00,$23,$00,$21
+4470                db   $00,$1F,$00,$1E,$00,$00,$01,$04
+4478                db   $01,$07,$01
+
+447B                dc   9, $FF
 
                 draw_cage_top:
 4484  3A0480        ld   a,($8004)
@@ -8056,27 +7907,17 @@
 44BB  328C91        ld   ($918C),a
 44BE  1824          jr   $44E4
                 ;; looks like data: 2byte coords
-44C0  1001          djnz $44C3
-44C2  12            ld   (de),a
-44C3  03            inc  bc
-44C4  14            inc  d
-44C5  011503        ld   bc,$0315
-44C8  17            rla
-44C9  011903        ld   bc,$0319
-44CC  1B            dec  de
-44CD  011C03        ld   bc,$031C
-44D0  FF            rst  $38
-44D1  FF            rst  $38
-44D2  1C            inc  e
-44D3  010003        ld   bc,$0300
-44D6  1C            inc  e
-44D7  010003        ld   bc,$0300
-44DA  1C            inc  e
-44DB  010003        ld   bc,$0300
-44DE  1C            inc  e
-44DF  010003        ld   bc,$0300
-44E2  FF            rst  $38
-44E3  FF            rst  $38
+44C0                db   $10,$01,$12,$03
+44C4                db   $14,$01,$15,$03
+44C8                db   $17,$01,$19,$03
+44CC                db   $1B,$01,$1C,$03
+44D0                db   $FF,$FF
+44D2                db   $1C,$01,$00,$03
+44D6                db   $1C,$01,$00,$03
+44DA                db   $1C,$01,$00,$03
+44DE                db   $1C,$01,$00,$03
+44E2                db   $FF,$FF
+
                 _more_cage:
 44E4  3C            inc  a
 44E5  328991        ld   ($9189),a
@@ -9028,17 +8869,8 @@
 4B3F  FF            rst  $38
 
                 sfx_15_data:
-4B40  03            inc  bc
-4B41  324B36        ld   ($364B),a
-4B44  4B            ld   c,e
-4B45  364B          ld   (hl),$4B
-4B47  FF            rst  $38
-4B48  00            nop
-4B49  01FFFF        ld   bc,$FFFF
-4B4C  FF            rst  $38
-4B4D  FF            rst  $38
-4B4E  FF            rst  $38
-4B4F  FF            rst  $38
+4B40                db   $03,$32,$4B,$36,$4B,$36,$4B,$FF
+4B48                db   $00,$01,$FF,$FF,$FF,$FF,$FF,$FF
 
                 ;;
                 your_being_chased_dino_sprite:
@@ -9063,6 +8895,7 @@
 
 4B6C                dc   116, $FF ; 116 free bytes!
 
+                ;; what's this... data? nothin?
 4BE0  0E04          ld   c,$04
 4BE2  0E02          ld   c,$02
 4BE4  0C            inc  c
@@ -9152,10 +8985,10 @@
 4C45  FF            rst  $38
 
                 sfx_2_data:
-4C46  03            inc  bc
-4C47  364C          ld   (hl),$4C
-4C49  3E4C          ld   a,$4C
-4C4B  304C          jr   nc,$4C99
+4C46                db   $03
+4C47                db   $36,$4C
+4C49                db   $3E,$4C
+4C4B                db   $30,$4C
 
 4C4D                dc   3, $FF
 
@@ -9575,239 +9408,35 @@
 4EFD  C31C50        jp   $501C ; round 4+ = get 2 faster each time!
 
                 pickups_lookup:
-4F00  91            sub  c ; up to 3 pickups per screen
-4F01  5A            ld   e,d
-4F02  8C            adc  a,h
-4F03  00            nop
-4F04  00            nop
-4F05  00            nop
-4F06  00            nop
-4F07  00            nop
-4F08  00            nop
-4F09  91            sub  c ; pos (hi), pos (lo), pickup symbol
-4F0A  5A            ld   e,d
-4F0B  8D            adc  a,l
-4F0C  00            nop
-4F0D  00            nop
-4F0E  00            nop
-4F0F  00            nop
-4F10  00            nop
-4F11  00            nop
-4F12  91            sub  c
-4F13  1A            ld   a,(de)
-4F14  8D            adc  a,l
-4F15  00            nop
-4F16  00            nop
-4F17  00            nop
-4F18  00            nop
-4F19  00            nop
-4F1A  00            nop
-4F1B  91            sub  c
-4F1C  5A            ld   e,d
-4F1D  8C            adc  a,h
-4F1E  00            nop
-4F1F  00            nop
-4F20  00            nop
-4F21  00            nop
-4F22  00            nop
-4F23  00            nop
-4F24  91            sub  c
-4F25  B1            or   c
-4F26  8C            adc  a,h
-4F27  00            nop
-4F28  00            nop
-4F29  00            nop
-4F2A  00            nop
-4F2B  00            nop
-4F2C  00            nop
-4F2D  91            sub  c
-4F2E  8E            adc  a,(hl)
-4F2F  8C            adc  a,h
-4F30  00            nop
-4F31  00            nop
-4F32  00            nop
-4F33  00            nop
-4F34  00            nop
-4F35  00            nop
-4F36  91            sub  c
-4F37  D28D00        jp   nc,$008D
-4F3A  00            nop
-4F3B  00            nop
-4F3C  00            nop
-4F3D  00            nop
-4F3E  00            nop
-4F3F  91            sub  c
-4F40  5A            ld   e,d
-4F41  8D            adc  a,l
-4F42  00            nop
-4F43  00            nop
-4F44  00            nop
-4F45  00            nop
-4F46  00            nop
-4F47  00            nop
-4F48  91            sub  c
-4F49  1A            ld   a,(de)
-4F4A  8D            adc  a,l
-4F4B  00            nop
-4F4C  00            nop
-4F4D  00            nop
-4F4E  00            nop
-4F4F  00            nop
-4F50  00            nop
-4F51  91            sub  c
-4F52  B1            or   c
-4F53  8C            adc  a,h
-4F54  00            nop
-4F55  00            nop
-4F56  00            nop
-4F57  00            nop
-4F58  00            nop
-4F59  00            nop
-4F5A  90            sub  b
-4F5B  CB8E          res  1,(hl)
-4F5D  91            sub  c
-4F5E  8E            adc  a,(hl)
-4F5F  8C            adc  a,h
-4F60  00            nop
-4F61  00            nop
-4F62  00            nop
-4F63  91            sub  c
-4F64  D28D00        jp   nc,$008D
-4F67  00            nop
-4F68  00            nop
-4F69  00            nop
-4F6A  00            nop
-4F6B  00            nop
-4F6C  91            sub  c
-4F6D  5A            ld   e,d
-4F6E  8C            adc  a,h
-4F6F  00            nop
-4F70  00            nop
-4F71  00            nop
-4F72  00            nop
-4F73  00            nop
-4F74  00            nop
-4F75  92            sub  d
-4F76  7A            ld   a,d
-4F77  8E            adc  a,(hl)
-4F78  91            sub  c
-4F79  1A            ld   a,(de)
-4F7A  8D            adc  a,l
-4F7B  00            nop
-4F7C  00            nop
-4F7D  00            nop
-4F7E  91            sub  c
-4F7F  5A            ld   e,d
-4F80  8D            adc  a,l
-4F81  00            nop
-4F82  00            nop
-4F83  00            nop
-4F84  00            nop
-4F85  00            nop
-4F86  00            nop
-4F87  92            sub  d
-4F88  EE83          xor  $83
-4F8A  92            sub  d
-4F8B  17            rla
-4F8C  8E            adc  a,(hl)
-4F8D  00            nop
-4F8E  00            nop
-4F8F  00            nop
-4F90  91            sub  c
-4F91  D28D00        jp   nc,$008D
-4F94  00            nop
-4F95  00            nop
-4F96  00            nop
-4F97  00            nop
-4F98  00            nop
-4F99  91            sub  c
-4F9A  5A            ld   e,d
-4F9B  8D            adc  a,l
-4F9C  00            nop
-4F9D  00            nop
-4F9E  00            nop
-4F9F  00            nop
-4FA0  00            nop
-4FA1  00            nop
-4FA2  92            sub  d
-4FA3  EE83          xor  $83
-4FA5  92            sub  d
-4FA6  17            rla
-4FA7  8E            adc  a,(hl)
-4FA8  00            nop
-4FA9  00            nop
-4FAA  00            nop
-4FAB  91            sub  c
-4FAC  D28D00        jp   nc,$008D
-4FAF  00            nop
-4FB0  00            nop
-4FB1  00            nop
-4FB2  00            nop
-4FB3  00            nop
-4FB4  92            sub  d
-4FB5  17            rla
-4FB6  8C            adc  a,h
-4FB7  92            sub  d
-4FB8  318D92        ld   sp,$928D
-4FBB  2B            dec  hl
-4FBC  8F            adc  a,a
-4FBD  90            sub  b
-4FBE  CB8E          res  1,(hl)
-4FC0  91            sub  c
-4FC1  8E            adc  a,(hl)
-4FC2  8C            adc  a,h
-4FC3  00            nop
-4FC4  00            nop
-4FC5  00            nop
-4FC6  91            sub  c
-4FC7  D28D00        jp   nc,$008D
-4FCA  00            nop
-4FCB  00            nop
-4FCC  00            nop
-4FCD  00            nop
-4FCE  00            nop
-4FCF  92            sub  d
-4FD0  17            rla
-4FD1  8C            adc  a,h
-4FD2  92            sub  d
-4FD3  318D92        ld   sp,$928D
-4FD6  2B            dec  hl
-4FD7  8F            adc  a,a
-4FD8  90            sub  b
-4FD9  CB8E          res  1,(hl)
-4FDB  91            sub  c
-4FDC  8E            adc  a,(hl)
-4FDD  8C            adc  a,h
-4FDE  92            sub  d
-4FDF  AB            xor  e
-4FE0  8E            adc  a,(hl)
-4FE1  91            sub  c
-4FE2  D28D00        jp   nc,$008D
-4FE5  00            nop
-4FE6  00            nop
-4FE7  00            nop
-4FE8  00            nop
-4FE9  00            nop
-4FEA  00            nop ; Screen 27 (cage - no pickups)
-4FEB  00            nop
-4FEC  00            nop
-4FED  00            nop
-4FEE  00            nop
-4FEF  00            nop
-4FF0  00            nop
-4FF1  00            nop
-4FF2  00            nop
-4FF3  00            nop
-4FF4  00            nop
-4FF5  00            nop
-4FF6  00            nop
-4FF7  00            nop
-4FF8  00            nop
-4FF9  00            nop
-4FFA  00            nop
-4FFB  00            nop
-4FFC  00            nop
-4FFD  00            nop
+4F00                db   $91,$5A,$8C,$00,$00,$00,$00,$00,$00 ;  up to 3 pickups per screen
+4F09                db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00 ;  pos (hi), pos (lo), pickup symbol
+4F12                db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
+4F1B                db   $91,$5A,$8C,$00,$00,$00,$00,$00,$00
+4F24                db   $91,$B1,$8C,$00,$00,$00,$00,$00,$00
+4F2D                db   $91,$8E,$8C,$00,$00,$00,$00,$00,$00
+4F36                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4F3F                db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+4F48                db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
+4F51                db   $91,$B1,$8C,$00,$00,$00,$00,$00,$00
+4F5A                db   $90,$CB,$8E,$91,$8E,$8C,$00,$00,$00
+4F63                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4F6C                db   $91,$5A,$8C,$00,$00,$00,$00,$00,$00
+4F75                db   $92,$7A,$8E,$91,$1A,$8D,$00,$00,$00
+4F7E                db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+4F87                db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
+4F90                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4F99                db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+4FA2                db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
+4FAB                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4FB4                db   $92,$17,$8C,$92,$31,$8D,$92,$2B,$8F
+4FBD                db   $90,$CB,$8E,$91,$8E,$8C,$00,$00,$00
+4FC6                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4FCF                db   $92,$17,$8C,$92,$31,$8D,$92,$2B,$8F
+4FD8                db   $90,$CB,$8E,$91,$8E,$8C,$92,$AB,$8E
+4FE1                db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+4FEA                db   $00,$00,$00,$00,$00,$00,$00,$00,$00 ;  Screen 27 (cage - no pickups)
+4FF3                db   $00,$00,$00,$00,$00,$00,$00,$00,$00
+4FFC                db   $00,$00
 
 4FFE                dc   2, $FF
 
@@ -9878,13 +9507,10 @@
 5052                dc   1, $FF
 
                 sfx_3_data:
-5053  03            inc  bc
-5054  84            add  a,h
-5055  50            ld   d,b
-5056  90            sub  b
-5057  50            ld   d,b
-5058  8C            adc  a,h
-5059  50            ld   d,b
+5053                db   $03
+5054                db   $84,$50
+5056                db   $90,$50
+5058                db   $8C,$50
 505A  FF            rst  $38
 505B  FF            rst  $38
 505C  FF            rst  $38
@@ -10164,10 +9790,7 @@
 51E9  FF            rst  $38
 
                 sfx_7_data:
-51EA  03            inc  bc
-51EB  DA51E6        jp   c,$E651
-51EE  51            ld   d,c
-51EF  F451FF        call p,$FF51
+51EA                db   $03,$DA,$51,$E6,$51,$F4,$51,$FF
 51F2  FF            rst  $38
 51F3  FF            rst  $38
 51F4  F8            ret  m
@@ -10469,26 +10092,12 @@
 
                 ;; frame, frame leg, x-off, y-off
                 attract_player_down_stair_data:
-5408  0D            dec  c
-5409  0C            inc  c
-540A  04            inc  b
-540B  F8            ret  m
-540C  0F            rrca
-540D  0E04          ld   c,$04
-540F  00            nop
-5410  111004        ld   de,$0410
-5413  08            ex   af,af'
-5414  1612          ld   d,$12
-5416  04            inc  b
-5417  08            ex   af,af'
-5418  14            inc  d ; WHAT?! Wrong on the way down too! Head and legs flipped.
-5419  13            inc  de
-541A  04            inc  b
-541B  08            ex   af,af'
-541C  0D            dec  c
-541D  0C            inc  c
-541E  04            inc  b
-541F  08            ex   af,af'
+5408                db   $0D,$0C,$04,$F8
+540C                db   $0F,$0E,$04,$00
+5410                db   $11,$10,$04,$08
+5414                db   $16,$12,$04,$08
+5418                db   $14,$13,$04,$08 ;  WHAT?! Wrong on the way down too! Head and legs flipped.
+541C                db   $0D,$0C,$04,$08
 
 5420                dc   8, $FF
 
@@ -10635,18 +10244,8 @@
 5513  FF            rst  $38
 
                 sfx_8_data:
-5514  03            inc  bc
-5515  04            inc  b
-5516  55            ld   d,l
-5517  08            ex   af,af'
-5518  55            ld   d,l
-5519  08            ex   af,af'
-551A  55            ld   d,l
-551B  FF            rst  $38
-551C  FF            rst  $38
-551D  FF            rst  $38
-551E  FF            rst  $38
-551F  FF            rst  $38
+5514                db   $03,$04,$55,$08,$55,$08,$55,$FF
+551C                db   $FF,$FF,$FF,$FF
 
                 ;; mabye sfx?
                 reset_sfx_something_1:
@@ -10678,42 +10277,16 @@
 5548  00            nop
 5549  00            nop
 554A  C9            ret
-554B  FF            rst  $38
-554C  FF            rst  $38
-554D  FF            rst  $38
-554E  FF            rst  $38
-554F  FF            rst  $38
 
-5550  1001          djnz $5553
-5552  0B            dec  bc
-5553  010801        ld   bc,$0108
-5556  FF            rst  $38
-5557  FF            rst  $38
-5558  04            inc  b
-5559  04            inc  b
-555A  0F            rrca
-555B  1050          djnz $55AD
-555D  55            ld   d,l
-555E  FF            rst  $38
-555F  FF            rst  $38
+554B                dc   5, $FF
+
+                ;; more mystery data
+5550                db   $10,$01,$0B,$01,$08,$01,$FF,$FF
+5558                db   $04,$04,$0F,$10,$50,$55,$FF,$FF
 
                 sfx_10_data:
-5560  03            inc  bc
-5561  58            ld   e,b
-5562  55            ld   d,l
-5563  5C            ld   e,h
-5564  55            ld   d,l
-5565  5C            ld   e,h
-5566  55            ld   d,l
-5567  FF            rst  $38
-5568  6A            ld   l,d
-5569  55            ld   d,l
-556A  FF            rst  $38
-556B  FF            rst  $38
-556C  FF            rst  $38
-556D  FF            rst  $38
-556E  FF            rst  $38
-556F  FF            rst  $38
+5560                db   $03,$58,$55,$5C,$55,$5C,$55,$FF
+5568                db   $6A,$55,$FF,$FF,$FF,$FF,$FF,$FF
 
                 ;; bytes after the call are
                 ;; start_y, start_x, tile 1, ...tile x, 0xFF
@@ -10776,36 +10349,17 @@
 55C1  0C            inc  c
 55C2  05            dec  b
                 ;; YOUR BEING CHASED
-55C3  29            add  hl,hl
-55C4  1F            rra
-55C5  25            dec  h
-55C6  221012        ld   ($1210),hl
-55C9  15            dec  d
-55CA  19            add  hl,de
-55CB  1E17          ld   e,$17
-55CD  1013          djnz $55E2
-55CF  1811          jr   $55E2
-55D1  23            inc  hl
-55D2  15            dec  d
-55D3  14            inc  d
-55D4  FF            rst  $38
+55C3                db   $29,$1F,$25,$22,$10,$12,$15,$19,$1E,$17,$10,$13,$18,$11,$23,$15,$14,$FF
 55D5  CDA85A        call $5AA8
 55D8  CD7055        call $5570
 55DB  1007          djnz $55E4
                 ;; BY A DINOSAUR (classic!)
-55DD  12            ld   (de),a
-55DE  29            add  hl,hl
-55DF  1011          djnz $55F2
-55E1  1014          djnz $55F7
-55E3  19            add  hl,de
-55E4  1E1F          ld   e,$1F
-55E6  23            inc  hl
-55E7  112522        ld   de,$2225
-55EA  FF            rst  $38
+55DD                db   $12,$29,$10,$11,$10,$14,$19,$1E,$1F,$23,$11,$25,$22,$FF
 55EB  C3B248        jp   $48B2
 
 55EE                dc   2, $FF
 
+                ;;  more audio data? (notes? a1 02 c3 02, ...)
 55F0  A1            and  c
 55F1  02            ld   (bc),a
 55F2  C302A1        jp   $A102
@@ -11025,7 +10579,7 @@
 
 56F5                dc   3, $FF
 
-                ;;
+                ;; more audio-looking (notes?)
 56F8  12            ld   (de),a
 56F9  010E01        ld   bc,$010E
 56FC  12            ld   (de),a
@@ -11165,172 +10719,55 @@
 57C6  21880F        ld   hl,$0F88
 57C9  CD815C        call $5C81
 57CC  CD7055        call $5570
-57CF  08            ex   af,af'
-57D0  08            ex   af,af'
-57D1  15            dec  d
-57D2  2824          jr   z,$57F8
-57D4  221110        ld   ($1011),hl
-57D7  12            ld   (de),a
-57D8  1F            rra
-57D9  1E25          ld   e,$25
-57DB  23            inc  hl
-57DC  FF            rst  $38
+57CF                db   $08,$08
+57D1                db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
 57DD  CD7055        call $5570
-57E0  09            add  hl,bc
-57E1  08            ex   af,af'
-57E2  2B            dec  hl
-57E3  2B            dec  hl
-57E4  2B            dec  hl
-57E5  2B            dec  hl
-57E6  2B            dec  hl
-57E7  2B            dec  hl
-57E8  2B            dec  hl
-57E9  2B            dec  hl
-57EA  2B            dec  hl
-57EB  2B            dec  hl
-57EC  2B            dec  hl
-57ED  FF            rst  $38
+57E0                db   $09,$08
+57E2                db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
 57EE  CDB04E        call $4EB0
 57F1  CDB04E        call $4EB0
 57F4  CD7055        call $5570
-57F7  0C            inc  c
-57F8  07            rlca
-57F9  2019          jr   nz,$5814
-57FB  13            inc  de
-57FC  1B            dec  de
-57FD  1025          djnz $5824
-57FF  2010          jr   nz,$5811
-5801  0610          ld   b,$10
-5803  12            ld   (de),a
-5804  1F            rra
-5805  1E25          ld   e,$25
-5807  23            inc  hl
-5808  FF            rst  $38
+57F7                db   $0C,$07
+57F9                db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
 5809  CD7055        call $5570
-580C  1007          djnz $5815
-580E  1F            rra
-580F  12            ld   (de),a
-5810  1A            ld   a,(de)
-5811  15            dec  d
-5812  13            inc  de
-5813  24            inc  h
-5814  23            inc  hl
-5815  1027          djnz $583E
-5817  19            add  hl,de
-5818  24            inc  h
-5819  181F          jr   $583A
-581B  25            dec  h
-581C  24            inc  h
-581D  FF            rst  $38
+580C                db   $10,$07
+580E                db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
 581E  CD7055        call $5570
-5821  14            inc  d
-5822  07            rlca
-5823  1C            inc  e
-5824  1F            rra
-5825  23            inc  hl
-5826  19            add  hl,de
-5827  1E17          ld   e,$17
-5829  1011          djnz $583C
-582B  101C          djnz $5849
-582D  19            add  hl,de
-582E  1615          ld   d,$15
-5830  FF            rst  $38
+5821                db   $14,$07
+5823                db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
 5831  CDB04E        call $4EB0
 5834  CDB04E        call $4EB0
 5837  CD7055        call $5570
-583A  17            rla
-583B  0B            dec  bc
-583C  E0            ret  po
-583D  DCDDDE        call c,$DEDD
-5840  DF            rst  $18
-5841  FF            rst  $38
+583A                db   $17,$0B
+583C                db   $E0,$DC,$DD,$DE,$DF,$FF
 5842  CD7055        call $5570
-5845  180B          jr   $5852
-5847  E1            pop  hl
-5848  E8            ret  pe
-5849  EAF2E6        jp   pe,$E6F2
-584C  FF            rst  $38
+5845                db   $18,$0B
+5847                db   $E1,$E8,$EA,$F2,$E6,$FF
 584D  CD7055        call $5570
-5850  19            add  hl,de
-5851  0B            dec  bc
-5852  E1            pop  hl
-5853  E9            jp   (hl)
-5854  EB            ex   de,hl
-5855  F3            di
-5856  E6FF          and  $FF
+5850                db   $19,$0B
+5852                db   $E1,$E9,$EB,$F3,$E6,$FF
 5858  CD7055        call $5570
-585B  1A            ld   a,(de)
-585C  0B            dec  bc
-585D  E2E3E3        jp   po,$E3E3
-5860  E3            ex   (sp),hl
-5861  E4FFCD        call po,$CDFF
-5864  B0            or   b
-5865  4E            ld   c,(hl)
+585B                db   $1A,$0B
+585D                db   $E2,$E3,$E3,$E3,$E4,$FF
+5863  CDB04E        call $4EB0
 5866  CDB04E        call $4EB0
 5869  CDB04E        call $4EB0
 586C  CDB04E        call $4EB0
 586F  C9            ret
 
                 ;; what's this data eh? Looks similar to $5c00
-5870  A2            and  d
-5871  01A201        ld   bc,$01A2
-5874  A2            and  d
-5875  01A201        ld   bc,$01A2
-5878  B2            or   d
-5879  01B201        ld   bc,$01B2
-587C  B2            or   d
-587D  01B201        ld   bc,$01B2
-5880  C201C2        jp   nz,$C201
-5883  01C201        ld   bc,$01C2
-5886  C201D2        jp   nz,$D201
-5889  01D201        ld   bc,$01D2
-588C  D201D2        jp   nc,$D201
-588F  01FFFF        ld   bc,$FFFF
-5892  FF            rst  $38
-5893  FF            rst  $38
-5894  FF            rst  $38
-5895  FF            rst  $38
-5896  FF            rst  $38
-5897  FF            rst  $38
-5898  FF            rst  $38
-5899  FF            rst  $38
-589A  FF            rst  $38
-589B  FF            rst  $38
-589C  FF            rst  $38
-589D  FF            rst  $38
-589E  FF            rst  $38
-589F  FF            rst  $38
-58A0  0C            inc  c
-58A1  1678          ld   d,$78
-58A3  1678          ld   d,$78
-58A5  1696          ld   d,$96
-58A7  1696          ld   d,$96
-58A9  16EE          ld   d,$EE
-58AB  09            add  hl,bc
-58AC  FF            rst  $38
-58AD  FF            rst  $38
-58AE  FF            rst  $38
-58AF  FF            rst  $38
-58B0  A1            and  c
-58B1  02            ld   (bc),a
-58B2  C302A1        jp   $A102
-58B5  02            ld   (bc),a
-58B6  C302A1        jp   $A102
-58B9  02            ld   (bc),a
-58BA  C302A1        jp   $A102
-58BD  02            ld   (bc),a
-58BE  C302A0        jp   $A002
-58C1  02            ld   (bc),a
-58C2  D301          out  ($01),a
-58C4  D301          out  ($01),a
-58C6  D301          out  ($01),a
-58C8  D301          out  ($01),a
-58CA  FF            rst  $38
-58CB  FF            rst  $38
-58CC  FF            rst  $38
-58CD  FF            rst  $38
-58CE  FF            rst  $38
-58CF  FF            rst  $38
+5870                db   $A2,$01,$A2,$01,$A2,$01,$A2,$01
+5878                db   $B2,$01,$B2,$01,$B2,$01,$B2,$01
+5880                db   $C2,$01,$C2,$01,$C2,$01,$C2,$01
+5888                db   $D2,$01,$D2,$01,$D2,$01,$D2,$01
+5890                db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+5898                db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+58A0                db   $0C,$16,$78,$16,$78,$16,$96,$16
+58A8                db   $96,$16,$EE,$09,$FF,$FF,$FF,$FF
+58B0                db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+58B8                db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+58C0                db   $A0,$02,$D3,$01,$D3,$01,$D3,$01
+58C8                db   $D3,$01,$FF,$FF,$FF,$FF,$FF,$FF
 
                 ;; bytes after the call are:
                 ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -11364,375 +10801,84 @@
 
                 draw_splash_circle_border_1:
 5900  CD7055        call $5570
-5903  010151        ld   bc,$5101 ; start pos
-5906  52            ld   d,d
-5907  53            ld   d,e
-5908  51            ld   d,c
-5909  52            ld   d,d
-590A  53            ld   d,e
-590B  51            ld   d,c
-590C  52            ld   d,d
-590D  53            ld   d,e
-590E  51            ld   d,c
-590F  52            ld   d,d
-5910  53            ld   d,e
-5911  51            ld   d,c
-5912  52            ld   d,d
-5913  53            ld   d,e
-5914  51            ld   d,c
-5915  52            ld   d,d
-5916  53            ld   d,e
-5917  51            ld   d,c
-5918  52            ld   d,d
-5919  53            ld   d,e
-591A  51            ld   d,c
-591B  52            ld   d,d
-591C  53            ld   d,e
-591D  51            ld   d,c
-591E  52            ld   d,d
-591F  FF            rst  $38
+5903                db   $01,$01 ;  start pos
+                ;; splash screen circle border (26 = tiles)
+                ;; Top Row 1
+5905                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+5915                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
 
                 ;; left side 1
 5920  CDD058        call $58D0
-5923  010253        ld   bc,$5302 ; start pos
-5926  52            ld   d,d
-5927  51            ld   d,c
-5928  53            ld   d,e
-5929  52            ld   d,d
-592A  51            ld   d,c
-592B  53            ld   d,e
-592C  52            ld   d,d
-592D  51            ld   d,c
-592E  53            ld   d,e
-592F  52            ld   d,d
-5930  51            ld   d,c
-5931  53            ld   d,e
-5932  52            ld   d,d
-5933  51            ld   d,c
-5934  53            ld   d,e
-5935  52            ld   d,d
-5936  51            ld   d,c
-5937  53            ld   d,e
-5938  52            ld   d,d
-5939  51            ld   d,c
-593A  53            ld   d,e
-593B  52            ld   d,d
-593C  51            ld   d,c
-593D  53            ld   d,e
-593E  52            ld   d,d
-593F  FF            rst  $38
+5923                db   $01,$02 ;  start pos
+5925                db   $53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53
+5935                db   $52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$FF
 
                 ;; right side 1
 5940  CDD058        call $58D0
-5943  1A            ld   a,(de) ; start pos
-5944  02            ld   (bc),a
-5945  51            ld   d,c
-5946  52            ld   d,d
-5947  53            ld   d,e
-5948  51            ld   d,c
-5949  52            ld   d,d
-594A  53            ld   d,e
-594B  51            ld   d,c
-594C  52            ld   d,d
-594D  53            ld   d,e
-594E  51            ld   d,c
-594F  52            ld   d,d
-5950  53            ld   d,e
-5951  51            ld   d,c
-5952  52            ld   d,d
-5953  53            ld   d,e
-5954  51            ld   d,c
-5955  52            ld   d,d
-5956  53            ld   d,e
-5957  51            ld   d,c
-5958  52            ld   d,d
-5959  53            ld   d,e
-595A  51            ld   d,c
-595B  52            ld   d,d
-595C  53            ld   d,e
-595D  51            ld   d,c
-595E  52            ld   d,d
-595F  FF            rst  $38
+5943                db   $1A,$02 ; start pos (1a = scr_tile_w)
+5945                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+5955                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
 
                 ;; Bottom row 1
 5960  CD7055        call $5570
-5963  1C            inc  e ; start pos
-5964  015351        ld   bc,$5153
-5967  52            ld   d,d
-5968  53            ld   d,e
-5969  51            ld   d,c
-596A  52            ld   d,d
-596B  53            ld   d,e
-596C  51            ld   d,c
-596D  52            ld   d,d
-596E  53            ld   d,e
-596F  51            ld   d,c
-5970  52            ld   d,d
-5971  53            ld   d,e
-5972  51            ld   d,c
-5973  52            ld   d,d
-5974  53            ld   d,e
-5975  51            ld   d,c
-5976  52            ld   d,d
-5977  53            ld   d,e
-5978  51            ld   d,c
-5979  52            ld   d,d
-597A  53            ld   d,e
-597B  51            ld   d,c
-597C  52            ld   d,d
-597D  53            ld   d,e
-597E  51            ld   d,c
-597F  FF            rst  $38
+5963                db   $1C,$01 ;  start pos (1C = scr_tile_h)
+5965                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+5975                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
 5980  C9            ret
 
 5981                dc   7, $FF
 
                 draw_splash_circle_border_2:
 5988  CD7055        call $5570
-598B  010152        ld   bc,$5201
-598E  53            ld   d,e
-598F  51            ld   d,c
-5990  52            ld   d,d
-5991  53            ld   d,e
-5992  51            ld   d,c
-5993  52            ld   d,d
-5994  53            ld   d,e
-5995  51            ld   d,c
-5996  52            ld   d,d
-5997  53            ld   d,e
-5998  51            ld   d,c
-5999  52            ld   d,d
-599A  53            ld   d,e
-599B  51            ld   d,c
-599C  52            ld   d,d
-599D  53            ld   d,e
-599E  51            ld   d,c
-599F  52            ld   d,d
-59A0  53            ld   d,e
-59A1  51            ld   d,c
-59A2  52            ld   d,d
-59A3  53            ld   d,e
-59A4  51            ld   d,c
-59A5  52            ld   d,d
-59A6  53            ld   d,e
-59A7  FF            rst  $38
+598B                db   $01,$01
+598D                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+599D                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
                 ;;
 59A8  CDD058        call $58D0
-59AB  010252        ld   bc,$5202
-59AE  51            ld   d,c
-59AF  53            ld   d,e
-59B0  52            ld   d,d
-59B1  51            ld   d,c
-59B2  53            ld   d,e
-59B3  52            ld   d,d
-59B4  51            ld   d,c
-59B5  53            ld   d,e
-59B6  52            ld   d,d
-59B7  51            ld   d,c
-59B8  53            ld   d,e
-59B9  52            ld   d,d
-59BA  51            ld   d,c
-59BB  53            ld   d,e
-59BC  52            ld   d,d
-59BD  51            ld   d,c
-59BE  53            ld   d,e
-59BF  52            ld   d,d
-59C0  51            ld   d,c
-59C1  53            ld   d,e
-59C2  52            ld   d,d
-59C3  51            ld   d,c
-59C4  53            ld   d,e
-59C5  52            ld   d,d
-59C6  51            ld   d,c
-59C7  FF            rst  $38
+59AB                db   $01,$02
+59AD                db   $52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52
+59BD                db   $51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$FF
                 ;;
 59C8  CDD058        call $58D0
-59CB  1A            ld   a,(de)
-59CC  02            ld   (bc),a
-59CD  53            ld   d,e
-59CE  51            ld   d,c
-59CF  52            ld   d,d
-59D0  53            ld   d,e
-59D1  51            ld   d,c
-59D2  52            ld   d,d
-59D3  53            ld   d,e
-59D4  51            ld   d,c
-59D5  52            ld   d,d
-59D6  53            ld   d,e
-59D7  51            ld   d,c
-59D8  52            ld   d,d
-59D9  53            ld   d,e
-59DA  51            ld   d,c
-59DB  52            ld   d,d
-59DC  53            ld   d,e
-59DD  51            ld   d,c
-59DE  52            ld   d,d
-59DF  53            ld   d,e
-59E0  51            ld   d,c
-59E1  52            ld   d,d
-59E2  53            ld   d,e
-59E3  51            ld   d,c
-59E4  52            ld   d,d
-59E5  53            ld   d,e
-59E6  51            ld   d,c
-59E7  FF            rst  $38
+59CB                db   $1A,$02
+59CD                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+59DD                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
                 ;;
 59E8  CD7055        call $5570
-59EB  1C            inc  e
-59EC  015253        ld   bc,$5352
-59EF  51            ld   d,c
-59F0  52            ld   d,d
-59F1  53            ld   d,e
-59F2  51            ld   d,c
-59F3  52            ld   d,d
-59F4  53            ld   d,e
-59F5  51            ld   d,c
-59F6  52            ld   d,d
-59F7  53            ld   d,e
-59F8  51            ld   d,c
-59F9  52            ld   d,d
-59FA  53            ld   d,e
-59FB  51            ld   d,c
-59FC  52            ld   d,d
-59FD  53            ld   d,e
-59FE  51            ld   d,c
-59FF  52            ld   d,d
-5A00  53            ld   d,e
-5A01  51            ld   d,c
-5A02  52            ld   d,d
-5A03  53            ld   d,e
-5A04  51            ld   d,c
-5A05  52            ld   d,d
-5A06  53            ld   d,e
-5A07  FF            rst  $38
+59EB                db   $1C,$01
+59ED                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+59FD                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
                 ;;
 5A08  C9            ret
+
 5A09                dc   7, $FF
 
                 draw_splash_circle_border_3:
 5A10  CD7055        call $5570
-5A13  010153        ld   bc,$5301
-5A16  51            ld   d,c
-5A17  52            ld   d,d
-5A18  53            ld   d,e
-5A19  51            ld   d,c
-5A1A  52            ld   d,d
-5A1B  53            ld   d,e
-5A1C  51            ld   d,c
-5A1D  52            ld   d,d
-5A1E  53            ld   d,e
-5A1F  51            ld   d,c
-5A20  52            ld   d,d
-5A21  53            ld   d,e
-5A22  51            ld   d,c
-5A23  52            ld   d,d
-5A24  53            ld   d,e
-5A25  51            ld   d,c
-5A26  52            ld   d,d
-5A27  53            ld   d,e
-5A28  51            ld   d,c
-5A29  52            ld   d,d
-5A2A  53            ld   d,e
-5A2B  51            ld   d,c
-5A2C  52            ld   d,d
-5A2D  53            ld   d,e
-5A2E  51            ld   d,c
-5A2F  FF            rst  $38
+5A13                db   $01,$01
+5A15                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+5A25                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
                 ;;
 5A30  CDD058        call $58D0
-5A33  010251        ld   bc,$5102
-5A36  53            ld   d,e
-5A37  52            ld   d,d
-5A38  51            ld   d,c
-5A39  53            ld   d,e
-5A3A  52            ld   d,d
-5A3B  51            ld   d,c
-5A3C  53            ld   d,e
-5A3D  52            ld   d,d
-5A3E  51            ld   d,c
-5A3F  53            ld   d,e
-5A40  52            ld   d,d
-5A41  51            ld   d,c
-5A42  53            ld   d,e
-5A43  52            ld   d,d
-5A44  51            ld   d,c
-5A45  53            ld   d,e
-5A46  52            ld   d,d
-5A47  51            ld   d,c
-5A48  53            ld   d,e
-5A49  52            ld   d,d
-5A4A  51            ld   d,c
-5A4B  53            ld   d,e
-5A4C  52            ld   d,d
-5A4D  51            ld   d,c
-5A4E  53            ld   d,e
-5A4F  FF            rst  $38
+5A33                db   $01,$02
+5A35                db   $51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51
+5A45                db   $53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$FF
                 ;;
 5A50  CDD058        call $58D0
-5A53  1A            ld   a,(de)
-5A54  02            ld   (bc),a
-5A55  52            ld   d,d
-5A56  53            ld   d,e
-5A57  51            ld   d,c
-5A58  52            ld   d,d
-5A59  53            ld   d,e
-5A5A  51            ld   d,c
-5A5B  52            ld   d,d
-5A5C  53            ld   d,e
-5A5D  51            ld   d,c
-5A5E  52            ld   d,d
-5A5F  53            ld   d,e
-5A60  51            ld   d,c
-5A61  52            ld   d,d
-5A62  53            ld   d,e
-5A63  51            ld   d,c
-5A64  52            ld   d,d
-5A65  53            ld   d,e
-5A66  51            ld   d,c
-5A67  52            ld   d,d
-5A68  53            ld   d,e
-5A69  51            ld   d,c
-5A6A  52            ld   d,d
-5A6B  53            ld   d,e
-5A6C  51            ld   d,c
-5A6D  52            ld   d,d
-5A6E  53            ld   d,e
-5A6F  FF            rst  $38
+5A53                db   $1A,$02
+5A55                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+5A65                db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
                 ;;
 5A70  CD7055        call $5570
-5A73  1C            inc  e
-5A74  015152        ld   bc,$5251
-5A77  53            ld   d,e
-5A78  51            ld   d,c
-5A79  52            ld   d,d
-5A7A  53            ld   d,e
-5A7B  51            ld   d,c
-5A7C  52            ld   d,d
-5A7D  53            ld   d,e
-5A7E  51            ld   d,c
-5A7F  52            ld   d,d
-5A80  53            ld   d,e
-5A81  51            ld   d,c
-5A82  52            ld   d,d
-5A83  53            ld   d,e
-5A84  51            ld   d,c
-5A85  52            ld   d,d
-5A86  53            ld   d,e
-5A87  51            ld   d,c
-5A88  52            ld   d,d
-5A89  53            ld   d,e
-5A8A  51            ld   d,c
-5A8B  52            ld   d,d
-5A8C  53            ld   d,e
-5A8D  51            ld   d,c
-5A8E  52            ld   d,d
-5A8F  FF            rst  $38
+5A73                db   $1C,$01
+5A75                db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+5A85                db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
                 ;;
 5A90  C9            ret
 
 5A91                dc   7, $FF
 
-                ;;
+                ;; fancy wait for start button
 5A98  E5            push hl
 5A99  C5            push bc
 5A9A  D5            push de
@@ -11802,109 +10948,38 @@
 5AF9  CD815C        call $5C81
 5AFC  CDE65A        call $5AE6
 5AFF  CD7055        call $5570
-5B02  08            ex   af,af'
-5B03  08            ex   af,af'
+5B02                db   $08,$08
                 ;; EXTRA BONUS
-5B04  15            dec  d
-5B05  2824          jr   z,$5B2B
-5B07  221110        ld   ($1011),hl
-5B0A  12            ld   (de),a
-5B0B  1F            rra
-5B0C  1E25          ld   e,$25
-5B0E  23            inc  hl
-5B0F  FF            rst  $38
+5B04                db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
 5B10  CD7055        call $5570
-5B13  09            add  hl,bc
-5B14  08            ex   af,af'
-5B15  2B            dec  hl
-5B16  2B            dec  hl
-5B17  2B            dec  hl
-5B18  2B            dec  hl
-5B19  2B            dec  hl
-5B1A  2B            dec  hl
-5B1B  2B            dec  hl
-5B1C  2B            dec  hl
-5B1D  2B            dec  hl
-5B1E  2B            dec  hl
-5B1F  2B            dec  hl
-5B20  FF            rst  $38
+5B13                db   $09,$08
+5B15                db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
 5B21  CDA85A        call $5AA8
 5B24  CDA85A        call $5AA8
 5B27  CD7055        call $5570
-5B2A  0C            inc  c
-5B2B  07            rlca
+5B2A                db   $0C,$07
                 ;; PICK UP 6 BONUS
-5B2C  2019          jr   nz,$5B47
-5B2E  13            inc  de
-5B2F  1B            dec  de
-5B30  1025          djnz $5B57
-5B32  2010          jr   nz,$5B44
-5B34  0610          ld   b,$10
-5B36  12            ld   (de),a
-5B37  1F            rra
-5B38  1E25          ld   e,$25
-5B3A  23            inc  hl
-5B3B  FF            rst  $38
+5B2C                db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
 5B3C  CD7055        call $5570
-5B3F  1007          djnz $5B48
-5B41  1F            rra
-5B42  12            ld   (de),a
-5B43  1A            ld   a,(de)
-5B44  15            dec  d
-5B45  13            inc  de
-5B46  24            inc  h
-5B47  23            inc  hl
-5B48  1027          djnz $5B71
-5B4A  19            add  hl,de
-5B4B  24            inc  h
-5B4C  181F          jr   $5B6D
-5B4E  25            dec  h
-5B4F  24            inc  h
-5B50  FF            rst  $38
+5B3F                db   $10,$07
+5B41                db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
 5B51  CD7055        call $5570
-5B54  14            inc  d
-5B55  07            rlca
-5B56  1C            inc  e
-5B57  1F            rra
-5B58  23            inc  hl
-5B59  19            add  hl,de
-5B5A  1E17          ld   e,$17
-5B5C  1011          djnz $5B6F
-5B5E  101C          djnz $5B7C
-5B60  19            add  hl,de
-5B61  1615          ld   d,$15
-5B63  FF            rst  $38
+5B54                db   $14,$07
+5B56                db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
 5B64  CDA85A        call $5AA8
 5B67  CD7055        call $5570
-5B6A  17            rla
-5B6B  0B            dec  bc
-5B6C  E0            ret  po
-5B6D  DCDDDE        call c,$DEDD
-5B70  DF            rst  $18
-5B71  FF            rst  $38
+5B6A                db   $17,$0B
+5B6C                db   $E0,$DC,$DD,$DE,$DF,$FF
 5B72  CD7055        call $5570
-5B75  180B          jr   $5B82
-5B77  E1            pop  hl
-5B78  E5            push hl
-5B79  E5            push hl
-5B7A  E5            push hl
-5B7B  E6FF          and  $FF
+5B75                db   $18,$0B
+5B77                db   $E1,$E5,$E5,$E5,$E6,$FF
 5B7D  CD7055        call $5570
-5B80  19            add  hl,de
-5B81  0B            dec  bc
-5B82  E1            pop  hl
-5B83  E5            push hl
-5B84  E5            push hl
-5B85  E5            push hl
-5B86  E6FF          and  $FF
+5B80                db   $19,$0B
+5B82                db   $E1,$E5,$E5,$E5,$E6,$FF
 5B88  CD7055        call $5570
-5B8B  1A            ld   a,(de)
-5B8C  0B            dec  bc
-5B8D  E2E3E3        jp   po,$E3E3
-5B90  E3            ex   (sp),hl
-5B91  E4FFCD        call po,$CDFF
-5B94  A8            xor  b
-5B95  5A            ld   e,d
+5B8B                db   $1A,$0B
+5B8D                db   $E2,$E3,$E3,$E3,$E4,$FF
+5B91  CDA85A        call $5AA8
 5B96  CDA85A        call $5AA8
 5B99  CDC85B        call $5BC8
 5B9C  C9            ret
@@ -12054,6 +11129,7 @@
 
 5C85                dc   1, $FF
 
+                ;; Yet more note-looking data
 5C86  0601          ld   b,$01
 5C88  0601          ld   b,$01
 5C8A  0601          ld   b,$01
@@ -12121,20 +11197,8 @@
 5CFF  FF            rst  $38
 
                 sfx_1_data:
-5D00  02            ld   (bc),a
-5D01  08            ex   af,af'
-5D02  5D            ld   e,l
-5D03  14            inc  d
-5D04  5D            ld   e,l
-5D05  14            inc  d
-5D06  5D            ld   e,l
-5D07  FF            rst  $38
-5D08  01080E        ld   bc,$0E08
-5D0B  00            nop
-5D0C  86            add  a,(hl)
-5D0D  5C            ld   e,h
-5D0E  EE03          xor  $03
-
+5D00                db   $02,$08,$5D,$14,$5D,$14,$5D,$FF
+5D08                db   $01,$08,$0E,$00,$86,$5C,$EE,$03
 5D10  FF            rst  $38
 5D11  FF            rst  $38
 5D12  FF            rst  $38
@@ -12374,14 +11438,7 @@
 5E87  FF            rst  $38
 
                 sfx_12_data:
-5E88  03            inc  bc
-5E89  75            ld   (hl),l
-5E8A  5E            ld   e,(hl)
-5E8B  90            sub  b
-5E8C  5E            ld   e,(hl)
-5E8D  79            ld   a,c
-5E8E  5E            ld   e,(hl)
-5E8F  FF            rst  $38
+5E88                db   $03,$75,$5E,$90,$5E,$79,$5E,$FF
 5E90  F45D1C        call p,$1C5D
 5E93  5E            ld   e,(hl)
 5E94  4C            ld   c,h
@@ -12479,12 +11536,7 @@
 5F2F  FF            rst  $38
 
                 sfx_13_data:
-5F30  03            inc  bc
-5F31  24            inc  h
-5F32  5F            ld   e,a
-5F33  205F          jr   nz,$5F94
-5F35  285F          jr   z,$5F96
-5F37  FF            rst  $38
+5F30                db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
 5F38  09            add  hl,bc
 5F39  010E01        ld   bc,$010E
 5F3C  1001          djnz $5F3F
@@ -12534,14 +11586,7 @@
 5F77  FF            rst  $38
 
                 sfx_14_data:
-5F78  03            inc  bc
-5F79  90            sub  b
-5F7A  5F            ld   e,a
-5F7B  80            add  a,b
-5F7C  5F            ld   e,a
-5F7D  98            sbc  a,b
-5F7E  5F            ld   e,a
-5F7F  FF            rst  $38
+5F78                db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
 5F80  385F          jr   c,$5FE1
 5F82  204A          jr   nz,$5FCE
 5F84  204A          jr   nz,$5FD0
