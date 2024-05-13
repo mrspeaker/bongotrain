@@ -357,20 +357,20 @@
 00E5  CD8014        call $1480
 00E8  21E00F        ld   hl,$0FE0
 00EB  CD4008        call $0840
-00EE                db $00, $00 ; params to DRAW_SCREEN
+00EE                db   $00, $00 ; params to DRAW_SCREEN
 00F0  CD5024        call $2450
 00F3  CD1003        call $0310
-00F6                db $09, $0B
-00F8                db $20,$22,$15,$23,$23,$FF ; PRESS
+00F6                db   $09, $0B
+00F8                db   $20,$22,$15,$23,$23,$FF ; PRESS
 00FE  CD1003        call $0310
-0101                db $0C, $09
-0103                db $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
+0101                db   $0C, $09
+0103                db   $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
 010E  CD1003        call $0310
-0111                db $0F, $8B
-0113                db $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
+0111                db   $0F, $8B
+0113                db   $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
 011A  CD1003        call $0310
-011D                db $19, $09
-011F                db $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
+011D                db   $19, $09
+011F                db   $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
 0127  210383        ld   hl,$8303
 012A  AF            xor  a
 012B  ED6F          rld
@@ -992,7 +992,7 @@
 
 05C9                dc   7, $FF
 
-                ;; (hmm, no... looks like P1/P2... but why?)
+                ;; Not really sure.
                 normalize_input:
 05D0  3A0480        ld   a,($8004)
 05D3  A7            and  a
@@ -1190,18 +1190,18 @@
 
                 ;; x-off, head-anim, leg-anim, yoff
                 phys_jump_lookup_left:
-0728                db $FA,$8C,$8D,$0C
-072C                db $FA,$8E,$8F,$0C
-0730                db $FA,$90,$91,$06
-0734                db $FA,$90,$96,$00
-0738                db $FA,$90,$91,$FA
-073C                db $FA,$8E,$8F,$F4
-0740                db $FA,$8C,$8D,$F4
+0728                db   $FA,$8C,$8D,$0C
+072C                db   $FA,$8E,$8F,$0C
+0730                db   $FA,$90,$91,$06
+0734                db   $FA,$90,$96,$00
+0738                db   $FA,$90,$91,$FA
+073C                db   $FA,$8E,$8F,$F4
+0740                db   $FA,$8C,$8D,$F4
 
-0744                dc 12, $FF
+0744                dc   12, $FF
 
                 ;; x-off, head-anim, leg-anim, yoff
-                phys_jump_lookup_right:          ; right?
+                phys_jump_lookup_right:
 0750                db   $06,$0C,$0D,$0C
 0754                db   $06,$0E,$0F,$0C
 0758                db   $06,$10,$11,$06
@@ -2226,6 +2226,7 @@
 
 0FC4  C3D61B        jp   $1BD6
 
+                ;; couple of $0Fs in a sea of $FFs
 0FC7                dc   10, $FF
 0FD1  0F            rrca
 0FD2                dc   11, $FF
@@ -3510,215 +3511,31 @@
                 ;; (all `n_n` screens).
                 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
                 level_bg__n_n:
-18B0  03            inc  bc
-18B1  41            ld   b,c
-18B2  00            nop
-18B3  09            add  hl,bc
-18B4  FE00          cp   $00
-18B6  1E39          ld   e,$39
-18B8  FF            rst  $38
-18B9  03            inc  bc
-18BA  43            ld   b,e
-18BB  00            nop
-18BC  09            add  hl,bc
-18BD  FD45          ld   b,iyl
-18BF  41            ld   b,c
-18C0  00            nop
-18C1  1B            dec  de
-18C2  FE3B          cp   $3B
-18C4  45            ld   b,l
-18C5  45            ld   b,l
-18C6  FF            rst  $38
-18C7  03            inc  bc
-18C8  40            ld   b,b
-18C9  00            nop
-18CA  09            add  hl,bc
-18CB  FD            db   $fd
-18CC  42            ld   b,d
-18CD  00            nop
-18CE  1B            dec  de
-18CF  FD            db   $fd
-18D0  3F            ccf
-18D1  3F            ccf
-18D2  3B            dec  sp
-18D3  FF            rst  $38
-18D4  03            inc  bc
-18D5  43            ld   b,e
-18D6  00            nop
-18D7  09            add  hl,bc
-18D8  FC4100        call m,$0041
-18DB  1B            dec  de
-18DC  FD            db   $fd
-18DD  3B            dec  sp
-18DE  3B            dec  sp
-18DF  3F            ccf
-18E0  FF            rst  $38
-18E1  03            inc  bc
-18E2  42            ld   b,d
-18E3  00            nop
-18E4  1B            dec  de
-18E5  FD            db   $fd
-18E6  3F            ccf
-18E7  3B            dec  sp
-18E8  3B            dec  sp
-18E9  FF            rst  $38
-18EA  03            inc  bc
-18EB  3F            ccf
-18EC  00            nop
-18ED  1B            dec  de
-18EE  FD            db   $fd
-18EF  3F            ccf
-18F0  3F            ccf
-18F1  3B            dec  sp
-18F2  FF            rst  $38
-18F3  03            inc  bc
-18F4  3E43          ld   a,$43
-18F6  00            nop
-18F7  1B            dec  de
-18F8  FD            db   $fd
-18F9  3B            dec  sp
-18FA  3F            ccf
-18FB  3B            dec  sp
-18FC  FF            rst  $38
-18FD  03            inc  bc
-18FE  3F            ccf
-18FF  40            ld   b,b
-1900  00            nop
-1901  1B            dec  de
-1902  FC473B        call m,$3B47
-1905  47            ld   b,a
-1906  FF            rst  $38
-1907  03            inc  bc
-1908  3B            dec  sp
-1909  42            ld   b,d
-190A  00            nop
-190B  1D            dec  e
-190C  3D            dec  a
-190D  3F            ccf
-190E  FF            rst  $38
-190F  03            inc  bc
-1910  3B            dec  sp
-1911  40            ld   b,b
-1912  00            nop
-1913  1D            dec  e
-1914  3C            inc  a
-1915  3EFF          ld   a,$FF
-1917  03            inc  bc
-1918  3F            ccf
-1919  43            ld   b,e
-191A  00            nop
-191B  1D            dec  e
-191C  3A3FFF        ld   a,($FF3F)
-191F  03            inc  bc
-1920  3E41          ld   a,$41
-1922  00            nop
-1923  1B            dec  de
-1924  FE10          cp   $10
-1926  3D            dec  a
-1927  3EFF          ld   a,$FF
-1929  03            inc  bc
-192A  3B            dec  sp
-192B  40            ld   b,b
-192C  00            nop
-192D  1B            dec  de
-192E  FD            db   $fd
-192F  47            ld   b,a
-1930  3E47          ld   a,$47
-1932  FF            rst  $38
-1933  03            inc  bc
-1934  3F            ccf
-1935  42            ld   b,d
-1936  00            nop
-1937  1B            dec  de
-1938  FD            db   $fd
-1939  3B            dec  sp
-193A  3B            dec  sp
-193B  3B            dec  sp
-193C  FF            rst  $38
-193D  03            inc  bc
-193E  3E00          ld   a,$00
-1940  1B            dec  de
-1941  FD            db   $fd
-1942  3E3F          ld   a,$3F
-1944  3F            ccf
-1945  FF            rst  $38
-1946  03            inc  bc
-1947  42            ld   b,d
-1948  00            nop
-1949  09            add  hl,bc
-194A  FE00          cp   $00
-194C  1B            dec  de
-194D  FD            db   $fd
-194E  3F            ccf
-194F  3B            dec  sp
-1950  3EFF          ld   a,$FF
-1952  03            inc  bc
-1953  43            ld   b,e
-1954  00            nop
-1955  09            add  hl,bc
-1956  FD            db   $fd
-1957  47            ld   b,a
-1958  41            ld   b,c
-1959  00            nop
-195A  1B            dec  de
-195B  FD            db   $fd
-195C  3B            dec  sp
-195D  3E3E          ld   a,$3E
-195F  FF            rst  $38
-1960  03            inc  bc
-1961  41            ld   b,c
-1962  00            nop
-1963  09            add  hl,bc
-1964  FD            db   $fd
-1965  00            nop
-1966  1B            dec  de
-1967  FC3E3B        call m,$3B3E
-196A  3B            dec  sp
-196B  FF            rst  $38
-196C  03            inc  bc
-196D  42            ld   b,d
-196E  00            nop
-196F  09            add  hl,bc
-1970  FD            db   $fd
-1971  00            nop
-1972  1EFE          ld   e,$FE
-1974  FF            rst  $38
-1975  03            inc  bc
-1976  43            ld   b,e
-1977  00            nop
-1978  09            add  hl,bc
-1979  FD            db   $fd
-197A  00            nop
-197B  1EFD          ld   e,$FD
-197D  FF            rst  $38
-197E  03            inc  bc
-197F  42            ld   b,d
-1980  00            nop
-1981  09            add  hl,bc
-1982  FD            db   $fd
-1983  00            nop
-1984  1EFD          ld   e,$FD
-1986  FF            rst  $38
-1987  03            inc  bc
-1988  41            ld   b,c
-1989  00            nop
-198A  09            add  hl,bc
-198B  FD            db   $fd
-198C  00            nop
-198D  1EFD          ld   e,$FD
-198F  FF            rst  $38
-1990  03            inc  bc
-1991  40            ld   b,b
-1992  00            nop
-1993  09            add  hl,bc
-1994  FD            db   $fd
-1995  00            nop
-1996  1EFC          ld   e,$FC
-1998  FF            rst  $38
+18B0: 03 41 00 09 FE 00 1E 39 FF
+18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
+18C7: 03 40 00 09 FD 42 00 1B FD 3F 3F 3B FF
+18D4: 03 43 00 09 FC 41 00 1B FD 3B 3B 3F FF
+18E1: 03 42 00 1B FD 3F 3B 3B FF
+18EA: 03 3F 00 1B FD 3F 3F 3B FF
+18F3: 03 3E 43 00 1B FD 3B 3F 3B FF
+18FD: 03 3F 40 00 1B FC 47 3B 47 FF
+1907: 03 3B 42 00 1D 3D 3F FF
+190F: 03 3B 40 00 1D 3C 3E FF
+1917: 03 3F 43 00 1D 3A 3F FF
+191F: 03 3E 41 00 1B FE 10 3D 3E FF
+1929: 03 3B 40 00 1B FD 47 3E 47 FF
+1933: 03 3F 42 00 1B FD 3B 3B 3B FF
+193D: 03 3E 00 1B FD 3E 3F 3F FF
+1946: 03 42 00 09 FE 00 1B FD 3F 3B 3E FF
+1952: 03 43 00 09 FD 47 41 00 1B FD 3B 3E 3E FF
+1960: 03 41 00 09 FD 00 1B FC 3E 3B 3B FF
+196C: 03 42 00 09 FD 00 1E FE FF
+1975: 03 43 00 09 FD 00 1E FD FF
+197E: 03 42 00 09 FD 00 1E FD FF
+1987: 03 41 00 09 FD 00 1E FD FF
+1990: 03 40 00 09 FD 00 1E FC FF
 
-1999  FF            rst  $38
-199A  FF            rst  $38
-199B  FF            rst  $38
+1999                dc   3, $FF
 
                 ;;; Skip level AFTER getting bonus
                 bonus_skip_screen:

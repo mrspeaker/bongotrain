@@ -24,32 +24,54 @@ The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be delet
 ** scratchpad
 
 #+BEGIN_SRC elisp
-  (defun rst38 (start end)
-    (interactive (if (use-region-p)
-                     (list (region-beginning) (region-end))
-                   (list nil nil)))
-    (let ((c (count-lines start end))
-          (retp (string-equal
-                 "C9"
-                 (buffer-substring-no-properties (+ start 6) (+ start 8))))
-          (addr (buffer-substring-no-properties start (+ start 4) )))
-      (message (format "%s" retp))
-      (replace-region-contents start end
-                               (lambda ()
-                                 (format "%s%s                dc   %d, $FF"
-                                         (if (not retp) ""  "");not doing this
-                                         addr c)))))
+    (defun rst38 (start end)
+      (interactive (if (use-region-p)
+                       (list (region-beginning) (region-end))
+                     (list nil nil)))
+      (let ((c (count-lines start end))
+            (retp (string-equal
+                   "C9"
+                   (buffer-substring-no-properties (+ start 6) (+ start 8))))
+            (addr (buffer-substring-no-properties start (+ start 4) )))
+        (message (format "%s" retp))
+        (replace-region-contents start end
+                                 (lambda ()
+                                   (format "%s%s                dc   %d, $FF"
+                                           (if (not retp) ""  "");not doing this
+                                           addr c)))))
 
-  (defun rst39 (start end)
-    (interactive (if (use-region-p)
-                     (list (region-beginning) (region-end))
-                   (list nil nil)))
-    (rst38 start end)
-    (goto-char start)
-    (insert "\n")
+    (defun rst39 (start end)
+      (interactive (if (use-region-p)
+                       (list (region-beginning) (region-end))
+                     (list nil nil)))
+      (rst38 start end)
+      (goto-char start)
+      (insert "\n")
+      )
+
+  (defun replace-pattern-map (pat fun)
+    (interactive)
+    (let ((line (thing-at-point 'line t)))
+      (when (string-match pat line)
+        (end-of-line)
+        (newline)
+        (insert (funcall fun (substring line 0 -1)))
+        (previous-line)
+        (delete-line)
+        (forward-line 1)
+        (replace-pattern-map pat fun)
+        )
+      )
     )
 
-  (defun bongo_bytes ()
-    
+  (defun bon-bytes ()
+    (interactive)
+    (replace-pattern-map "[0-9A-F]+:" (lambda (line) line))
     )
+
+(s-join ","
+        (seq-map (lambda (l) (concat "$" l))
+                 (seq-drop (s-split " " "1234: 12 32 41 23 FF") 1)
+                 ))  
+
   #+END_SRC
