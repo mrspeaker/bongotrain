@@ -2607,32 +2607,15 @@
                 draw_background:
                 ;; draw first 6 columns
 12B8  CD1003        call $0310
-12BB  03            inc  bc
-12BC  00            nop
-12BD  40            ld   b,b ; downward spikes
-12BE  42            ld   b,d
-12BF  43            ld   b,e
-12C0  42            ld   b,d
-12C1  41            ld   b,c
-12C2  40            ld   b,b
-12C3  FF            rst  $38
+12BB                db   $03,$00
+12BD                db   $40,$42,$43,$42,$41,$40,$FF ; downward spikes
 12C4  CD1003        call $0310
-12C7  09            add  hl,bc
-12C8  00            nop
-12C9  FEFD          cp   $FD ; top left platform
-12CB  FD            db   $fd
-12CC  FD            db   $fd
-12CD  FD            db   $fd
-12CE  FCFFCD        call m,$CDFF
-12D1  1003          djnz $12D6
-12D3  1E00          ld   e,$00
-12D5  FEFD          cp   $FD ; bottomleft platform
-12D7  FD            db   $fd
-12D8  FD            db   $fd
-12D9  FD            db   $fd
-12DA  FCFFCD        call m,$CDFF
-12DD  B0            or   b
-12DE  14            inc  d
+12C7                db   $09,$00
+12C9                db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; top left platform
+12D0  CD1003        call $0310
+12D3                db   $1E,$00
+12D5                db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; bottomleft platform
+12DC  CDB014        call $14B0
 12DF  21E092        ld   hl,$92E0 ; screen pos (6,0)
 12E2  DD2A2080      ld   ix,($8020)
 12E6  1617          ld   d,$17 ; call 23 columns = width - 6
@@ -15054,95 +15037,6 @@
 5F9F  4B            ld   c,e
 5FA0  064B          ld   b,$4B
 5FA2  EE0B          xor  $0B
-5FA4  FF            rst  $38 ; to 0x5fff
-5FA5  FF            rst  $38
-5FA6  FF            rst  $38
-5FA7  FF            rst  $38
-5FA8  FF            rst  $38
-5FA9  FF            rst  $38
-5FAA  FF            rst  $38
-5FAB  FF            rst  $38
-5FAC  FF            rst  $38
-5FAD  FF            rst  $38
-5FAE  FF            rst  $38
-5FAF  FF            rst  $38
-5FB0  FF            rst  $38
-5FB1  FF            rst  $38
-5FB2  FF            rst  $38
-5FB3  FF            rst  $38
-5FB4  FF            rst  $38
-5FB5  FF            rst  $38
-5FB6  FF            rst  $38
-5FB7  FF            rst  $38
-5FB8  FF            rst  $38
-5FB9  FF            rst  $38
-5FBA  FF            rst  $38
-5FBB  FF            rst  $38
-5FBC  FF            rst  $38
-5FBD  FF            rst  $38
-5FBE  FF            rst  $38
-5FBF  FF            rst  $38
-5FC0  FF            rst  $38
-5FC1  FF            rst  $38
-5FC2  FF            rst  $38
-5FC3  FF            rst  $38
-5FC4  FF            rst  $38
-5FC5  FF            rst  $38
-5FC6  FF            rst  $38
-5FC7  FF            rst  $38
-5FC8  FF            rst  $38
-5FC9  FF            rst  $38
-5FCA  FF            rst  $38
-5FCB  FF            rst  $38
-5FCC  FF            rst  $38
-5FCD  FF            rst  $38
-5FCE  FF            rst  $38
-5FCF  FF            rst  $38
-5FD0  FF            rst  $38
-5FD1  FF            rst  $38
-5FD2  FF            rst  $38
-5FD3  FF            rst  $38
-5FD4  FF            rst  $38
-5FD5  FF            rst  $38
-5FD6  FF            rst  $38
-5FD7  FF            rst  $38
-5FD8  FF            rst  $38
-5FD9  FF            rst  $38
-5FDA  FF            rst  $38
-5FDB  FF            rst  $38
-5FDC  FF            rst  $38
-5FDD  FF            rst  $38
-5FDE  FF            rst  $38
-5FDF  FF            rst  $38
-5FE0  FF            rst  $38
-5FE1  FF            rst  $38
-5FE2  FF            rst  $38
-5FE3  FF            rst  $38
-5FE4  FF            rst  $38
-5FE5  FF            rst  $38
-5FE6  FF            rst  $38
-5FE7  FF            rst  $38
-5FE8  FF            rst  $38
-5FE9  FF            rst  $38
-5FEA  FF            rst  $38
-5FEB  FF            rst  $38
-5FEC  FF            rst  $38
-5FED  FF            rst  $38
-5FEE  FF            rst  $38
-5FEF  FF            rst  $38
-5FF0  FF            rst  $38
-5FF1  FF            rst  $38
-5FF2  FF            rst  $38
-5FF3  FF            rst  $38
-5FF4  FF            rst  $38
-5FF5  FF            rst  $38
-5FF6  FF            rst  $38
-5FF7  FF            rst  $38
-5FF8  FF            rst  $38
-5FF9  FF            rst  $38
-5FFA  FF            rst  $38
-5FFB  FF            rst  $38
-5FFC  FF            rst  $38
-5FFD  FF            rst  $38
-5FFE  FF            rst  $38
-5FFF  FF            rst  $38
+5FA4  FF            rst  $38
+
+5FA5                dc   91, $FF ; to 0x5fff
