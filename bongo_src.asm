@@ -3511,29 +3511,29 @@
                 ;; (all `n_n` screens).
                 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
                 level_bg__n_n:
-18B0: 03 41 00 09 FE 00 1E 39 FF
-18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
-18C7: 03 40 00 09 FD 42 00 1B FD 3F 3F 3B FF
-18D4: 03 43 00 09 FC 41 00 1B FD 3B 3B 3F FF
-18E1: 03 42 00 1B FD 3F 3B 3B FF
-18EA: 03 3F 00 1B FD 3F 3F 3B FF
-18F3: 03 3E 43 00 1B FD 3B 3F 3B FF
-18FD: 03 3F 40 00 1B FC 47 3B 47 FF
-1907: 03 3B 42 00 1D 3D 3F FF
-190F: 03 3B 40 00 1D 3C 3E FF
-1917: 03 3F 43 00 1D 3A 3F FF
-191F: 03 3E 41 00 1B FE 10 3D 3E FF
-1929: 03 3B 40 00 1B FD 47 3E 47 FF
-1933: 03 3F 42 00 1B FD 3B 3B 3B FF
-193D: 03 3E 00 1B FD 3E 3F 3F FF
-1946: 03 42 00 09 FE 00 1B FD 3F 3B 3E FF
-1952: 03 43 00 09 FD 47 41 00 1B FD 3B 3E 3E FF
-1960: 03 41 00 09 FD 00 1B FC 3E 3B 3B FF
-196C: 03 42 00 09 FD 00 1E FE FF
-1975: 03 43 00 09 FD 00 1E FD FF
-197E: 03 42 00 09 FD 00 1E FD FF
-1987: 03 41 00 09 FD 00 1E FD FF
-1990: 03 40 00 09 FD 00 1E FC FF
+18B0                db   $03,$41,$00,$09,$FE,$00,$1E,$39,$FF
+18B9                db   $03,$43,$00,$09,$FD,$45,$41,$00,$1B,$FE,$3B,$45,$45,$FF
+18C7                db   $03,$40,$00,$09,$FD,$42,$00,$1B,$FD,$3F,$3F,$3B,$FF
+18D4                db   $03,$43,$00,$09,$FC,$41,$00,$1B,$FD,$3B,$3B,$3F,$FF
+18E1                db   $03,$42,$00,$1B,$FD,$3F,$3B,$3B,$FF
+18EA                db   $03,$3F,$00,$1B,$FD,$3F,$3F,$3B,$FF
+18F3                db   $03,$3E,$43,$00,$1B,$FD,$3B,$3F,$3B,$FF
+18FD                db   $03,$3F,$40,$00,$1B,$FC,$47,$3B,$47,$FF
+1907                db   $03,$3B,$42,$00,$1D,$3D,$3F,$FF
+190F                db   $03,$3B,$40,$00,$1D,$3C,$3E,$FF
+1917                db   $03,$3F,$43,$00,$1D,$3A,$3F,$FF
+191F                db   $03,$3E,$41,$00,$1B,$FE,$10,$3D,$3E,$FF
+1929                db   $03,$3B,$40,$00,$1B,$FD,$47,$3E,$47,$FF
+1933                db   $03,$3F,$42,$00,$1B,$FD,$3B,$3B,$3B,$FF
+193D                db   $03,$3E,$00,$1B,$FD,$3E,$3F,$3F,$FF
+1946                db   $03,$42,$00,$09,$FE,$00,$1B,$FD,$3F,$3B,$3E,$FF
+1952                db   $03,$43,$00,$09,$FD,$47,$41,$00,$1B,$FD,$3B,$3E,$3E,$FF
+1960                db   $03,$41,$00,$09,$FD,$00,$1B,$FC,$3E,$3B,$3B,$FF
+196C                db   $03,$42,$00,$09,$FD,$00,$1E,$FE,$FF
+1975                db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+197E                db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+1987                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+1990                db   $03,$40,$00,$09,$FD,$00,$1E,$FC,$FF
 
 1999                dc   3, $FF
 
@@ -3616,226 +3616,31 @@
                 ;; (`/` screens)
                 ;; See DRAW_SCREEN_FROM_LEVEL_DATA
                 level_bg__stairs_up:
-1A10  03            inc  bc
-1A11  3F            ccf
-1A12  00            nop
-1A13  1B            dec  de
-1A14  FE30          cp   $30
-1A16  313CFF        ld   sp,$FF3C
-1A19  03            inc  bc
-1A1A  3F            ccf
-1A1B  3E3B          ld   a,$3B
-1A1D  40            ld   b,b
-1A1E  00            nop
-1A1F  1B            dec  de
-1A20  FC103A        call m,$3A10
-1A23  3F            ccf
-1A24  FF            rst  $38
-1A25  03            inc  bc
-1A26  3B            dec  sp
-1A27  3B            dec  sp
-1A28  3E3F          ld   a,$3F
-1A2A  42            ld   b,d
-1A2B  00            nop
-1A2C  1B            dec  de
-1A2D  3610          ld   (hl),$10
-1A2F  3D            dec  a
-1A30  3F            ccf
-1A31  FF            rst  $38
-1A32  03            inc  bc
-1A33  3F            ccf
-1A34  3B            dec  sp
-1A35  3F            ccf
-1A36  3E3B          ld   a,$3B
-1A38  41            ld   b,c
-1A39  00            nop
-1A3A  18FE          jr   $1A3A
-1A3C  3031          jr   nc,$1A6F
-1A3E  103C          djnz $1A7C
-1A40  3F            ccf
-1A41  3EFF          ld   a,$FF
-1A43  03            inc  bc
-1A44  3F            ccf
-1A45  3B            dec  sp
-1A46  3E3B          ld   a,$3B
-1A48  3E3F          ld   a,$3F
-1A4A  40            ld   b,b
-1A4B  00            nop
-1A4C  18FC          jr   $1A4A
-1A4E  00            nop
-1A4F  1D            dec  e
-1A50  39            add  hl,sp
-1A51  3EFF          ld   a,$FF
-1A53  03            inc  bc
-1A54  3B            dec  sp
-1A55  3F            ccf
-1A56  3B            dec  sp
-1A57  3E3B          ld   a,$3B
-1A59  41            ld   b,c
-1A5A  00            nop
-1A5B  1836          jr   $1A93
-1A5D  1010          djnz $1A6F
-1A5F  3D            dec  a
-1A60  3F            ccf
-1A61  3E3B          ld   a,$3B
-1A63  FF            rst  $38
-1A64  03            inc  bc
-1A65  3F            ccf
-1A66  3B            dec  sp
-1A67  3B            dec  sp
-1A68  3B            dec  sp
-1A69  00            nop
-1A6A  15            dec  d
-1A6B  FE30          cp   $30
-1A6D  313010        ld   sp,$1030
-1A70  3A3E3B        ld   a,($3B3E)
-1A73  3B            dec  sp
-1A74  3F            ccf
-1A75  FF            rst  $38
-1A76  03            inc  bc
-1A77  3E3E          ld   a,$3E
-1A79  3B            dec  sp
-1A7A  00            nop
-1A7B  15            dec  d
-1A7C  FC001A        call m,$1A00
-1A7F  3C            inc  a
-1A80  3F            ccf
-1A81  3E3E          ld   a,$3E
-1A83  3F            ccf
-1A84  FF            rst  $38
-1A85  03            inc  bc
-1A86  3B            dec  sp
-1A87  00            nop
-1A88  15            dec  d
-1A89  37            scf
-1A8A  1010          djnz $1A9C
-1A8C  1039          djnz $1AC7
-1A8E  3E3E          ld   a,$3E
-1A90  3F            ccf
-1A91  3B            dec  sp
-1A92  3F            ccf
-1A93  FF            rst  $38
-1A94  03            inc  bc
-1A95  3E42          ld   a,$42
-1A97  00            nop
-1A98  12            ld   (de),a
-1A99  FE31          cp   $31
-1A9B  3031          jr   nc,$1ACE
-1A9D  1010          djnz $1AAF
-1A9F  103A          djnz $1ADB
-1AA1  3F            ccf
-1AA2  3E3B          ld   a,$3B
-1AA4  3E3F          ld   a,$3F
-1AA6  FF            rst  $38
-1AA7  03            inc  bc
-1AA8  3F            ccf
-1AA9  41            ld   b,c
-1AAA  00            nop
-1AAB  12            ld   (de),a
-1AAC  FC001A        call m,$1A00
-1AAF  383E          jr   c,$1AEF
-1AB1  3B            dec  sp
-1AB2  3B            dec  sp
-1AB3  3F            ccf
-1AB4  FF            rst  $38
-1AB5  03            inc  bc
-1AB6  3E40          ld   a,$40
-1AB8  00            nop
-1AB9  12            ld   (de),a
-1ABA  3600          ld   (hl),$00
-1ABC  1B            dec  de
-1ABD  39            add  hl,sp
-1ABE  3F            ccf
-1ABF  3B            dec  sp
-1AC0  3F            ccf
-1AC1  FF            rst  $38
-1AC2  03            inc  bc
-1AC3  42            ld   b,d
-1AC4  00            nop
-1AC5  0F            rrca
-1AC6  FE30          cp   $30
-1AC8  31001B        ld   sp,$1B00
-1ACB  3C            inc  a
-1ACC  3F            ccf
-1ACD  3E3E          ld   a,$3E
-1ACF  FF            rst  $38
-1AD0  03            inc  bc
-1AD1  43            ld   b,e
-1AD2  00            nop
-1AD3  0F            rrca
-1AD4  FC001C        call m,$1C00
-1AD7  3E3E          ld   a,$3E
-1AD9  3B            dec  sp
-1ADA  FF            rst  $38
-1ADB  03            inc  bc
-1ADC  41            ld   b,c
-1ADD  00            nop
-1ADE  0F            rrca
-1ADF  37            scf
-1AE0  00            nop
-1AE1  1D            dec  e
-1AE2  3A3BFF        ld   a,($FF3B)
-1AE5  03            inc  bc
-1AE6  42            ld   b,d
-1AE7  00            nop
-1AE8  0C            inc  c
-1AE9  FE34          cp   $34
-1AEB  35            dec  (hl)
-1AEC  3600          ld   (hl),$00
-1AEE  1E3C          ld   e,$3C
-1AF0  FF            rst  $38
-1AF1  03            inc  bc
-1AF2  41            ld   b,c
-1AF3  00            nop
-1AF4  0C            inc  c
-1AF5  FC001E        call m,$1E00
-1AF8  39            add  hl,sp
-1AF9  FF            rst  $38
-1AFA  03            inc  bc
-1AFB  40            ld   b,b
-1AFC  00            nop
-1AFD  0C            inc  c
-1AFE  3600          ld   (hl),$00
-1B00  1E3E          ld   e,$3E
-1B02  FF            rst  $38
-1B03  03            inc  bc
-1B04  42            ld   b,d
-1B05  00            nop
-1B06  09            add  hl,bc
-1B07  FE00          cp   $00
-1B09  1EFE          ld   e,$FE
-1B0B  FF            rst  $38
-1B0C  03            inc  bc
-1B0D  43            ld   b,e
-1B0E  00            nop
-1B0F  09            add  hl,bc
-1B10  FD            db   $fd
-1B11  00            nop
-1B12  1EFD          ld   e,$FD
-1B14  FF            rst  $38
-1B15  03            inc  bc
-1B16  42            ld   b,d
-1B17  00            nop
-1B18  09            add  hl,bc
-1B19  FD            db   $fd
-1B1A  00            nop
-1B1B  1EFD          ld   e,$FD
-1B1D  FF            rst  $38
-1B1E  03            inc  bc
-1B1F  41            ld   b,c
-1B20  00            nop
-1B21  09            add  hl,bc
-1B22  FD            db   $fd
-1B23  00            nop
-1B24  1EFD          ld   e,$FD
-1B26  FF            rst  $38
-1B27  03            inc  bc
-1B28  40            ld   b,b
-1B29  00            nop
-1B2A  09            add  hl,bc
-1B2B  FC001E        call m,$1E00
-1B2E  FCFF2A        call m,$2AFF
-1B31  2080          jr   nz,$1AB3
+1A10                db   $03,$3F,$00,$1B,$FE,$30,$31,$3C,$FF
+1A19                db   $03,$3F,$3E,$3B,$40,$00,$1B,$FC,$10,$3A,$3F,$FF
+1A25                db   $03,$3B,$3B,$3E,$3F,$42,$00,$1B,$36,$10,$3D,$3F,$FF
+1A32                db   $03,$3F,$3B,$3F,$3E,$3B,$41,$00,$18,$FE,$30,$31,$10,$3C,$3F,$3E,$FF
+1A43                db   $03,$3F,$3B,$3E,$3B,$3E,$3F,$40,$00,$18,$FC,$00,$1D,$39,$3E,$FF
+1A53                db   $03,$3B,$3F,$3B,$3E,$3B,$41,$00,$18,$36,$10,$10,$3D,$3F,$3E,$3B,$FF
+1A64                db   $03,$3F,$3B,$3B,$3B,$00,$15,$FE,$30,$31,$30,$10,$3A,$3E,$3B,$3B,$3F,$FF
+1A76                db   $03,$3E,$3E,$3B,$00,$15,$FC,$00,$1A,$3C,$3F,$3E,$3E,$3F,$FF
+1A85                db   $03,$3B,$00,$15,$37,$10,$10,$10,$39,$3E,$3E,$3F,$3B,$3F,$FF
+1A94                db   $03,$3E,$42,$00,$12,$FE,$31,$30,$31,$10,$10,$10,$3A,$3F,$3E,$3B,$3E,$3F,$FF
+1AA7                db   $03,$3F,$41,$00,$12,$FC,$00,$1A,$38,$3E,$3B,$3B,$3F,$FF
+1AB5                db   $03,$3E,$40,$00,$12,$36,$00,$1B,$39,$3F,$3B,$3F,$FF
+1AC2                db   $03,$42,$00,$0F,$FE,$30,$31,$00,$1B,$3C,$3F,$3E,$3E,$FF
+1AD0                db   $03,$43,$00,$0F,$FC,$00,$1C,$3E,$3E,$3B,$FF
+1ADB                db   $03,$41,$00,$0F,$37,$00,$1D,$3A,$3B,$FF
+1AE5                db   $03,$42,$00,$0C,$FE,$34,$35,$36,$00,$1E,$3C,$FF
+1AF1                db   $03,$41,$00,$0C,$FC,$00,$1E,$39,$FF
+1AFA                db   $03,$40,$00,$0C,$36,$00,$1E,$3E,$FF
+1B03                db   $03,$42,$00,$09,$FE,$00,$1E,$FE,$FF
+1B0C                db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+1B15                db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+1B1E                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+1B27                db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+1B30  2A2080        ld   hl,($8020)
 1B33  011400        ld   bc,$0014 ; add 20 bytes to bg_ptr
 1B36  09            add  hl,bc
 1B37  222080        ld   ($8020),hl
@@ -4095,852 +3900,99 @@
 1CF4  E1            pop  hl
 1CF5  FF            rst  $38
 1CF6  C9            ret
-1CF7  FF            rst  $38
-1CF8  FF            rst  $38
-1CF9  FF            rst  $38
-1CFA  FF            rst  $38
-1CFB  FF            rst  $38
-1CFC  FF            rst  $38
-1CFD  FF            rst  $38
-1CFE  FF            rst  $38
-1CFF  FF            rst  $38
+
+1CF7                dc   9, $FF
 
                 ;; Level data for screens: 16, 19, 27
                 ;; (all `S` screens)
                 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-                level_bg__s:
-1D00  03            inc  bc
-1D01  3B            dec  sp
-1D02  3E3F          ld   a,$3F
-1D04  00            nop
-1D05  0F            rrca
-1D06  FE00          cp   $00
-1D08  1B            dec  de
-1D09  FE10          cp   $10
-1D0B  3D            dec  a
-1D0C  3EFF          ld   a,$FF
-1D0E  03            inc  bc
-1D0F  3E3E          ld   a,$3E
-1D11  3F            ccf
-1D12  3E00          ld   a,$00
-1D14  0F            rrca
-1D15  FD            db   $fd
-1D16  00            nop
-1D17  1B            dec  de
-1D18  FD            db   $fd
-1D19  103C          djnz $1D57
-1D1B  3F            ccf
-1D1C  FF            rst  $38
-1D1D  03            inc  bc
-1D1E  3E3B          ld   a,$3B
-1D20  3B            dec  sp
-1D21  3F            ccf
-1D22  3B            dec  sp
-1D23  00            nop
-1D24  0F            rrca
-1D25  FD            db   $fd
-1D26  00            nop
-1D27  1B            dec  de
-1D28  FD            db   $fd
-1D29  103A          djnz $1D65
-1D2B  3B            dec  sp
-1D2C  FF            rst  $38
-1D2D  03            inc  bc
-1D2E  3B            dec  sp
-1D2F  3E3B          ld   a,$3B
-1D31  3F            ccf
-1D32  3F            ccf
-1D33  41            ld   b,c
-1D34  00            nop
-1D35  0F            rrca
-1D36  FD            db   $fd
-1D37  00            nop
-1D38  1B            dec  de
-1D39  FD            db   $fd
-1D3A  103C          djnz $1D78
-1D3C  3B            dec  sp
-1D3D  FF            rst  $38
-1D3E  03            inc  bc
-1D3F  3B            dec  sp
-1D40  3E3F          ld   a,$3F
-1D42  3B            dec  sp
-1D43  00            nop
-1D44  0F            rrca
-1D45  FC0019        call m,$1900
-1D48  35            dec  (hl)
-1D49  34            inc  (hl)
-1D4A  3C            inc  a
-1D4B  1039          djnz $1D86
-1D4D  3EFF          ld   a,$FF
-1D4F  03            inc  bc
-1D50  3F            ccf
-1D51  3E3B          ld   a,$3B
-1D53  3E00          ld   a,$00
-1D55  0D            dec  c
-1D56  3631          ld   (hl),$31
-1D58  00            nop
-1D59  1837          jr   $1D92
-1D5B  1010          djnz $1D6D
-1D5D  103D          djnz $1D9C
-1D5F  3F            ccf
-1D60  3EFF          ld   a,$FF
-1D62  03            inc  bc
-1D63  3B            dec  sp
-1D64  3B            dec  sp
-1D65  40            ld   b,b
-1D66  00            nop
-1D67  0C            inc  c
-1D68  33            inc  sp
-1D69  00            nop
-1D6A  12            ld   (de),a
-1D6B  FE00          cp   $00
-1D6D  18FE          jr   $1D6D
-1D6F  1010          djnz $1D81
-1D71  3C            inc  a
-1D72  3E3F          ld   a,$3F
-1D74  3F            ccf
-1D75  FF            rst  $38
-1D76  03            inc  bc
-1D77  3E40          ld   a,$40
-1D79  00            nop
-1D7A  0C            inc  c
-1D7B  FE00          cp   $00
-1D7D  12            ld   (de),a
-1D7E  FD            db   $fd
-1D7F  00            nop
-1D80  18FD          jr   $1D7F
-1D82  1010          djnz $1D94
-1D84  3D            dec  a
-1D85  3B            dec  sp
-1D86  3F            ccf
-1D87  3B            dec  sp
-1D88  FF            rst  $38
-1D89  03            inc  bc
-1D8A  3F            ccf
-1D8B  41            ld   b,c
-1D8C  00            nop
-1D8D  0C            inc  c
-1D8E  FD            db   $fd
-1D8F  00            nop
-1D90  12            ld   (de),a
-1D91  FD            db   $fd
-1D92  00            nop
-1D93  18FD          jr   $1D92
-1D95  103A          djnz $1DD1
-1D97  3F            ccf
-1D98  3F            ccf
-1D99  3E3B          ld   a,$3B
-1D9B  FF            rst  $38
-1D9C  03            inc  bc
-1D9D  3F            ccf
-1D9E  40            ld   b,b
-1D9F  00            nop
-1DA0  0C            inc  c
-1DA1  FD            db   $fd
-1DA2  00            nop
-1DA3  12            ld   (de),a
-1DA4  FD            db   $fd
-1DA5  00            nop
-1DA6  18FD          jr   $1DA5
-1DA8  1038          djnz $1DE2
-1DAA  3E3F          ld   a,$3F
-1DAC  3E3B          ld   a,$3B
-1DAE  FF            rst  $38
-1DAF  03            inc  bc
-1DB0  40            ld   b,b
-1DB1  00            nop
-1DB2  0C            inc  c
-1DB3  FD            db   $fd
-1DB4  00            nop
-1DB5  12            ld   (de),a
-1DB6  FD            db   $fd
-1DB7  00            nop
-1DB8  18FD          jr   $1DB7
-1DBA  1010          djnz $1DCC
-1DBC  3A3B3B        ld   a,($3B3B)
-1DBF  3F            ccf
-1DC0  FF            rst  $38
-1DC1  03            inc  bc
-1DC2  42            ld   b,d
-1DC3  00            nop
-1DC4  0C            inc  c
-1DC5  FC0012        call m,$1200
-1DC8  FC0018        call m,$1800
-1DCB  FC1010        call m,$1010
-1DCE  3A3F3E        ld   a,($3E3F)
-1DD1  3B            dec  sp
-1DD2  FF            rst  $38
-1DD3  03            inc  bc
-1DD4  43            ld   b,e
-1DD5  00            nop
-1DD6  0A            ld   a,(bc)
-1DD7  33            inc  sp
-1DD8  310017        ld   sp,$1700
-1DDB  3610          ld   (hl),$10
-1DDD  103C          djnz $1E1B
-1DDF  3F            ccf
-1DE0  3B            dec  sp
-1DE1  3B            dec  sp
-1DE2  3EFF          ld   a,$FF
-1DE4  03            inc  bc
-1DE5  41            ld   b,c
-1DE6  00            nop
-1DE7  0A            ld   a,(bc)
-1DE8  3600          ld   (hl),$00
-1DEA  1636          ld   d,$36
-1DEC  1010          djnz $1DFE
-1DEE  3D            dec  a
-1DEF  3B            dec  sp
-1DF0  3F            ccf
-1DF1  3E3B          ld   a,$3B
-1DF3  3B            dec  sp
-1DF4  FF            rst  $38
-1DF5  03            inc  bc
-1DF6  43            ld   b,e
-1DF7  00            nop
-1DF8  09            add  hl,bc
-1DF9  FE00          cp   $00
-1DFB  15            dec  d
-1DFC  FE10          cp   $10
-1DFE  103A          djnz $1E3A
-1E00  3E3F          ld   a,$3F
-1E02  3B            dec  sp
-1E03  3F            ccf
-1E04  3B            dec  sp
-1E05  3F            ccf
-1E06  FF            rst  $38
-1E07  03            inc  bc
-1E08  42            ld   b,d
-1E09  00            nop
-1E0A  09            add  hl,bc
-1E0B  FD            db   $fd
-1E0C  00            nop
-1E0D  15            dec  d
-1E0E  FD            db   $fd
-1E0F  1010          djnz $1E21
-1E11  1010          djnz $1E23
-1E13  3E3B          ld   a,$3B
-1E15  3F            ccf
-1E16  3F            ccf
-1E17  3EFF          ld   a,$FF
-1E19  03            inc  bc
-1E1A  41            ld   b,c
-1E1B  00            nop
-1E1C  09            add  hl,bc
-1E1D  FD            db   $fd
-1E1E  00            nop
-1E1F  15            dec  d
-1E20  FD            db   $fd
-1E21  1010          djnz $1E33
-1E23  1010          djnz $1E35
-1E25  103A          djnz $1E61
-1E27  3F            ccf
-1E28  3B            dec  sp
-1E29  3EFF          ld   a,$FF
-1E2B  03            inc  bc
-1E2C  40            ld   b,b
-1E2D  00            nop
-1E2E  09            add  hl,bc
-1E2F  FD            db   $fd
-1E30  00            nop
-1E31  15            dec  d
-1E32  FC001E        call m,$1E00
-1E35  FD            db   $fd
-1E36  FF            rst  $38
-1E37  03            inc  bc
-1E38  42            ld   b,d
-1E39  00            nop
-1E3A  09            add  hl,bc
-1E3B  FD            db   $fd
-1E3C  00            nop
-1E3D  1EFE          ld   e,$FE
-1E3F  FF            rst  $38
-1E40  03            inc  bc
-1E41  43            ld   b,e
-1E42  00            nop
-1E43  09            add  hl,bc
-1E44  FD            db   $fd
-1E45  00            nop
-1E46  1EFD          ld   e,$FD
-1E48  FF            rst  $38
-1E49  03            inc  bc
-1E4A  42            ld   b,d
-1E4B  00            nop
-1E4C  09            add  hl,bc
-1E4D  FD            db   $fd
-1E4E  00            nop
-1E4F  1EFD          ld   e,$FD
-1E51  FF            rst  $38
-1E52  03            inc  bc
-1E53  41            ld   b,c
-1E54  00            nop
-1E55  09            add  hl,bc
-1E56  FD            db   $fd
-1E57  00            nop
-1E58  1EFD          ld   e,$FD
-1E5A  FF            rst  $38
-1E5B  03            inc  bc
-1E5C  40            ld   b,b
-1E5D  00            nop
-1E5E  09            add  hl,bc
-1E5F  FC001E        call m,$1E00
-1E62  FCFFFF        call m,$FFFF
-1E65  FF            rst  $38
-1E66  FF            rst  $38
-1E67  FF            rst  $38
-1E68  FF            rst  $38
-1E69  FF            rst  $38
-1E6A  FF            rst  $38
-1E6B  FF            rst  $38
-1E6C  FF            rst  $38
-1E6D  FF            rst  $38
-1E6E  FF            rst  $38
-1E6F  FF            rst  $38
+                level_bg__S:
+1D00                db   $03,$3B,$3E,$3F,$00,$0F,$FE,$00,$1B,$FE,$10,$3D,$3E,$FF
+1D0E                db   $03,$3E,$3E,$3F,$3E,$00,$0F,$FD,$00,$1B,$FD,$10,$3C,$3F,$FF
+1D1D                db   $03,$3E,$3B,$3B,$3F,$3B,$00,$0F,$FD,$00,$1B,$FD,$10,$3A,$3B,$FF
+1D2D                db   $03,$3B,$3E,$3B,$3F,$3F,$41,$00,$0F,$FD,$00,$1B,$FD,$10,$3C,$3B,$FF
+1D3E                db   $03,$3B,$3E,$3F,$3B,$00,$0F,$FC,$00,$19,$35,$34,$3C,$10,$39,$3E,$FF
+1D4F                db   $03,$3F,$3E,$3B,$3E,$00,$0D,$36,$31,$00,$18,$37,$10,$10,$10,$3D,$3F,$3E,$FF
+1D62                db   $03,$3B,$3B,$40,$00,$0C,$33,$00,$12,$FE,$00,$18,$FE,$10,$10,$3C,$3E,$3F,$3F,$FF
+1D76                db   $03,$3E,$40,$00,$0C,$FE,$00,$12,$FD,$00,$18,$FD,$10,$10,$3D,$3B,$3F,$3B,$FF
+1D89                db   $03,$3F,$41,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$3A,$3F,$3F,$3E,$3B,$FF
+1D9C                db   $03,$3F,$40,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$38,$3E,$3F,$3E,$3B,$FF
+1DAF                db   $03,$40,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$10,$3A,$3B,$3B,$3F,$FF
+1DC1                db   $03,$42,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$10,$10,$3A,$3F,$3E,$3B,$FF
+1DD3                db   $03,$43,$00,$0A,$33,$31,$00,$17,$36,$10,$10,$3C,$3F,$3B,$3B,$3E,$FF
+1DE4                db   $03,$41,$00,$0A,$36,$00,$16,$36,$10,$10,$3D,$3B,$3F,$3E,$3B,$3B,$FF
+1DF5                db   $03,$43,$00,$09,$FE,$00,$15,$FE,$10,$10,$3A,$3E,$3F,$3B,$3F,$3B,$3F,$FF
+1E07                db   $03,$42,$00,$09,$FD,$00,$15,$FD,$10,$10,$10,$10,$3E,$3B,$3F,$3F,$3E,$FF
+1E19                db   $03,$41,$00,$09,$FD,$00,$15,$FD,$10,$10,$10,$10,$10,$3A,$3F,$3B,$3E,$FF
+1E2B                db   $03,$40,$00,$09,$FD,$00,$15,$FC,$00,$1E,$FD,$FF
+1E37                db   $03,$42,$00,$09,$FD,$00,$1E,$FE,$FF
+1E40                db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+1E49                db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+1E52                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+1E5B                db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+1E64                dc   12, $FF
 
                 ;; Level data for screens 7, 12, 17, 20, 23, 26
                 ;; (all `\` screens)
                 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
                 level_bg__stairs_down:
-1E70  03            inc  bc
-1E71  42            ld   b,d
-1E72  00            nop
-1E73  0A            ld   a,(bc)
-1E74  3032          jr   nc,$1EA8
-1E76  00            nop
-1E77  1D            dec  e
-1E78  3C            inc  a
-1E79  3F            ccf
-1E7A  FF            rst  $38
-1E7B  03            inc  bc
-1E7C  43            ld   b,e
-1E7D  00            nop
-1E7E  0C            inc  c
-1E7F  FE00          cp   $00
-1E81  1C            inc  e
-1E82  3A3B3F        ld   a,($3F3B)
-1E85  FF            rst  $38
-1E86  03            inc  bc
-1E87  41            ld   b,c
-1E88  00            nop
-1E89  0C            inc  c
-1E8A  FC0019        call m,$1900
-1E8D  383E          jr   c,$1ECD
-1E8F  3B            dec  sp
-1E90  3F            ccf
-1E91  3F            ccf
-1E92  3B            dec  sp
-1E93  FF            rst  $38
-1E94  03            inc  bc
-1E95  3B            dec  sp
-1E96  40            ld   b,b
-1E97  00            nop
-1E98  0D            dec  c
-1E99  313200        ld   sp,$0032
-1E9C  163A          ld   d,$3A
-1E9E  3F            ccf
-1E9F  3E3B          ld   a,$3B
-1EA1  3B            dec  sp
-1EA2  3E3F          ld   a,$3F
-1EA4  3B            dec  sp
-1EA5  3F            ccf
-1EA6  FF            rst  $38
-1EA7  03            inc  bc
-1EA8  3B            dec  sp
-1EA9  00            nop
-1EAA  0F            rrca
-1EAB  FE00          cp   $00
-1EAD  15            dec  d
-1EAE  39            add  hl,sp
-1EAF  3E3E          ld   a,$3E
-1EB1  3F            ccf
-1EB2  3B            dec  sp
-1EB3  3F            ccf
-1EB4  3F            ccf
-1EB5  3B            dec  sp
-1EB6  3E3F          ld   a,$3F
-1EB8  FF            rst  $38
-1EB9  03            inc  bc
-1EBA  3F            ccf
-1EBB  40            ld   b,b
-1EBC  00            nop
-1EBD  0F            rrca
-1EBE  FC0014        call m,$1400
-1EC1  383F          jr   c,$1F02
-1EC3  3B            dec  sp
-1EC4  3E3B          ld   a,$3B
-1EC6  3F            ccf
-1EC7  3E3B          ld   a,$3B
-1EC9  3F            ccf
-1ECA  3E3E          ld   a,$3E
-1ECC  FF            rst  $38
-1ECD  03            inc  bc
-1ECE  3B            dec  sp
-1ECF  3E41          ld   a,$41
-1ED1  00            nop
-1ED2  1030          djnz $1F04
-1ED4  320014        ld   ($1400),a
-1ED7  3A3B3F        ld   a,($3F3B)
-1EDA  3E3F          ld   a,$3F
-1EDC  3F            ccf
-1EDD  3B            dec  sp
-1EDE  3B            dec  sp
-1EDF  3E3F          ld   a,$3F
-1EE1  3EFF          ld   a,$FF
-1EE3  03            inc  bc
-1EE4  3E3F          ld   a,$3F
-1EE6  3B            dec  sp
-1EE7  3B            dec  sp
-1EE8  40            ld   b,b
-1EE9  00            nop
-1EEA  12            ld   (de),a
-1EEB  FE3F          cp   $3F
-1EED  3F            ccf
-1EEE  3B            dec  sp
-1EEF  3E3F          ld   a,$3F
-1EF1  3E3B          ld   a,$3B
-1EF3  3B            dec  sp
-1EF4  3E3F          ld   a,$3F
-1EF6  3E3B          ld   a,$3B
-1EF8  FF            rst  $38
-1EF9  03            inc  bc
-1EFA  3B            dec  sp
-1EFB  3F            ccf
-1EFC  3F            ccf
-1EFD  3E40          ld   a,$40
-1EFF  00            nop
-1F00  12            ld   (de),a
-1F01  FD            db   $fd
-1F02  3B            dec  sp
-1F03  3F            ccf
-1F04  3E3B          ld   a,$3B
-1F06  3E3F          ld   a,$3F
-1F08  3F            ccf
-1F09  3B            dec  sp
-1F0A  3B            dec  sp
-1F0B  3F            ccf
-1F0C  3E3E          ld   a,$3E
-1F0E  FF            rst  $38
-1F0F  03            inc  bc
-1F10  3F            ccf
-1F11  3F            ccf
-1F12  3E3B          ld   a,$3B
-1F14  3B            dec  sp
-1F15  00            nop
-1F16  1639          ld   d,$39
-1F18  3B            dec  sp
-1F19  3F            ccf
-1F1A  3E3F          ld   a,$3F
-1F1C  3F            ccf
-1F1D  3B            dec  sp
-1F1E  3B            dec  sp
-1F1F  3EFF          ld   a,$FF
-1F21  03            inc  bc
-1F22  3F            ccf
-1F23  3B            dec  sp
-1F24  3B            dec  sp
-1F25  3E40          ld   a,$40
-1F27  00            nop
-1F28  15            dec  d
-1F29  FE3B          cp   $3B
-1F2B  3E3F          ld   a,$3F
-1F2D  3B            dec  sp
-1F2E  3E3F          ld   a,$3F
-1F30  3B            dec  sp
-1F31  3E3F          ld   a,$3F
-1F33  FF            rst  $38
-1F34  03            inc  bc
-1F35  3B            dec  sp
-1F36  3F            ccf
-1F37  3E3E          ld   a,$3E
-1F39  3B            dec  sp
-1F3A  41            ld   b,c
-1F3B  00            nop
-1F3C  15            dec  d
-1F3D  FC3E3B        call m,$3B3E
-1F40  3F            ccf
-1F41  3E3B          ld   a,$3B
-1F43  3F            ccf
-1F44  3E3B          ld   a,$3B
-1F46  3F            ccf
-1F47  FF            rst  $38
-1F48  03            inc  bc
-1F49  3F            ccf
-1F4A  3E3E          ld   a,$3E
-1F4C  3F            ccf
-1F4D  3F            ccf
-1F4E  00            nop
-1F4F  19            add  hl,de
-1F50  3A3E3F        ld   a,($3F3E)
-1F53  3B            dec  sp
-1F54  3F            ccf
-1F55  3B            dec  sp
-1F56  FF            rst  $38
-1F57  03            inc  bc
-1F58  3F            ccf
-1F59  3E3F          ld   a,$3F
-1F5B  3B            dec  sp
-1F5C  40            ld   b,b
-1F5D  00            nop
-1F5E  18FE          jr   $1F5E
-1F60  3B            dec  sp
-1F61  3E3F          ld   a,$3F
-1F63  3F            ccf
-1F64  3E3B          ld   a,$3B
-1F66  FF            rst  $38
-1F67  03            inc  bc
-1F68  3F            ccf
-1F69  3E3E          ld   a,$3E
-1F6B  3B            dec  sp
-1F6C  3F            ccf
-1F6D  40            ld   b,b
-1F6E  00            nop
-1F6F  18FC          jr   $1F6D
-1F71  3E3B          ld   a,$3B
-1F73  3E3B          ld   a,$3B
-1F75  3E3F          ld   a,$3F
-1F77  FF            rst  $38
-1F78  03            inc  bc
-1F79  3E3B          ld   a,$3B
-1F7B  3B            dec  sp
-1F7C  41            ld   b,c
-1F7D  00            nop
-1F7E  1C            inc  e
-1F7F  383F          jr   c,$1FC0
-1F81  3F            ccf
-1F82  FF            rst  $38
-1F83  03            inc  bc
-1F84  3F            ccf
-1F85  3E42          ld   a,$42
-1F87  00            nop
-1F88  1B            dec  de
-1F89  FE3E          cp   $3E
-1F8B  3B            dec  sp
-1F8C  3B            dec  sp
-1F8D  FF            rst  $38
-1F8E  03            inc  bc
-1F8F  3F            ccf
-1F90  40            ld   b,b
-1F91  00            nop
-1F92  1B            dec  de
-1F93  FC3B3E        call m,$3E3B
-1F96  3F            ccf
-1F97  FF            rst  $38
-1F98  03            inc  bc
-1F99  42            ld   b,d
-1F9A  00            nop
-1F9B  09            add  hl,bc
-1F9C  FE00          cp   $00
-1F9E  1EFE          ld   e,$FE
-1FA0  FF            rst  $38
-1FA1  03            inc  bc
-1FA2  43            ld   b,e
-1FA3  00            nop
-1FA4  09            add  hl,bc
-1FA5  FD            db   $fd
-1FA6  00            nop
-1FA7  1EFD          ld   e,$FD
-1FA9  FF            rst  $38
-1FAA  03            inc  bc
-1FAB  42            ld   b,d
-1FAC  00            nop
-1FAD  09            add  hl,bc
-1FAE  FD            db   $fd
-1FAF  00            nop
-1FB0  1EFD          ld   e,$FD
-1FB2  FF            rst  $38
-1FB3  03            inc  bc
-1FB4  41            ld   b,c
-1FB5  00            nop
-1FB6  09            add  hl,bc
-1FB7  FD            db   $fd
-1FB8  00            nop
-1FB9  1EFD          ld   e,$FD
-1FBB  FF            rst  $38
-1FBC  03            inc  bc
-1FBD  40            ld   b,b
-1FBE  00            nop
-1FBF  09            add  hl,bc
-1FC0  FC001E        call m,$1E00
-1FC3  FCFFFF        call m,$FFFF
-1FC6  FF            rst  $38
-1FC7  FF            rst  $38
-1FC8  FF            rst  $38
-1FC9  FF            rst  $38
-1FCA  FF            rst  $38
-1FCB  FF            rst  $38
-1FCC  FF            rst  $38
-1FCD  FF            rst  $38
-1FCE  FF            rst  $38
-1FCF  FF            rst  $38
-1FD0  FF            rst  $38
-1FD1  FF            rst  $38
-1FD2  FF            rst  $38
-1FD3  FF            rst  $38
-1FD4  FF            rst  $38
-1FD5  FF            rst  $38
-1FD6  FF            rst  $38
-1FD7  FF            rst  $38
-1FD8  FF            rst  $38
-1FD9  FF            rst  $38
-1FDA  FF            rst  $38
-1FDB  FF            rst  $38
-1FDC  FF            rst  $38
-1FDD  FF            rst  $38
-1FDE  FF            rst  $38
-1FDF  FF            rst  $38
+1E70                db   $03,$42,$00,$0A,$30,$32,$00,$1D,$3C,$3F,$FF
+1E7B                db   $03,$43,$00,$0C,$FE,$00,$1C,$3A,$3B,$3F,$FF
+1E86                db   $03,$41,$00,$0C,$FC,$00,$19,$38,$3E,$3B,$3F,$3F,$3B,$FF
+1E94                db   $03,$3B,$40,$00,$0D,$31,$32,$00,$16,$3A,$3F,$3E,$3B,$3B,$3E,$3F,$3B,$3F,$FF
+1EA7                db   $03,$3B,$00,$0F,$FE,$00,$15,$39,$3E,$3E,$3F,$3B,$3F,$3F,$3B,$3E,$3F,$FF
+1EB9                db   $03,$3F,$40,$00,$0F,$FC,$00,$14,$38,$3F,$3B,$3E,$3B,$3F,$3E,$3B,$3F,$3E,$3E,$FF
+1ECD                db   $03,$3B,$3E,$41,$00,$10,$30,$32,$00,$14,$3A,$3B,$3F,$3E,$3F,$3F,$3B,$3B,$3E,$3F,$3E,$FF
+1EE3                db   $03,$3E,$3F,$3B,$3B,$40,$00,$12,$FE,$3F,$3F,$3B,$3E,$3F,$3E,$3B,$3B,$3E,$3F,$3E,$3B,$FF
+1EF9                db   $03,$3B,$3F,$3F,$3E,$40,$00,$12,$FD,$3B,$3F,$3E,$3B,$3E,$3F,$3F,$3B,$3B,$3F,$3E,$3E,$FF
+1F0F                db   $03,$3F,$3F,$3E,$3B,$3B,$00,$16,$39,$3B,$3F,$3E,$3F,$3F,$3B,$3B,$3E,$FF
+1F21                db   $03,$3F,$3B,$3B,$3E,$40,$00,$15,$FE,$3B,$3E,$3F,$3B,$3E,$3F,$3B,$3E,$3F,$FF
+1F34                db   $03,$3B,$3F,$3E,$3E,$3B,$41,$00,$15,$FC,$3E,$3B,$3F,$3E,$3B,$3F,$3E,$3B,$3F,$FF
+1F48                db   $03,$3F,$3E,$3E,$3F,$3F,$00,$19,$3A,$3E,$3F,$3B,$3F,$3B,$FF
+1F57                db   $03,$3F,$3E,$3F,$3B,$40,$00,$18,$FE,$3B,$3E,$3F,$3F,$3E,$3B,$FF
+1F67                db   $03,$3F,$3E,$3E,$3B,$3F,$40,$00,$18,$FC,$3E,$3B,$3E,$3B,$3E,$3F,$FF
+1F78                db   $03,$3E,$3B,$3B,$41,$00,$1C,$38,$3F,$3F,$FF
+1F83                db   $03,$3F,$3E,$42,$00,$1B,$FE,$3E,$3B,$3B,$FF
+1F8E                db   $03,$3F,$40,$00,$1B,$FC,$3B,$3E,$3F,$FF
+1F98                db   $03,$42,$00,$09,$FE,$00,$1E,$FE,$FF
+1FA1                db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+1FAA                db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+1FB3                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+1FBC                db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+1FC5                dc   27, $FF
 
                 ;; Level data for screens 21, 24
                 ;; (all `S_S` screens)
                 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-                level_bg__s_s:
-1FE0  03            inc  bc
-1FE1  42            ld   b,d
-1FE2  00            nop
-1FE3  1D            dec  e
-1FE4  3D            dec  a
-1FE5  3B            dec  sp
-1FE6  FF            rst  $38
-1FE7  03            inc  bc
-1FE8  41            ld   b,c
-1FE9  00            nop
-1FEA  0F            rrca
-1FEB  FE00          cp   $00
-1FED  1B            dec  de
-1FEE  FE3F          cp   $3F
-1FF0  3E3B          ld   a,$3B
-1FF2  FF            rst  $38
-1FF3  03            inc  bc
-1FF4  40            ld   b,b
-1FF5  00            nop
-1FF6  0F            rrca
-1FF7  FD            db   $fd
-1FF8  00            nop
-1FF9  1B            dec  de
-1FFA  FD            db   $fd
-1FFB  3B            dec  sp
-1FFC  3E3F          ld   a,$3F
-1FFE  FF            rst  $38
-1FFF  03            inc  bc ; ...to be continued...
+                level_bg__S_S:
+1FE0                db   $03,$42,$00,$1D,$3D,$3B,$FF
+1FE7                db   $03,$41,$00,$0F,$FE,$00,$1B,$FE,$3F,$3E,$3B,$FF
+1FF3                db   $03,$40,$00,$0F,$FD,$00,$1B,$FD,$3B,$3E,$3F,$FF
+1FFF                db   $03     ; ...to be continued...
                 ;;; ======END OF BG2.BIN, START OF BG3.BIN ===========
-2000  3F            ccf
-2001  43            ld   b,e
-2002  00            nop
-2003  0F            rrca
-2004  FC001B        call m,$1B00
-2007  FC3F3E        call m,$3E3F
-200A  3B            dec  sp
-200B  FF            rst  $38
-200C  03            inc  bc
-200D  3E3B          ld   a,$3B
-200F  41            ld   b,c
-2010  00            nop
-2011  0E36          ld   c,$36
-2013  1032          djnz $2047
-2015  00            nop
-2016  1B            dec  de
-2017  383B          jr   c,$2054
-2019  3F            ccf
-201A  3EFF          ld   a,$FF
-201C  03            inc  bc
-201D  3B            dec  sp
-201E  3E3E          ld   a,$3E
-2020  40            ld   b,b
-2021  00            nop
-2022  0D            dec  c
-2023  3610          ld   (hl),$10
-2025  1010          djnz $2037
-2027  32001A        ld   ($1A00),a
-202A  3D            dec  a
-202B  3B            dec  sp
-202C  3B            dec  sp
-202D  3F            ccf
-202E  3F            ccf
-202F  FF            rst  $38
-2030  03            inc  bc
-2031  3B            dec  sp
-2032  3E3E          ld   a,$3E
-2034  40            ld   b,b
-2035  00            nop
-2036  0C            inc  c
-2037  FE00          cp   $00
-2039  12            ld   (de),a
-203A  FE00          cp   $00
-203C  18FE          jr   $203C
-203E  3E3F          ld   a,$3F
-2040  3B            dec  sp
-2041  3B            dec  sp
-2042  3E3F          ld   a,$3F
-2044  FF            rst  $38
-2045  03            inc  bc
-2046  3F            ccf
-2047  3E3B          ld   a,$3B
-2049  00            nop
-204A  0C            inc  c
-204B  FD            db   $fd
-204C  00            nop
-204D  12            ld   (de),a
-204E  FD            db   $fd
-204F  00            nop
-2050  18FD          jr   $204F
-2052  3F            ccf
-2053  3E3B          ld   a,$3B
-2055  3F            ccf
-2056  3E3B          ld   a,$3B
-2058  FF            rst  $38
-2059  03            inc  bc
-205A  3E3B          ld   a,$3B
-205C  41            ld   b,c
-205D  00            nop
-205E  0C            inc  c
-205F  FC0012        call m,$1200
-2062  FC0018        call m,$1800
-2065  FC3E3F        call m,$3F3E
-2068  3E3F          ld   a,$3F
-206A  3B            dec  sp
-206B  3F            ccf
-206C  FF            rst  $38
-206D  03            inc  bc
-206E  3F            ccf
-206F  42            ld   b,d
-2070  00            nop
-2071  19            add  hl,de
-2072  3C            inc  a
-2073  3F            ccf
-2074  3E3B          ld   a,$3B
-2076  3B            dec  sp
-2077  3F            ccf
-2078  FF            rst  $38
-2079  03            inc  bc
-207A  3B            dec  sp
-207B  43            ld   b,e
-207C  00            nop
-207D  19            add  hl,de
-207E  3A3E3F        ld   a,($3F3E)
-2081  3E3F          ld   a,$3F
-2083  3EFF          ld   a,$FF
-2085  03            inc  bc
-2086  3B            dec  sp
-2087  42            ld   b,d
-2088  00            nop
-2089  19            add  hl,de
-208A  3C            inc  a
-208B  3B            dec  sp
-208C  3B            dec  sp
-208D  3E3B          ld   a,$3B
-208F  3B            dec  sp
-2090  FF            rst  $38
-2091  03            inc  bc
-2092  3F            ccf
-2093  3F            ccf
-2094  41            ld   b,c
-2095  00            nop
-2096  19            add  hl,de
-2097  3C            inc  a
-2098  3F            ccf
-2099  3E3F          ld   a,$3F
-209B  3B            dec  sp
-209C  3EFF          ld   a,$FF
-209E  03            inc  bc
-209F  3E43          ld   a,$43
-20A1  00            nop
-20A2  1A            ld   a,(de)
-20A3  3E3F          ld   a,$3F
-20A5  3F            ccf
-20A6  3E3B          ld   a,$3B
-20A8  FF            rst  $38
-20A9  03            inc  bc
-20AA  3B            dec  sp
-20AB  3B            dec  sp
-20AC  40            ld   b,b
-20AD  00            nop
-20AE  0C            inc  c
-20AF  FE00          cp   $00
-20B1  12            ld   (de),a
-20B2  FE00          cp   $00
-20B4  18FE          jr   $20B4
-20B6  3E3F          ld   a,$3F
-20B8  3B            dec  sp
-20B9  3B            dec  sp
-20BA  3F            ccf
-20BB  3EFF          ld   a,$FF
-20BD  03            inc  bc
-20BE  3F            ccf
-20BF  00            nop
-20C0  0C            inc  c
-20C1  FD            db   $fd
-20C2  00            nop
-20C3  12            ld   (de),a
-20C4  FD            db   $fd
-20C5  00            nop
-20C6  18FD          jr   $20C5
-20C8  3E3E          ld   a,$3E
-20CA  3F            ccf
-20CB  3B            dec  sp
-20CC  3F            ccf
-20CD  3B            dec  sp
-20CE  FF            rst  $38
-20CF  03            inc  bc
-20D0  40            ld   b,b
-20D1  00            nop
-20D2  0C            inc  c
-20D3  FC0012        call m,$1200
-20D6  FC0018        call m,$1800
-20D9  FC3F3E        call m,$3E3F
-20DC  3B            dec  sp
-20DD  3B            dec  sp
-20DE  3E3F          ld   a,$3F
-20E0  FF            rst  $38
-20E1  03            inc  bc
-20E2  42            ld   b,d
-20E3  00            nop
-20E4  0B            dec  bc
-20E5  3600          ld   (hl),$00
-20E7  13            inc  de
-20E8  320019        ld   ($1900),a
-20EB  3031          jr   nc,$211E
-20ED  313030        ld   sp,$3030
-20F0  FEFF          cp   $FF
-20F2  03            inc  bc
-20F3  43            ld   b,e
-20F4  00            nop
-20F5  0A            ld   a,(bc)
-20F6  3600          ld   (hl),$00
-20F8  14            inc  d
-20F9  32001E        ld   ($1E00),a
-20FC  FD            db   $fd
-20FD  FF            rst  $38
-20FE  03            inc  bc
-20FF  42            ld   b,d
-2100  00            nop
-2101  09            add  hl,bc
-2102  FE00          cp   $00
-2104  15            dec  d
-2105  FE00          cp   $00
-2107  1EFD          ld   e,$FD
-2109  FF            rst  $38
-210A  03            inc  bc
-210B  41            ld   b,c
-210C  00            nop
-210D  09            add  hl,bc
-210E  FD            db   $fd
-210F  00            nop
-2110  15            dec  d
-2111  FD            db   $fd
-2112  00            nop
-2113  1EFD          ld   e,$FD
-2115  FF            rst  $38
-2116  03            inc  bc
-2117  40            ld   b,b
-2118  00            nop
-2119  09            add  hl,bc
-211A  FC0015        call m,$1500
-211D  FC001E        call m,$1E00
-2120  FCFFFF        call m,$FFFF
-2123  FF            rst  $38
-2124  FF            rst  $38
-2125  FF            rst  $38
-2126  FF            rst  $38
-2127  FF            rst  $38
+2000                db   $3F,$43,$00,$0F,$FC,$00,$1B,$FC,$3F,$3E,$3B,$FF
+200C                db   $03,$3E,$3B,$41,$00,$0E,$36,$10,$32,$00,$1B,$38,$3B,$3F,$3E,$FF
+201C                db   $03,$3B,$3E,$3E,$40,$00,$0D,$36,$10,$10,$10,$32,$00,$1A,$3D,$3B,$3B,$3F,$3F,$FF
+2030                db   $03,$3B,$3E,$3E,$40,$00,$0C,$FE,$00,$12,$FE,$00,$18,$FE,$3E,$3F,$3B,$3B,$3E,$3F,$FF
+2045                db   $03,$3F,$3E,$3B,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$3F,$3E,$3B,$3F,$3E,$3B,$FF
+2059                db   $03,$3E,$3B,$41,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$3E,$3F,$3E,$3F,$3B,$3F,$FF
+206D                db   $03,$3F,$42,$00,$19,$3C,$3F,$3E,$3B,$3B,$3F,$FF
+2079                db   $03,$3B,$43,$00,$19,$3A,$3E,$3F,$3E,$3F,$3E,$FF
+2085                db   $03,$3B,$42,$00,$19,$3C,$3B,$3B,$3E,$3B,$3B,$FF
+2091                db   $03,$3F,$3F,$41,$00,$19,$3C,$3F,$3E,$3F,$3B,$3E,$FF
+209E                db   $03,$3E,$43,$00,$1A,$3E,$3F,$3F,$3E,$3B,$FF
+20A9                db   $03,$3B,$3B,$40,$00,$0C,$FE,$00,$12,$FE,$00,$18,$FE,$3E,$3F,$3B,$3B,$3F,$3E,$FF
+20BD                db   $03,$3F,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$3E,$3E,$3F,$3B,$3F,$3B,$FF
+20CF                db   $03,$40,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$3F,$3E,$3B,$3B,$3E,$3F,$FF
+20E1                db   $03,$42,$00,$0B,$36,$00,$13,$32,$00,$19,$30,$31,$31,$30,$30,$FE,$FF
+20F2                db   $03,$43,$00,$0A,$36,$00,$14,$32,$00,$1E,$FD,$FF
+20FE                db   $03,$42,$00,$09,$FE,$00,$15,$FE,$00,$1E,$FD,$FF
+210A                db   $03,$41,$00,$09,$FD,$00,$15,$FD,$00,$1E,$FD,$FF
+2116                db   $03,$40,$00,$09,$FC,$00,$15,$FC,$00,$1E,$FC,$FF
+
+2122                dc   6, $FF
 
                 ;; Waits 1 vblank, checks if credit is added yet
                 wait_for_start_button:
@@ -4957,286 +4009,32 @@
                 ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
                 ;; (all `nTn` and `W` levels)
                 ;; See DRAW_SCREEN_FROM_LEVEL_DATA
-                level_bg__ntn:
-2140  03            inc  bc
-2141  40            ld   b,b
-2142  00            nop
-2143  0A            ld   a,(bc)
-2144  48            ld   c,b
-2145  00            nop
-2146  1E39          ld   e,$39
-2148  FF            rst  $38
-2149  03            inc  bc
-214A  41            ld   b,c
-214B  00            nop
-214C  0B            dec  bc
-214D  48            ld   c,b
-214E  00            nop
-214F  1D            dec  e
-2150  3A3BFF        ld   a,($FF3B)
-2153  03            inc  bc
-2154  3F            ccf
-2155  46            ld   b,(hl)
-2156  46            ld   b,(hl)
-2157  46            ld   b,(hl)
-2158  46            ld   b,(hl)
-2159  46            ld   b,(hl)
-215A  46            ld   b,(hl)
-215B  46            ld   b,(hl)
-215C  46            ld   b,(hl)
-215D  FA001B        jp   m,$1B00
-2160  FE3E          cp   $3E
-2162  3F            ccf
-2163  3EFF          ld   a,$FF
-2165  03            inc  bc
-2166  3E40          ld   a,$40
-2168  44            ld   b,h
-2169  44            ld   b,h
-216A  44            ld   b,h
-216B  44            ld   b,h
-216C  44            ld   b,h
-216D  44            ld   b,h
-216E  44            ld   b,h
-216F  F8            ret  m
-2170  00            nop
-2171  1B            dec  de
-2172  FD            db   $fd
-2173  3B            dec  sp
-2174  3F            ccf
-2175  3EFF          ld   a,$FF
-2177  03            inc  bc
-2178  42            ld   b,d
-2179  00            nop
-217A  0D            dec  c
-217B  48            ld   c,b
-217C  00            nop
-217D  1B            dec  de
-217E  FC3A3B        call m,$3B3A
-2181  3B            dec  sp
-2182  FF            rst  $38
-2183  03            inc  bc
-2184  3B            dec  sp
-2185  3B            dec  sp
-2186  41            ld   b,c
-2187  00            nop
-2188  0E48          ld   c,$48
-218A  00            nop
-218B  1B            dec  de
-218C  3C            inc  a
-218D  3B            dec  sp
-218E  3E3E          ld   a,$3E
-2190  FF            rst  $38
-2191  03            inc  bc
-2192  3B            dec  sp
-2193  3E00          ld   a,$00
-2195  0F            rrca
-2196  48            ld   c,b
-2197  00            nop
-2198  1B            dec  de
-2199  3A3E3F        ld   a,($3F3E)
-219C  3F            ccf
-219D  FF            rst  $38
-219E  03            inc  bc
-219F  3F            ccf
-21A0  3F            ccf
-21A1  40            ld   b,b
-21A2  46            ld   b,(hl)
-21A3  46            ld   b,(hl)
-21A4  46            ld   b,(hl)
-21A5  46            ld   b,(hl)
-21A6  46            ld   b,(hl)
-21A7  46            ld   b,(hl)
-21A8  46            ld   b,(hl)
-21A9  46            ld   b,(hl)
-21AA  46            ld   b,(hl)
-21AB  FA0018        jp   m,$1800
-21AE  FE10          cp   $10
-21B0  1039          djnz $21EB
-21B2  3B            dec  sp
-21B3  3F            ccf
-21B4  3F            ccf
-21B5  FF            rst  $38
-21B6  03            inc  bc
-21B7  3E3B          ld   a,$3B
-21B9  3B            dec  sp
-21BA  41            ld   b,c
-21BB  44            ld   b,h
-21BC  44            ld   b,h
-21BD  44            ld   b,h
-21BE  44            ld   b,h
-21BF  44            ld   b,h
-21C0  44            ld   b,h
-21C1  44            ld   b,h
-21C2  44            ld   b,h
-21C3  F8            ret  m
-21C4  00            nop
-21C5  18FD          jr   $21C4
-21C7  3F            ccf
-21C8  3E3B          ld   a,$3B
-21CA  3F            ccf
-21CB  3E3B          ld   a,$3B
-21CD  FF            rst  $38
-21CE  03            inc  bc
-21CF  3F            ccf
-21D0  3B            dec  sp
-21D1  3E40          ld   a,$40
-21D3  00            nop
-21D4  0F            rrca
-21D5  4A            ld   c,d
-21D6  00            nop
-21D7  18FC          jr   $21D5
-21D9  3F            ccf
-21DA  3F            ccf
-21DB  3E3E          ld   a,$3E
-21DD  3B            dec  sp
-21DE  3EFF          ld   a,$FF
-21E0  03            inc  bc
-21E1  3B            dec  sp
-21E2  3E43          ld   a,$43
-21E4  00            nop
-21E5  0F            rrca
-21E6  4A            ld   c,d
-21E7  00            nop
-21E8  1B            dec  de
-21E9  3C            inc  a
-21EA  3E3F          ld   a,$3F
-21EC  3B            dec  sp
-21ED  FF            rst  $38
-21EE  03            inc  bc
-21EF  3F            ccf
-21F0  41            ld   b,c
-21F1  46            ld   b,(hl)
-21F2  46            ld   b,(hl)
-21F3  46            ld   b,(hl)
-21F4  46            ld   b,(hl)
-21F5  46            ld   b,(hl)
-21F6  46            ld   b,(hl)
-21F7  46            ld   b,(hl)
-21F8  46            ld   b,(hl)
-21F9  46            ld   b,(hl)
-21FA  46            ld   b,(hl)
-21FB  FA001B        jp   m,$1B00
-21FE  3C            inc  a
-21FF  3B            dec  sp
-2200  3F            ccf
-2201  3EFF          ld   a,$FF
-2203  03            inc  bc
-2204  40            ld   b,b
-2205  44            ld   b,h
-2206  44            ld   b,h
-2207  44            ld   b,h
-2208  44            ld   b,h
-2209  44            ld   b,h
-220A  44            ld   b,h
-220B  44            ld   b,h
-220C  44            ld   b,h
-220D  44            ld   b,h
-220E  44            ld   b,h
-220F  44            ld   b,h
-2210  F8            ret  m
-2211  00            nop
-2212  1C            inc  e
-2213  39            add  hl,sp
-2214  3E3F          ld   a,$3F
-2216  FF            rst  $38
-2217  03            inc  bc
-2218  42            ld   b,d
-2219  00            nop
-221A  0F            rrca
-221B  49            ld   c,c
-221C  00            nop
-221D  1C            inc  e
-221E  3C            inc  a
-221F  3B            dec  sp
-2220  3B            dec  sp
-2221  FF            rst  $38
-2222  03            inc  bc
-2223  41            ld   b,c
-2224  00            nop
-2225  0E49          ld   c,$49
-2227  00            nop
-2228  1B            dec  de
-2229  FE3F          cp   $3F
-222B  3E3B          ld   a,$3B
-222D  FF            rst  $38
-222E  03            inc  bc
-222F  43            ld   b,e
-2230  00            nop
-2231  0D            dec  c
-2232  49            ld   c,c
-2233  00            nop
-2234  1B            dec  de
-2235  FC3E3F        call m,$3F3E
-2238  3B            dec  sp
-2239  FF            rst  $38
-223A  03            inc  bc
-223B  3F            ccf
-223C  41            ld   b,c
-223D  46            ld   b,(hl)
-223E  46            ld   b,(hl)
-223F  46            ld   b,(hl)
-2240  46            ld   b,(hl)
-2241  46            ld   b,(hl)
-2242  46            ld   b,(hl)
-2243  46            ld   b,(hl)
-2244  FA001C        jp   m,$1C00
-2247  39            add  hl,sp
-2248  3E3B          ld   a,$3B
-224A  FF            rst  $38
-224B  03            inc  bc
-224C  40            ld   b,b
-224D  44            ld   b,h
-224E  44            ld   b,h
-224F  44            ld   b,h
-2250  44            ld   b,h
-2251  44            ld   b,h
-2252  44            ld   b,h
-2253  44            ld   b,h
-2254  44            ld   b,h
-2255  F8            ret  m
-2256  00            nop
-2257  1D            dec  e
-2258  3C            inc  a
-2259  3F            ccf
-225A  FF            rst  $38
-225B  03            inc  bc
-225C  42            ld   b,d
-225D  00            nop
-225E  0B            dec  bc
-225F  49            ld   c,c
-2260  00            nop
-2261  1E3C          ld   e,$3C
-2263  FF            rst  $38
-2264  03            inc  bc
-2265  43            ld   b,e
-2266  00            nop
-2267  0A            ld   a,(bc)
-2268  49            ld   c,c
-2269  00            nop
-226A  1EFE          ld   e,$FE
-226C  FF            rst  $38
-226D  03            inc  bc
-226E  42            ld   b,d
-226F  00            nop
-2270  09            add  hl,bc
-2271  FE00          cp   $00
-2273  1EFD          ld   e,$FD
-2275  FF            rst  $38
-2276  03            inc  bc
-2277  41            ld   b,c
-2278  00            nop
-2279  09            add  hl,bc
-227A  FD            db   $fd
-227B  00            nop
-227C  1EFD          ld   e,$FD
-227E  FF            rst  $38
-227F  03            inc  bc
-2280  40            ld   b,b
-2281  00            nop
-2282  09            add  hl,bc
-2283  FC001E        call m,$1E00
-2286  FCFF3E        call m,$3EFF
-2289  07            rlca
+                level_bg__nTn:
+2140                db   $03,$40,$00,$0A,$48,$00,$1E,$39,$FF
+2149                db   $03,$41,$00,$0B,$48,$00,$1D,$3A,$3B,$FF
+2153                db   $03,$3F,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1B,$FE,$3E,$3F,$3E,$FF
+2165                db   $03,$3E,$40,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1B,$FD,$3B,$3F,$3E,$FF
+2177                db   $03,$42,$00,$0D,$48,$00,$1B,$FC,$3A,$3B,$3B,$FF
+2183                db   $03,$3B,$3B,$41,$00,$0E,$48,$00,$1B,$3C,$3B,$3E,$3E,$FF
+2191                db   $03,$3B,$3E,$00,$0F,$48,$00,$1B,$3A,$3E,$3F,$3F,$FF
+219E                db   $03,$3F,$3F,$40,$46,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$18,$FE,$10,$10,$39,$3B,$3F,$3F,$FF
+21B6                db   $03,$3E,$3B,$3B,$41,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$18,$FD,$3F,$3E,$3B,$3F,$3E,$3B,$FF
+21CE                db   $03,$3F,$3B,$3E,$40,$00,$0F,$4A,$00,$18,$FC,$3F,$3F,$3E,$3E,$3B,$3E,$FF
+21E0                db   $03,$3B,$3E,$43,$00,$0F,$4A,$00,$1B,$3C,$3E,$3F,$3B,$FF
+21EE                db   $03,$3F,$41,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1B,$3C,$3B,$3F,$3E,$FF
+2203                db   $03,$40,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1C,$39,$3E,$3F,$FF
+2217                db   $03,$42,$00,$0F,$49,$00,$1C,$3C,$3B,$3B,$FF
+2222                db   $03,$41,$00,$0E,$49,$00,$1B,$FE,$3F,$3E,$3B,$FF
+222E                db   $03,$43,$00,$0D,$49,$00,$1B,$FC,$3E,$3F,$3B,$FF
+223A                db   $03,$3F,$41,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1C,$39,$3E,$3B,$FF
+224B                db   $03,$40,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1D,$3C,$3F,$FF
+225B                db   $03,$42,$00,$0B,$49,$00,$1E,$3C,$FF
+2264                db   $03,$43,$00,$0A,$49,$00,$1E,$FE,$FF
+226D                db   $03,$42,$00,$09,$FE,$00,$1E,$FD,$FF
+2276                db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+227F                db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+2288  3E07          ld   a,$07
 228A  D300          out  ($00),a
 228C  3E38          ld   a,$38
 228E  D301          out  ($01),a

@@ -3512,7 +3512,7 @@ LEVEL_BG__STAIRS_UP
 1B27: 03 40 00 09 FC 00 1E FC FF
 
     ;; who calls? Can't see it triggered in debugger
-1B30: 2A 20 80    ld   hl,$LEVEL_BG_PTR
+1B30: 2A 20 80    ld   hl,($LEVEL_BG_PTR)
 1B33: 01 14 00    ld   bc,$0014 ; add 20 bytes to bg_ptr
 1B36: 09          add  hl,bc
 1B37: 22 20 80    ld   ($LEVEL_BG_PTR),hl
