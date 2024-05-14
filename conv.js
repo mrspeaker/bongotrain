@@ -192,17 +192,46 @@ const get_missing_labels = (src, dst) => {
     }, null);
 };
 
+const get_sym_table = (dst) =>
+    dst.reduce((ac, el) => {
+        if (el.type === t.SYMBOL) {
+            const m = el.line.match(/\s*(\w+)\s*=\s\$(\w{4})/);
+            if (m) {
+                if (!!ac[m[2]]) {
+                    console.log("dupe:", ac[m[2]], m[2], m[1]);
+                }
+                ac[m[2]] = m[1];
+            }
+        }
+        return ac;
+    }, {});
+
+const replace_sym = (dst, sym_table) =>
+    dst.map((d) => {
+        if (d.type === t.INST) {
+            const m = d.line.match(/\$([0-9A-Fa-f]{4})/);
+            if (m) {
+                console.log(m[1], sym_table[m[1]]);
+            }
+            d.line = "!";
+        }
+        return d;
+    });
+
 const run = async () => {
-    const src_txt = await get_file("./bongo.asm");
+    //const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
 
-    const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)); //.slice(240);
-    const dst = parse(dst_txt.split("\n"), parseDstLine); //.slice(240);
+    //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)).slice(240);
+    const dst = parse(dst_txt.split("\n"), parseDstLine);
 
-    console.log(get_missing_labels(src, dst));
+    const sym_table = get_sym_table(dst);
+    console.log(sym_table);
+
+    const out = replace_sym(dst, sym_table);
     //console.log(src.length, dst.length);
     //console.table(src);
-    //console.table(dst);
+    console.table(out);
     //const comments = get_inst_comments(src);
     // console.log(inst_comments);
     //const meta = get_meta(src);
