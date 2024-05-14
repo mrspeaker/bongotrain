@@ -206,17 +206,40 @@ const get_sym_table = (dst) =>
         return ac;
     }, {});
 
-const replace_sym = (dst, sym_table) =>
-    dst.map((d) => {
+const replace_sym = (dst, sym_table) => {
+    const miss = new Set();
+    const out = dst.map((d) => {
         if (d.type === t.INST) {
             const m = d.line.match(/\$([0-9A-Fa-f]{4})/);
             if (m) {
-                console.log(m[1], sym_table[m[1]]);
+                const addr = parseInt(m[1], 16);
+                if (addr < 0x6000) {
+                    // Jump addr
+                } else {
+                    if (sym_table[m[1]] === undefined) {
+                        console.log("oh");
+                        miss.add(m[1]);
+                    }
+                    //console.log(m[1], sym_table[m[1]]);
+                }
             }
-            d.line = "!";
         }
         return d;
     });
+    console.log(Array.from(miss).sort());
+    return out;
+};
+
+const get_labels = (dst) =>
+    dst.reduce((ac, el) => {
+        if (el.type === t.LABEL) {
+            const m = el.line.match(/\s*(\w+)\s*:/);
+            if (m) {
+                ac[el.addr] = m[1];
+            }
+        }
+        return ac;
+    }, {});
 
 const run = async () => {
     //const src_txt = await get_file("./bongo.asm");
@@ -224,6 +247,9 @@ const run = async () => {
 
     //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)).slice(240);
     const dst = parse(dst_txt.split("\n"), parseDstLine);
+
+    //const labels = get_labels(dst); //dst.filter((d) => d.type === t.LABEL); //.map((d) => d.addr);
+    //console.log(labels);
 
     const sym_table = get_sym_table(dst);
     console.log(sym_table);

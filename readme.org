@@ -49,6 +49,37 @@ The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be delet
     (insert "\n")
     )
 
+  (defun replace-line (fun)
+    (interactive)
+    (let ((line (thing-at-point 'line t)))
+      (end-of-line)
+      (newline)
+      (insert (funcall fun (substring line 0 -1)))
+      (previous-line)
+      (delete-line)
+      (forward-line 1)
+      )
+    )
+
+  (defun string-chunk (str n)
+    (mapcar (lambda (p) (s-join "" p))
+            (seq-partition (s-split "" str t) n)))
+
+  (defun byteify()
+    (interactive)
+    (replace-line
+     (lambda (line)
+       (let ((addr (substring-no-properties line 0 4))
+             (bytes (s-trim (substring-no-properties line 6 20))))
+         (concat
+          addr
+          "                db   $"
+          (s-join ",$"
+                  (string-chunk bytes 2))
+
+          )))))
+
+
   (defun replace-pattern-map (pat fun)
     (interactive)
     (let ((line (thing-at-point 'line t)))
