@@ -7569,21 +7569,21 @@
 42FB                dc   5, $FF
 
                 ;; data?
-4300  F0            ret  p
-4301  70            ld   (hl),b
-4302  B0            or   b
-4303  30D0          jr   nc,$42D5
-4305  50            ld   d,b
-4306  90            sub  b
-4307  10E0          djnz $42E9
-4309  60            ld   h,b
-430A  A0            and  b
-430B  20C0          jr   nz,$42CD
-430D  40            ld   b,b
-430E  80            add  a,b
-430F  00            nop
-4310  FF            rst  $38
-4311  FF            rst  $38
+4300                db   $F0
+4301                db   $70
+4302                db   $B0
+4303                db   $30,$D0
+4305                db   $50
+4306                db   $90
+4307                db   $10,$E0
+4309                db   $60
+430A                db   $A0
+430B                db   $20,$C0
+430D                db   $40
+430E                db   $80
+430F                db   $00
+4310                db   $FF
+4311                db   $FF
 
                 ;;
 4312  CDF841        call $41F8
@@ -7756,7 +7756,7 @@
 44BA  3C            inc  a
 44BB  328C91        ld   ($918C),a
 44BE  1824          jr   $44E4
-                ;; looks like data: 2byte coords
+                ;; notes
 44C0                db   $10,$01,$12,$03
 44C4                db   $14,$01,$15,$03
 44C8                db   $17,$01,$19,$03
@@ -9885,34 +9885,34 @@
 
 54E3  FF            rst  $38
 
-54E4  2D            dec  l
-54E5  02            ld   (bc),a
-54E6  2D            dec  l
-54E7  012D01        ld   bc,$012D
-54EA  2D            dec  l
-54EB  02            ld   (bc),a
-54EC  2A022D        ld   hl,($2D02)
-54EF  02            ld   (bc),a
-54F0  3204FF        ld   ($FF04),a
-54F3  FF            rst  $38
-54F4  210221        ld   hl,$2102
-54F7  012101        ld   bc,$0121
-54FA  21021E        ld   hl,$1E02
-54FD  02            ld   (bc),a
-54FE  210226        ld   hl,$2602
-5501  04            inc  b
-5502  FF            rst  $38
-5503  FF            rst  $38
-5504  01030F        ld   bc,$0F03
-5507  00            nop
-5508  E454FF        call po,$FF54
-550B  FF            rst  $38
-550C  F454FF        call p,$FF54
-550F  FF            rst  $38
-5510  6C            ld   l,h
-5511  55            ld   d,l
-5512  FF            rst  $38
-5513  FF            rst  $38
+                ;; notes
+54E4                db   $2D
+54E5                db   $02
+54E6                db   $2D
+54E7                db   $01,$2D,$01
+54EA                db   $2D
+54EB                db   $02
+54EC                db   $2A,$02,$2D
+54EF                db   $02
+54F0                db   $32,$04,$FF
+54F3                db   $FF
+54F4                db   $21,$02,$21
+54F7                db   $01,$21,$01
+54FA                db   $21,$02,$1E
+54FD                db   $02
+54FE                db   $21,$02,$26
+5501                db   $04
+5502                db   $FF
+5503                db   $FF
+5504                db   $01,$03,$0F
+5507                db   $00
+5508                db   $E4,$54,$FF
+550B                db   $FF
+550C                db   $F4,$54,$FF
+550F                db   $FF
+5510                dw   $556C
+5512                db   $FF
+5513                db   $FF
 
                 sfx_8_data:
 5514                db   $03,$04,$55,$08,$55,$08,$55,$FF
@@ -10030,191 +10030,191 @@
 
 55EE                dc   2, $FF
 
-                ;;  more audio data? (notes? a1 02 c3 02, ...)
-55F0  A1            and  c
-55F1  02            ld   (bc),a
-55F2  C302A1        jp   $A102
-55F5  02            ld   (bc),a
-55F6  C302A1        jp   $A102
-55F9  02            ld   (bc),a
-55FA  C302A1        jp   $A102
-55FD  02            ld   (bc),a
-55FE  C302FF        jp   $FF02
-5601  FF            rst  $38
-5602  FF            rst  $38
-5603  FF            rst  $38
-5604  00            nop
-5605  02            ld   (bc),a
-5606  FF            rst  $38
-5607  FF            rst  $38
-5608  FF            rst  $38
-5609  FF            rst  $38
-560A  FF            rst  $38
-560B  FF            rst  $38
-560C  0E0E          ld   c,$0E
-560E  FF            rst  $38
-560F  FF            rst  $38
-5610  E0            ret  po
-5611  15            dec  d
-5612  FF            rst  $38
-5613  FF            rst  $38
-5614  44            ld   b,h
-5615  15            dec  d
-5616  48            ld   c,b
-5617  15            dec  d
-5618  48            ld   c,b
-5619  15            dec  d
-561A  A0            and  b
-561B  15            dec  d
-561C  A0            and  b
-561D  15            dec  d
-561E  EE09          xor  $09
-5620  FF            rst  $38
-5621  FF            rst  $38
-5622  70            ld   (hl),b
-5623  1870          jr   $5695
-5625  1830          jr   $5657
-5627  17            rla
-5628  B0            or   b
-5629  18EE          jr   $5619
-562B  05            dec  b
-562C  FF            rst  $38
-562D  FF            rst  $38
-562E  FF            rst  $38
-562F  FF            rst  $38
-5630  0E02          ld   c,$02
-5632  13            inc  de
-5633  04            inc  b
-5634  13            inc  de
-5635  04            inc  b
-5636  13            inc  de
-5637  02            ld   (bc),a
-5638  13            inc  de
-5639  061A          ld   b,$1A
-563B  04            inc  b
-563C  1A            ld   a,(de)
-563D  04            inc  b
-563E  1A            ld   a,(de)
-563F  02            ld   (bc),a
-5640  1E06          ld   e,$06
-5642  1C            inc  e
-5643  04            inc  b
-5644  1E02          ld   e,$02
-5646  1C            inc  e
-5647  02            ld   (bc),a
-5648  1A            ld   a,(de)
-5649  0617          ld   b,$17
-564B  04            inc  b
-564C  FF            rst  $38
-564D  FF            rst  $38
-564E  FF            rst  $38
-564F  FF            rst  $38
-5650  13            inc  de
-5651  02            ld   (bc),a
-5652  17            rla
-5653  02            ld   (bc),a
-5654  1802          jr   $5658
-5656  1A            ld   a,(de)
-5657  02            ld   (bc),a
-5658  1A            ld   a,(de)
-5659  04            inc  b
-565A  1A            ld   a,(de)
-565B  04            inc  b
-565C  1A            ld   a,(de)
-565D  061A          ld   b,$1A
-565F  02            ld   (bc),a
-5660  1806          jr   $5668
-5662  1804          jr   $5668
-5664  1802          jr   $5668
-5666  1802          jr   $566A
-5668  1802          jr   $566C
-566A  17            rla
-566B  02            ld   (bc),a
-566C  17            rla
-566D  02            ld   (bc),a
-566E  13            inc  de
-566F  04            inc  b
-5670  17            rla
-5671  04            inc  b
-5672  1802          jr   $5676
-5674  0E02          ld   c,$02
-5676  FF            rst  $38
-5677  FF            rst  $38
-5678  09            add  hl,bc
-5679  02            ld   (bc),a
-567A  0B            dec  bc
-567B  04            inc  b
-567C  0B            dec  bc
-567D  04            inc  b
-567E  0B            dec  bc
-567F  02            ld   (bc),a
-5680  0C            inc  c
-5681  0615          ld   b,$15
-5683  04            inc  b
-5684  15            dec  d
-5685  04            inc  b
-5686  15            dec  d
-5687  02            ld   (bc),a
-5688  1A            ld   a,(de)
-5689  0618          ld   b,$18
-568B  04            inc  b
-568C  1A            ld   a,(de)
-568D  02            ld   (bc),a
-568E  1802          jr   $5692
-5690  15            dec  d
-5691  0613          ld   b,$13
-5693  04            inc  b
-5694  FF            rst  $38
-5695  FF            rst  $38
-5696  0E02          ld   c,$02
-5698  13            inc  de
-5699  02            ld   (bc),a
-569A  13            inc  de
-569B  02            ld   (bc),a
-569C  15            dec  d
-569D  02            ld   (bc),a
-569E  15            dec  d
-569F  04            inc  b
-56A0  15            dec  d
-56A1  04            inc  b
-56A2  15            dec  d
-56A3  0615          ld   b,$15
-56A5  02            ld   (bc),a
-56A6  13            inc  de
-56A7  0613          ld   b,$13
-56A9  04            inc  b
-56AA  13            inc  de
-56AB  02            ld   (bc),a
-56AC  13            inc  de
-56AD  02            ld   (bc),a
-56AE  13            inc  de
-56AF  02            ld   (bc),a
-56B0  13            inc  de
-56B1  02            ld   (bc),a
-56B2  13            inc  de
-56B3  02            ld   (bc),a
-56B4  0E04          ld   c,$04
-56B6  13            inc  de
-56B7  04            inc  b
-56B8  13            inc  de
-56B9  02            ld   (bc),a
-56BA  15            dec  d
-56BB  02            ld   (bc),a
-56BC  FF            rst  $38
-56BD  FF            rst  $38
-56BE  FF            rst  $38
-56BF  FF            rst  $38
-56C0  05            dec  b
-56C1  05            dec  b
-56C2  0C            inc  c
-56C3  00            nop
-56C4  0C            inc  c
-56C5  1630          ld   d,$30
-56C7  1630          ld   d,$30
-56C9  1650          ld   d,$50
-56CB  1650          ld   d,$50
-56CD  16EE          ld   d,$EE
-56CF  09            add  hl,bc
+                ;;  notes
+55F0                db   $A1
+55F1                db   $02
+55F2                db   $C3,$02,$A1
+55F5                db   $02
+55F6                db   $C3,$02,$A1
+55F9                db   $02
+55FA                db   $C3,$02,$A1
+55FD                db   $02
+55FE                db   $C3,$02,$FF
+5601                db   $FF
+5602                db   $FF
+5603                db   $FF
+5604                db   $00
+5605                db   $02
+5606                db   $FF
+5607                db   $FF
+5608                db   $FF
+5609                db   $FF
+560A                db   $FF
+560B                db   $FF
+560C                db   $0E,$0E
+560E                db   $FF
+560F                db   $FF
+5610                db   $E0
+5611                db   $15
+5612                db   $FF
+5613                db   $FF
+5614                db   $44
+5615                db   $15
+5616                db   $48
+5617                db   $15
+5618                db   $48
+5619                db   $15
+561A                db   $A0
+561B                db   $15
+561C                db   $A0
+561D                db   $15
+561E                db   $EE,$09
+5620                db   $FF
+5621                db   $FF
+5622                db   $70
+5623                db   $18,$70
+5625                db   $18,$30
+5627                db   $17
+5628                db   $B0
+5629                db   $18,$EE
+562B                db   $05
+562C                db   $FF
+562D                db   $FF
+562E                db   $FF
+562F                db   $FF
+5630                db   $0E,$02
+5632                db   $13
+5633                db   $04
+5634                db   $13
+5635                db   $04
+5636                db   $13
+5637                db   $02
+5638                db   $13
+5639                db   $06,$1A
+563B                db   $04
+563C                db   $1A
+563D                db   $04
+563E                db   $1A
+563F                db   $02
+5640                db   $1E,$06
+5642                db   $1C
+5643                db   $04
+5644                db   $1E,$02
+5646                db   $1C
+5647                db   $02
+5648                db   $1A
+5649                db   $06,$17
+564B                db   $04
+564C                db   $FF
+564D                db   $FF
+564E                db   $FF
+564F                db   $FF
+5650                db   $13
+5651                db   $02
+5652                db   $17
+5653                db   $02
+5654                db   $18,$02
+5656                db   $1A
+5657                db   $02
+5658                db   $1A
+5659                db   $04
+565A                db   $1A
+565B                db   $04
+565C                db   $1A
+565D                db   $06,$1A
+565F                db   $02
+5660                db   $18,$06
+5662                db   $18,$04
+5664                db   $18,$02
+5666                db   $18,$02
+5668                db   $18,$02
+566A                db   $17
+566B                db   $02
+566C                db   $17
+566D                db   $02
+566E                db   $13
+566F                db   $04
+5670                db   $17
+5671                db   $04
+5672                db   $18,$02
+5674                db   $0E,$02
+5676                db   $FF
+5677                db   $FF
+5678                db   $09
+5679                db   $02
+567A                db   $0B
+567B                db   $04
+567C                db   $0B
+567D                db   $04
+567E                db   $0B
+567F                db   $02
+5680                db   $0C
+5681                db   $06,$15
+5683                db   $04
+5684                db   $15
+5685                db   $04
+5686                db   $15
+5687                db   $02
+5688                db   $1A
+5689                db   $06,$18
+568B                db   $04
+568C                db   $1A
+568D                db   $02
+568E                db   $18,$02
+5690                db   $15
+5691                db   $06,$13
+5693                db   $04
+5694                db   $FF
+5695                db   $FF
+5696                db   $0E,$02
+5698                db   $13
+5699                db   $02
+569A                db   $13
+569B                db   $02
+569C                db   $15
+569D                db   $02
+569E                db   $15
+569F                db   $04
+56A0                db   $15
+56A1                db   $04
+56A2                db   $15
+56A3                db   $06,$15
+56A5                db   $02
+56A6                db   $13
+56A7                db   $06,$13
+56A9                db   $04
+56AA                db   $13
+56AB                db   $02
+56AC                db   $13
+56AD                db   $02
+56AE                db   $13
+56AF                db   $02
+56B0                db   $13
+56B1                db   $02
+56B2                db   $13
+56B3                db   $02
+56B4                db   $0E,$04
+56B6                db   $13
+56B7                db   $04
+56B8                db   $13
+56B9                db   $02
+56BA                db   $15
+56BB                db   $02
+56BC                db   $FF
+56BD                db   $FF
+56BE                db   $FF
+56BF                db   $FF
+56C0                db   $05
+56C1                db   $05
+56C2                db   $0C
+56C3                db   $00
+56C4                db   $0C
+56C5                db   $16,$30
+56C7                db   $16,$30
+56C9                db   $16,$50
+56CB                db   $16,$50
+56CD                db   $16,$EE
+56CF                db   $09
 
                 draw_buggy_border:
 56D0  3E01          ld   a,$01
