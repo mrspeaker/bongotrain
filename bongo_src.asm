@@ -9421,74 +9421,63 @@
 51A1                dc   2, $FF
 51A3                dw   $1198
 51A4                dc   2, $FF
-51A7  FF            rst  $38
-51A8  FC5064        call m,$6450
-51AB  51            ld   d,c
-51AC  325176        ld   ($7651),a
-51AF  51            ld   d,c
-51B0  325164        ld   ($6451),a
-51B3  51            ld   d,c
-51B4  325176        ld   ($7651),a
-51B7  51            ld   d,c
-51B8  FF            rst  $38
-51B9  FF            rst  $38
-51BA  0C            inc  c
-51BB  02            ld   (bc),a
-51BC  1802          jr   $51C0
-51BE  0C            inc  c
-51BF  02            ld   (bc),a
-51C0  1802          jr   $51C4
-51C2  0C            inc  c
-51C3  02            ld   (bc),a
-51C4  1802          jr   $51C8
-51C6  0C            inc  c
-51C7  02            ld   (bc),a
-51C8  1802          jr   $51CC
-51CA  0C            inc  c
-51CB  02            ld   (bc),a
-51CC  1802          jr   $51D0
-51CE  0C            inc  c
-51CF  02            ld   (bc),a
-51D0  1802          jr   $51D4
-51D2  0C            inc  c
-51D3  02            ld   (bc),a
-51D4  1802          jr   $51D8
-51D6  FF            rst  $38
-51D7  FF            rst  $38
-51D8  FF            rst  $38
-51D9  FF            rst  $38
-51DA  03            inc  bc
-51DB  03            inc  bc
-51DC  0F            rrca
-51DD  10BA          djnz $5199
-51DF  51            ld   d,c
-51E0  FF            rst  $38
-51E1  FF            rst  $38
-51E2  CA11FF        jp   z,$FF11
-51E5  FF            rst  $38
-51E6  F8            ret  m
-51E7  51            ld   d,c
-51E8  FF            rst  $38
-51E9  FF            rst  $38
+51A7                db   $FF
+51A8                db   $FC,$50,$64
+51AB                db   $51
+51AC                db   $32,$51,$76
+51AF                db   $51
+51B0                db   $32,$51,$64
+51B3                db   $51
+51B4                db   $32,$51,$76
+51B7                db   $51
+51B8                db   $FF
+51B9                db   $FF
+51BA                db   $0C
+51BB                db   $02
+51BC                db   $18,$02
+51BE                db   $0C
+51BF                db   $02
+51C0                db   $18,$02
+51C2                db   $0C
+51C3                db   $02
+51C4                db   $18,$02
+51C6                db   $0C
+51C7                db   $02
+51C8                db   $18,$02
+51CA                db   $0C
+51CB                db   $02
+51CC                db   $18,$02
+51CE                db   $0C
+51CF                db   $02
+51D0                db   $18,$02
+51D2                db   $0C
+51D3                db   $02
+51D4                db   $18,$02
+51D6                db   $FF
+51D7                db   $FF
+51D8                db   $FF
+51D9                db   $FF
+51DA                db   $03
+51DB                db   $03
+51DC                db   $0F
+51DD                db   $10,$BA
+51DF                db   $51
+51E0                db   $FF
+51E1                db   $FF
+51E2                db   $CA,$11,$FF
+51E5                db   $FF
+51E6                db   $F8
+51E7                db   $51
+51E8                db   $FF
+51E9                db   $FF
 
                 sfx_7_data:
 51EA                db   $03,$DA,$51,$E6,$51,$F4,$51,$FF
-51F2  FF            rst  $38
-51F3  FF            rst  $38
-51F4  F8            ret  m
-51F5  51            ld   d,c
-51F6  FF            rst  $38
-51F7  FF            rst  $38
-51F8  FF            rst  $38
-51F9  FF            rst  $38
-51FA  FF            rst  $38
-51FB  FF            rst  $38
-51FC  FF            rst  $38
-51FD  FF            rst  $38
-51FE  FF            rst  $38
-51FF  FF            rst  $38
+51F2                db   $FF
+51F3                db   $FF
+51F4                dw   $51F8
+51F6                dc   10, $FF
 
-                ;; ??
                 play_sfx_chunk_ch_1:
 5200  DDE5          push ix
 5202  E1            pop  hl
@@ -9962,7 +9951,7 @@
 
 554B                dc   5, $FF
 
-                ;; more mystery data
+                ;; sfx notes + data
 5550                db   $10,$01,$0B,$01,$08,$01,$FF,$FF
 5558                db   $04,$04,$0F,$10,$50,$55,$FF,$FF
 
@@ -10261,128 +10250,117 @@
 
 56F5                dc   3, $FF
 
-                ;; more audio-looking (notes?)
-56F8  12            ld   (de),a
-56F9  010E01        ld   bc,$010E
-56FC  12            ld   (de),a
-56FD  010E01        ld   bc,$010E
-5700  1001          djnz $5703
-5702  0D            dec  c
-5703  011001        ld   bc,$0110
-5706  0D            dec  c
-5707  010E01        ld   bc,$010E
-570A  0B            dec  bc
-570B  010E01        ld   bc,$010E
-570E  0B            dec  bc
-570F  010D01        ld   bc,$010D
-5712  09            add  hl,bc
-5713  010D01        ld   bc,$010D
-5716  09            add  hl,bc
-5717  010401        ld   bc,$0104
-571A  0601          ld   b,$01
-571C  07            rlca
-571D  010901        ld   bc,$0109
-5720  0B            dec  bc
-5721  010D01        ld   bc,$010D
-5724  0E01          ld   c,$01
-5726  1001          djnz $5729
-5728  0E02          ld   c,$02
-572A  09            add  hl,bc
-572B  02            ld   (bc),a
-572C  0E04          ld   c,$04
-572E  FF            rst  $38
-572F  FF            rst  $38
-5730  A1            and  c
-5731  02            ld   (bc),a
-5732  C302A1        jp   $A102
-5735  02            ld   (bc),a
-5736  C302A1        jp   $A102
-5739  02            ld   (bc),a
-573A  C302A1        jp   $A102
-573D  02            ld   (bc),a
-573E  C302A1        jp   $A102
-5741  02            ld   (bc),a
-5742  C301C3        jp   $C301
-5745  01A002        ld   bc,$02A0
-5748  A0            and  b
-5749  02            ld   (bc),a
-574A  D301          out  ($01),a
-574C  D301          out  ($01),a
-574E  D301          out  ($01),a
-5750  D301          out  ($01),a
-5752  C0            ret  nz
-5753  02            ld   (bc),a
-5754  C1            pop  bc
-5755  02            ld   (bc),a
-5756  FF            rst  $38
-5757  FF            rst  $38
-5758  FF            rst  $38
-5759  FF            rst  $38
-575A  FF            rst  $38
-575B  FF            rst  $38
-575C  FF            rst  $38
-575D  FF            rst  $38
-575E  FF            rst  $38
-575F  FF            rst  $38
-5760  01080F        ld   bc,$0F08
-5763  10F8          djnz $575D
-5765  56            ld   d,(hl)
-5766  FF            rst  $38
-5767  FF            rst  $38
-5768  80            add  a,b
-5769  57            ld   d,a
-576A  FF            rst  $38
-576B  FF            rst  $38
-576C  6E            ld   l,(hl)
-576D  57            ld   d,a
-576E  FF            rst  $38
-576F  FF            rst  $38
+                ;; notes
+56F8                db   $12
+56F9                db   $01,$0E,$01
+56FC                db   $12
+56FD                db   $01,$0E,$01
+5700                db   $10,$01
+5702                db   $0D
+5703                db   $01,$10,$01
+5706                db   $0D
+5707                db   $01,$0E,$01
+570A                db   $0B
+570B                db   $01,$0E,$01
+570E                db   $0B
+570F                db   $01,$0D,$01
+5712                db   $09
+5713                db   $01,$0D,$01
+5716                db   $09
+5717                db   $01,$04,$01
+571A                db   $06,$01
+571C                db   $07
+571D                db   $01,$09,$01
+5720                db   $0B
+5721                db   $01,$0D,$01
+5724                db   $0E,$01
+5726                db   $10,$01
+5728                db   $0E,$02
+572A                db   $09
+572B                db   $02
+572C                db   $0E,$04
+572E                db   $FF
+572F                db   $FF
+5730                db   $A1
+5731                db   $02
+5732                db   $C3,$02,$A1
+5735                db   $02
+5736                db   $C3,$02,$A1
+5739                db   $02
+573A                db   $C3,$02,$A1
+573D                db   $02
+573E                db   $C3,$02,$A1
+5741                db   $02
+5742                db   $C3,$01,$C3
+5745                db   $01,$A0,$02
+5748                db   $A0
+5749                db   $02
+574A                db   $D3,$01
+574C                db   $D3,$01
+574E                db   $D3,$01
+5750                db   $D3,$01
+5752                db   $C0
+5753                db   $02
+5754                db   $C1
+5755                db   $02
+5756                db   $FF
+5757                db   $FF
+5758                db   $FF
+5759                db   $FF
+575A                db   $FF
+575B                db   $FF
+575C                db   $FF
+575D                db   $FF
+575E                db   $FF
+575F                db   $FF
+5760                db   $01,$08,$0F
+5763                db   $10,$F8
+5765                db   $56
+5766                db   $FF
+5767                db   $FF
+5768                db   $80
+5769                db   $57
+576A                db   $FF
+576B                db   $FF
+576C                db   $6E
+576D                db   $57
+576E                db   $FF
+576F                db   $FF
 
                 sfx_9_data:
-5770  02            ld   (bc),a
-5771  60            ld   h,b
-5772  57            ld   d,a
-5773  68            ld   l,b
-5774  57            ld   d,a
-5775  6C            ld   l,h
-5776  57            ld   d,a
-5777  FF            rst  $38
-5778  FF            rst  $38
-5779  FF            rst  $38
-577A  FF            rst  $38
-577B  FF            rst  $38
-577C  FF            rst  $38
-577D  FF            rst  $38
-577E  FF            rst  $38
-577F  FF            rst  $38
-5780  15            dec  d
-5781  010E01        ld   bc,$010E
-5784  15            dec  d
-5785  010E01        ld   bc,$010E
-5788  15            dec  d
-5789  011001        ld   bc,$0110
-578C  15            dec  d
-578D  011001        ld   bc,$0110
-5790  13            inc  de
-5791  010E01        ld   bc,$010E
-5794  13            inc  de
-5795  010E01        ld   bc,$010E
-5798  1001          djnz $579B
-579A  09            add  hl,bc
-579B  011001        ld   bc,$0110
-579E  09            add  hl,bc
-579F  010901        ld   bc,$0109
-57A2  0B            dec  bc
-57A3  010901        ld   bc,$0109
-57A6  07            rlca
-57A7  010601        ld   bc,$0106
-57AA  04            inc  b
-57AB  010201        ld   bc,$0102
-57AE  04            inc  b
-57AF  010202        ld   bc,$0202
-57B2  0602          ld   b,$02
-57B4  02            ld   (bc),a
-57B5  04            inc  b
+5770                db   $02
+5771                dw   $5760
+5773                dw   $5768
+5775                dw   $576C
+5777                dc   9, $FF
+5780                db   $15
+5781                db   $01,$0E,$01
+5784                db   $15
+5785                db   $01,$0E,$01
+5788                db   $15
+5789                db   $01,$10,$01
+578C                db   $15
+578D                db   $01,$10,$01
+5790                db   $13
+5791                db   $01,$0E,$01
+5794                db   $13
+5795                db   $01,$0E,$01
+5798                db   $10,$01
+579A                db   $09
+579B                db   $01,$10,$01
+579E                db   $09
+579F                db   $01,$09,$01
+57A2                db   $0B
+57A3                db   $01,$09,$01
+57A6                db   $07
+57A7                db   $01,$06,$01
+57AA                db   $04
+57AB                db   $01,$02,$01
+57AE                db   $04
+57AF                db   $01,$02,$02
+57B2                db   $06,$02
+57B4                db   $02
+57B5                db   $04
 57B6                dc   10, $FF
 
                 call_draw_extra_bonus_screen:
@@ -10428,7 +10406,7 @@
 586C  CDB04E        call $4EB0
 586F  C9            ret
 
-                ;; what's this data eh? Looks similar to $5c00
+                ;; notes
 5870                db   $A2,$01,$A2,$01,$A2,$01,$A2,$01
 5878                db   $B2,$01,$B2,$01,$B2,$01,$B2,$01
 5880                db   $C2,$01,$C2,$01,$C2,$01,$C2,$01
@@ -10705,94 +10683,52 @@
 
 5BFF                dc   1, $FF
 
-                ;; Looks similar format to 5870
-5C00  15            dec  d
-5C01  011501        ld   bc,$0115
-5C04  15            dec  d
-5C05  011A03        ld   bc,$031A
-5C08  1E02          ld   e,$02
-5C0A  15            dec  d
-5C0B  011501        ld   bc,$0115
-5C0E  15            dec  d
-5C0F  011A03        ld   bc,$031A
-5C12  1E02          ld   e,$02
-5C14  15            dec  d
-5C15  011501        ld   bc,$0115
-5C18  15            dec  d
-5C19  011A01        ld   bc,$011A
-5C1C  210121        ld   hl,$2101
-5C1F  012101        ld   bc,$0121
-5C22  210323        ld   hl,$2303
-5C25  011E01        ld   bc,$011E
-5C28  1C            inc  e
-5C29  04            inc  b
-5C2A  15            dec  d
-5C2B  011501        ld   bc,$0115
-5C2E  15            dec  d
-5C2F  011903        ld   bc,$0319
-5C32  1C            inc  e
-5C33  02            ld   (bc),a
-5C34  15            dec  d
-5C35  011501        ld   bc,$0115
-5C38  15            dec  d
-5C39  011903        ld   bc,$0319
-5C3C  1C            inc  e
-5C3D  02            ld   (bc),a
-5C3E  15            dec  d
-5C3F  011501        ld   bc,$0115
-5C42  15            dec  d
-5C43  011501        ld   bc,$0115
-5C46  210121        ld   hl,$2101
-5C49  012101        ld   bc,$0121
-5C4C  210223        ld   hl,$2302
-5C4F  011E02        ld   bc,$021E
-5C52  1A            ld   a,(de)
-5C53  04            inc  b
-5C54  FF            rst  $38
-5C55  FF            rst  $38
-5C56  FF            rst  $38
-5C57  FF            rst  $38
-5C58  FF            rst  $38
-5C59  FF            rst  $38
-5C5A  FF            rst  $38
-5C5B  FF            rst  $38
-5C5C  FF            rst  $38
-5C5D  FF            rst  $38
-5C5E  FF            rst  $38
-5C5F  FF            rst  $38
-5C60  62            ld   h,d
-5C61  5C            ld   e,h
-5C62  FF            rst  $38
-5C63  FF            rst  $38
-5C64  FF            rst  $38
-5C65  FF            rst  $38
-5C66  FF            rst  $38
-5C67  FF            rst  $38
-5C68  FF            rst  $38
-5C69  FF            rst  $38
-5C6A  FF            rst  $38
-5C6B  FF            rst  $38
-5C6C  FF            rst  $38
-5C6D  FF            rst  $38
-5C6E  FF            rst  $38
-5C6F  FF            rst  $38
-5C70  FF            rst  $38
-5C71  FF            rst  $38
-5C72  FF            rst  $38
-5C73  FF            rst  $38
-5C74  FF            rst  $38
-5C75  FF            rst  $38
-5C76  FF            rst  $38
-5C77  FF            rst  $38
-5C78  FF            rst  $38
-5C79  FF            rst  $38
-5C7A  FF            rst  $38
-5C7B  FF            rst  $38
-5C7C  FF            rst  $38
-5C7D  FF            rst  $38
-5C7E  FF            rst  $38
-5C7F  FF            rst  $38
-5C80  FF            rst  $38
+                ;; notes
+5C00                db   $15
+5C01                db   $01,$15,$01
+5C04                db   $15
+5C05                db   $01,$1A,$03
+5C08                db   $1E,$02
+5C0A                db   $15
+5C0B                db   $01,$15,$01
+5C0E                db   $15
+5C0F                db   $01,$1A,$03
+5C12                db   $1E,$02
+5C14                db   $15
+5C15                db   $01,$15,$01
+5C18                db   $15
+5C19                db   $01,$1A,$01
+5C1C                db   $21,$01,$21
+5C1F                db   $01,$21,$01
+5C22                db   $21,$03,$23
+5C25                db   $01,$1E,$01
+5C28                db   $1C
+5C29                db   $04
+5C2A                db   $15
+5C2B                db   $01,$15,$01
+5C2E                db   $15
+5C2F                db   $01,$19,$03
+5C32                db   $1C
+5C33                db   $02
+5C34                db   $15
+5C35                db   $01,$15,$01
+5C38                db   $15
+5C39                db   $01,$19,$03
+5C3C                db   $1C
+5C3D                db   $02
+5C3E                db   $15
+5C3F                db   $01,$15,$01
+5C42                db   $15
+5C43                db   $01,$15,$01
+5C46                db   $21,$01,$21
+5C49                db   $01,$21,$01
+5C4C                db   $21,$02,$23
+5C4F                db   $01,$1E,$02
+5C52                db   $1A
+5C53                db   $04
+5C54                dc   12, $FF
+5C60                dw   $5C62
+5C62                dc   31, $FF
 
                 jmp_hl:
 5C81  E9            jp   (hl)
@@ -10803,71 +10739,66 @@
 5C85                dc   1, $FF
 
                 ;; Yet more note-looking data
-5C86  0601          ld   b,$01
-5C88  0601          ld   b,$01
-5C8A  0601          ld   b,$01
-5C8C  0E01          ld   c,$01
-5C8E  09            add  hl,bc
-5C8F  011201        ld   bc,$0112
-5C92  1001          djnz $5C95
-5C94  0E01          ld   c,$01
-5C96  0601          ld   b,$01
-5C98  0601          ld   b,$01
-5C9A  0601          ld   b,$01
-5C9C  0E01          ld   c,$01
-5C9E  09            add  hl,bc
-5C9F  011201        ld   bc,$0112
-5CA2  1001          djnz $5CA5
-5CA4  0E01          ld   c,$01
-5CA6  0601          ld   b,$01
-5CA8  0601          ld   b,$01
-5CAA  0601          ld   b,$01
-5CAC  0E01          ld   c,$01
-5CAE  09            add  hl,bc
-5CAF  011201        ld   bc,$0112
-5CB2  1001          djnz $5CB5
-5CB4  0E01          ld   c,$01
-5CB6  12            ld   (de),a
-5CB7  011201        ld   bc,$0112
-5CBA  12            ld   (de),a
-5CBB  011001        ld   bc,$0110
-5CBE  1001          djnz $5CC1
-5CC0  0D            dec  c
-5CC1  010702        ld   bc,$0207
-5CC4  07            rlca
-5CC5  010701        ld   bc,$0107
-5CC8  07            rlca
-5CC9  010D01        ld   bc,$010D
-5CCC  0D            dec  c
-5CCD  011001        ld   bc,$0110
-5CD0  1002          djnz $5CD4
-5CD2  07            rlca
-5CD3  010701        ld   bc,$0107
-5CD6  07            rlca
-5CD7  010D01        ld   bc,$010D
-5CDA  0D            dec  c
-5CDB  011001        ld   bc,$0110
-5CDE  1002          djnz $5CE2
-5CE0  07            rlca
-5CE1  010701        ld   bc,$0107
-5CE4  07            rlca
-5CE5  010901        ld   bc,$0109
-5CE8  1001          djnz $5CEB
-5CEA  1001          djnz $5CED
-5CEC  1001          djnz $5CEF
-5CEE  15            dec  d
-5CEF  011501        ld   bc,$0115
-5CF2  13            inc  de
-5CF3  02            ld   (bc),a
-5CF4  12            ld   (de),a
-5CF5  011002        ld   bc,$0210
-5CF8  0E02          ld   c,$02
-5CFA  FF            rst  $38
-5CFB  FF            rst  $38
-5CFC  FF            rst  $38
-5CFD  FF            rst  $38
-5CFE  FF            rst  $38
-5CFF  FF            rst  $38
+5C86                db   $06,$01
+5C88                db   $06,$01
+5C8A                db   $06,$01
+5C8C                db   $0E,$01
+5C8E                db   $09
+5C8F                db   $01,$12,$01
+5C92                db   $10,$01
+5C94                db   $0E,$01
+5C96                db   $06,$01
+5C98                db   $06,$01
+5C9A                db   $06,$01
+5C9C                db   $0E,$01
+5C9E                db   $09
+5C9F                db   $01,$12,$01
+5CA2                db   $10,$01
+5CA4                db   $0E,$01
+5CA6                db   $06,$01
+5CA8                db   $06,$01
+5CAA                db   $06,$01
+5CAC                db   $0E,$01
+5CAE                db   $09
+5CAF                db   $01,$12,$01
+5CB2                db   $10,$01
+5CB4                db   $0E,$01
+5CB6                db   $12
+5CB7                db   $01,$12,$01
+5CBA                db   $12
+5CBB                db   $01,$10,$01
+5CBE                db   $10,$01
+5CC0                db   $0D
+5CC1                db   $01,$07,$02
+5CC4                db   $07
+5CC5                db   $01,$07,$01
+5CC8                db   $07
+5CC9                db   $01,$0D,$01
+5CCC                db   $0D
+5CCD                db   $01,$10,$01
+5CD0                db   $10,$02
+5CD2                db   $07
+5CD3                db   $01,$07,$01
+5CD6                db   $07
+5CD7                db   $01,$0D,$01
+5CDA                db   $0D
+5CDB                db   $01,$10,$01
+5CDE                db   $10,$02
+5CE0                db   $07
+5CE1                db   $01,$07,$01
+5CE4                db   $07
+5CE5                db   $01,$09,$01
+5CE8                db   $10,$01
+5CEA                db   $10,$01
+5CEC                db   $10,$01
+5CEE                db   $15
+5CEF                db   $01,$15,$01
+5CF2                db   $13
+5CF3                db   $02
+5CF4                db   $12
+5CF5                db   $01,$10,$02
+5CF8                db   $0E,$02
+5CFA                dc   6, $FF
 
                 sfx_1_data:
 5D00                db   $02
@@ -10876,419 +10807,392 @@
 5D05                dw   $5D14
 5D07                db   $FF
 5D08                db   $01,$08,$0E,$00,$86,$5C,$EE,$03
-5D10  FF            rst  $38
-5D11  FF            rst  $38
-5D12  FF            rst  $38
-5D13  FF            rst  $38
-5D14  00            dw   $5C00
-5D16  EE03          xor  $03
-5D18  FF            rst  $38
-5D19  FF            rst  $38
-5D1A  70            ld   (hl),b
-5D1B  1830          jr   $5D4D
-5D1D  17            rla
-5D1E  3017          jr   nc,$5D37
-5D20  3017          jr   nc,$5D39
-5D22  3017          jr   nc,$5D3B
-5D24  281D          jr   z,$5D43
-5D26  EE03          xor  $03
-5D28  E3            ex   (sp),hl
-5D29  06D3          ld   b,$D3
-5D2B  03            inc  bc
-5D2C  D303          out  ($03),a
-5D2E  FF            rst  $38
-5D2F  FF            rst  $38
-5D30  19            add  hl,de
-5D31  011A01        ld   bc,$011A
-5D34  1B            dec  de
-5D35  011C01        ld   bc,$011C
-5D38  21021C        ld   hl,$1C02
-5D3B  012102        ld   bc,$0221
-5D3E  1C            inc  e
-5D3F  02            ld   (bc),a
-5D40  1B            dec  de
-5D41  012102        ld   bc,$0221
-5D44  1B            dec  de
-5D45  012102        ld   bc,$0221
-5D48  1B            dec  de
-5D49  02            ld   (bc),a
-5D4A  1A            ld   a,(de)
-5D4B  012102        ld   bc,$0221
-5D4E  1A            ld   a,(de)
-5D4F  012102        ld   bc,$0221
-5D52  1A            ld   a,(de)
-5D53  02            ld   (bc),a
-5D54  19            add  hl,de
-5D55  011A01        ld   bc,$011A
-5D58  1B            dec  de
-5D59  011C02        ld   bc,$021C
-5D5C  FF            rst  $38
-5D5D  FF            rst  $38
-5D5E  FF            rst  $38
-5D5F  FF            rst  $38
-5D60  19            add  hl,de
-5D61  20FF          jr   nz,$5D62
-5D63  FF            rst  $38
-5D64  1A            ld   a,(de)
-5D65  011901        ld   bc,$0119
-5D68  17            rla
-5D69  011503        ld   bc,$0315
-5D6C  15            dec  d
-5D6D  011C03        ld   bc,$031C
-5D70  1C            inc  e
-5D71  011E02        ld   bc,$021E
-5D74  1A            ld   a,(de)
-5D75  02            ld   (bc),a
-5D76  15            dec  d
-5D77  02            ld   (bc),a
-5D78  1E02          ld   e,$02
-5D7A  1C            inc  e
-5D7B  03            inc  bc
-5D7C  19            add  hl,de
-5D7D  011901        ld   bc,$0119
-5D80  17            rla
-5D81  011502        ld   bc,$0215
-5D84  17            rla
-5D85  0619          ld   b,$19
-5D87  011701        ld   bc,$0117
-5D8A  15            dec  d
-5D8B  03            inc  bc
-5D8C  15            dec  d
-5D8D  011C03        ld   bc,$031C
-5D90  1C            inc  e
-5D91  011E01        ld   bc,$011E
-5D94  1C            inc  e
-5D95  011A02        ld   bc,$021A
-5D98  1E02          ld   e,$02
-5D9A  210225        ld   hl,$2502
-5D9D  02            ld   (bc),a
-5D9E  25            dec  h
-5D9F  02            ld   (bc),a
-5DA0  2601          ld   h,$01
-5DA2  25            dec  h
-5DA3  012302        ld   bc,$0223
-5DA6  2105FF        ld   hl,$FF05
-5DA9  FF            rst  $38
-5DAA  FF            rst  $38
-5DAB  FF            rst  $38
-5DAC  1003          djnz $5DB1
-5DAE  1004          djnz $5DB4
-5DB0  1004          djnz $5DB6
-5DB2  12            ld   (de),a
-5DB3  04            inc  b
-5DB4  12            ld   (de),a
-5DB5  04            inc  b
-5DB6  1004          djnz $5DBC
-5DB8  1004          djnz $5DBE
-5DBA  0B            dec  bc
-5DBB  04            inc  b
-5DBC  0B            dec  bc
-5DBD  04            inc  b
-5DBE  1004          djnz $5DC4
-5DC0  1004          djnz $5DC6
-5DC2  12            ld   (de),a
-5DC3  04            inc  b
-5DC4  12            ld   (de),a
-5DC5  04            inc  b
-5DC6  1004          djnz $5DCC
-5DC8  09            add  hl,bc
-5DC9  04            inc  b
-5DCA  09            add  hl,bc
-5DCB  05            dec  b
-5DCC  FF            rst  $38
-5DCD  FF            rst  $38
-5DCE  FF            rst  $38
-5DCF  FF            rst  $38
-5DD0  01050F        ld   bc,$0F05
-5DD3  00            nop
-5DD4  60            ld   h,b
-5DD5  5D            ld   e,l
-5DD6  AC            xor  h
-5DD7  5D            ld   e,l
-5DD8  AC            xor  h
-5DD9  5D            ld   e,l
-5DDA  EE07          xor  $07
-5DDC  CC1DFF        call z,$FF1D
-5DDF  FF            rst  $38
-5DE0  305D          jr   nc,$5E3F
-5DE2  64            ld   h,h
-5DE3  5D            ld   e,l
-5DE4  64            ld   h,h
-5DE5  5D            ld   e,l
-5DE6  EE07          xor  $07
-5DE8  FF            rst  $38
-5DE9  FF            rst  $38
+5D10                dc   4, $FF
+5D14                db   $00,$5C
+5D16                db   $EE,$03
+5D18                db   $FF
+5D19                db   $FF
+5D1A                db   $70
+5D1B                db   $18,$30
+5D1D                db   $17
+5D1E                db   $30,$17
+5D20                db   $30,$17
+5D22                db   $30,$17
+5D24                db   $28,$1D
+5D26                db   $EE,$03
+5D28                db   $E3
+5D29                db   $06,$D3
+5D2B                db   $03
+5D2C                db   $D3,$03
+5D2E                db   $FF
+5D2F                db   $FF
+5D30                db   $19
+5D31                db   $01,$1A,$01
+5D34                db   $1B
+5D35                db   $01,$1C,$01
+5D38                db   $21,$02,$1C
+5D3B                db   $01,$21,$02
+5D3E                db   $1C
+5D3F                db   $02
+5D40                db   $1B
+5D41                db   $01,$21,$02
+5D44                db   $1B
+5D45                db   $01,$21,$02
+5D48                db   $1B
+5D49                db   $02
+5D4A                db   $1A
+5D4B                db   $01,$21,$02
+5D4E                db   $1A
+5D4F                db   $01,$21,$02
+5D52                db   $1A
+5D53                db   $02
+5D54                db   $19
+5D55                db   $01,$1A,$01
+5D58                db   $1B
+5D59                db   $01,$1C,$02
+5D5C                db   $FF
+5D5D                db   $FF
+5D5E                db   $FF
+5D5F                db   $FF
+5D60                db   $19
+5D61                db   $20,$FF
+5D63                db   $FF
+5D64                db   $1A
+5D65                db   $01,$19,$01
+5D68                db   $17
+5D69                db   $01,$15,$03
+5D6C                db   $15
+5D6D                db   $01,$1C,$03
+5D70                db   $1C
+5D71                db   $01,$1E,$02
+5D74                db   $1A
+5D75                db   $02
+5D76                db   $15
+5D77                db   $02
+5D78                db   $1E,$02
+5D7A                db   $1C
+5D7B                db   $03
+5D7C                db   $19
+5D7D                db   $01,$19,$01
+5D80                db   $17
+5D81                db   $01,$15,$02
+5D84                db   $17
+5D85                db   $06,$19
+5D87                db   $01,$17,$01
+5D8A                db   $15
+5D8B                db   $03
+5D8C                db   $15
+5D8D                db   $01,$1C,$03
+5D90                db   $1C
+5D91                db   $01,$1E,$01
+5D94                db   $1C
+5D95                db   $01,$1A,$02
+5D98                db   $1E,$02
+5D9A                db   $21,$02,$25
+5D9D                db   $02
+5D9E                db   $25
+5D9F                db   $02
+5DA0                db   $26,$01
+5DA2                db   $25
+5DA3                db   $01,$23,$02
+5DA6                db   $21,$05,$FF
+5DA9                db   $FF
+5DAA                db   $FF
+5DAB                db   $FF
+5DAC                db   $10,$03
+5DAE                db   $10,$04
+5DB0                db   $10,$04
+5DB2                db   $12
+5DB3                db   $04
+5DB4                db   $12
+5DB5                db   $04
+5DB6                db   $10,$04
+5DB8                db   $10,$04
+5DBA                db   $0B
+5DBB                db   $04
+5DBC                db   $0B
+5DBD                db   $04
+5DBE                db   $10,$04
+5DC0                db   $10,$04
+5DC2                db   $12
+5DC3                db   $04
+5DC4                db   $12
+5DC5                db   $04
+5DC6                db   $10,$04
+5DC8                db   $09
+5DC9                db   $04
+5DCA                db   $09
+5DCB                db   $05
+5DCC                db   $FF
+5DCD                db   $FF
+5DCE                db   $FF
+5DCF                db   $FF
+5DD0                db   $01,$05,$0F
+5DD3                db   $00
+5DD4                db   $60
+5DD5                db   $5D
+5DD6                db   $AC
+5DD7                db   $5D
+5DD8                db   $AC
+5DD9                db   $5D
+5DDA                db   $EE,$07
+5DDC                db   $CC,$1D,$FF
+5DDF                db   $FF
+5DE0                db   $30,$5D
+5DE2                db   $64
+5DE3                db   $5D
+5DE4                db   $64
+5DE5                db   $5D
+5DE6                db   $EE,$07
+5DE8                db   $FF
+5DE9                db   $FF
 
                 sfx_11_data:
-5DEA  03            inc  bc
-5DEB  D0            ret  nc
-5DEC  5D            ld   e,l
-5DED  E0            ret  po
-5DEE  5D            ld   e,l
-5DEF  DC5DFF        call c,$FF5D
-5DF2  FF            rst  $38
-5DF3  FF            rst  $38
-5DF4  15            dec  d
-5DF5  011A02        ld   bc,$021A
-5DF8  1D            dec  e
-5DF9  011C01        ld   bc,$011C
-5DFC  1D            dec  e
-5DFD  011C01        ld   bc,$011C
-5E00  1A            ld   a,(de)
-5E01  02            ld   (bc),a
-5E02  1D            dec  e
-5E03  011C02        ld   bc,$021C
-5E06  1D            dec  e
-5E07  011A01        ld   bc,$011A
-5E0A  1C            inc  e
-5E0B  011D01        ld   bc,$011D
-5E0E  1C            inc  e
-5E0F  02            ld   (bc),a
-5E10  1D            dec  e
-5E11  011A01        ld   bc,$011A
-5E14  15            dec  d
-5E15  011101        ld   bc,$0111
-5E18  0E03          ld   c,$03
-5E1A  FF            rst  $38
-5E1B  FF            rst  $38
-5E1C  110111        ld   de,$1101
-5E1F  011101        ld   bc,$0111
-5E22  110111        ld   de,$1101
-5E25  011101        ld   bc,$0111
-5E28  110111        ld   de,$1101
-5E2B  011001        ld   bc,$0110
-5E2E  1001          djnz $5E31
-5E30  1001          djnz $5E33
-5E32  1001          djnz $5E35
-5E34  1001          djnz $5E37
-5E36  1001          djnz $5E39
-5E38  1001          djnz $5E3B
-5E3A  1001          djnz $5E3D
-5E3C  0E02          ld   c,$02
-5E3E  0E01          ld   c,$01
-5E40  1001          djnz $5E43
-5E42  11020E        ld   de,$0E02
-5E45  02            ld   (bc),a
-5E46  14            inc  d
-5E47  04            inc  b
-5E48  15            dec  d
-5E49  04            inc  b
-5E4A  FF            rst  $38
-5E4B  FF            rst  $38
-5E4C  0E02          ld   c,$02
-5E4E  110109        ld   de,$0901
-5E51  010B01        ld   bc,$010B
-5E54  0C            inc  c
-5E55  010E02        ld   bc,$020E
-5E58  110109        ld   de,$0901
-5E5B  010B01        ld   bc,$010B
-5E5E  0C            inc  c
-5E5F  010E02        ld   bc,$020E
-5E62  110109        ld   de,$0901
-5E65  010B01        ld   bc,$010B
-5E68  0C            inc  c
-5E69  010E01        ld   bc,$010E
-5E6C  09            add  hl,bc
-5E6D  010501        ld   bc,$0105
-5E70  02            ld   (bc),a
-5E71  03            inc  bc
-5E72  FF            rst  $38
-5E73  FF            rst  $38
-5E74  FF            rst  $38
-5E75  01060F        ld   bc,$0F06
-5E78  00            nop
-5E79  80            add  a,b
-5E7A  5E            ld   e,(hl)
-5E7B  FF            rst  $38
-5E7C  FF            rst  $38
-5E7D  FF            rst  $38
-5E7E  FF            rst  $38
-5E7F  FF            rst  $38
-5E80  FF            rst  $38
-5E81  FF            rst  $38
-5E82  FF            rst  $38
-5E83  FF            rst  $38
-5E84  FF            rst  $38
-5E85  FF            rst  $38
-5E86  FF            rst  $38
-5E87  FF            rst  $38
+5DEA                db   $03
+5DEB                dw   $5DD0
+5DED                dw   $5DE0
+5DEF                dw   $5DDC
+5DF1                db   $FF
+5DF2                db   $FF
+5DF3                db   $FF
+5DF4                db   $15
+5DF5                db   $01,$1A,$02
+5DF8                db   $1D
+5DF9                db   $01,$1C,$01
+5DFC                db   $1D
+5DFD                db   $01,$1C,$01
+5E00                db   $1A
+5E01                db   $02
+5E02                db   $1D
+5E03                db   $01,$1C,$02
+5E06                db   $1D
+5E07                db   $01,$1A,$01
+5E0A                db   $1C
+5E0B                db   $01,$1D,$01
+5E0E                db   $1C
+5E0F                db   $02
+5E10                db   $1D
+5E11                db   $01,$1A,$01
+5E14                db   $15
+5E15                db   $01,$11,$01
+5E18                db   $0E,$03
+5E1A                db   $FF
+5E1B                db   $FF
+5E1C                db   $11,$01,$11
+5E1F                db   $01,$11,$01
+5E22                db   $11,$01,$11
+5E25                db   $01,$11,$01
+5E28                db   $11,$01,$11
+5E2B                db   $01,$10,$01
+5E2E                db   $10,$01
+5E30                db   $10,$01
+5E32                db   $10,$01
+5E34                db   $10,$01
+5E36                db   $10,$01
+5E38                db   $10,$01
+5E3A                db   $10,$01
+5E3C                db   $0E,$02
+5E3E                db   $0E,$01
+5E40                db   $10,$01
+5E42                db   $11,$02,$0E
+5E45                db   $02
+5E46                db   $14
+5E47                db   $04
+5E48                db   $15
+5E49                db   $04
+5E4A                db   $FF
+5E4B                db   $FF
+5E4C                db   $0E,$02
+5E4E                db   $11,$01,$09
+5E51                db   $01,$0B,$01
+5E54                db   $0C
+5E55                db   $01,$0E,$02
+5E58                db   $11,$01,$09
+5E5B                db   $01,$0B,$01
+5E5E                db   $0C
+5E5F                db   $01,$0E,$02
+5E62                db   $11,$01,$09
+5E65                db   $01,$0B,$01
+5E68                db   $0C
+5E69                db   $01,$0E,$01
+5E6C                db   $09
+5E6D                db   $01,$05,$01
+5E70                db   $02
+5E71                db   $03
+5E72                db   $FF
+5E73                db   $FF
+5E74                db   $FF
+5E75                db   $01,$06,$0F
+5E78                db   $00
+5E79                db   $80
+5E7A                db   $5E
+5E7B                dc   13, $FF
 
                 sfx_12_data:
 5E88                db   $03,$75,$5E,$90,$5E,$79,$5E,$FF
-5E90  F45D1C        call p,$1C5D
-5E93  5E            ld   e,(hl)
-5E94  4C            ld   c,h
-5E95  5E            ld   e,(hl)
-5E96  4C            ld   c,h
-5E97  5E            ld   e,(hl)
-5E98  EE09          xor  $09
-5E9A  FF            rst  $38
-5E9B  FF            rst  $38
-5E9C  FF            rst  $38
-5E9D  FF            rst  $38
-5E9E  FF            rst  $38
-5E9F  FF            rst  $38
-5EA0  0E01          ld   c,$01
-5EA2  1001          djnz $5EA5
-5EA4  13            inc  de
-5EA5  011701        ld   bc,$0117
-5EA8  1601          ld   d,$01
-5EAA  17            rla
-5EAB  011601        ld   bc,$0116
-5EAE  17            rla
-5EAF  011601        ld   bc,$0116
-5EB2  17            rla
-5EB3  011601        ld   bc,$0116
-5EB6  1801          jr   $5EB9
-5EB8  17            rla
-5EB9  011501        ld   bc,$0115
-5EBC  17            rla
-5EBD  011301        ld   bc,$0113
-5EC0  0E01          ld   c,$01
-5EC2  13            inc  de
-5EC3  011701        ld   bc,$0117
-5EC6  1A            ld   a,(de)
-5EC7  011901        ld   bc,$0119
-5ECA  1A            ld   a,(de)
-5ECB  011901        ld   bc,$0119
-5ECE  1A            ld   a,(de)
-5ECF  011901        ld   bc,$0119
-5ED2  1A            ld   a,(de)
-5ED3  011901        ld   bc,$0119
-5ED6  1C            inc  e
-5ED7  011A01        ld   bc,$011A
-5EDA  19            add  hl,de
-5EDB  011A01        ld   bc,$011A
-5EDE  17            rla
-5EDF  010E01        ld   bc,$010E
-5EE2  1001          djnz $5EE5
-5EE4  13            inc  de
-5EE5  011701        ld   bc,$0117
-5EE8  1601          ld   d,$01
-5EEA  17            rla
-5EEB  011601        ld   bc,$0116
-5EEE  17            rla
-5EEF  011601        ld   bc,$0116
-5EF2  17            rla
-5EF3  011601        ld   bc,$0116
-5EF6  1801          jr   $5EF9
-5EF8  17            rla
-5EF9  011501        ld   bc,$0115
-5EFC  17            rla
-5EFD  011301        ld   bc,$0113
-5F00  0E01          ld   c,$01
-5F02  1001          djnz $5F05
-5F04  13            inc  de
-5F05  011701        ld   bc,$0117
-5F08  15            dec  d
-5F09  02            ld   (bc),a
-5F0A  0E01          ld   c,$01
-5F0C  17            rla
-5F0D  011502        ld   bc,$0215
-5F10  0E01          ld   c,$01
-5F12  13            inc  de
-5F13  02            ld   (bc),a
-5F14  0E02          ld   c,$02
-5F16  13            inc  de
-5F17  01FFFF        ld   bc,$FFFF
-5F1A  FF            rst  $38
-5F1B  FF            rst  $38
-5F1C  FF            rst  $38
-5F1D  FF            rst  $38
-5F1E  FF            rst  $38
-5F1F  FF            rst  $38
-5F20  A0            and  b
-5F21  5E            ld   e,(hl)
-5F22  EE03          xor  $03
-5F24  03            inc  bc
-5F25  060F          ld   b,$0F
-5F27  101C          djnz $5F45
-5F29  5F            ld   e,a
-5F2A  FF            rst  $38
-5F2B  FF            rst  $38
-5F2C  FF            rst  $38
-5F2D  FF            rst  $38
-5F2E  FF            rst  $38
-5F2F  FF            rst  $38
+5E90                db   $F4,$5D,$1C
+5E93                db   $5E
+5E94                db   $4C
+5E95                db   $5E
+5E96                db   $4C
+5E97                db   $5E
+5E98                db   $EE,$09
+5E9A                dc   6, $FF
+5EA0                db   $0E,$01
+5EA2                db   $10,$01
+5EA4                db   $13
+5EA5                db   $01,$17,$01
+5EA8                db   $16,$01
+5EAA                db   $17
+5EAB                db   $01,$16,$01
+5EAE                db   $17
+5EAF                db   $01,$16,$01
+5EB2                db   $17
+5EB3                db   $01,$16,$01
+5EB6                db   $18,$01
+5EB8                db   $17
+5EB9                db   $01,$15,$01
+5EBC                db   $17
+5EBD                db   $01,$13,$01
+5EC0                db   $0E,$01
+5EC2                db   $13
+5EC3                db   $01,$17,$01
+5EC6                db   $1A
+5EC7                db   $01,$19,$01
+5ECA                db   $1A
+5ECB                db   $01,$19,$01
+5ECE                db   $1A
+5ECF                db   $01,$19,$01
+5ED2                db   $1A
+5ED3                db   $01,$19,$01
+5ED6                db   $1C
+5ED7                db   $01,$1A,$01
+5EDA                db   $19
+5EDB                db   $01,$1A,$01
+5EDE                db   $17
+5EDF                db   $01,$0E,$01
+5EE2                db   $10,$01
+5EE4                db   $13
+5EE5                db   $01,$17,$01
+5EE8                db   $16,$01
+5EEA                db   $17
+5EEB                db   $01,$16,$01
+5EEE                db   $17
+5EEF                db   $01,$16,$01
+5EF2                db   $17
+5EF3                db   $01,$16,$01
+5EF6                db   $18,$01
+5EF8                db   $17
+5EF9                db   $01,$15,$01
+5EFC                db   $17
+5EFD                db   $01,$13,$01
+5F00                db   $0E,$01
+5F02                db   $10,$01
+5F04                db   $13
+5F05                db   $01,$17,$01
+5F08                db   $15
+5F09                db   $02
+5F0A                db   $0E,$01
+5F0C                db   $17
+5F0D                db   $01,$15,$02
+5F10                db   $0E,$01
+5F12                db   $13
+5F13                db   $02
+5F14                db   $0E,$02
+5F16                db   $13
+5F17                db   $01,$FF,$FF
+5F1A                db   $FF
+5F1B                db   $FF
+5F1C                db   $FF
+5F1D                db   $FF
+5F1E                db   $FF
+5F1F                db   $FF
+5F20                db   $A0
+5F21                db   $5E
+5F22                db   $EE,$03
+5F24                db   $03
+5F25                db   $06,$0F
+5F27                db   $10,$1C
+5F29                db   $5F
+5F2A                dc   6, $FF
 
                 sfx_13_data:
 5F30                db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
-5F38  09            add  hl,bc
-5F39  010E01        ld   bc,$010E
-5F3C  1001          djnz $5F3F
-5F3E  12            ld   (de),a
-5F3F  03            inc  bc
-5F40  13            inc  de
-5F41  011302        ld   bc,$0213
-5F44  17            rla
-5F45  02            ld   (bc),a
-5F46  15            dec  d
-5F47  04            inc  b
-5F48  12            ld   (de),a
-5F49  02            ld   (bc),a
-5F4A  15            dec  d
-5F4B  02            ld   (bc),a
-5F4C  13            inc  de
-5F4D  03            inc  bc
-5F4E  12            ld   (de),a
-5F4F  011302        ld   bc,$0213
-5F52  1002          djnz $5F56
-5F54  12            ld   (de),a
-5F55  05            dec  b
-5F56  09            add  hl,bc
-5F57  010E01        ld   bc,$010E
-5F5A  1001          djnz $5F5D
-5F5C  12            ld   (de),a
-5F5D  03            inc  bc
-5F5E  13            inc  de
-5F5F  011302        ld   bc,$0213
-5F62  17            rla
-5F63  02            ld   (bc),a
-5F64  15            dec  d
-5F65  04            inc  b
-5F66  12            ld   (de),a
-5F67  02            ld   (bc),a
-5F68  15            dec  d
-5F69  02            ld   (bc),a
-5F6A  13            inc  de
-5F6B  03            inc  bc
-5F6C  12            ld   (de),a
-5F6D  011302        ld   bc,$0213
-5F70  1002          djnz $5F74
-5F72  0E05          ld   c,$05
-5F74  FF            rst  $38
-5F75  FF            rst  $38
-5F76  FF            rst  $38
-5F77  FF            rst  $38
+5F38                db   $09
+5F39                db   $01,$0E,$01
+5F3C                db   $10,$01
+5F3E                db   $12
+5F3F                db   $03
+5F40                db   $13
+5F41                db   $01,$13,$02
+5F44                db   $17
+5F45                db   $02
+5F46                db   $15
+5F47                db   $04
+5F48                db   $12
+5F49                db   $02
+5F4A                db   $15
+5F4B                db   $02
+5F4C                db   $13
+5F4D                db   $03
+5F4E                db   $12
+5F4F                db   $01,$13,$02
+5F52                db   $10,$02
+5F54                db   $12
+5F55                db   $05
+5F56                db   $09
+5F57                db   $01,$0E,$01
+5F5A                db   $10,$01
+5F5C                db   $12
+5F5D                db   $03
+5F5E                db   $13
+5F5F                db   $01,$13,$02
+5F62                db   $17
+5F63                db   $02
+5F64                db   $15
+5F65                db   $04
+5F66                db   $12
+5F67                db   $02
+5F68                db   $15
+5F69                db   $02
+5F6A                db   $13
+5F6B                db   $03
+5F6C                db   $12
+5F6D                db   $01,$13,$02
+5F70                db   $10,$02
+5F72                db   $0E,$05
+5F74                db   $FF
+5F75                db   $FF
+5F76                db   $FF
+5F77                db   $FF
 
                 sfx_14_data:
 5F78                db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
-5F80  385F          jr   c,$5FE1
-5F82  204A          jr   nz,$5FCE
-5F84  204A          jr   nz,$5FD0
-5F86  48            ld   c,b
-5F87  4A            ld   c,d
-5F88  48            ld   c,b
-5F89  4A            ld   c,d
-5F8A  EE0B          xor  $0B
-5F8C  FF            rst  $38
-5F8D  FF            rst  $38
-5F8E  FF            rst  $38
-5F8F  FF            rst  $38
-5F90  01050F        ld   bc,$0F05
-5F93  00            nop
-5F94  8C            adc  a,h
-5F95  5F            ld   e,a
-5F96  FF            rst  $38
-5F97  FF            rst  $38
-5F98  C44AE4        call nz,$E44A
-5F9B  4A            ld   c,d
-5F9C  E44A06        call po,$064A
-5F9F  4B            ld   c,e
-5FA0  064B          ld   b,$4B
-5FA2  EE0B          xor  $0B
-5FA4  FF            rst  $38
+5F80                db   $38,$5F
+5F82                db   $20,$4A
+5F84                db   $20,$4A
+5F86                db   $48
+5F87                db   $4A
+5F88                db   $48
+5F89                db   $4A
+5F8A                db   $EE,$0B
+5F8C                db   $FF
+5F8D                db   $FF
+5F8E                db   $FF
+5F8F                db   $FF
+5F90                db   $01,$05,$0F
+5F93                db   $00
+5F94                db   $8C
+5F95                db   $5F
+5F96                db   $FF
+5F97                db   $FF
+5F98                db   $C4,$4A,$E4
+5F9B                db   $4A
+5F9C                db   $E4,$4A,$06
+5F9F                db   $4B
+5FA0                db   $06,$4B
+5FA2                db   $EE,$0B
 
-5FA5                dc   91, $FF ; to 0x5fff
+5FA5                dc   92, $FF ; to 0x5fff
 
                 ;;; ======= END OF BG6.BIN ======
