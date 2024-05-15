@@ -7,18 +7,14 @@ Welcom to bongo.
 See the `RUNNING` section in the file for instructions (tl;dr:  `mame bongo --autoboot_script ./bongo.lua`)
 
 ** Reverse engineered disassembly
-`bongo.asm` is an annotated version of the Bongo source code. I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for. Not 100% complete, but I think all the good stuff has been uncovered.
+`bongo_src.asm` is an annotated version of the Bongo source code. I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for. Not 100% complete, but I think all the good stuff has been uncovered.
 
 ** Building ROMs
-So the disassembly I did was completely by hand in a text editor with search and replace. This means that I most likely have messed with the original bytes, or accidentally cut/paste things somewhere - so the code can not be compiled back into ROMs.
+The Bongo source can be compiled with the `zmac` z80 compiler, then split into chunks that recreate the original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
 
-I'm now trying to do it properly, and there is a buildable version of the source in `bongo_src.asm`. This can be compiled with the `zmac` compiler, then split into chunks that recreate the original Bongo ROM files.
+`build.sh` that will chop the front off the `bongo_src.asm` (I need the bytes for reference, but can't compile with them). This generates `src.asm`, which is compiled by `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
 
-There is a script `build.sh` that will chop the front off the `bongo_src.asm` (I need the bytes for reference, but can't compile with them). This generates `src.asm`, which is compiled by `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
-
-The idea is that once `bongo_src.asm` is 100% symbol-ized, then it will be deleted and `src.asm` will be the one-true-source of Bongo.
-
-[Have currently converted the labels, comments, padding bytes over to the buildable version. TODO: symbols and  "data blocks"]
+Once `bongo_src.asm` is 100% symbol-ized, it will be deleted and `src.asm` will be the one-true-source of Bongo. 
 
 
 ** scratchpad

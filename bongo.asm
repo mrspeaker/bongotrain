@@ -2,8 +2,12 @@
     ;; picked apart by Mr Speaker
     ;; https://www.mrspeaker.net
 
-    ;; (NOTE: all just find/replace in a text editor:
-    ;; so don't try and compile me!)
+    ;; NOTE: DEPRECATED! this was my original decompilation.
+    ;; It was done manually in a text editor with no compilation
+    ;; step: so it can't be compiled (and would have tonnes of
+    ;; errors if you tried). GO TO bongo_src.asm for the latest.
+
+    ;;
 
     ;; Overview:
     ;; - BIG_RESET ($1000) inits and starts loop

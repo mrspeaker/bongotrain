@@ -9,69 +9,7 @@ const t = {
     LABEL: 5,
 };
 
-const missing_labels = [
-    "0079",
-    "00B3",
-    "01AD",
-    "0215",
-    "0246",
-    "0260",
-    "0260",
-    "027E",
-    "027E",
-    "029F",
-    "02B9",
-    "02E3",
-    "02D6",
-    "02F9",
-    "0304",
-    "0336",
-    "03C7",
-    "03FA",
-    "04B2",
-    "04C8",
-    "04D4",
-    "05AB",
-    "059D",
-    "05A6",
-    "05C2",
-    "05ED",
-    "06AA",
-    "06B2",
-    "06BE",
-    "06C6",
-    "06CE",
-    "0797",
-    "07EB",
-    "0904",
-    "09B1",
-    "0A24",
-    "0A50",
-    "0ADB",
-    "0AEE",
-    "0B96",
-    "0BE6",
-    "0BD6",
-    "0BBA",
-    "0C8E",
-    "0CA2",
-    "0CB2",
-    "0D19",
-    "0D79",
-    "0DCD",
-    "0E4C",
-    "0E81",
-    "0E9F",
-    "0F44",
-    "0F4E",
-    "107A",
-    "10E9",
-    "1121",
-    "1121",
-    "1126",
-    "1139",
-    "11DB",
-];
+const missing_labels = [];
 const missing_label_map = missing_labels.reduce((ac, el) => {
     ac[el] = true;
     return ac;
@@ -426,12 +364,12 @@ const run = async () => {
     const dst_txt = await get_file("./bongo_src.asm");
 
     //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)).slice(240);
-    const dsta = parse(dst_txt.split("\n"), parseDstLine);
+    const dst = parse(dst_txt.split("\n"), parseDstLine);
 
     //const labels = get_labels(dst); //dst.filter((d) => d.type === t.LABEL); //.map((d) => d.addr);
     //console.log(labels);
 
-    const dst = add_missing_labels(dsta, missing_label_map);
+    //const dst = add_missing_labels(dsta, missing_label_map);
 
     const sym_table = get_sym_table(dst);
     const label_table = get_labels(dst);
