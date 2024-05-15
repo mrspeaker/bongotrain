@@ -14,7 +14,7 @@
 
 rm -rf zout
 
-cut -c 16- bongo_src.asm > src.asm
+cut -c 17- bongo_src.asm > src.asm
 zmac -j -c -n src.asm
 split -b4k zout/src.cim zout/b_
 
