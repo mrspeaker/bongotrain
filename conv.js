@@ -74,7 +74,7 @@ const parse = (txt, lineParser) => {
             //}
             return ac;
         },
-        { state: 0, addr: -1, lines: [] },
+        { state: 0, addr: -1, lines: [] }
     );
 
     // Link labels and instructions
@@ -93,7 +93,7 @@ const parse = (txt, lineParser) => {
             }
             return ac;
         },
-        { label: null },
+        { label: null }
     );
 
     return parsed.lines;
@@ -135,7 +135,7 @@ const get_meta = (src) =>
             }
             return { cur, groups };
         },
-        { cur: [], groups: {} },
+        { cur: [], groups: {} }
     ).groups;
 
 const moosh = (meta, code) =>
@@ -213,18 +213,66 @@ const replace_sym = (dst, sym_table) => {
             const m = d.line.match(/\$([0-9A-Fa-f]{4})/);
             if (m) {
                 const addr = parseInt(m[1], 16);
-                if (addr < 0x6000) {
-                    // Jump addr
-                } else {
+                if (addr >= 0x6000) {
                     if (sym_table[m[1]] === undefined) {
                         miss.set(m[1], miss.has(m[1]) ? miss.get(m[1]) + 1 : 1);
+                    } else {
+                        // found symbol... replace it in d.
+                        //...
+                        return {
+                            ...d,
+                            line: d.line.replace("$" + m[1], sym_table[m[1]]),
+                        };
                     }
                 }
             }
         }
-        return d;
+        return { ...d };
     });
-    console.log(Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1))); //Array.from(miss).sort());
+    if (miss.size > 0) {
+        console.log(
+            "Missing symbols",
+            Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1))
+        );
+    }
+    return out;
+};
+
+const replace_labels = (dst, labels) => {
+    const miss = new Map();
+    const out = dst.map((d) => {
+        if (d.type === t.INST) {
+            const m = d.line
+                .split(";")[0]
+                .slice(20)
+                .match(/(\w+)\s+\$([0-9A-Fa-f]{4}).*/);
+            if (m && m.length) {
+                const addr = m[2];
+                const addr_p = parseInt(addr, 16);
+                if (addr_p < 0x6000) {
+                    const instr = m[1];
+                    const label = labels[addr];
+                    if (!label) {
+                        miss.set(addr, miss.has(addr) ? miss.get(addr) + 1 : 1);
+                        /*console.log(
+                            d.addr.toString(16).padStart(4, 0).toUpperCase(),
+                            instr,
+                            addr
+                        );*/
+                    } else {
+                        //console.log("HIT", instr, label);
+                        // Got a label - replace it.
+                        //const addr = parseInt(m[1], 16);
+                        //                if (addr < 0x6000) {
+                        //console.log(addr, labels[addr]);
+                    }
+                }
+            }
+        }
+        return { ...d };
+    });
+    //    console.table(miss);
+    //console.table(Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1)));
     return out;
 };
 
@@ -232,8 +280,11 @@ const get_labels = (dst) =>
     dst.reduce((ac, el) => {
         if (el.type === t.LABEL) {
             const m = el.line.match(/\s*(\w+)\s*:/);
-            if (m) {
-                ac[el.addr] = m[1];
+            if (m && m.length == 2) {
+                ac[el.inst.addr.toString(16).toUpperCase().padStart(4, 0)] =
+                    m[1];
+            } else {
+                console.log("Bad label?", el.line);
             }
         }
         return ac;
@@ -250,17 +301,15 @@ const run = async () => {
     //console.log(labels);
 
     const sym_table = get_sym_table(dst);
-    console.log(sym_table);
-
-    const out = replace_sym(dst, sym_table);
-    //console.log(src.length, dst.length);
-    //console.table(src);
-    console.table(out);
+    const label_table = get_labels(dst);
+    const out_sym = replace_sym(dst, sym_table);
+    console.log(out_sym);
+    const out = out_sym;
+    //const out_lab = replace_labels(out_sym, label_table);
     //const comments = get_inst_comments(src);
-    // console.log(inst_comments);
     //const meta = get_meta(src);
     //const out = moosh_comments(comments, dst);
-    //document.querySelector("#out").value = indent(out).join("\n");
+    document.querySelector("#out").value = indent(out).join("\n");
 };
 
 run();

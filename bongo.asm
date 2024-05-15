@@ -103,7 +103,7 @@
     _8068             $8068  ; ?? used with 67
 
     EXTRA_GOT_P1      $8070  ; P1 Earned extra life
-    EXTRA_GOT_P1      $8071  ; P2 Earned extra life
+    EXTRA_GOT_P2      $8071  ; P2 Earned extra life
 
     HISCORE_TIMER     $8075  ; Countdown for entering time in hiscore screen
     HISCORE_TIMER2    $8076  ; 16 counter for countdown
