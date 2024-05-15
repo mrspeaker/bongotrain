@@ -230,6 +230,7 @@
                 _8310             = $8310  ; ?
 
                 ;; 16bit signed sub constants
+                JMP_HL_OFFSET     = $4000
                 MINUS_95          = $FFA1
                 MINUS_64          = $FFC0
                 MINUS_36          = $FFDC
@@ -430,7 +431,7 @@
 0018  CD8822        call write_out_0_and_1
 001B  C38D00        jp   setup_then_start_game
 
-                ;; data?
+                ;; data? no?
 001E                db  $DD,$19
                 _0020:          ; called here once - but looks suspicious
 0020                db  $DD,$19,$2B,$10,$AF
@@ -872,14 +873,14 @@
 
                 reset_ents_all:
 0370  CD7014        call reset_xoff_sprites_and_clear_screen
-0373  212015        ld   hl,$1520 ; RESET_SFX_SOMETHING_1
-0376  CDE301        call jmp_hl_plus_4k ; $4520
-0379  21200E        ld   hl,$0E20 ; ATTRACT_SPLASH_BONGO
-037C  CDE301        call jmp_hl_plus_4k ; $4220
-037F  21C017        ld   hl,reset_dino
-0382  CDE301        call jmp_hl_plus_4k ; $57C0
-0385  21A015        ld   hl,$15A0 ; $CHASED_BY_A_DINO_SCREEN
-0388  CDE301        call jmp_hl_plus_4k ; $55A0
+0373  212015        ld   hl,reset_sfx_something_1 - JMP_HL_OFFSET
+0376  CDE301        call jmp_hl_plus_4k
+0379  21200E        ld   hl,attract_splash_bongo - JMP_HL_OFFSET
+037C  CDE301        call jmp_hl_plus_4k
+037F  21C017        ld   hl,call_draw_extra_bonus_screen - JMP_HL_OFFSET
+0382  CDE301        call jmp_hl_plus_4k
+0385  21A015        ld   hl,chased_by_a_dino_screen - JMP_HL_OFFSET
+0388  CDE301        call jmp_hl_plus_4k
 038B  00            nop
 038C  00            nop
 038D  00            nop
@@ -961,7 +962,7 @@
 040E                dc   2, $FF
 
                 game_over:
-0410  21E816        ld   hl,$16E8 ; $SFX_RESET_A_BUNCH-$4000
+0410  21E816        ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
 0413  CDE301        call jmp_hl_plus_4k
 0416  CDE024        call delay_60_vblanks
 0419  CD3004        call check_if_hiscore
@@ -2690,8 +2691,8 @@
 11A9  CDBA04        call check_dino_timer
 11AC  CD502B        call update_enemies
 11AF  CDA83B        call player_enemies_collision
-11B2  212000        ld   hl,_0020
-11B5  CDE301        call jmp_hl_plus_4k ; $UPDATE_EVERYTHING_MORE
+11B2  212000        ld   hl,update_everything_more - JMP_HL_OFFSET
+11B5  CDE301        call jmp_hl_plus_4k
 11B8  C9            ret
 
 11B9                dc   7, $FF
@@ -2854,7 +2855,7 @@
                 reset_enemies_and_draw_bottom_row:
 12F1  221E80        ld   (screen_ram_ptr),hl ; hl = 9000 when hits here on death
 12F4  CD1035        call reset_enemies
-12F7  21500C        ld   hl,$0C50 ; $ADD_SCREEN_PICKUPS
+12F7  21500C        ld   hl,add_screen_pickups - JMP_HL_OFFSET
 12FA  CDE301        call jmp_hl_plus_4k
 12FD  C3103F        jp   draw_bottom_row_numbers
 
@@ -3136,7 +3137,7 @@
 14AE                dc   2, $FF
 
                 screen_reset:
-14B0  21E806        ld   hl,$06E8
+14B0  21E806        ld   hl,play_tune_for_cur_screen - JMP_HL_OFFSET
 14B3  CDE301        call jmp_hl_plus_4k
 14B6  CDC83B        call copy_xoffs
                 ;; set init player pos
@@ -4481,7 +4482,7 @@
 2590                dc   8, $FF
                 _part_three:
 2598  73            ld   (hl),e
-2599  012000        ld   bc,_0020
+2599  012000        ld   bc,$0020
 259C  09            add  hl,bc
 259D  7C            ld   a,h
 259E  FE94          cp   $94
@@ -4491,7 +4492,7 @@
                 _part_four:
 25A8  CDA013        call wait_vblank
 25AB  73            ld   (hl),e
-25AC  012000        ld   bc,_0020
+25AC  012000        ld   bc,$0020
 25AF  09            add  hl,bc
 25B0  7E            ld   a,(hl)
 25B1  BB            cp   e
@@ -4512,7 +4513,7 @@
                 _part_six:
 25D0  CDA013        call wait_vblank
 25D3  73            ld   (hl),e
-25D4  012000        ld   bc,_0020
+25D4  012000        ld   bc,$0020
 25D7  ED42          sbc  hl,bc
 25D9  7E            ld   a,(hl)
 25DA  BB            cp   e
@@ -5196,7 +5197,7 @@
 
                 enter_hiscore_screen:
 2D88  F5            push af
-2D89  21E816        ld   hl,$16E8 ; 56e8 = $SFX_RESET_A_BUNCH
+2D89  21E816        ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
 2D8C  CDE301        call jmp_hl_plus_4k
 2D8F  3E09          ld   a,$09 ; extra life /hiscore sfx
 2D91  324280        ld   (ch1_sfx),a
@@ -5331,7 +5332,7 @@
 2F1A                dc   6, $FF
 
                 hiscore_rub_letter:
-2F20  112000        ld   de,_0020
+2F20  112000        ld   de,$0020
 2F23  FD19          add  iy,de
 2F25  FD36002B      ld   (iy+$00),$2B
 2F29  3E10          ld   a,$10
@@ -7275,7 +7276,7 @@
 
                 delay_83_call_weird_a:
 3F00  CD6014        call delay_83
-3F03  21900E        ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
+3F03  21900E        ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
                 ; seems to do nothing
 3F06  CDE301        call jmp_hl_plus_4k
 3F09  C9            ret
@@ -7565,7 +7566,7 @@
 40FF  C9            ret
 
                 ;; Called directly by SFX_SUMFIN_2 and
-                ;; indirectly (maybe) by weird load at 0x41e3
+                ;; indirectly (maybe) from weird_unsed_maybe_load
                 _4100:
 4100  DD7E05        ld   a,(ix+$05)
 4103  A7            and  a
@@ -7697,6 +7698,7 @@
 41E1                dc   2, $FF
 
                 ;; How do i get here?... what is this Weird load for?
+                weird_unsed_maybe_load: 
 41E3  3A0041        ld   a,(_4100)
 41E6  01E301        ld   bc,jmp_hl_plus_4k
 41E9  C5            push bc
