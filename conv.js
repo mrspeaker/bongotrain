@@ -207,7 +207,7 @@ const get_sym_table = (dst) =>
     }, {});
 
 const replace_sym = (dst, sym_table) => {
-    const miss = new Set();
+    const miss = new Map();
     const out = dst.map((d) => {
         if (d.type === t.INST) {
             const m = d.line.match(/\$([0-9A-Fa-f]{4})/);
@@ -217,16 +217,14 @@ const replace_sym = (dst, sym_table) => {
                     // Jump addr
                 } else {
                     if (sym_table[m[1]] === undefined) {
-                        console.log("oh");
-                        miss.add(m[1]);
+                        miss.set(m[1], miss.has(m[1]) ? miss.get(m[1]) + 1 : 1);
                     }
-                    //console.log(m[1], sym_table[m[1]]);
                 }
             }
         }
         return d;
     });
-    console.log(Array.from(miss).sort());
+    console.log(Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1))); //Array.from(miss).sort());
     return out;
 };
 

@@ -37,8 +37,12 @@
                 walk_anim_timer   = $8010  ; % 7?
                 falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
                 player_died       = $8012  ; 0 = no, 1 = yep, dead
-                p1_score          = $8014  ; and 8015, 8016 (BCD score)
-                p2_score          = $8017  ; and 8018, 8019 (BCD score)
+                p1_score          = $8014  ; (BCD score)
+                p1_score_1        = $8015  ; (BCD score)
+                p1_score_2        = $8016  ; (BCD score)
+                p2_score          = $8017  ; (BCD score)
+                p2_score_1        = $8018  ; (BCD score)
+                p2_score_2        = $8019  ; (BCD score)
                 _unused_1         = $801B  ; unused? Set once, never read
                 score_to_add      = $801D  ; amount to add to the current score
 
