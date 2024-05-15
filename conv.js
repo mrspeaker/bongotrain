@@ -9,6 +9,9 @@ const t = {
     LABEL: 5,
 };
 
+const val2hex = (val) => val.toString(16).toUpperCase().padStart(4, 0);
+const hex2val = (hex) => parseInt(hex, 16);
+
 const parseLine = (raw, addr) => {
     const line = raw.trim();
     const leading = raw.length - line.trimEnd().length;
@@ -74,7 +77,7 @@ const parse = (txt, lineParser) => {
             //}
             return ac;
         },
-        { state: 0, addr: -1, lines: [] }
+        { state: 0, addr: -1, lines: [] },
     );
 
     // Link labels and instructions
@@ -93,7 +96,7 @@ const parse = (txt, lineParser) => {
             }
             return ac;
         },
-        { label: null }
+        { label: null },
     );
 
     return parsed.lines;
@@ -135,7 +138,7 @@ const get_meta = (src) =>
             }
             return { cur, groups };
         },
-        { cur: [], groups: {} }
+        { cur: [], groups: {} },
     ).groups;
 
 const moosh = (meta, code) =>
@@ -232,13 +235,13 @@ const replace_sym = (dst, sym_table) => {
     if (miss.size > 0) {
         console.log(
             "Missing symbols",
-            Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1))
+            Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1)),
         );
     }
     return out;
 };
 
-const replace_labels = (dst, labels) => {
+const replace_labels = (dst, labels, insts) => {
     const miss = new Map();
     const out = dst.map((d) => {
         if (d.type === t.INST) {
@@ -246,21 +249,46 @@ const replace_labels = (dst, labels) => {
                 .split(";")[0]
                 .slice(20)
                 .match(/(\w+)\s+\$([0-9A-Fa-f]{4}).*/);
-            if (m && m.length) {
-                const addr = m[2];
-                const addr_p = parseInt(addr, 16);
-                if (addr_p < 0x6000) {
+            const inst_points_to_addr = m && m.length;
+
+            if (inst_points_to_addr) {
+                const ref_addr = m[2];
+                const ref_addr_p = parseInt(ref_addr, 16);
+                if (ref_addr_p < 0x6000) {
                     const instr = m[1];
-                    const label = labels[addr];
+                    const label = labels[ref_addr];
                     if (!label) {
-                        miss.set(addr, miss.has(addr) ? miss.get(addr) + 1 : 1);
-                        /*console.log(
-                            d.addr.toString(16).padStart(4, 0).toUpperCase(),
-                            instr,
-                            addr
-                        );*/
+                        miss.set(
+                            ref_addr,
+                            miss.has(ref_addr) ? miss.get(ref_addr) + 1 : 1,
+                        );
+                        // Show any invalid label addresses...
+                        const label_addr_is_valid = !!insts[hex2val(ref_addr)];
+                        if (!label_addr_is_valid) {
+                            console.log(
+                                "Missing label addr:",
+                                val2hex(d.addr),
+                                instr,
+                                ref_addr,
+                            );
+                        } else {
+                            // dest addr is valid, but has no label...
+                            //console.log(ref_addr);
+                        }
                     } else {
-                        //console.log("HIT", instr, label);
+                        /*                        console.log(
+                            "HIT",
+                            instr,
+                            label,
+                            "...",
+                            d.line,
+                            "|",
+                            d.line.replace("$" + ref_addr, label),
+                        );*/
+                        return {
+                            ...d,
+                            line: d.line.replace("$" + ref_addr, label),
+                        };
                         // Got a label - replace it.
                         //const addr = parseInt(m[1], 16);
                         //                if (addr < 0x6000) {
@@ -290,6 +318,14 @@ const get_labels = (dst) =>
         return ac;
     }, {});
 
+const get_inst = (dst) =>
+    dst.reduce((ac, el) => {
+        if (el.type === t.INST) {
+            ac[el.addr] = el.line;
+        }
+        return ac;
+    }, {});
+
 const run = async () => {
     //const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
@@ -302,13 +338,12 @@ const run = async () => {
 
     const sym_table = get_sym_table(dst);
     const label_table = get_labels(dst);
-    const out_sym = replace_sym(dst, sym_table);
-    console.log(out_sym);
-    const out = out_sym;
-    //const out_lab = replace_labels(out_sym, label_table);
-    //const comments = get_inst_comments(src);
-    //const meta = get_meta(src);
-    //const out = moosh_comments(comments, dst);
+    const inst_table = get_inst(dst);
+    //console.log(inst_table);
+    //const out_sym = replace_sym(dst, sym_table);
+    const out_lab = replace_labels(dst, label_table, inst_table);
+    //console.log(out_lab);
+    const out = out_lab;
     document.querySelector("#out").value = indent(out).join("\n");
 };
 
