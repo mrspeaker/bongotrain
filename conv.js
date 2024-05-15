@@ -9,6 +9,74 @@ const t = {
     LABEL: 5,
 };
 
+const missing_labels = [
+    "0079",
+    "00B3",
+    "01AD",
+    "0215",
+    "0246",
+    "0260",
+    "0260",
+    "027E",
+    "027E",
+    "029F",
+    "02B9",
+    "02E3",
+    "02D6",
+    "02F9",
+    "0304",
+    "0336",
+    "03C7",
+    "03FA",
+    "04B2",
+    "04C8",
+    "04D4",
+    "05AB",
+    "059D",
+    "05A6",
+    "05C2",
+    "05ED",
+    "06AA",
+    "06B2",
+    "06BE",
+    "06C6",
+    "06CE",
+    "0797",
+    "07EB",
+    "0904",
+    "09B1",
+    "0A24",
+    "0A50",
+    "0ADB",
+    "0AEE",
+    "0B96",
+    "0BE6",
+    "0BD6",
+    "0BBA",
+    "0C8E",
+    "0CA2",
+    "0CB2",
+    "0D19",
+    "0D79",
+    "0DCD",
+    "0E4C",
+    "0E81",
+    "0E9F",
+    "0F44",
+    "0F4E",
+    "107A",
+    "10E9",
+    "1121",
+    "1121",
+    "1126",
+    "1139",
+    "11DB",
+];
+const missing_label_map = missing_labels.reduce((ac, el) => {
+    ac[el] = true;
+    return ac;
+}, {});
+
 const val2hex = (val) => val.toString(16).toUpperCase().padStart(4, 0);
 const hex2val = (hex) => parseInt(hex, 16);
 
@@ -62,6 +130,7 @@ const parseDstLine = (raw, addr) => {
             addr: parseInt(line.slice(0, 4), 16),
         };
     }
+    //    console.log("LABBB:", { ...out, type: t.LABEL, addr });
     return { ...out, type: t.LABEL, addr };
 };
 
@@ -241,16 +310,16 @@ const replace_sym = (dst, sym_table) => {
     return out;
 };
 
-const replace_labels = (dst, labels, insts) => {
+const replace_labels = (dst, labels, insts, labelMap) => {
     const miss = new Map();
-    const out = dst.map((d) => {
+    const ddd = [];
+    const out = dst.flatMap((d) => {
         if (d.type === t.INST) {
             const m = d.line
                 .split(";")[0]
                 .slice(20)
-                .match(/(\w+)\s+\$([0-9A-Fa-f]{4}).*/);
+                .match(/(\w+)[^\$]*\$([0-9A-Fa-f]{4}).*/);
             const inst_points_to_addr = m && m.length;
-
             if (inst_points_to_addr) {
                 const ref_addr = m[2];
                 const ref_addr_p = parseInt(ref_addr, 16);
@@ -265,15 +334,19 @@ const replace_labels = (dst, labels, insts) => {
                         // Show any invalid label addresses...
                         const label_addr_is_valid = !!insts[hex2val(ref_addr)];
                         if (!label_addr_is_valid) {
-                            console.log(
+                            /* console.log(
                                 "Missing label addr:",
                                 val2hex(d.addr),
                                 instr,
                                 ref_addr,
-                            );
+                                );*/
+                            // console.log("mis", ref_addr, d.line);
                         } else {
                             // dest addr is valid, but has no label...
-                            //console.log(ref_addr);
+                            //ddd.push(ref_addr);
+                            //if (labelMap[ref_addr]) {
+                            //console.log("hit", ref_addr, d.line);
+                            ////} else
                         }
                     } else {
                         /*                        console.log(
@@ -299,6 +372,7 @@ const replace_labels = (dst, labels, insts) => {
         }
         return { ...d };
     });
+    //console.log(ddd);
     //    console.table(miss);
     //console.table(Array.from(miss).sort((a, b) => (a[0] > b[0] ? 1 : -1)));
     return out;
@@ -309,8 +383,7 @@ const get_labels = (dst) =>
         if (el.type === t.LABEL) {
             const m = el.line.match(/\s*(\w+)\s*:/);
             if (m && m.length == 2) {
-                ac[el.inst.addr.toString(16).toUpperCase().padStart(4, 0)] =
-                    m[1];
+                ac[val2hex(el.inst.addr)] = m[1];
             } else {
                 console.log("Bad label?", el.line);
             }
@@ -326,22 +399,52 @@ const get_inst = (dst) =>
         return ac;
     }, {});
 
+const add_missing_labels = (dst, labels) =>
+    dst.reduce((ac, el) => {
+        if (el.type === t.INST) {
+            const addr = val2hex(el.addr);
+            if (labels[addr]) {
+                const label = {
+                    line: `_${addr}:`,
+                    leading: 16,
+                    type: t.LABEL,
+                    addr: el.addr,
+                    inst: el,
+                };
+                console.log("hit", label);
+                ac.push(label);
+            } else {
+                //  console.log("addr not in lables:", addr);
+            }
+        }
+        ac.push(el);
+        return ac;
+    }, []);
+
 const run = async () => {
     //const src_txt = await get_file("./bongo.asm");
     const dst_txt = await get_file("./bongo_src.asm");
 
     //const src = parse(src_txt.split("\n"), caseFix(parseSrcLine)).slice(240);
-    const dst = parse(dst_txt.split("\n"), parseDstLine);
+    const dsta = parse(dst_txt.split("\n"), parseDstLine);
 
     //const labels = get_labels(dst); //dst.filter((d) => d.type === t.LABEL); //.map((d) => d.addr);
     //console.log(labels);
 
+    const dst = add_missing_labels(dsta, missing_label_map);
+
     const sym_table = get_sym_table(dst);
     const label_table = get_labels(dst);
     const inst_table = get_inst(dst);
+
     //console.log(inst_table);
     //const out_sym = replace_sym(dst, sym_table);
-    const out_lab = replace_labels(dst, label_table, inst_table);
+    const out_lab = replace_labels(
+        dst,
+        label_table,
+        inst_table,
+        missing_label_map,
+    );
     //console.log(out_lab);
     const out = out_lab;
     document.querySelector("#out").value = indent(out).join("\n");
