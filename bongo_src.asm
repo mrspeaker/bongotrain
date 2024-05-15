@@ -232,6 +232,9 @@
 
                 screen_ram        = $9000 ; - 0x93ff  videoram
                 start_of_tiles    = $9040 ; top right tile
+
+                scr_pik_n_n       = $915A ; pickup right n_n levels
+
                 end_of_tiles      = $93BF ; bottom left tile
                 ;; what's all the stuff in herer?
                 xoff_col_ram      = $9800 ; xoffset and color data per tile row
