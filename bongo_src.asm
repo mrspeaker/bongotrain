@@ -86,12 +86,22 @@
                 ch2_sfx           = $8043  ; SFX channel 2
                 sfx_id            = $8044  ; queued sound effect ID to play
 
+                lava_tile_offset  = $804B  ; Current lava tile (offset?)
+
                 1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
                 1up_scr_pos_2     = $804E  ; ... but not used I reckon,
                 1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
 
                 1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
                 is_hit_cage       = $8051  ; did player trigger cage?
+
+                sfx_val_1         = $8052  ; All used in similar looking sfx subs
+                sfx_val_2         = $8053  ;
+                sfx_val_3         = $8054  ;
+                sfx_val_4         = $8055  ;
+                sfx_val_5         = $8056  ;
+                sfx_val_6         = $8057  ;
+
                 speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
                 speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
                 dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
@@ -114,10 +124,12 @@
 
 
                 ;; Bunch of unused/debugs/tmps?
+                _8080             = $8080  ; set to 3 in unused sub, never read
                 _8086             = $8086  ; set in hiscore, never read
                 _8090             = $8090  ; set to 1, never read?
                 _8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
                 _8094             = $8094  ; unused? used with 8093
+                _80FF             = $80FF  ; cleared at start (HARD_RESET)
 
                 screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
                 ; Gets memcpy'd to $9800
@@ -182,6 +194,46 @@
                 input_buttons     = $83F1  ; copied to 800C and 800D
                 input_buttons_2   = $83F2  ; dunno what buttons
 
+                ;; TODO: give these symbols a name!
+                _8046             = $8046  ; ?
+                _8049             = $8049  ; ?
+                _804A             = $804A  ; ?
+                _8101             = $8101  ; ?
+                _8105             = $8105  ; ?
+                _8106             = $8106  ; ?
+                _8108             = $8108  ; ?
+                _8126             = $8126  ; ?
+                _8128             = $8128  ; ?
+                _8129             = $8129  ; ?
+                _812A             = $812A  ; ?
+                _8131             = $8131  ; ?
+                _8133             = $8133  ; ?
+                _8135             = $8135  ; ?
+                _8137             = $8137  ; ?
+                _8138             = $8138  ; ?
+                _813F             = $813F  ; ?
+                _82A5             = $82A5  ; ?
+                _82AD             = $82AD  ; ?
+                _82B5             = $82B5  ; ?
+                _82B8             = $82B8  ; ?
+                _82D0             = $82D0  ; ?
+                _82E8             = $82E8  ; ?
+                _8306             = $8306  ; ?
+                _8308             = $8308  ; ?
+                _8309             = $8309  ; ?
+                _830A             = $830A  ; ?
+                _830B             = $830B  ; ?
+                _830C             = $830C  ; ?
+                _830D             = $830D  ; ?
+                _830E             = $830E  ; ?
+                _830F             = $830F  ; ?
+                _8310             = $8310  ; ?
+
+                ;; 16bit signed sub constants
+                MINUS_95          = $FFA1
+                MINUS_64          = $FFC0
+                MINUS_36          = $FFDC
+
                 ;;;  constants
 
                 screen_width      = $E0  ; 224
@@ -233,19 +285,134 @@
                 screen_ram        = $9000 ; - 0x93ff  videoram
                 start_of_tiles    = $9040 ; top right tile
 
-                scr_pik_n_n       = $915A ; pickup right n_n levels
+                ;; a hundred-odd screen locations. Figure 'em out, and name them.
+                _9010             = $9010  ; ?​​
+                _901F             = $901F  ; ?​​
+                _9061             = $9061  ; ?​​
+                _9081             = $9081  ; ?​​
+                _9082             = $9082  ; ?​​
+                _908E             = $908E  ; ?​​
+                _9090             = $9090  ; ?​​
+                _9092             = $9092  ; ?​​
+                _90A1             = $90A1  ; ?​​
+                _90A2             = $90A2  ; ?​​
+                _90C1             = $90C1  ; ?​​
+                _90CB             = $90CB  ; ?​​
+                _90E1             = $90E1  ; ?​​
+                _90E2             = $90E2  ; ?​​
+                _9101             = $9101  ; ?​​
+                _9102             = $9102  ; ?​​
+                _911A             = $911A  ; ?​​
+                _9122             = $9122  ; ?​​
+                _9142             = $9142  ; ?​​
+                _9157             = $9157  ; ?​​
+                scr_pik_n_n       = $915A  ; pickup right n_n levels
+                _9160             = $9160  ; ?​​
+                _9162             = $9162  ; ?​​
+                _9177             = $9177  ; ?​​
+                _9179             = $9179  ; ?​​
+                _9180             = $9180  ; ?​​
+                _9182             = $9182  ; ?​​
+                _9184             = $9184  ; ?​​
+                _9189             = $9189  ; ?​​
+                _918A             = $918A  ; ?​​
+                _918B             = $918B  ; ?​​
+                _918C             = $918C  ; ?​​
+                _918E             = $918E  ; ?​​
+                _9197             = $9197  ; ?​​
+                _9199             = $9199  ; ?​​
+                _91A0             = $91A0  ; ?​​
+                _91A1             = $91A1  ; ?​​
+                _91A2             = $91A2  ; ?​​
+                _91A9             = $91A9  ; ?​​
+                _91AA             = $91AA  ; ?​​
+                _91AB             = $91AB  ; ?​​
+                _91AC             = $91AC  ; ?​​
+                _91B1             = $91B1  ; ?​​
+                _91B7             = $91B7  ; ?​​
+                _91C0             = $91C0  ; ?​​
+                _91C1             = $91C1  ; ?​​
+                _91C9             = $91C9  ; ?​​
+                _91CA             = $91CA  ; ?​​
+                _91CB             = $91CB  ; ?​​
+                _91CC             = $91CC  ; ?​​
+                _91D2             = $91D2  ; ?​​
+                _91D7             = $91D7  ; ?​​
+                _91D8             = $91D8  ; ?​​
+                _91E0             = $91E0  ; ?​​
+                _91E1             = $91E1  ; ?​​
+                _91F7             = $91F7  ; ?​​
+                _91F8             = $91F8  ; ?​​
+                _91F9             = $91F9  ; ?​​
+                _9200             = $9200  ; ?​​
+                _9201             = $9201  ; ?​​
+                _9217             = $9217  ; ?​​
+                _9218             = $9218  ; ?​​
+                _9219             = $9219  ; ?​​
+                _9220             = $9220  ; ?​​
+                _9221             = $9221  ; ?​​
+                _9224             = $9224  ; ?​​
+                _922B             = $922B  ; ?​​
+                _9231             = $9231  ; ?​​
+                _9237             = $9237  ; ?​​
+                _9238             = $9238  ; ?​​
+                _9239             = $9239  ; ?​​
+                _9240             = $9240  ; ?​​
+                _9241             = $9241  ; ?​​
+                _9242             = $9242  ; ?​​
+                _9248             = $9248  ; ?​​
+                _9257             = $9257  ; ?​​
+                _9260             = $9260  ; ?​​
+                _9262             = $9262  ; ?​​
+                _9277             = $9277  ; ?​​
+                _927A             = $927A  ; ?​​
+                _9280             = $9280  ; ?​​
+                _9282             = $9282  ; ?​​
+                _9297             = $9297  ; ?​​
+                _92A2             = $92A2  ; ?​​
+                _92AB             = $92AB  ; ?​​
+                _92C2             = $92C2  ; ?​​
+                _92E0             = $92E0  ; ?​​
+                _92E1             = $92E1  ; ?​​
+                _92EE             = $92EE  ; ?​​
+                _9301             = $9301  ; ?​​
+                _9302             = $9302  ; ?​​
+                _9308             = $9308  ; ?​​
+                _930C             = $930C  ; ?​​
+                _9310             = $9310  ; ?​​
+                _9314             = $9314  ; ?​​
+                _9321             = $9321  ; ?​​
+                _9322             = $9322  ; ?​​
+                _9341             = $9341  ; ?​​
+                _934B             = $934B  ; ?​​
+                _934C             = $934C  ; ?​​
+                _934E             = $934E  ; ?
+                _9350             = $9350  ; ?​​
+                _9352             = $9352  ; ?​​
+                _9361             = $9361  ; ?​​
+                _9362             = $9362  ; ?​​
+                _936B             = $936B  ; ?​​
+                _936C             = $936C  ; ?​​
+                _9381             = $9381  ; ?​​
+                _9382             = $9382  ; ?​​
+                _938B             = $938B  ; ?​​
+                _938C             = $938C  ; ?​​
+                _93A0             = $93A0  ; ?
 
                 end_of_tiles      = $93BF ; bottom left tile
                 ;; what's all the stuff in herer?
-                xoff_col_ram      = $9800 ; xoffset and color data per tile row
+                xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
                 sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
                 port_in0          = $A000 ;
                 port_in1          = $A800 ;
                 port_in2          = $B000 ;
                 int_enable        = $B001 ; interrupt enable
+                _B004             = $B004 ; "galaxian stars enable"?
                 _B006             = $B006 ; set to 1 for P1 or
                 _B007             = $B007 ; 0 for P2... why? Controls?
                 watchdog          = $B800 ; main timer?
+                _C000             = $C000 ;
+                _C003             = $C003 ;
 
                 ;;; ============ START OF BG1.BIN =============
 
@@ -3098,12 +3265,12 @@
 1676                dc   2, $FF
 
                 ;; ? data for something?
-1678  E8            ret  pe
-1679  ECEEF0        call pe,$F0EE
-167C  E9            jp   (hl)
-167D  ED            db   $ed
-167E  EF            rst  $28
-167F  F1            pop  af
+1678                db   $E8
+1679                db   $EC,$EE,$F0
+167C                db   $E9
+167D                db   $ED
+167E                db   $EF
+167F                db   $F1
 
                 update_speed_timers:
 1680  3A0480        ld   a,($8004)
@@ -3552,7 +3719,7 @@
 
 1B4F  FF            db   $FF
 
-                ;; ?
+                ;; ? unused?
 1B50  3E03          ld   a,$03
 1B52  328080        ld   ($8080),a
 1B55  CD0017        call $1700
@@ -3567,7 +3734,7 @@
 1B6A  3C            inc  a
 1B6B  27            daa
 1B6C  77            ld   (hl),a
-1B6D  CDB02C        call $2CB0 ; calls nothing based on screen
+1B6D  CDB02C        call $2CB0 ; calls nothing (nopped dispatch) based on screen
 1B70  C30010        jp   $1000
 
 1B73                dc   13, $FF
