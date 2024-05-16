@@ -205,8 +205,9 @@ const get_missing_labels = (src, dst) => {
 const get_sym_table = (dst) =>
     dst.reduce((ac, el) => {
         if (el.type === t.SYMBOL) {
-            const m = el.line.match(/\s*(\w+)\s*=\s\$(\w{4})/);
+            const m = el.line.match(/\s*(\w+)\s*=\s\$(\w{2})(\s|$)/);
             if (m) {
+                console.log(m);
                 if (!!ac[m[2]]) {
                     console.log("dupe:", ac[m[2]], m[2], m[1]);
                 }
@@ -372,6 +373,7 @@ const run = async () => {
     //const dst = add_missing_labels(dsta, missing_label_map);
 
     const sym_table = get_sym_table(dst);
+    console.log(sym_table);
     const label_table = get_labels(dst);
     const inst_table = get_inst(dst);
 
