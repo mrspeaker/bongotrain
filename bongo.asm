@@ -2,8 +2,7 @@
 ;; picked apart by Mr Speaker
 ;; https://www.mrspeaker.net
 
-;; (NOTE: all just find/replace in a text editor:
-;; so don't try and compile me!)
+;; Read README.org for details and building instructions.
 
 ;; Overview:
 ;; - BIG_RESET ($1000) inits and starts loop
@@ -400,7 +399,9 @@ _938C             = $938C  ; ?​​
 _93A0             = $93A0  ; ?
 
 end_of_tiles      = $93BF ; bottom left tile
-;; what's all the stuff in herer?
+
+;; what's all the stuff in herer? $93ff-$9800
+
 xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
 sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
 port_in0          = $A000 ;
@@ -446,7 +447,7 @@ reset_vector:
 
     dc 11, $FF
 
-;; Called once at startup
+;; Initialize everything. Called once at startup.
 init_screen:
     ld   a,(port_in0)
     and  $83 ; 1000 0011

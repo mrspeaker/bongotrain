@@ -6,16 +6,16 @@ Welcom to bongo.
 `bongo.lua` is a trainer for Bongo, including a new game mode: OGNOB MODE.
 See the `RUNNING` section in the file for instructions (tl;dr:  `mame bongo --autoboot_script ./bongo.lua`)
 
-** Reverse engineered disassembly
-`bongo_src.asm` is an annotated version of the Bongo source code. I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for. Not 100% complete, but I think all the good stuff has been uncovered.
+** Reverse-engineered source code
+`bongo.asm` is a decompiled and annotated version of the Bongo object code back to source code.
+I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for.
+
+Not 100% complete... still a bunch of placeholder symbols, but I found so much interesting stuff buried in the code... blog posts to come!
 
 ** Building ROMs
-The Bongo source can be compiled with the `zmac` z80 compiler, then split into chunks that recreate the original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
+The Bongo source can be compiled with the `zmac` (http://48k.ca/zmac.html) z80 compiler, then split into chunks that recreate the 6 original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
 
-`build.sh` that will chop the front off the `bongo_src.asm` (I need the bytes for reference, but can't compile with them). This generates `src.asm`, which is compiled by `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
-
-Once `bongo_src.asm` is 100% symbol-ized, it will be deleted and `src.asm` will be the one-true-source of Bongo. 
-
+`build.sh` compiles the source with `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
 
 ** scratchpad
 
