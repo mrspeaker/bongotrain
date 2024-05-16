@@ -183,6 +183,8 @@
     credits           = $8303  ; how many credits in machine
     _8305             = $8305  ; Coins? dunno
     hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+    _830F             = $830F  ; ?
+    _8310             = $8310  ; ?
 
     tick_num          = $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -218,15 +220,6 @@
     _82D0             = $82D0  ; ?
     _82E8             = $82E8  ; ?
     _8306             = $8306  ; ?
-    _8308             = $8308  ; ?
-    _8309             = $8309  ; ?
-    _830A             = $830A  ; ?
-    _830B             = $830B  ; ?
-    _830C             = $830C  ; ?
-    _830D             = $830D  ; ?
-    _830E             = $830E  ; ?
-    _830F             = $830F  ; ?
-    _8310             = $8310  ; ?
 
     ;; 16bit signed sub constants
     JMP_HL_OFFSET     = $4000
@@ -5542,25 +5535,25 @@ _3022:
 ;; writes some chars to screen
 ;; actually - different screen loc than copy_msg 1!
 copy_hiscore_name_to_screen_2:
-    ld   a,(hiscore_name)
+    ld   a,(hiscore_name+0)
     ld   (hi_name-0*$20),a   ; char 1
-    ld   a,(_8308)
+    ld   a,(hiscore_name+1)
     ld   (hi_name-1*$20),a   ; char 2
-    ld   a,(_8309)
+    ld   a,(hiscore_name+2)
     ld   (hi_name-2*$20),a   ; char 3
-    ld   a,(_830A)
+    ld   a,(hiscore_name+3)
     ld   (hi_name-3*$20),a   ; char 4
-    ld   a,(_830B)
+    ld   a,(hiscore_name+4)
     ld   (hi_name-4*$20),a   ; char 5
-    ld   a,(_830C)
+    ld   a,(hiscore_name+5)
     ld   (hi_name-5*$20),a   ; char 6
-    ld   a,(_830D)
+    ld   a,(hiscore_name+6)
     ld   (hi_name-6*$20),a   ; char 7
-    ld   a,(_830E)
+    ld   a,(hiscore_name+7)
     ld   (hi_name-7*$20),a   ; char 8
-    ld   a,(_830F)
+    ld   a,(hiscore_name+8)
     ld   (hi_name-8*$20),a   ; char 9
-    ld   a,(_8310)
+    ld   a,(hiscore_name+9)
     ld   (hi_name-9*$20),a   ; char 10
     ret
 
