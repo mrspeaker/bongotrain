@@ -287,72 +287,65 @@
     _911A             = $911A  ; ?
     scr_lives_p2      = $9122  ; icons for lives, p2
     scr_pik_n_n       = $915A  ; pickup right n_n levels
-    _9179             = $9179  ; ?
-    _9184             = $9184  ; ?
-    _9189             = $9189  ; ?
-    _918A             = $918A  ; ?
-    _918B             = $918B  ; ?
-    _918C             = $918C  ; ?
-    _918E             = $918E  ; ?​​
-    _9199             = $9199  ; ?​​
-    _91A1             = $91A1  ; ?​​
-    _91A9             = $91A9  ; ?​​
-    _91AA             = $91AA  ; ?​​
-    _91AB             = $91AB  ; ?​​
-    _91AC             = $91AC  ; ?​​
-    _91B1             = $91B1  ; ?​​
-    _91C1             = $91C1  ; ?​​
-    _91C9             = $91C9  ; ?​​
-    _91CA             = $91CA  ; ?​​
-    _91CB             = $91CB  ; ?​​
-    _91CC             = $91CC  ; ?​​
-    _91D2             = $91D2  ; ?​​
-    _91D8             = $91D8  ; ?​​
-    _91E1             = $91E1  ; ?​​
-    _91F8             = $91F8  ; ?​​
-    _91F9             = $91F9  ; ?​​
-    _9201             = $9201  ; ?​​
-    _9217             = $9217  ; ?
-    _9218             = $9218  ; ?​​
-    _9219             = $9219  ; ?​​
-    _9221             = $9221  ; ?​​
-    _9224             = $9224  ; ?​​
-    _922B             = $922B  ; ?​​
-    _9231             = $9231  ; ?​​
-    _9238             = $9238  ; ?​​
-    _9239             = $9239  ; ?​​
-    _9241             = $9241  ; ?​​
-    _9248             = $9248  ; ?​​
+    _9179             = $9179  ;
+    _9184             = $9184  ;
+    _9189             = $9189  ;
+    _918A             = $918A  ;
+    _918B             = $918B  ;
+    _918C             = $918C  ;
+    _918E             = $918E  ;
+    _9199             = $9199  ;
+    _91A1             = $91A1  ;
+    _91A9             = $91A9  ;
+    _91AA             = $91AA  ;
+    _91AB             = $91AB  ;
+    _91AC             = $91AC  ;
+    _91B1             = $91B1  ;
+    _91C1             = $91C1  ;
+    _91C9             = $91C9  ;
+    _91CA             = $91CA  ;
+    _91CB             = $91CB  ;
+    _91CC             = $91CC  ;
+    _91D2             = $91D2  ;
+    _91E1             = $91E1  ;
+    _9201             = $9201  ;
+    _9217             = $9217  ;
+    _9221             = $9221  ;
+    _9224             = $9224  ;
+    _922B             = $922B  ;
+    _9231             = $9231  ;
+    _9241             = $9241  ;
+    _9248             = $9248  ;
     hi_name_entry     = $9277  ; as you enter your name
-    _927A             = $927A  ; ?​​
+    _927A             = $927A  ;
     hi_name           = $9280  ; hiscore name
-    _9297             = $9297  ; ?​​
-    _92AB             = $92AB  ; ?​​
+    _9297             = $9297  ;
+    _92AB             = $92AB  ;
     scr_lives_p1      = $92C2  ; first "life" icon for p1
-    _92E0             = $92E0  ; ?​​
-    p1_score_digits   = $92E1  ; ?​​
-    _92EE             = $92EE  ; ?​​
-    p1_timer_digits   = $9302  ; ?​​
-    _9308             = $9308  ; ?​​
-    _930C             = $930C  ; ?​​
-    _9310             = $9310  ; ?​​
-    _9314             = $9314  ; ?​​
-    _9321             = $9321  ; ?​​
-    _9322             = $9322  ; ?​​
-    _934B             = $934B  ; ?​​
-    _934C             = $934C  ; ?​​
-    _934E             = $934E  ; ?
-    _9350             = $9350  ; ?​​
-    _9352             = $9352  ; ?​​
-    _9361             = $9361  ; ?​​
-    _9362             = $9362  ; ?​​
-    _936B             = $936B  ; ?​​
-    _936C             = $936C  ; ?​​
-    _9381             = $9381  ; ?​​
-    _9382             = $9382  ; ?​​
-    _938B             = $938B  ; ?​​
-    _938C             = $938C  ; ?​​
-    _93A0             = $93A0  ; ?
+    scr_lvl_bg_start  = $92E0  ; pos (6,0): first tile in level background
+    p1_score_digits   = $92E1  ;
+    scr_pik_S_top     = $92EE  ; top-left pickup for S levels
+    p1_timer_digits   = $9302  ;
+    _9308             = $9308  ;
+    _930C             = $930C  ;
+    _9310             = $9310  ;
+    _9314             = $9314  ;
+    _9321             = $9321  ;
+    _9322             = $9322  ;
+    _934B             = $934B  ;
+    _934C             = $934C  ;
+    _934E             = $934E  ;
+    _9350             = $9350  ;
+    _9352             = $9352  ;
+    _9361             = $9361  ;
+    _9362             = $9362  ;
+    _936B             = $936B  ;
+    _936C             = $936C  ;
+    _9381             = $9381  ;
+    _9382             = $9382  ;
+    _938B             = $938B  ;
+    _938C             = $938C  ;
+    _93A0             = $93A0  ;
 
     end_of_tiles      = $93BF ; bottom left tile
 
@@ -370,6 +363,18 @@
     watchdog          = $B800 ; main timer?
     _C000             = $C000 ;
     _C003             = $C003 ;
+
+
+;;; ============ Bongo World Map  =============
+;;;
+;;;  1:  n_n  n_n  nTn  n_n   /   W
+;;;  7:   \   n_n  nTn   /    W
+;;; 12:   \   n_n  nTn  n_n   S
+;;; 17:   \   n_n   S    \   S_S
+;;; 22:   W    \   S_S
+;;; 25:   W    \    S
+;;;
+
 
 ;;; ============ START OF BG1.BIN =============
 
@@ -2806,7 +2811,7 @@ draw_background:
     db   $1E,$00
     db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; bottomleft platform
     call screen_reset
-    ld   hl,_92E0 ; screen pos (6,0)
+    ld   hl,scr_lvl_bg_start ; screen pos (6,0)
     ld   ix,(level_bg_ptr)
     ld   d,$17 ; call 23 columns = width - 6
 _draw_column:                   ; because first 6 are constant
@@ -5586,7 +5591,7 @@ set_hiscore_text:
 
 _30C0:
     ld   c,$00
-    ld   hl,hiscore_name+11
+    ld   hl,hiscore_name+9
 _30C5:
     ld   a,(hl)
     cp   $2B
@@ -5612,7 +5617,7 @@ _30D8:
 
 _30E8:
     ld   d,$0A                  ;hiscore name length
-    ld   ix,hiscore_name+$0A
+    ld   ix,hiscore_name+$08
 _30EE:
     ld   a,(ix+$00)
     ld   (ix+$01),a
@@ -7228,7 +7233,7 @@ _3D96:
     dc   1, $FF
 
 draw_cage_and_scene:            ; for cutscene
-    ld   hl,_9218
+    ld   hl,screen_ram+$218
     ld   (hl),$66
     inc  hl
     ld   (hl),$67
@@ -7236,7 +7241,7 @@ draw_cage_and_scene:            ; for cutscene
     ld   (hl),$6A
     inc  hl
     ld   (hl),$6B
-    ld   hl,_91F8
+    ld   hl,screen_ram+$1F8
     ld   (hl),$64
     inc  hl
     ld   (hl),$65
@@ -7244,7 +7249,7 @@ draw_cage_and_scene:            ; for cutscene
     ld   (hl),$68
     inc  hl
     ld   (hl),$69
-    ld   hl,_91D8
+    ld   hl,screen_ram+$1D8
     ld   (hl),$6E
     inc  hl
     ld   (hl),$6F
@@ -7643,7 +7648,7 @@ _40CB:
 
 add_pickup_pat_9:
     ld   a,$8F
-    ld   (_92EE),a
+    ld   (scr_pik_S_top),a
     ld   a,$8E
     ld   (_9217),a
     ret
@@ -8104,7 +8109,7 @@ _43C0:
     dc   10, $FF
 
     ld   a,$9F
-    ld   (_92EE),a
+    ld   (scr_pik_S_top),a
     ld   a,$9E
     ld   (_9217),a
     ret
@@ -11152,7 +11157,7 @@ draw_extra_bonus_screen:
     db   $E2,$E3,$E3,$E3,$E4,$FF
     call flash_border
     call flash_border
-    call _5BC8
+    call attract_10000_bonus
     ret
 
     dc   11, $FF
@@ -11181,24 +11186,24 @@ _5BC3:
     dc   1, $FF
 
 ;;
-_5BC8:
-    ld   a,$F2
-    ld   (_91F8),a
+attract_10000_bonus:
+    ld   a,$F2                  ; 0000 top-right
+    ld   (screen_ram+$1F8),a
     call flash_border
-    ld   a,$F3
-    ld   (_91F9),a
+    ld   a,$F3                  ; 0000 bottom-right
+    ld   (screen_ram+$1F9),a
     call flash_border
-    ld   a,$EA
-    ld   (_9218),a
+    ld   a,$EA                  ; 0000 top-left
+    ld   (screen_ram+$218),a
     call flash_border
-    ld   a,$EB
-    ld   (_9219),a
+    ld   a,$EB                  ; 0000 bottom-left
+    ld   (screen_ram+$219),a
     call flash_border
-    ld   a,$E8
-    ld   (_9238),a
+    ld   a,$E8                  ; 10 top
+    ld   (screen_ram+$238),a
     call flash_border
-    ld   a,$E9
-    ld   (_9239),a
+    ld   a,$E9                  ; 10 bottom
+    ld   (screen_ram+$239),a
     call flash_border
     call flash_border
     call flash_border
