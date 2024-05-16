@@ -16,24 +16,24 @@ set -e
 
 # clear previous output
 rm -rf zout
-echo "clean:   go."
+echo "clean:     go."
 
 # compile to un-annotated bytes
-zmac -j -c -n bongo.asm
-echo "compile: go."
+zmac -j -c -n --oo cim bongo.asm
+echo "compile:   go."
 
 # split bytes into 4K chunks (to mimic ROMs)
-split -b4k zout/bongo.cim zout/b_
-echo "split:   go."
+split -b4k -d -a 1 zout/bongo.cim zout/bg
+echo "split:     go."
 
 # check the checksums match to real ROM dumps
 obj=(
-  zout/b_aa
-  zout/b_ab
-  zout/b_ac
-  zout/b_ad
-  zout/b_ae
-  zout/b_af
+  zout/bg0
+  zout/bg1
+  zout/bg2
+  zout/bg3
+  zout/bg4
+  zout/bg5
 )
 rom=(
   dump/romgo/bg1.bin
@@ -59,8 +59,29 @@ for index in ${!obj[*]}; do
     fi
 done
 
+# package up full Bongo MAME ROMs
+cd zout
+mv bg0 bg1.bin
+mv bg1 bg2.bin
+mv bg2 bg3.bin
+mv bg3 bg4.bin
+mv bg4 bg5.bin
+mv bg5 bg6.bin
+rm bongo.cim
+cp ../dump/romgo/b-clr.bin .
+cp ../dump/romgo/b-h.bin .
+cp ../dump/romgo/b-k.bin .
+zip -j -q bongo.zip *.bin
+cd ..
 if [ "$err" -eq "0" ]; then
-    echo "bon:     go."
+    echo "bongo.zip: go."
+else
+    echo "(bootleg) bongo.zip: go."
+fi
+
+
+if [ "$err" -eq "0" ]; then
+    echo "bon:       go."
 else
     echo "no go."
 fi
