@@ -1,419 +1,420 @@
-;; Bongo by JetSoft
-;; picked apart by Mr Speaker
-;; https://www.mrspeaker.net
+;;; Bongo by JetSoft
+;;; picked apart by Mr Speaker
+;;; https://www.mrspeaker.net
 
-;; Read README.org for details and building instructions.
+;;; Builds to MAME-exact version of Bongo ROMS
+;;; Read README.org for details and building instructions.
 
-;; Overview:
-;; - BIG_RESET ($1000) inits and starts loop
-;; - Main loop is at MAIN_LOOP ($104b)
-;; - ... which calls UPDATE_EVERYTHING ($1170)
-;; - Also a NMI interrupt loop ($66)
-;; - ... which calls hardware-y stuff
+;;; Overview:
+;;; - BIG_RESET ($1000) inits and starts loop
+;;; - Main loop is at MAIN_LOOP ($104b)
+;;; - ... which calls UPDATE_EVERYTHING ($1170)
+;;; - Also a NMI interrupt loop ($66)
+;;; - ... which calls hardware-y stuff
 
-;; Important Bongo lore:
-;; - We decided "Bongo" is actually name of the lil' jumpy
-;;   guy in the corner of the screen, not the player.
-;;   He's complicated: celebrates the player's death,
-;;   but also parties with player on dino capture.
+;;; Important Bongo lore:
+;;; - We decided "Bongo" is actually name of the lil' jumpy
+;;;   guy in the corner of the screen, not the player.
+;;;   He's complicated: celebrates the player's death,
+;;;   but also parties with player on dino capture.
 
-tick_mod_3        = $8000  ; timer for every 3 frames
-tick_mod_6        = $8001  ; timer for every 6 frames
-pl_y_legs_copy    = $8002  ; copy of player y legs?
-_8003             = $8003  ; ? used with 8002 s bunch
-player_num        = $8004  ; current player
-jump_triggered    = $8005  ; jump triggered by setting jump_tbl_idx
-second_timer      = $8006
-p1_time           = $8007  ; time of player's run: never displayed!
-p1_timer_h        = $8008  ; hi byte of timer 1
-p2_time           = $8009  ; ...we could have had speed running!
-p2_timer_h        = $800A  ; hi byte of timer 2
-controls          = $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
-buttons_1         = $800C  ; P1/P2 buttons... and?
-buttons_2         = $800D  ; ... more buttons?
-controlsn         = $800E  ; some kind of "normalized" controls
-jump_tbl_idx      = $800F  ; index into table for physics jump
-walk_anim_timer   = $8010  ; % 7?
-falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
-player_died       = $8012  ; 0 = no, 1 = yep, dead
-p1_score          = $8014  ; (BCD score)
-p1_score_1        = $8015  ; (BCD score)
-p1_score_2        = $8016  ; (BCD score)
-p2_score          = $8017  ; (BCD score)
-p2_score_1        = $8018  ; (BCD score)
-p2_score_2        = $8019  ; (BCD score)
-_unused_1         = $801B  ; unused? Set once, never read
-score_to_add      = $801D  ; amount to add to the current score
+    tick_mod_3        = $8000  ; timer for every 3 frames
+    tick_mod_6        = $8001  ; timer for every 6 frames
+    pl_y_legs_copy    = $8002  ; copy of player y legs?
+    _8003             = $8003  ; ? used with 8002 s bunch
+    player_num        = $8004  ; current player
+    jump_triggered    = $8005  ; jump triggered by setting jump_tbl_idx
+    second_timer      = $8006
+    p1_time           = $8007  ; time of player's run: never displayed!
+    p1_timer_h        = $8008  ; hi byte of timer 1
+    p2_time           = $8009  ; ...we could have had speed running!
+    p2_timer_h        = $800A  ; hi byte of timer 2
+    controls          = $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
+    buttons_1         = $800C  ; P1/P2 buttons... and?
+    buttons_2         = $800D  ; ... more buttons?
+    controlsn         = $800E  ; some kind of "normalized" controls
+    jump_tbl_idx      = $800F  ; index into table for physics jump
+    walk_anim_timer   = $8010  ; % 7?
+    falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
+    player_died       = $8012  ; 0 = no, 1 = yep, dead
+    p1_score          = $8014  ; (BCD score)
+    p1_score_1        = $8015  ; (BCD score)
+    p1_score_2        = $8016  ; (BCD score)
+    p2_score          = $8017  ; (BCD score)
+    p2_score_1        = $8018  ; (BCD score)
+    p2_score_2        = $8019  ; (BCD score)
+    _unused_1         = $801B  ; unused? Set once, never read
+    score_to_add      = $801D  ; amount to add to the current score
 
-screen_ram_ptr    = $801E  ; maybe it's where to start drawing bg?
-level_bg_ptr      = $8020  ; screen data pointer (2 byte addr)
+    screen_ram_ptr    = $801E  ; maybe it's where to start drawing bg?
+    level_bg_ptr      = $8020  ; screen data pointer (2 byte addr)
 
-did_init          = $8022  ; set after first init, not really used
-bongo_anim_timer  = $8023  ; [0,1,2] updated every 8 ticks
-bongo_jump_timer  = $8024  ; amount of ticks keep jumping for
-bongo_dir_flag    = $8025  ; 4 = jump | 2 = left | 1 = right
-bongo_timer       = $8027  ; ticks 0-1f for troll
+    did_init          = $8022  ; set after first init, not really used
+    bongo_anim_timer  = $8023  ; [0,1,2] updated every 8 ticks
+    bongo_jump_timer  = $8024  ; amount of ticks keep jumping for
+    bongo_dir_flag    = $8025  ; 4 = jump | 2 = left | 1 = right
+    bongo_timer       = $8027  ; ticks 0-1f for troll
 
-screen_num        = $8029  ; Current screen player is on
-screen_num_p2     = $802A  ; Player 2 screen
-_802c             = $802C  ; ??
-dino_counter      = $802D  ; Ticks up when DINO_TIMER is done
-dino_dir          = $802E  ; 01 = right, ff = left
+    screen_num        = $8029  ; Current screen player is on
+    screen_num_p2     = $802A  ; Player 2 screen
+    _802c             = $802C  ; ??
+    dino_counter      = $802D  ; Ticks up when DINO_TIMER is done
+    dino_dir          = $802E  ; 01 = right, ff = left
 
-player_max_x      = $8030  ; furthest x pos (used for move score)
-is_2_players      = $8031  ; 1=2p, 0=1p mode (not used much)
-lives             = $8032
-lives_p2          = $8033
-num_players       = $8034  ; attract mode = 0, 1P = 1, 2P = 2
-credits_umm       = $8035  ; something to do with credits
+    player_max_x      = $8030  ; furthest x pos (used for move score)
+    is_2_players      = $8031  ; 1=2p, 0=1p mode (not used much)
+    lives             = $8032
+    lives_p2          = $8033
+    num_players       = $8034  ; attract mode = 0, 1P = 1, 2P = 2
+    credits_umm       = $8035  ; something to do with credits
 
-;; Enemies: seems to be mix-and-match per screen
-rock_fall_timer   = $8036  ; resets falling pos of rock
-enemy_1_active    = $8037  ; not really "active":  has many values.
-enemy_1_timer     = $8038  ; unused?
-enemy_2_active    = $8039  ;
-enemy_2_timer     = $803A  ;
-enemy_3_active    = $803B  ;
-enemy_3_timer     = $803C  ;
-enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
-rock_left_timer   = $803E  ; Rock left timer
-_803f             = $803F  ; ...2
-_8040             = $8040  ; ?
-enemy_6_active    = $8041  ;
+    ;; Enemies: seems to be mix-and-match per screen
+    rock_fall_timer   = $8036  ; resets falling pos of rock
+    enemy_1_active    = $8037  ; not really "active":  has many values.
+    enemy_1_timer     = $8038  ; unused?
+    enemy_2_active    = $8039  ;
+    enemy_2_timer     = $803A  ;
+    enemy_3_active    = $803B  ;
+    enemy_3_timer     = $803C  ;
+    enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
+    rock_left_timer   = $803E  ; Rock left timer
+    _803f             = $803F  ; ...2
+    _8040             = $8040  ; ?
+    enemy_6_active    = $8041  ;
 
-ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
-ch2_sfx           = $8043  ; SFX channel 2
-sfx_id            = $8044  ; queued sound effect ID to play
+    ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+    ch2_sfx           = $8043  ; SFX channel 2
+    sfx_id            = $8044  ; queued sound effect ID to play
 
-lava_tile_offset  = $804B  ; Current lava tile (offset?)
+    lava_tile_offset  = $804B  ; Current lava tile (offset?)
 
-1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
-1up_scr_pos_2     = $804E  ; ... but not used I reckon,
-1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
+    1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
+    1up_scr_pos_2     = $804E  ; ... but not used I reckon,
+    1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
 
-1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
-is_hit_cage       = $8051  ; did player trigger cage?
+    1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
+    is_hit_cage       = $8051  ; did player trigger cage?
 
-sfx_val_1         = $8052  ; All used in similar looking sfx subs
-sfx_val_2         = $8053  ;
-sfx_val_3         = $8054  ;
-sfx_val_4         = $8055  ;
-sfx_val_5         = $8056  ;
-sfx_val_6         = $8057  ;
+    sfx_val_1         = $8052  ; All used in similar looking sfx subs
+    sfx_val_2         = $8053  ;
+    sfx_val_3         = $8054  ;
+    sfx_val_4         = $8055  ;
+    sfx_val_5         = $8056  ;
+    sfx_val_6         = $8057  ;
 
-speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
-speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
-dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
+    speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
+    speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
+    dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
 
-bonuses           = $8060  ; How many bonuses collected
-bonus_mult        = $8062  ; Bonus multiplier.
+    bonuses           = $8060  ; How many bonuses collected
+    bonus_mult        = $8062  ; Bonus multiplier.
 
-splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
-sfx_prev          = $8065  ; prevent retrigger effect?
+    splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
+    sfx_prev          = $8065  ; prevent retrigger effect?
 
-_8066             = $8066  ; ?? OE when alive, 02 when dead?
-_8067             = $8067  ; ?? used with 66
-_8068             = $8068  ; ?? used with 67
+    _8066             = $8066  ; ?? OE when alive, 02 when dead?
+    _8067             = $8067  ; ?? used with 66
+    _8068             = $8068  ; ?? used with 67
 
-extra_got_p1      = $8070  ; P1 Earned extra life
-extra_got_p2      = $8071  ; P2 Earned extra life
+    extra_got_p1      = $8070  ; P1 Earned extra life
+    extra_got_p2      = $8071  ; P2 Earned extra life
 
-hiscore_timer     = $8075  ; Countdown for entering time in hiscore screen
-hiscore_timer2    = $8076  ; 16 counter for countdown
+    hiscore_timer     = $8075  ; Countdown for entering time in hiscore screen
+    hiscore_timer2    = $8076  ; 16 counter for countdown
 
 
-;; Bunch of unused/debugs/tmps?
-_8080             = $8080  ; set to 3 in unused sub, never read
-_8086             = $8086  ; set in hiscore, never read
-_8090             = $8090  ; set to 1, never read?
-_8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
-_8094             = $8094  ; unused? used with 8093
-_80FF             = $80FF  ; cleared at start (HARD_RESET)
+    ;; Bunch of unused/debugs/tmps?
+    _8080             = $8080  ; set to 3 in unused sub, never read
+    _8086             = $8086  ; set in hiscore, never read
+    _8090             = $8090  ; set to 1, never read?
+    _8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
+    _8094             = $8094  ; unused? used with 8093
+    _80FF             = $80FF  ; cleared at start (HARD_RESET)
 
-screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
-; Gets memcpy'd to $9800
-
+    screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
+                                ; Gets memcpy'd to $9800
 
 ;;; ======== SPRITES ========
 ;;; all have the form: X, FRAME, COL, Y.
-player_x          = $8140
-player_frame      = $8141
-player_col        = $8142
-player_y          = $8143
-player_x_legs     = $8144
-player_frame_legs = $8145
-player_col_legs   = $8146
-player_y_legs     = $8147
-bongo_x           = $8148
-bongo_frame       = $8149
-bongo_col         = $814A
-bongo_y           = $814B
-dino_x            = $814C
-dino_frame        = $814D
-dino_col          = $814E
-dino_y            = $814F
-dino_x_legs       = $8150
-dino_frame_legs   = $8151
-dino_col_legs     = $8152
-dino_y_legs       = $8153
-enemy_1_x         = $8154
-enemy_1_frame     = $8155
-enemy_1_col       = $8156
-enemy_1_y         = $8157
-enemy_2_x         = $8158
-enemy_2_frame     = $8159
-enemy_2_col       = $815A
-enemy_2_y         = $815B
-enemy_3_x         = $815C
-enemy_3_frame     = $815D
-enemy_3_col       = $815E
-enemy_3_y         = $815F
+    player_x          = $8140
+    player_frame      = $8141
+    player_col        = $8142
+    player_y          = $8143
+    player_x_legs     = $8144
+    player_frame_legs = $8145
+    player_col_legs   = $8146
+    player_y_legs     = $8147
+    bongo_x           = $8148
+    bongo_frame       = $8149
+    bongo_col         = $814A
+    bongo_y           = $814B
+    dino_x            = $814C
+    dino_frame        = $814D
+    dino_col          = $814E
+    dino_y            = $814F
+    dino_x_legs       = $8150
+    dino_frame_legs   = $8151
+    dino_col_legs     = $8152
+    dino_y_legs       = $8153
+    enemy_1_x         = $8154
+    enemy_1_frame     = $8155
+    enemy_1_col       = $8156
+    enemy_1_y         = $8157
+    enemy_2_x         = $8158
+    enemy_2_frame     = $8159
+    enemy_2_col       = $815A
+    enemy_2_y         = $815B
+    enemy_3_x         = $815C
+    enemy_3_frame     = $815D
+    enemy_3_col       = $815E
+    enemy_3_y         = $815F
 ;;; ============================
 
-platform_xoffs    = $8180  ; maybe
+    platform_xoffs    = $8180  ; maybe
 
-synth1            = $82A0  ; bunch of bytes for sfx
-synth2            = $82A8  ; bunch of bytes for sfx
-synth3            = $82B0  ; bunch of bytes for sfx
+    synth1            = $82A0  ; bunch of bytes for sfx
+    synth2            = $82A8  ; bunch of bytes for sfx
+    synth3            = $82B0  ; bunch of bytes for sfx
 
-hiscore           = $8300  ;
-hiscore_1         = $8301  ;
-hiscore_2         = $8302
+    hiscore           = $8300  ;
+    hiscore_1         = $8301  ;
+    hiscore_2         = $8302
 
-credits           = $8303  ; how many credits in machine
-_8305             = $8305  ; Coins? dunno
-hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+    credits           = $8303  ; how many credits in machine
+    _8305             = $8305  ; Coins? dunno
+    hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
-tick_num          = $8312  ; adds 1 every tick
-;; NOTE: TICK_MOD is sped up after round 1!
-tick_mod_fast     = $8315  ; % 3 in round 1, % 2 in round 2+
-tick_mod_slow     = $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
+    tick_num          = $8312  ; adds 1 every tick
+    ;; NOTE: TICK_MOD is sped up after round 1!
+    tick_mod_fast     = $8315  ; % 3 in round 1, % 2 in round 2+
+    tick_mod_slow     = $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
-stack_location    = $83F0  ; I think?
-input_buttons     = $83F1  ; copied to 800C and 800D
-input_buttons_2   = $83F2  ; dunno what buttons
+    stack_location    = $83F0  ; I think?
+    input_buttons     = $83F1  ; copied to 800C and 800D
+    input_buttons_2   = $83F2  ; dunno what buttons
 
-;; TODO: give these symbols a name!
-_8046             = $8046  ; ?
-_8049             = $8049  ; ?
-_804A             = $804A  ; ?
-_8101             = $8101  ; ?
-_8105             = $8105  ; ?
-_8106             = $8106  ; ?
-_8108             = $8108  ; ?
-_8126             = $8126  ; ?
-_8128             = $8128  ; ?
-_8129             = $8129  ; ?
-_812A             = $812A  ; ?
-_8131             = $8131  ; ?
-_8133             = $8133  ; ?
-_8135             = $8135  ; ?
-_8137             = $8137  ; ?
-_8138             = $8138  ; ?
-_813F             = $813F  ; ?
-_82A5             = $82A5  ; ?
-_82AD             = $82AD  ; ?
-_82B5             = $82B5  ; ?
-_82B8             = $82B8  ; ?
-_82D0             = $82D0  ; ?
-_82E8             = $82E8  ; ?
-_8306             = $8306  ; ?
-_8308             = $8308  ; ?
-_8309             = $8309  ; ?
-_830A             = $830A  ; ?
-_830B             = $830B  ; ?
-_830C             = $830C  ; ?
-_830D             = $830D  ; ?
-_830E             = $830E  ; ?
-_830F             = $830F  ; ?
-_8310             = $8310  ; ?
+    ;; TODO: give these symbols a name!
+    _8046             = $8046  ; ?
+    _8049             = $8049  ; ?
+    _804A             = $804A  ; ?
+    _8101             = $8101  ; ?
+    _8105             = $8105  ; ?
+    _8106             = $8106  ; ?
+    _8108             = $8108  ; ?
+    _8126             = $8126  ; ?
+    _8128             = $8128  ; ?
+    _8129             = $8129  ; ?
+    _812A             = $812A  ; ?
+    _8131             = $8131  ; ?
+    _8133             = $8133  ; ?
+    _8135             = $8135  ; ?
+    _8137             = $8137  ; ?
+    _8138             = $8138  ; ?
+    _813F             = $813F  ; ?
+    _82A5             = $82A5  ; ?
+    _82AD             = $82AD  ; ?
+    _82B5             = $82B5  ; ?
+    _82B8             = $82B8  ; ?
+    _82D0             = $82D0  ; ?
+    _82E8             = $82E8  ; ?
+    _8306             = $8306  ; ?
+    _8308             = $8308  ; ?
+    _8309             = $8309  ; ?
+    _830A             = $830A  ; ?
+    _830B             = $830B  ; ?
+    _830C             = $830C  ; ?
+    _830D             = $830D  ; ?
+    _830E             = $830E  ; ?
+    _830F             = $830F  ; ?
+    _8310             = $8310  ; ?
 
-;; 16bit signed sub constants
-JMP_HL_OFFSET     = $4000
-MINUS_95          = $FFA1
-MINUS_64          = $FFC0
-MINUS_36          = $FFDC
+    ;; 16bit signed sub constants
+    JMP_HL_OFFSET     = $4000
+    MINUS_95          = $FFA1
+    MINUS_64          = $FFC0
+    MINUS_36          = $FFDC
 
 ;;;  constants
 
-screen_width      = $E0  ; 224
-scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
-scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
-num_screens       = $1B  ; 27 screens
+    screen_width      = $E0  ; 224
+    scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
+    scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
+    num_screens       = $1B  ; 27 screens
 
-round1_speed      = $1F
-round2_speed      = $10
-round3_speed      = $0D
+    round1_speed      = $1F
+    round2_speed      = $10
+    round3_speed      = $0D
 
-fr_rock_1         = $1D
-fr_spear          = $22
-fr_bird_1         = $23
-fr_bird_2         = $24
-fr_blue_1         = $34
-fr_blue_2         = $35
+    fr_rock_1         = $1D
+    fr_spear          = $22
+    fr_bird_1         = $23
+    fr_bird_2         = $24
+    fr_blue_1         = $34
+    fr_blue_2         = $35
 
-tile_0            = $00
-tile_9            = $09
-tile_blank        = $10
-tile_a            = $11
-tile_z            = $2A
-tile_hyphen       = $2B
+    tile_0            = $00
+    tile_9            = $09
+    tile_blank        = $10
+    tile_a            = $11
+    tile_z            = $2A
+    tile_hyphen       = $2B
 
-tile_cage         = $74       ; - $7f
-tile_cursor       = $89
-tile_crown_pika   = $8C ; alt crown
-tile_pik_crossa   = $8D
-tile_pik_ringa    = $8E
-tile_pik_vasea    = $8F
-tile_crown_pik    = $9C
-tile_pik_cross    = $9D
-tile_pik_ring     = $9E
-tile_pik_vase     = $9F
-tile_lvl_01       = $C0
+    tile_cage         = $74       ; - $7f
+    tile_cursor       = $89
+    tile_crown_pika   = $8C ; alt crown
+    tile_pik_crossa   = $8D
+    tile_pik_ringa    = $8E
+    tile_pik_vasea    = $8F
+    tile_crown_pik    = $9C
+    tile_pik_cross    = $9D
+    tile_pik_ring     = $9E
+    tile_pik_vase     = $9F
+    tile_lvl_01       = $C0
 
-;; tile > $F8 is a platform
-tile_solid        = $F8 ; high-wire platform R
-tile_platform_r   = $FC
-tile_platform_c   = $FD
-tile_platform_l   = $FE
+    ;; tile > $F8 is a platform
+    tile_solid        = $F8 ; high-wire platform R
+    tile_platform_r   = $FC
+    tile_platform_c   = $FD
+    tile_platform_l   = $FE
 
-scr_line_prev     = $FFE0       ; -32 = previous screen line
+    scr_line_prev     = $FFE0       ; -32 = previous screen line
 
 ;;; hardware
 
-screen_ram        = $9000 ; - 0x93ff  videoram
-start_of_tiles    = $9040 ; top right tile
+    screen_ram        = $9000 ; - 0x93ff  videoram
+    start_of_tiles    = $9040 ; top right tile
 
-;; a hundred-odd screen locations. Figure 'em out, and name them.
-_9010             = $9010  ; ?​​
-_901F             = $901F  ; ?​​
-_9061             = $9061  ; ?​​
-_9081             = $9081  ; ?​​
-_9082             = $9082  ; ?​​
-_908E             = $908E  ; ?​​
-_9090             = $9090  ; ?​​
-_9092             = $9092  ; ?​​
-_90A1             = $90A1  ; ?​​
-_90A2             = $90A2  ; ?​​
-_90C1             = $90C1  ; ?​​
-_90CB             = $90CB  ; ?​​
-_90E1             = $90E1  ; ?​​
-_90E2             = $90E2  ; ?​​
-_9101             = $9101  ; ?​​
-_9102             = $9102  ; ?​​
-_911A             = $911A  ; ?​​
-_9122             = $9122  ; ?​​
-_9142             = $9142  ; ?​​
-_9157             = $9157  ; ?​​
-scr_pik_n_n       = $915A  ; pickup right n_n levels
-_9160             = $9160  ; ?​​
-_9162             = $9162  ; ?​​
-_9177             = $9177  ; ?​​
-_9179             = $9179  ; ?​​
-_9180             = $9180  ; ?​​
-_9182             = $9182  ; ?​​
-_9184             = $9184  ; ?​​
-_9189             = $9189  ; ?​​
-_918A             = $918A  ; ?​​
-_918B             = $918B  ; ?​​
-_918C             = $918C  ; ?​​
-_918E             = $918E  ; ?​​
-_9197             = $9197  ; ?​​
-_9199             = $9199  ; ?​​
-_91A0             = $91A0  ; ?​​
-_91A1             = $91A1  ; ?​​
-_91A2             = $91A2  ; ?​​
-_91A9             = $91A9  ; ?​​
-_91AA             = $91AA  ; ?​​
-_91AB             = $91AB  ; ?​​
-_91AC             = $91AC  ; ?​​
-_91B1             = $91B1  ; ?​​
-_91B7             = $91B7  ; ?​​
-_91C0             = $91C0  ; ?​​
-_91C1             = $91C1  ; ?​​
-_91C9             = $91C9  ; ?​​
-_91CA             = $91CA  ; ?​​
-_91CB             = $91CB  ; ?​​
-_91CC             = $91CC  ; ?​​
-_91D2             = $91D2  ; ?​​
-_91D7             = $91D7  ; ?​​
-_91D8             = $91D8  ; ?​​
-_91E0             = $91E0  ; ?​​
-_91E1             = $91E1  ; ?​​
-_91F7             = $91F7  ; ?​​
-_91F8             = $91F8  ; ?​​
-_91F9             = $91F9  ; ?​​
-_9200             = $9200  ; ?​​
-_9201             = $9201  ; ?​​
-_9217             = $9217  ; ?​​
-_9218             = $9218  ; ?​​
-_9219             = $9219  ; ?​​
-_9220             = $9220  ; ?​​
-_9221             = $9221  ; ?​​
-_9224             = $9224  ; ?​​
-_922B             = $922B  ; ?​​
-_9231             = $9231  ; ?​​
-_9237             = $9237  ; ?​​
-_9238             = $9238  ; ?​​
-_9239             = $9239  ; ?​​
-_9240             = $9240  ; ?​​
-_9241             = $9241  ; ?​​
-_9242             = $9242  ; ?​​
-_9248             = $9248  ; ?​​
-_9257             = $9257  ; ?​​
-_9260             = $9260  ; ?​​
-_9262             = $9262  ; ?​​
-_9277             = $9277  ; ?​​
-_927A             = $927A  ; ?​​
-_9280             = $9280  ; ?​​
-_9282             = $9282  ; ?​​
-_9297             = $9297  ; ?​​
-_92A2             = $92A2  ; ?​​
-_92AB             = $92AB  ; ?​​
-_92C2             = $92C2  ; ?​​
-_92E0             = $92E0  ; ?​​
-_92E1             = $92E1  ; ?​​
-_92EE             = $92EE  ; ?​​
-_9301             = $9301  ; ?​​
-_9302             = $9302  ; ?​​
-_9308             = $9308  ; ?​​
-_930C             = $930C  ; ?​​
-_9310             = $9310  ; ?​​
-_9314             = $9314  ; ?​​
-_9321             = $9321  ; ?​​
-_9322             = $9322  ; ?​​
-_9341             = $9341  ; ?​​
-_934B             = $934B  ; ?​​
-_934C             = $934C  ; ?​​
-_934E             = $934E  ; ?
-_9350             = $9350  ; ?​​
-_9352             = $9352  ; ?​​
-_9361             = $9361  ; ?​​
-_9362             = $9362  ; ?​​
-_936B             = $936B  ; ?​​
-_936C             = $936C  ; ?​​
-_9381             = $9381  ; ?​​
-_9382             = $9382  ; ?​​
-_938B             = $938B  ; ?​​
-_938C             = $938C  ; ?​​
-_93A0             = $93A0  ; ?
+    ;; TODO: a hundred-odd screen locations. Figure 'em out, and name them.
+    ;;
+    _9010             = $9010  ; ?​​
+    _901F             = $901F  ; ?​​
+    _9061             = $9061  ; ?​​
+    _9081             = $9081  ; ?​​
+    _9082             = $9082  ; ?​​
+    _908E             = $908E  ; ?​​
+    _9090             = $9090  ; ?​​
+    _9092             = $9092  ; ?​​
+    _90A1             = $90A1  ; ?​​
+    _90A2             = $90A2  ; ?​​
+    _90C1             = $90C1  ; ?​​
+    _90CB             = $90CB  ; ?​​
+    _90E1             = $90E1  ; ?​​
+    _90E2             = $90E2  ; ?​​
+    _9101             = $9101  ; ?​​
+    _9102             = $9102  ; ?​​
+    _911A             = $911A  ; ?​​
+    _9122             = $9122  ; ?​​
+    _9142             = $9142  ; ?​​
+    _9157             = $9157  ; ?​​
+    scr_pik_n_n       = $915A  ; pickup right n_n levels
+    _9160             = $9160  ; ?​​
+    _9162             = $9162  ; ?​​
+    _9177             = $9177  ; ?​​
+    _9179             = $9179  ; ?​​
+    _9180             = $9180  ; ?​​
+    _9182             = $9182  ; ?​​
+    _9184             = $9184  ; ?​​
+    _9189             = $9189  ; ?​​
+    _918A             = $918A  ; ?​​
+    _918B             = $918B  ; ?​​
+    _918C             = $918C  ; ?​​
+    _918E             = $918E  ; ?​​
+    _9197             = $9197  ; ?​​
+    _9199             = $9199  ; ?​​
+    _91A0             = $91A0  ; ?​​
+    _91A1             = $91A1  ; ?​​
+    _91A2             = $91A2  ; ?​​
+    _91A9             = $91A9  ; ?​​
+    _91AA             = $91AA  ; ?​​
+    _91AB             = $91AB  ; ?​​
+    _91AC             = $91AC  ; ?​​
+    _91B1             = $91B1  ; ?​​
+    _91B7             = $91B7  ; ?​​
+    _91C0             = $91C0  ; ?​​
+    _91C1             = $91C1  ; ?​​
+    _91C9             = $91C9  ; ?​​
+    _91CA             = $91CA  ; ?​​
+    _91CB             = $91CB  ; ?​​
+    _91CC             = $91CC  ; ?​​
+    _91D2             = $91D2  ; ?​​
+    _91D7             = $91D7  ; ?​​
+    _91D8             = $91D8  ; ?​​
+    _91E0             = $91E0  ; ?​​
+    _91E1             = $91E1  ; ?​​
+    _91F7             = $91F7  ; ?​​
+    _91F8             = $91F8  ; ?​​
+    _91F9             = $91F9  ; ?​​
+    _9200             = $9200  ; ?​​
+    _9201             = $9201  ; ?​​
+    _9217             = $9217  ; ?​​
+    _9218             = $9218  ; ?​​
+    _9219             = $9219  ; ?​​
+    _9220             = $9220  ; ?​​
+    _9221             = $9221  ; ?​​
+    _9224             = $9224  ; ?​​
+    _922B             = $922B  ; ?​​
+    _9231             = $9231  ; ?​​
+    _9237             = $9237  ; ?​​
+    _9238             = $9238  ; ?​​
+    _9239             = $9239  ; ?​​
+    _9240             = $9240  ; ?​​
+    _9241             = $9241  ; ?​​
+    _9242             = $9242  ; ?​​
+    _9248             = $9248  ; ?​​
+    _9257             = $9257  ; ?​​
+    _9260             = $9260  ; ?​​
+    _9262             = $9262  ; ?​​
+    _9277             = $9277  ; ?​​
+    _927A             = $927A  ; ?​​
+    _9280             = $9280  ; ?​​
+    _9282             = $9282  ; ?​​
+    _9297             = $9297  ; ?​​
+    _92A2             = $92A2  ; ?​​
+    _92AB             = $92AB  ; ?​​
+    _92C2             = $92C2  ; ?​​
+    _92E0             = $92E0  ; ?​​
+    _92E1             = $92E1  ; ?​​
+    _92EE             = $92EE  ; ?​​
+    _9301             = $9301  ; ?​​
+    _9302             = $9302  ; ?​​
+    _9308             = $9308  ; ?​​
+    _930C             = $930C  ; ?​​
+    _9310             = $9310  ; ?​​
+    _9314             = $9314  ; ?​​
+    _9321             = $9321  ; ?​​
+    _9322             = $9322  ; ?​​
+    _9341             = $9341  ; ?​​
+    _934B             = $934B  ; ?​​
+    _934C             = $934C  ; ?​​
+    _934E             = $934E  ; ?
+    _9350             = $9350  ; ?​​
+    _9352             = $9352  ; ?​​
+    _9361             = $9361  ; ?​​
+    _9362             = $9362  ; ?​​
+    _936B             = $936B  ; ?​​
+    _936C             = $936C  ; ?​​
+    _9381             = $9381  ; ?​​
+    _9382             = $9382  ; ?​​
+    _938B             = $938B  ; ?​​
+    _938C             = $938C  ; ?​​
+    _93A0             = $93A0  ; ?
 
-end_of_tiles      = $93BF ; bottom left tile
+    end_of_tiles      = $93BF ; bottom left tile
 
-;; what's all the stuff in herer? $93ff-$9800
+    ;; what's all the stuff in herer? $93ff-$9800
 
-xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
-sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
-port_in0          = $A000 ;
-port_in1          = $A800 ;
-port_in2          = $B000 ;
-int_enable        = $B001 ; interrupt enable
-_B004             = $B004 ; "galaxian stars enable"?
-_B006             = $B006 ; set to 1 for P1 or
-_B007             = $B007 ; 0 for P2... why? Controls?
-watchdog          = $B800 ; main timer?
-_C000             = $C000 ;
-_C003             = $C003 ;
+    xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
+    sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
+    port_in0          = $A000 ;
+    port_in1          = $A800 ;
+    port_in2          = $B000 ;
+    int_enable        = $B001 ; interrupt enable
+    _B004             = $B004 ; "galaxian stars enable"?
+    _B006             = $B006 ; set to 1 for P1 or
+    _B007             = $B007 ; 0 for P2... why? Controls?
+    watchdog          = $B800 ; main timer?
+    _C000             = $C000 ;
+    _C003             = $C003 ;
 
 ;;; ============ START OF BG1.BIN =============
 
