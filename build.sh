@@ -12,49 +12,57 @@
 # Test which bits are diff:
 # cmp  -l -x dump/suprmous.x3 zout/fac
 
+set -e
+
+# clear previous output
 rm -rf zout
+echo "clean:   go."
 
+# compile to un-annotated bytes
 zmac -j -c -n bongo.asm
+echo "compile: go."
+
+# split bytes into 4K chunks (to mimic ROMs)
 split -b4k zout/bongo.cim zout/b_
+echo "split:   go."
 
-a=`shasum zout/b_aa | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg1.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
+# check the checksums match to real ROM dumps
+obj=(
+  zout/b_aa
+  zout/b_ab
+  zout/b_ac
+  zout/b_ad
+  zout/b_ae
+  zout/b_af
+)
+rom=(
+  dump/romgo/bg1.bin
+  dump/romgo/bg2.bin
+  dump/romgo/bg3.bin
+  dump/romgo/bg4.bin
+  dump/romgo/bg5.bin
+  dump/romgo/bg6.bin
+)
+
+err=0
+for index in ${!obj[*]}; do
+    a=`shasum ${obj[$index]} | sed 's/.*=.//g'`
+    b=`shasum ${rom[$index]} | sed 's/.*=.//g'`
+    a_sha=`echo $a | cut -c 1-40`
+    b_sha=`echo $b | cut -c 1-40`
+    if test "$a_sha" != "$b_sha"
+    then
+        err=$((err+1))
+        echo
+        echo "CRC error: ${obj[$index]} - ${rom[$index]} (${index}k):"
+        cmp -l -x ${obj[$index]} ${rom[$index]} | head -n 5
+    fi
+done
+
+if [ "$err" -eq "0" ]; then
+    echo "bon:     go."
+else
+    echo "no go."
+fi
+
 echo
-
-a=`shasum zout/b_ab | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg2.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
-echo
-
-a=`shasum zout/b_ac | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg3.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
-echo
-
-a=`shasum zout/b_ad | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg4.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
-echo
-
-a=`shasum zout/b_ae | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg5.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
-echo
-
-a=`shasum zout/b_af | sed 's/.*=.//g'`
-b=`shasum dump/romgo/bg6.bin | sed 's/.*=.//g'`
-echo $a | cut -c 33-
-echo $b | cut -c 33-
-echo
-
-#if [ "$f1a" = "$f1b" ]; then
-#    echo "ROM 1 OK"
-#else
-#    echo "ROM 1 checksum error"
-#fi
