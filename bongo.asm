@@ -447,7 +447,7 @@ reset_vector:
 
     dc 11, $FF
 
-;; Initialize everything. Called once at startup.
+;; Called once at startup
 init_screen:
     ld   a,(port_in0)
     and  $83 ; 1000 0011
@@ -1689,6 +1689,7 @@ _0904:
 
 bongo_lookup3:
     db   $29,$2A,$2B,$2A,$FF,$FF,$FF,$FF
+_0920:
     db   $A9,$AA,$AB,$AA,$FF,$FF,$FF,$FF
 
     dc   8, $FF
@@ -1821,7 +1822,7 @@ move_bongo_left:
     nop
     nop
     ld   (bongo_anim_timer),a
-    ld   hl,$0920
+    ld   hl,_0920
     add  a,l
     ld   l,a
     ld   a,(hl)
@@ -1860,12 +1861,13 @@ add_gravity_and_check_big_fall:
     dec  a
     ld   (falling_timer),a
     and  a
-    jr   nz,_ok_to_fall
+    jr   nz,_0A50
     call kill_player ; yep.
     ret
-_ok_to_fall:
+;; Ok, what's this... "gravity"? always pushing down 2
+_0A50:
     ld   a,(player_y)
-    inc  a ; Why +2? gravity?
+    inc  a ; Why? Looks suspicious - related to bug?
     inc  a ; force to ground I think
     ld   (player_y),a
     add  a,$10
@@ -2247,7 +2249,7 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
     nop
     nop
     ld   (bongo_anim_timer),a
-    ld   hl,$0DB0
+    ld   hl,_0DB0
     add  a,l
     ld   l,a
     ld   a,(hl)
@@ -2257,6 +2259,7 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
     dc   12, $FF
 
 ;; wat
+_0DB0:
     db   $05,$06,$07,$08,$FF,$FF,$FF,$FF
 
 draw_bongo:
@@ -4931,13 +4934,15 @@ _done_2B14:
     jr   _2B3A
 _2B28:
     cp   $10
-    jr   nz,$2B30
+    jr   nz,_2B30
     ld   a,$0A
     jr   _2B3A
+_2B30:
     cp   $20
-    jr   nz,$2B38
+    jr   nz,_2B38
     ld   a,$14
     jr   _2B3A
+_2B38:
     ld   a,$1E
 _2B3A:
     ld   c,a
@@ -4952,9 +4957,10 @@ _2B3A:
 update_enemies:
     ld   a,(player_num)
     and  a
-    jr   nz,$2B5B
+    jr   nz,_2B5B
     ld   a,(screen_num)
     jr   _2B5E
+_2B5B:
     ld   a,(screen_num_p2)
 _2B5E:
     dec  a ; scr#-1
@@ -5081,8 +5087,9 @@ rock_fall_1:
     ld   a,(rock_fall_timer)
     inc  a
     cp   $0E ; has rock finished falling?
-    jr   nz,$2C37
+    jr   nz,_2C37
     xor  a ; reset
+_2C37:
     ld   (rock_fall_timer),a
     and  a
     ret  nz
@@ -5113,13 +5120,15 @@ hiscore_check_buttons:
     ld   b,a
     ld   a,(_9184)
     cp   $01
-    jr   z,$2C7F
+    jr   z,_2C7F
     bit  7,b
-    jr   nz,$2C88
+    jr   nz,_2C88
+_2C7F:
     ld   a,(port_in0)
     bit  5,a ; jump?
     call nz,hiscore_select_letter
     ret
+_2C88:
     bit  5,b ; jump?
     call nz,hiscore_select_letter
     ret
@@ -5143,9 +5152,10 @@ enemy_pattern_scr_8:
 nopped_out_dispatch:
     ld   a,(player_num)
     and  a
-    jr   nz,$2CBB
+    jr   nz,_2CBB
     ld   a,(screen_num)
     jr   _2CBE
+_2CBB:
     ld   a,(screen_num_p2)
 _2CBE:
     dec  a ; scr - 1
@@ -5202,29 +5212,31 @@ set_hiscore_and_reset_game:
     ld   hl,hiscore
     ld   a,(p1_score)
     cp   (hl)
-    jr   nz,$2D1D
+    jr   nz,_2D1D
     inc  hl
     ld   a,(p1_score_1)
     cp   (hl)
-    jr   nz,$2D1D
+    jr   nz,_2D1D
     inc  hl
     ld   a,(p1_score_2)
     cp   (hl)
-    jr   nz,$2D1D
+    jr   nz,_2D1D
     call p1_got_hiscore
+_2D1A:
     jp   clear_after_game_over
+_2D1D:
     ld   hl,hiscore
     ld   a,(p2_score)
     cp   (hl)
-    jr   nz,$2D1A
+    jr   nz,_2D1A
     inc  hl
     ld   a,(p2_score_1)
     cp   (hl)
-    jr   nz,$2D1A
+    jr   nz,_2D1A
     inc  hl
     ld   a,(p2_score_2)
     cp   (hl)
-    jr   nz,$2D1A
+    jr   nz,_2D1A
     call p2_got_hiscore
     jp   clear_after_game_over
 
@@ -5243,11 +5255,12 @@ p1_got_hiscore:
 p2_got_hiscore:
     ld   a,(input_buttons)
     bit  7,a ; hmm what is bit 7 button?
-    jr   z,$2D69
+    jr   z,_2D69
     ld   a,$01
     ld   (_B006),a
     ld   (_B007),a
     jr   _2D70
+_2D69:
     xor  a
     ld   (_B006),a
     ld   (_B007),a
@@ -5318,16 +5331,20 @@ set_cursor:
     ld   ix,input_buttons
     ld   a,(_9184) ; read from screen set above?
     cp   $01 ; p1 (maybe)?
-    jr   z,$2E93
+    jr   z,_2E93
     bit  7,(ix+$00)
-    jr   nz,$2E97
+    jr   nz,_2E97
+_2E93:
     ld   ix,port_in0
+_2E97:
     bit  3,(ix+$00) ; right?
-    jr   z,$2EA0
+    jr   z,_2EA0
     call hiscore_fwd_cursor
+_2EA0:
     bit  2,(ix+$00) ; left?
-    jr   z,$2EA9
+    jr   z,_2EA9
     call hiscore_back_cursor
+_2EA9:
     call hiscore_check_buttons
     nop
     nop
@@ -5341,10 +5358,11 @@ _check_if_letters_full:
     pop  hl
     ld   a,$37
     cp   l
-    jr   nz,$2EC0
+    jr   nz,_2EC0
     ld   a,$91 ; 9137 = last letter pos
     cp   h
     jr   z,_done_2EC8
+_2EC0:
     pop  hl
     ld   (hl),tile_cursor ; useless? Done in SET_CURSOR
     call hiscore_enter_timer
@@ -5365,9 +5383,10 @@ hiscore_select_letter:
     jr   nz,_enter_letter
     ld   a,$92
     cp   l
-    jr   nz,$2EEB ; no!
+    jr   nz,_2EEB ; no!
     call pop_hls_then_copy_hiscore_name
     ret
+_2EEB:
     ld   a,$D2 ; how about "rub"?
     cp   l
     jr   nz,_enter_letter ; nope...
@@ -5405,12 +5424,14 @@ hiscore_rub_letter:
     pop  hl
     ld   a,$92 ; 9297 = first letter pos
     cp   h
-    jr   nz,$2F3C
+    jr   nz,_2F3C
     ld   a,$97
     cp   l
-    jr   z,$2F3E
+    jr   z,_2F3E
+_2F3C:
     pop  hl
     ret
+_2F3E:
     ld   de,scr_line_prev
     add  iy,de
     pop  hl
@@ -5427,14 +5448,16 @@ hiscore_back_cursor:
     ret  nz
     ld   a,$92
     cp   l
-    jr   nz,$2F63
+    jr   nz,_2F63
     ld   hl,_9090 ; screen somewhere
     ret
+_2F63:
     ld   a,$90
     cp   l
-    jr   nz,$2F6C
+    jr   nz,_2F6C
     ld   hl,_908E
     ret
+_2F6C:
     ld   a,$8E
     cp   l
     ret  nz
@@ -5446,11 +5469,12 @@ hiscore_back_cursor:
 hiscore_clear_name:
     push hl
     ld   hl,hiscore_name ; default is "HI-SCORE", clearing...
+_2F8C:
     ld   (hl),tile_blank
     inc  hl
     ld   a,l
     cp   $11
-    jr   nz,$2F8C
+    jr   nz,_2F8C
     pop  hl
     ret
 
@@ -5470,14 +5494,16 @@ hiscore_fwd_cursor:
     ret  nz
     ld   a,$4E
     cp   l
-    jr   nz,$2FC1
+    jr   nz,_2FC1
     ld   hl,_9350 ; wrap line 1
     ret
+_2FC1:
     ld   a,$50
     cp   l
-    jr   nz,$2FCA
+    jr   nz,_2FCA
     ld   hl,_9352 ; wrap line 2
     ret
+_2FCA:
     ld   a,$52
     cp   l
     ret  nz
@@ -5533,9 +5559,10 @@ copy_hiscore_name_to_screen:
     dc   3, $FF
 
     ld   c,$05
+_3022:
     call wait_vblank
     dec  c
-    jr   nz,$3022
+    jr   nz,_3022
     ret
 
     dc   15, $FF
@@ -5630,11 +5657,12 @@ _30D8:
 _30E8:
     ld   d,$0A
     ld   ix,_830F
+_30EE:
     ld   a,(ix+$00)
     ld   (ix+$01),a
     dec  d
     dec  ix
-    jr   nz,$30EE
+    jr   nz,_30EE
     ld   a,tile_blank
     ld   (hiscore_name),a
     ret
@@ -5648,9 +5676,10 @@ hiscore_enter_timer:
     push iy
     push ix
     ld   c,$14
+_3110:
     call wait_vblank
     dec  c
-    jr   nz,$3110
+    jr   nz,_3110
     ld   a,(hiscore_timer2)
     inc  a
     ld   (hiscore_timer2),a
@@ -5689,8 +5718,9 @@ update_enemy_1:
 ;;  Move rock according to lookup table
     inc  a
     cp   $3C
-    jr   nz,$314B
+    jr   nz,_314B
     xor  a
+_314B:
     ld   (enemy_1_active),a
     ld   hl,rock_fall_lookup ; list of [frame,y pos]
     sla  a
@@ -5754,15 +5784,16 @@ set_bird_left_y_c4:
 wrap_bird_left_y_c4:
     ld   a,(enemy_2_x)
     and  a
-    jr   z,$324D
+    jr   z,_324D
     cp   $01
-    jr   z,$324D
+    jr   z,_324D
     cp   $02
-    jr   z,$324D
+    jr   z,_324D
     cp   $03
-    jr   z,$324D
+    jr   z,_324D
     cp   $04
     ret  nz
+_324D:
     call set_bird_left_y_c4
     ret
 
@@ -5786,10 +5817,11 @@ move_animate_bird_left:
 _animate_bird:
     ld   a,(enemy_2_frame)
     cp   fr_bird_1
-    jr   nz,$3287
+    jr   nz,_3287
     ld   a,fr_bird_2
     ld   (enemy_2_frame),a
     ret
+_3287:
     ld   a,fr_bird_1
     ld   (enemy_2_frame),a
     ret
@@ -5818,8 +5850,9 @@ update_stair_up_blue_timer:
     ld   a,(enemy_2_timer)
     inc  a
     cp   $20
-    jr   nz,$32DF
+    jr   nz,_32DF
     xor  a
+_32DF:
     ld   (enemy_2_timer),a
     and  a
     ret  nz
@@ -5834,16 +5867,18 @@ _32F0:
     ret  z
     inc  a
     cp   $81
-    jr   nz,$32FB
+    jr   nz,_32FB
     xor  a
+_32FB:
     ld   (enemy_3_active),a
     ld   b,a
     scf
     ccf
     sub  $40
-    jr   nc,$3309
+    jr   nc,_3309
     call _3318
     ret
+_3309:
     call _3340
     ret
 
@@ -5859,10 +5894,11 @@ _3318:
     ret  nz
     ld   a,(enemy_1_frame)
     cp   fr_blue_1
-    jr   z,$3330
+    jr   z,_3330
     ld   a,fr_blue_1
     ld   (enemy_1_frame),a
     ret
+_3330:
     ld   a,fr_blue_2
     ld   (enemy_1_frame),a
     ret
@@ -5934,16 +5970,18 @@ _33B8:
     ret  z
     inc  a
     cp   $81
-    jr   nz,$33C3
+    jr   nz,_33C3
     xor  a
+_33C3:
     ld   (enemy_3_active),a
     ld   b,a
     scf
     ccf
     sub  $40
-    jr   nc,$33D1
+    jr   nc,_33D1
     call _33D8
     ret
+_33D1:
     call _3400
     ret
 
@@ -5958,10 +5996,11 @@ _33D8:
     ret  nz
     ld   a,(enemy_1_frame)
     cp   fr_blue_1
-    jr   nz,$33F0
+    jr   nz,_33F0
     ld   a,fr_blue_2
     ld   (enemy_1_frame),a
     ret
+_33F0:
     ld   a,fr_blue_1
     ld   (enemy_1_frame),a
     ret
@@ -5984,16 +6023,18 @@ _3418:
     ret  z
     inc  a
     cp   $61
-    jr   nz,$3423
+    jr   nz,_3423
     xor  a
+_3423:
     ld   (enemy_4_active),a
     ld   b,a
     scf
     ccf
     sub  $30
-    jr   nc,$3431
+    jr   nc,_3431
     call _3438
     ret
+_3431:
     call _3458
     ret
 
@@ -6008,10 +6049,11 @@ _3438:
     ret  nz
     ld   a,(enemy_2_frame)
     cp   fr_blue_1
-    jr   nz,$3450
+    jr   nz,_3450
     ld   a,fr_blue_2
     ld   (enemy_2_frame),a
     ret
+_3450:
     ld   a,fr_blue_1
     ld   (enemy_2_frame),a
     ret
@@ -6044,8 +6086,9 @@ update_stairdown_blue_right_timer:
     ld   a,(enemy_2_timer)
     inc  a
     cp   $20
-    jr   nz,$3497
+    jr   nz,_3497
     xor  a
+_3497:
     ld   (enemy_2_timer),a
     and  a
     ret  nz
@@ -6091,8 +6134,9 @@ update_stairdown_blue_left_timer:
     ld   a,(enemy_3_timer)
     inc  a
     cp   $28
-    jr   nz,$34F7
+    jr   nz,_34F7
     xor  a
+_34F7:
     ld   (enemy_3_timer),a
     and  a
     ret  nz
@@ -6154,8 +6198,9 @@ update_rock_left_timer:
     ld   a,(rock_left_timer)
     inc  a
     cp   $14
-    jr   nz,$357F
+    jr   nz,_357F
     xor  a
+_357F:
     ld   (rock_left_timer),a
     and  a
     ret  nz
@@ -6171,8 +6216,9 @@ set_rock_3_fr_and_y:
 ;;  Move rock according to lookup table
     inc  a
     cp   $40
-    jr   nz,$359B
+    jr   nz,_359B
     xor  a
+_359B:
     ld   (_803f),a
     ld   hl,rock_fall_lookup
     sla  a
@@ -6216,16 +6262,17 @@ set_bird_right_y_bc:
 wrap_bird_right_y_bc:
     ld   a,(enemy_3_x)
     and  a
-    jr   z,$3605
+    jr   z,_3605
     cp   $01
-    jr   z,$3605
+    jr   z,_3605
     cp   $02
-    jr   z,$3605
+    jr   z,_3605
     cp   $03
-    jr   z,$3605
+    jr   z,_3605
 _3602:
     cp   $04
     ret  nz
+_3605:
     call set_bird_right_y_bc
     ret
 
@@ -6248,10 +6295,11 @@ move_animate_bird_right:
     ret  nz
     ld   a,(enemy_3_frame)
     cp   $A3
-    jr   nz,$3637
+    jr   nz,_3637
     ld   a,$A4
     ld   (enemy_3_frame),a
     ret
+_3637:
     ld   a,$A3
     ld   (enemy_3_frame),a
     ret
@@ -6311,15 +6359,16 @@ _3688:
 _36A8:
     ld   a,(enemy_3_x)
     and  a
-    jr   z,$36BD
+    jr   z,_36BD
     cp   $01
-    jr   z,$36BD
+    jr   z,_36BD
     cp   $02
-    jr   z,$36BD
+    jr   z,_36BD
     cp   $03
-    jr   z,$36BD
+    jr   z,_36BD
     cp   $04
     ret  nz
+_36BD:
     call _3688
     ret
 
@@ -6355,15 +6404,16 @@ set_spear_left_y_94:
 wrap_spear_left_y_94:
     ld   a,(enemy_3_x)
     and  a
-    jr   z,$3725
+    jr   z,_3725
     cp   $01
-    jr   z,$3725
+    jr   z,_3725
     cp   $02
-    jr   z,$3725
+    jr   z,_3725
     cp   $03
-    jr   z,$3725
+    jr   z,_3725
     cp   $04
     ret  nz
+_3725:
     call set_spear_left_y_94
     ret
 
@@ -6412,15 +6462,16 @@ _3778:
 _3798:
     ld   a,(enemy_2_x)
     and  a
-    jr   z,$37AD
+    jr   z,_37AD
     cp   $01
-    jr   z,$37AD
+    jr   z,_37AD
     cp   $02
-    jr   z,$37AD
+    jr   z,_37AD
     cp   $03
-    jr   z,$37AD
+    jr   z,_37AD
     cp   $04
     ret  nz
+_37AD:
     call _3778
     ret
 
@@ -6645,18 +6696,20 @@ set_spear_left_top:
 wrap_spear_left_bottom:
     ld   a,(enemy_1_x)
     cp   $80
-    jr   z,$39D3
+    jr   z,_39D3
     cp   $81
-    jr   z,$39D3
+    jr   z,_39D3
     cp   $82
-    jr   z,$39D3
+    jr   z,_39D3
     cp   $83
-    jr   z,$39D3
+    jr   z,_39D3
     cp   $84
-    jr   z,$39D3
+    jr   z,_39D3
     cp   $00
-    jr   nz,$39D6
+    jr   nz,_39D6
+_39D3:
     call set_spear_left_bottom
+_39D6:
     jp   wrap_other_spears_left
 
     dc   15, $FF
@@ -6670,11 +6723,12 @@ update_3_spears_left:           ; screen 26
     jr   z,_middle_spear
     inc  a
     cp   $40
-    jr   nz,$3A02
+    jr   nz,_3A02
     xor  a
     ld   (enemy_1_active),a
     ld   (enemy_1_x),a
     jr   _middle_spear
+_3A02:
     ld   (enemy_1_active),a
     ld   a,(enemy_1_x)
     sub  $02
@@ -6686,11 +6740,12 @@ _middle_spear:
     jr   z,_top_spear
     inc  a
     cp   $40
-    jr   nz,$3A21
+    jr   nz,_3A21
     xor  a
     ld   (enemy_2_active),a
     ld   (enemy_2_x),a
     jr   _top_spear
+_3A21:
     ld   (enemy_2_active),a
     ld   a,(enemy_2_x)
     sub  $03
@@ -6702,11 +6757,12 @@ _top_spear:
     ret  z
     inc  a
     cp   $40
-    jr   nz,$3A3E
+    jr   nz,_3A3E
     xor  a
     ld   (enemy_3_active),a
     ld   (enemy_3_x),a
     ret
+_3A3E:
     ld   (enemy_3_active),a
     ld   a,(enemy_3_x)
     sub  $04
@@ -6722,11 +6778,12 @@ enemy_1_reset:
     ret  z
     inc  a
     cp   $3A
-    jr   nz,$3A62
+    jr   nz,_3A62
     xor  a
     ld   (enemy_1_x),a
     ld   (enemy_1_active),a
     ret
+_3A62:
     ld   (enemy_1_active),a
     ld   a,(enemy_1_y)
     dec  a
@@ -6738,10 +6795,11 @@ enemy_1_reset:
     ret  nz
     ld   a,(enemy_1_frame)
     cp   $36
-    jr   nz,$3A81
+    jr   nz,_3A81
     ld   a,$37
     ld   (enemy_1_frame),a
     ret
+_3A81:
     ld   a,$36
     ld   (enemy_1_frame),a
     ret
@@ -6755,11 +6813,12 @@ enemy_2_reset:
     ret  z
     inc  a
     cp   $3A
-    jr   nz,$3A9A
+    jr   nz,_3A9A
     xor  a
     ld   (enemy_2_x),a
     ld   (enemy_2_active),a
     ret
+_3A9A:
     ld   (enemy_2_active),a
     ld   a,(enemy_2_y)
     dec  a
@@ -6771,10 +6830,11 @@ enemy_2_reset:
     ret  nz
     ld   a,(enemy_2_frame)
     cp   $36
-    jr   nz,$3AB9
+    jr   nz,_3AB9
     ld   a,$37
     ld   (enemy_2_frame),a
     ret
+_3AB9:
     ld   a,$36
     ld   (enemy_2_frame),a
     ret
@@ -6788,11 +6848,12 @@ enemy_3_reset:
     ret  z
     inc  a
     cp   $3A
-    jr   nz,$3AD2
+    jr   nz,_3AD2
     xor  a
     ld   (enemy_3_x),a
     ld   (enemy_3_active),a
     ret
+_3AD2:
     ld   (enemy_3_active),a
     ld   a,(enemy_3_y)
     dec  a
@@ -6804,10 +6865,11 @@ enemy_3_reset:
     ret  nz
     ld   a,(enemy_3_frame)
     cp   $36
-    jr   nz,$3AF1
+    jr   nz,_3AF1
     ld   a,$37
     ld   (enemy_3_frame),a
     ret
+_3AF1:
     ld   a,$36
     ld   (enemy_3_frame),a
     ret
@@ -6870,17 +6932,20 @@ _3B40:
     ld   a,(rock_fall_timer)
     inc  a
     cp   $60
-    jr   nz,$3B4C
+    jr   nz,_3B4C
     xor  a
+_3B4C:
     ld   (rock_fall_timer),a
     cp   $08
-    jr   nz,$3B57
+    jr   nz,_3B57
     call set_enemy_1_98_c0
     ret
+_3B57:
     cp   $30
-    jr   nz,$3B5F
+    jr   nz,_3B5F
     call set_enemy_2_90_c0
     ret
+_3B5F:
     cp   $40
     ret  nz
     call set_enemy_3_90_c0
@@ -6951,13 +7016,14 @@ player_enemies_collision:
 
 copy_xoffs:
     ld   hl,_8108
+_3BCB:
     ld   a,(_8106)
     ld   (hl),a
     inc  hl
     inc  hl
     ld   a,l
     cp   $40
-    jr   nz,$3BCB
+    jr   nz,_3BCB
     ret
 
     dc   1, $FF
@@ -6983,10 +7049,11 @@ _3BEF:
     inc  ix
     ld   a,(ix+$00) ; read until 0xff
     cp   $FF
-    jr   z,$3BFC
+    jr   z,_3BFC
     ld   (hl),a
     inc  hl
     jr   _3BEF
+_3BFC:
     inc  ix
     push ix
     ret
@@ -6996,9 +7063,10 @@ _3BEF:
 screen_tile_animations:
     ld   a,(player_num)
     and  a
-    jr   nz,$3C0D
+    jr   nz,_3C0D
     ld   a,(screen_num)
     jr   _3C10
+_3C0D:
     ld   a,(screen_num_p2)
 _3C10:
     cp   $01
@@ -7025,8 +7093,9 @@ bubble_lava:
     ld   a,(lava_tile_offset)
     inc  a
     cp   $04
-    jr   nz,$3C3E
+    jr   nz,_3C3E
     xor  a
+_3C3E:
     ld   (lava_tile_offset),a
     and  a
     jr   nz,bubble_lava_1
@@ -7061,8 +7130,9 @@ bubble_lava_var:
     ld   a,(lava_tile_offset)
     inc  a
     cp   $04
-    jr   nz,$3C81
+    jr   nz,_3C81
     xor  a
+_3C81:
     ld   (lava_tile_offset),a
     and  a
     jr   nz,bubble_lava_var_1
@@ -7169,12 +7239,13 @@ do_cutscene:
     ld   hl,player_x ; destination
     ld   bc,cutscene_data ; src location
     ld   d,$20 ; 32 times do
+_3D69:
     ld   a,(bc) ;      <-
     ld   (hl),a ;       |  (sets all sprites)
     inc  hl     ;       |
     inc  bc     ;       |
     dec  d      ;       |
-    jr   nz,$3D69 ;    _|
+    jr   nz,_3D69 ;    _|
     call draw_cage_and_scene
     ld   d,$80 ; 128 x animate cutscene
     xor  a
@@ -7189,10 +7260,11 @@ _lp_3D7C:
 _cutscene_done:
     ld   a,(player_num) ; a = $8004 - which screen to use?
     and  a ; if a != 0
-    jr   nz,$3D96 ; goto screen-set 2
+    jr   nz,_3D96 ; goto screen-set 2
     ld   a,$01 ; reset to screen 1
     ld   (screen_num),a ; set screen
     jp   big_reset
+_3D96:
     ld   a,$01
     ld   (screen_num_p2),a ; player 2 screen
     jp   big_reset
@@ -7358,9 +7430,10 @@ draw_bottom_row_numbers:
 _animate_red_level_indicator:
     ld   a,(player_num)
     and  a
-    jr   nz,$3F3C
+    jr   nz,_3F3C
     ld   a,(screen_num)
     jr   _3F3F
+_3F3C:
     ld   a,(screen_num_p2) ; a = scr
 _3F3F:
     ld   hl,end_of_tiles
@@ -7539,10 +7612,11 @@ add_pickup_pat_6:
 _4080:
     ld   a,(ix+$05)
     and  a
-    jr   z,$408B
+    jr   z,_408B
     dec  a
     ld   (ix+$05),a
     ret
+_408B:
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ld   a,(ix+$02)
@@ -7588,10 +7662,11 @@ get_tile_scr_pos:
 _40C0:
     ld   a,(ix+$05)
     and  a
-    jr   z,$40CB
+    jr   z,_40CB
     dec  a
     ld   (ix+$05),a
     ret
+_40CB:
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ld   a,(ix+$02)
@@ -7632,10 +7707,11 @@ hit_bonus:
 _4100:
     ld   a,(ix+$05)
     and  a
-    jr   z,$410B
+    jr   z,_410B
     dec  a
     ld   (ix+$05),a
     ret
+_410B:
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ld   a,(ix+$02)
@@ -7986,9 +8062,10 @@ sfx_something_ch_1:
     ld   c,a
 _433A:
     dec  b
-    jr   z,$4340
+    jr   z,_4340
     add  a,c
     jr   _433A
+_4340:
     dec  a
     ld   (ix+$12),a
     call play_sfx_chunk_ch_1
@@ -8016,9 +8093,10 @@ sfx_something_ch_2:
     ld   c,a
 _437A:
     dec  b
-    jr   z,$4380
+    jr   z,_4380
     add  a,c
     jr   _437A
+_4380:
     dec  a
     ld   (ix+$13),a
     call play_sfx_chunk_ch_2
@@ -8053,9 +8131,10 @@ sfx_what_1:
     ld   c,a
 _43BA:
     dec  b
-    jr   z,$43C0
+    jr   z,_43C0
     add  a,c
     jr   _43BA
+_43C0:
     dec  a
     ld   (ix+$14),a
     call sfx_sub_what_1
@@ -8110,9 +8189,10 @@ sfx_synth_settings:
 draw_cage_top:
     ld   a,(player_num)
     and  a
-    jr   nz,$448F
+    jr   nz,_448F
     ld   a,(screen_num)
     jr   _4492
+_448F:
     ld   a,(screen_num_p2)
 _4492:
     cp   num_screens ; are we on screen 27?
@@ -8190,7 +8270,7 @@ sfx_03:; Pickup bling
     inc  hl
     ld   a,(hl)
     cp   $EE
-    jr   nz,$4552
+    jr   nz,_4552
     inc  hl
     ld   a,(hl)
     ld   c,a
@@ -8211,6 +8291,7 @@ sfx_03:; Pickup bling
     call sfx_something_ch_1
     ret
 
+_4552:
     cp   $FF
     ret  z
 
@@ -8249,31 +8330,33 @@ add_pickup_pat_7:
 sfx_06:; cutscene dance start (also intro tune?)
     ld   a,(ix+$13)
     and  a
-    jr   z,$458B
+    jr   z,_458B
     dec  a
     ld   (ix+$13),a
     ret
 ;; sfxsomething #4
+_458B:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF
-    jr   z,$45A2
+    jr   z,_45A2
     ld   (ix+$09),l
     ld   (ix+$0a),h
     call sfx_something_ch_2
     ret
 
 ;; sfxsomething #5
+_45A2:
     ld   l,(ix+$03)
     ld   h,(ix+$04)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $EE
-    jr   nz,$45D2
+    jr   nz,_45D2
     inc  hl
     ld   a,(hl)
     ld   c,a
@@ -8295,6 +8378,7 @@ sfx_06:; cutscene dance start (also intro tune?)
     ret
 
 ;; sfxsomething #6
+_45D2:
     cp   $FF
     ret  z
     ld   (ix+$03),l
@@ -8320,30 +8404,32 @@ add_pickup_pat_2:
 _4600:
     ld   a,(ix+$14)
     and  a
-    jr   z,$460B
+    jr   z,_460B
     dec  a
     ld   (ix+$14),a
     ret
+_460B:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF
-    jr   z,$4622
+    jr   z,_4622
     ld   (ix+$0b),l
     ld   (ix+$0c),h
     call sfx_what_1
     ret
 
 ;; sfxsomething #8
+_4622:
     ld   l,(ix+$05)
     ld   h,(ix+$06)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $EE
-    jr   nz,$4652
+    jr   nz,_4652
     inc  hl
     ld   a,(hl)
     ld   c,a
@@ -8365,6 +8451,7 @@ _4600:
     ret
 
 ;; sfxsomething #9
+_4652:
     cp   $FF
     ret  z
     ld   (ix+$05),l
@@ -8383,18 +8470,19 @@ _4680:
     ld   ix,_82B8
     ld   a,(ix+$0d)
     and  a
-    jr   z,$46A1
+    jr   z,_46A1
     call sfx_01
     ld   a,(ix+$0d)
     dec  a
-    jr   z,$46A1
+    jr   z,_46A1
     call sfx_06
     ld   a,(ix+$0d)
     dec  a
     dec  a
-    jr   z,$46A1
+    jr   z,_46A1
     call _4600
     ret
+_46A1:
     ret
 
     dc   14, $FF
@@ -8439,9 +8527,10 @@ play_tune_for_cur_screen:
     ret  z
     ld   a,(player_num)
     and  a
-    jr   nz,$46F8
+    jr   nz,_46F8
     ld   a,(screen_num)
     jr   _46FB
+_46F8:
     ld   a,(screen_num_p2)
 _46FB:
     dec  a ; scr - 1
@@ -8602,23 +8691,26 @@ _here:
 sfx_queuer:
     ld   a,(ch1_sfx)
     and  a
-    jr   nz,$484B
+    jr   nz,_484B
     call _4680 ; play in ch1
     jr   _484E
+_484B:
     call clear_sfx_1 ; ... kill ch1?
 _484E:
     ld   a,(ch2_sfx) ; and try ch2?
     and  a
-    jr   nz,$4859
+    jr   nz,_4859
     call _48E0 ; play in ch2?
     jr   _485C
+_4859:
     call clear_sfx_2
 _485C:
     ld   a,(sfx_id)
     and  a
-    jr   nz,$4867
+    jr   nz,_4867
     call more_sfx_something
     jr   _done_486A
+_4867:
     call play_sfx
 _done_486A:
     ret
@@ -8741,29 +8833,37 @@ clear_sfx_2:
     nop
     ld   c,$00
     bit  0,a
-    jr   z,$494A
+    jr   z,_494A
     set  5,b
+_494A:
     bit  1,a
-    jr   z,$4950
+    jr   z,_4950
     set  4,b
+_4950:
     bit  2,a
-    jr   z,$4956
+    jr   z,_4956
     set  7,c
+_4956:
     bit  3,a
-    jr   z,$495C
+    jr   z,_495C
     set  6,c
+_495C:
     bit  4,a
-    jr   z,$4962
+    jr   z,_4962
     set  5,c
+_4962:
     bit  5,a
-    jr   z,$4968
+    jr   z,_4968
     set  4,c
+_4968:
     bit  6,a
-    jr   z,$496E
+    jr   z,_496E
     set  3,c
+_496E:
     bit  7,a
-    jr   z,$4974
+    jr   z,_4974
     set  2,c
+_4974:
     ld   a,b
     nop
     nop
@@ -8780,17 +8880,21 @@ clear_sfx_2:
     nop
     ld   c,$F0
     bit  0,a
-    jr   z,$498A
+    jr   z,_498A
     res  7,c
+_498A:
     bit  1,a
-    jr   z,$4990
+    jr   z,_4990
     res  6,c
+_4990:
     bit  2,a
-    jr   z,$4996
+    jr   z,_4996
     res  5,c
+_4996:
     bit  3,a
-    jr   z,$499C
+    jr   z,_499C
     res  4,c
+_499C:
     ld   a,c
     add  a,b
     nop
@@ -9113,9 +9217,10 @@ add_screen_pickups:
     call draw_cage_top
     ld   a,(player_num)
     and  a
-    jr   z,$4C5E
+    jr   z,_4C5E
     ld   a,(screen_num_p2)
     jr   _4C61
+_4C5E:
     ld   a,(screen_num)
 _4C61:
     dec  a ; scr - 1
@@ -9263,11 +9368,12 @@ trigger_cage_fall:
 _update_cage_fall:
     call draw_cage_tiles
     push hl
+_4D47:
     ld   hl,wait_vblank ; blocks action as cage falls
     call jmp_hl
     ld   a,(tick_num)
     and  $03
-    jr   nz,$4D47
+    jr   nz,_4D47
     pop  hl
     inc  hl ; move cage down
     call check_dino_cage_collision
@@ -9290,9 +9396,10 @@ reset_3_row_xoffs:              ; which ones?
 end_screen_logic:
     ld   a,(player_num) ; are we on end screen?
     and  a
-    jr   nz,$4D7F
+    jr   nz,_4D7F
     ld   a,(screen_num)
     jr   _4D82
+_4D7F:
     ld   a,(screen_num_p2)
 _4D82:
     cp   $1B ; // check is screen 27
@@ -9350,6 +9457,7 @@ done_caged_dino:
     xor  a
     ld   (dino_x),a
     ld   (dino_x_legs),a
+_4DD7:
     call draw_cage_tiles
     push hl
     ld   hl,wait_vblank
@@ -9358,7 +9466,7 @@ done_caged_dino:
     inc  hl
     ld   a,$DC
     cp   l
-    jr   nz,$4DD7
+    jr   nz,_4DD7
     ld   a,$91
     ld   (dino_x),a
     ld   a,$38
@@ -9487,6 +9595,7 @@ wait_60_for_start_button:
 
 wait_15_for_start_button:
     ld   d,$0E
+_4EC4:
     push hl
     push bc
     push de
@@ -9496,7 +9605,7 @@ wait_15_for_start_button:
     pop  bc
     pop  hl
     dec  d
-    jr   nz,$4EC4
+    jr   nz,_4EC4
     ret
 
 ;; what 30 for start
@@ -9510,20 +9619,23 @@ wait_30_for_start_button:
 speed_up_for_next_round:
     ld   a,(player_num)
     and  a
-    jr   nz,$4EEB
+    jr   nz,_4EEB
     ld   hl,speed_delay_p1
     jr   _4EEE
+_4EEB:
     ld   hl,speed_delay_p2
 _4EEE:
     ld   a,(hl)
     cp   round1_speed
-    jr   nz,$4EF6
+    jr   nz,_4EF6
     ld   (hl),round2_speed ; round 2 = $10
     ret
+_4EF6:
     cp   round2_speed
-    jr   nz,$4EFD
+    jr   nz,_4EFD
     ld   (hl),round3_speed ; round 3 = $0d
     ret
+_4EFD:
     jp   even_more_faster_dino ; round 4+ = get 2 faster each time!
 
 pickups_lookup:
@@ -9573,11 +9685,12 @@ animate_pickups:
     ld   e,a
     and  $F0
     cp   $80
-    jr   nz,$5016
+    jr   nz,_5016
     ld   a,e
     add  a,$10
     ld   (bc),a
     jr   _501A
+_5016:
     ld   a,e
     sub  $10
     ld   (bc),a
@@ -9599,9 +9712,10 @@ animate_all_pickups:
     ld   hl,pickups_lookup
     ld   a,(player_num)
     and  a
-    jr   z,$5034
+    jr   z,_5034
     ld   a,(screen_num_p2)
     jr   _5037
+_5034:
     ld   a,(screen_num)
 _5037:
     dec  a ; Get screen x 9
@@ -9900,10 +10014,11 @@ play_sfx_chunk_ch_1:
     pop  hl
     ld   a,l
     cp   $E8
-    jr   nz,$520F
+    jr   nz,_520F
     ld   a,$02
     ld   (sfx_val_4),a
     jr   _5225
+_520F:
     ld   a,(sfx_val_4)
     and  a
     jr   z,_5225
@@ -9911,18 +10026,20 @@ play_sfx_chunk_ch_1:
     ld   (sfx_val_4),a
     ld   a,(sfx_val_1)
     and  a
-    jr   z,$5223
+    jr   z,_5223
     dec  a
     ld   (sfx_val_1),a
+_5223:
     pop  hl
     ret
 _5225:
     ld   a,l
     cp   $D0
-    jr   nz,$5231
+    jr   nz,_5231
     ld   a,$02
     ld   (sfx_val_1),a
     jr   _523D
+_5231:
     ld   a,(sfx_val_1)
     and  a
     jr   z,_523D
@@ -9944,10 +10061,11 @@ play_sfx_chunk_ch_2:
     pop  hl
     ld   a,l
     cp   $E8
-    jr   nz,$525F
+    jr   nz,_525F
     ld   a,$02
     ld   (sfx_val_5),a
     jr   _5275
+_525F:
     ld   a,(sfx_val_5)
     and  a
     jr   z,_5275
@@ -9955,18 +10073,20 @@ play_sfx_chunk_ch_2:
     ld   (sfx_val_5),a
     ld   a,(sfx_val_2)
     and  a
-    jr   z,$5273
+    jr   z,_5273
     dec  a
     ld   (sfx_val_2),a
+_5273:
     pop  hl
     ret
 _5275:
     ld   a,l
     cp   $D0
-    jr   nz,$5281
+    jr   nz,_5281
     ld   a,$02
     ld   (sfx_val_2),a
     jr   _528D
+_5281:
     ld   a,(sfx_val_2)
     and  a
     jr   z,_528D
@@ -9986,10 +10106,11 @@ sfx_sub_what_1:
     pop  hl
     ld   a,l
     cp   $E8
-    jr   nz,$52AF
+    jr   nz,_52AF
     ld   a,$02
     ld   (sfx_val_6),a
     jr   _52C5
+_52AF:
     ld   a,(sfx_val_6)
     and  a
     jr   z,_52C5
@@ -9997,18 +10118,20 @@ sfx_sub_what_1:
     ld   (sfx_val_6),a
     ld   a,(sfx_val_3)
     and  a
-    jr   z,$52C3
+    jr   z,_52C3
     dec  a
     ld   (sfx_val_3),a
+_52C3:
     pop  hl
     ret
 _52C5:
     ld   a,l
     cp   $D0
-    jr   nz,$52D1
+    jr   nz,_52D1
     ld   a,$02
     ld   (sfx_val_3),a
     jr   _52DD
+_52D1:
     ld   a,(sfx_val_3)
     and  a
     jr   z,_52DD
@@ -10122,10 +10245,11 @@ attract_player_up_stair_data:
 attract_animate_dino_head:
     ld   a,(bongo_frame)
     cp   $2D
-    jr   nz,$53A6
+    jr   nz,_53A6
     ld   a,$2C
     ld   (bongo_frame),a
     jr   _done_54AB
+_53A6:
     ld   a,$2D
     ld   (bongo_frame),a
 
@@ -10134,10 +10258,11 @@ _done_54AB:
 
 attract_jump_down_stairs:
     ld   e,$06 ; 6 stairs down
+_53AE:
     call attract_jump_down_one_stair
     call attract_animate_dino_head
     dec  e
-    jr   nz,$53AE
+    jr   nz,_53AE
     ret
 
 ;; identical to jump up, but point at down data.
@@ -10237,15 +10362,17 @@ attract_dino_runs_along_ground:
     ld   a,(ix+$05)
     inc  a
     cp   $33
-    jr   nz,$5471
+    jr   nz,_5471
     ld   a,$31
+_5471:
     ld   (ix+$05),a
     ld   a,(tick_num)
     and  $0F
     cp   $05
-    jr   nz,$5483
+    jr   nz,_5483
     ld   (ix+$01),$2C
     jr   _548B
+_5483:
     cp   $08
     jr   nz,_548B
     ld   (ix+$01),$2D
@@ -10289,9 +10416,10 @@ attract_catch_dino:
 attract_animate_pickups_and_wait:
     ld   a,(tick_num)
     and  $03
-    jr   nz,$54CF
+    jr   nz,_54CF
     ld   hl,animate_splash_pickup_nops
     call jmp_hl
+_54CF:
     ld   hl,wait_for_start_button
     call jmp_hl
     ret
@@ -10300,11 +10428,12 @@ attract_animate_pickups_and_wait:
 
 attract_dino_cage_invert:
     ld   e,$20
+_54DA:
     push de
     call attract_animate_pickups_and_wait
     pop  de
     dec  e
-    jr   nz,$54DA
+    jr   nz,_54DA
     ret
 
     rst  $38
@@ -10348,25 +10477,28 @@ reset_sfx_something_1:
     ld   (_8046),a
     ld   a,(_82A5)
     and  a
-    jr   nz,$552F
+    jr   nz,_552F
     ld   a,$F9
     nop
     nop
     nop
+_552F:
     ld   a,(_82AD)
     and  a
-    jr   nz,$553A
+    jr   nz,_553A
     ld   a,$FD
     nop
     nop
     nop
+_553A:
     ld   a,(_82B5)
     and  a
-    jr   nz,$5545
+    jr   nz,_5545
     ld   a,$FB
     nop
     nop
     nop
+_5545:
     ld   a,$FF
     nop
     nop
@@ -10413,10 +10545,11 @@ _lp_558E:
     ld   a,(bc) ; each character until 0xff
     inc  bc
     cp   $FF
-    jr   nz,$5596
+    jr   nz,_5596
     push bc
 _done_5595:
     ret
+_5596:
     ld   (hl),a ; writes to screen loc
     ld   d,$FF
     ld   e,$E0
@@ -10864,10 +10997,11 @@ _58E7:
     inc  ix ; read data until 0xff
     ld   a,(ix+$00)
     cp   $FF
-    jr   z,$58F4
+    jr   z,_58F4
     ld   (hl),a
     inc  hl
     jr   _58E7
+_58F4:
     inc  ix
     push ix
     ret
@@ -10970,29 +11104,33 @@ _5A98:
 ;; Splash screen animated circle border
 flash_border:
     ld   e,$05
+_5AAA:
     ld   d,$05
+_5AAC:
     push de
     call draw_splash_circle_border_1
     call _5A98
     pop  de
     dec  d
-    jr   nz,$5AAC
+    jr   nz,_5AAC
     ld   d,$05
+_5AB9:
     push de
     call draw_splash_circle_border_2
     call _5A98
     pop  de
     dec  d
-    jr   nz,$5AB9
+    jr   nz,_5AB9
     ld   d,$05
+_5AC6:
     push de
     call draw_splash_circle_border_3
     call _5A98
     pop  de
     dec  d
-    jr   nz,$5AC6
+    jr   nz,_5AC6
     dec  e
-    jr   nz,$5AAA
+    jr   nz,_5AAA
     ret
 
     dc   3, $FF
@@ -11000,12 +11138,13 @@ flash_border:
 set_row_colors:
     ld   b,a
     ld   hl,_8101 ; col for row 1
+_5ADC:
     ld   (hl),b
     inc  hl
     inc  hl
     ld   a,l
     cp   $41
-    jr   nz,$5ADC
+    jr   nz,_5ADC
     ret
 
     dc   1, $FF
@@ -11066,8 +11205,9 @@ animate_circle_border:
     ld   a,(splash_anim_fr)
     inc  a
     cp   $03
-    jr   nz,$5BB1
+    jr   nz,_5BB1
     xor  a
+_5BB1:
     ld   (splash_anim_fr),a
     and  a
     jr   nz,_border_1_2
@@ -11075,9 +11215,10 @@ animate_circle_border:
     ret
 _border_1_2:
     cp   $01
-    jr   nz,$5BC3
+    jr   nz,_5BC3
     call draw_splash_circle_border_2
     ret
+_5BC3:
     call draw_splash_circle_border_1
     ret
 
