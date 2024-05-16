@@ -181,10 +181,9 @@
     hiscore_2         = $8302
 
     credits           = $8303  ; how many credits in machine
-    _8305             = $8305  ; Coins? dunno
+    coinage_2         = $8305  ; Coins? dunno
+    coinage           = $8306  ; dunno what "coinage" is really.
     hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
-    _830F             = $830F  ; ?
-    _8310             = $8310  ; ?
 
     tick_num          = $8312  ; adds 1 every tick
     ;; NOTE: TICK_MOD is sped up after round 1!
@@ -219,7 +218,6 @@
     _82B8             = $82B8  ; ?
     _82D0             = $82D0  ; ?
     _82E8             = $82E8  ; ?
-    _8306             = $8306  ; ?
 
     ;; 16bit signed sub constants
     JMP_HL_OFFSET     = $4000
@@ -253,8 +251,9 @@
     tile_z            = $2A
     tile_hyphen       = $2B
 
-    tile_cage         = $74       ; - $7f
+    tile_cage         = $74 ; - $7f
     tile_cursor       = $89
+    tile_lives        = $8A
     tile_crown_pika   = $8C ; alt crown
     tile_pik_crossa   = $8D
     tile_pik_ringa    = $8E
@@ -278,20 +277,17 @@
 
     ;; TODO: a hundred-odd screen locations. Figure 'em out, and name them.
     ;; (use some x/y system, or $start_of_tiles + x)
-    p2_score_digits  = $9061  ; score for player 2
-    p2_timer_digits  = $9082  ; timer for player 1
+    p2_score_digits   = $9061  ; score for player 2
+    p2_timer_digits   = $9082  ; timer for player 1
     _908E             = $908E  ; ?​​
     _hi_under_X       = $9090  ; hiscore screen, under X (wrap point)
     _9092             = $9092  ; ?​​
     scr_pik_r_W       = $90CB  ; highwire pickup, right
     _90E2             = $90E2  ;
     _911A             = $911A  ; ?
-    _9122             = $9122  ; ?
-    _9142             = $9142  ; ?
+    scr_lives_p2      = $9122  ; icons for lives, p2
     scr_pik_n_n       = $915A  ; pickup right n_n levels
-    _9162             = $9162  ; ?
     _9179             = $9179  ; ?
-    _9182             = $9182  ; ?
     _9184             = $9184  ; ?
     _9189             = $9189  ; ?
     _918A             = $918A  ; ?
@@ -300,7 +296,6 @@
     _918E             = $918E  ; ?​​
     _9199             = $9199  ; ?​​
     _91A1             = $91A1  ; ?​​
-    _91A2             = $91A2  ; ?​​
     _91A9             = $91A9  ; ?​​
     _91AA             = $91AA  ; ?​​
     _91AB             = $91AB  ; ?​​
@@ -327,17 +322,13 @@
     _9238             = $9238  ; ?​​
     _9239             = $9239  ; ?​​
     _9241             = $9241  ; ?​​
-    _9242             = $9242  ; ?​​
     _9248             = $9248  ; ?​​
-    _9262             = $9262  ; ?​​
     hi_name_entry     = $9277  ; as you enter your name
     _927A             = $927A  ; ?​​
     hi_name           = $9280  ; hiscore name
-    _9282             = $9282  ; ?​​
     _9297             = $9297  ; ?​​
-    _92A2             = $92A2  ; ?​​
     _92AB             = $92AB  ; ?​​
-    _92C2             = $92C2  ; ?​​
+    scr_lives_p1      = $92C2  ; first "life" icon for p1
     _92E0             = $92E0  ; ?​​
     p1_score_digits   = $92E1  ; ?​​
     _92EE             = $92EE  ; ?​​
@@ -693,17 +684,17 @@ _027E:
     dc   7, $FF
 
 coinage_routine:
-    ld   a,(_8306)
+    ld   a,(coinage)
     and  a
     jr   z,_029F
     dec  a
-    ld   (_8306),a
+    ld   (coinage),a
     ret  nz
     ld   a,(port_in0)
     and  $03
     ret  z
     ld   a,$05
-    ld   (_8306),a
+    ld   (coinage),a
     ret
 _029F:
     ld   a,(port_in0)
@@ -715,21 +706,21 @@ _029F:
     ld   a,b
     cp   $01
     jr   nz,_02B9
-    ld   a,(_8305)
+    ld   a,(coinage_2)
     inc  a
-    ld   (_8305),a
+    ld   (coinage_2),a
     jr   _02C1
 _02B9:
-    ld   a,(_8305)
+    ld   a,(coinage_2)
     add  a,$06
-    ld   (_8305),a
+    ld   (coinage_2),a
 _02C1:
     ld   a,$07
-    ld   (_8306),a
+    ld   (coinage),a
     ld   a,(input_buttons)
     bit  6,a ; added credit
     jr   z,_02E3
-    ld   a,(_8305)
+    ld   a,(coinage_2)
     and  a
     ret  z
     ld   b,a
@@ -741,10 +732,10 @@ _02D6:
     jr   nz,_02D6
     ld   (credits),a
     xor  a
-    ld   (_8305),a
+    ld   (coinage_2),a
     ret
 _02E3:
-    ld   a,(_8305)
+    ld   a,(coinage_2)
     and  a
     ret  z
     cp   $01
@@ -764,12 +755,12 @@ _02F9:
     daa
     ld   (credits),a
     ld   a,$01
-    ld   (_8305),a
+    ld   (coinage_2),a
     ret
 _0304:
     ld   (credits),a
     xor  a
-    ld   (_8305),a
+    ld   (coinage_2),a
     ret
 
     dc   4, $FF
@@ -864,40 +855,40 @@ draw_lives:
     ld   a,(lives)
     and  a
     ld   b,a
-    ld   a,$8A
-    jr   z,_03C7
+    ld   a,tile_lives
+    jr   z,_done_p1_lives
     dec  b
-    ld   (_92C2),a
-    jr   z,_03C7
+    ld   (scr_lives_p1-0*$20),a
+    jr   z,_done_p1_lives
     dec  b
-    ld   (_92A2),a
-    jr   z,_03C7
+    ld   (scr_lives_p1-1*$20),a
+    jr   z,_done_p1_lives
     dec  b
-    ld   (_9282),a
-    jr   z,_03C7
+    ld   (scr_lives_p1-2*$20),a
+    jr   z,_done_p1_lives
     dec  b
-    ld   (_9262),a
-    jr   z,_03C7
-    ld   (_9242),a
-_03C7:
+    ld   (scr_lives_p1-3*$20),a
+    jr   z,_done_p1_lives
+    ld   (scr_lives_p1-4*$20),a
+_done_p1_lives:
     ld   a,(lives_p2)
     and  a
     ld   b,a
     ret  z
-    ld   a,$8A
+    ld   a,tile_lives
     dec  b
-    ld   (_9122),a
+    ld   (scr_lives_p2+0*$20),a
     ret  z
     dec  b
-    ld   (_9142),a
+    ld   (scr_lives_p2+1*$20),a
     ret  z
     dec  b
-    ld   (_9162),a
+    ld   (scr_lives_p2+2*$20),a
     ret  z
     dec  b
-    ld   (_9182),a
+    ld   (scr_lives_p2+3*$20),a
     ret  z
-    ld   (_91A2),a
+    ld   (scr_lives_p2+4*$20),a
     ret
 
     db   $FF
@@ -5595,7 +5586,7 @@ set_hiscore_text:
 
 _30C0:
     ld   c,$00
-    ld   hl,_8310
+    ld   hl,hiscore_name+11
 _30C5:
     ld   a,(hl)
     cp   $2B
@@ -5620,8 +5611,8 @@ _30D8:
     dc   7, $FF
 
 _30E8:
-    ld   d,$0A
-    ld   ix,_830F
+    ld   d,$0A                  ;hiscore name length
+    ld   ix,hiscore_name+$0A
 _30EE:
     ld   a,(ix+$00)
     ld   (ix+$01),a
