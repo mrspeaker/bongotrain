@@ -14,8 +14,9 @@
 
 rm -rf zout
 
-zmac -j -c -n bongo.asm
-split -b4k zout/bongo.cim zout/b_
+cut -c 17- bytes_bongo_src.asm > src.asm
+zmac -j -c -n src.asm
+split -b4k zout/src.cim zout/b_
 
 a=`shasum zout/b_aa | sed 's/.*=.//g'`
 b=`shasum dump/romgo/bg1.bin | sed 's/.*=.//g'`

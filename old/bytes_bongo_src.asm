@@ -2,8 +2,7 @@
                 ;; picked apart by Mr Speaker
                 ;; https://www.mrspeaker.net
 
-                ;; (NOTE: all just find/replace in a text editor:
-                ;; so don't try and compile me!)
+                ;; NOTE: see README for building details
 
                 ;; Overview:
                 ;; - BIG_RESET ($1000) inits and starts loop

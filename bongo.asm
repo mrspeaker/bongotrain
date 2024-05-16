@@ -1,11284 +1,11629 @@
-    ;; Bongo by JetSoft
-    ;; picked apart by Mr Speaker
-    ;; https://www.mrspeaker.net
+;; Bongo by JetSoft
+;; picked apart by Mr Speaker
+;; https://www.mrspeaker.net
 
-    ;; NOTE: DEPRECATED! this was my original decompilation.
-    ;; It was done manually in a text editor with no compilation
-    ;; step: so it can't be compiled (and would have tonnes of
-    ;; errors if you tried). GO TO bongo_src.asm for the latest.
+;; (NOTE: all just find/replace in a text editor:
+;; so don't try and compile me!)
 
-    ;;
+;; Overview:
+;; - BIG_RESET ($1000) inits and starts loop
+;; - Main loop is at MAIN_LOOP ($104b)
+;; - ... which calls UPDATE_EVERYTHING ($1170)
+;; - Also a NMI interrupt loop ($66)
+;; - ... which calls hardware-y stuff
 
-    ;; Overview:
-    ;; - BIG_RESET ($1000) inits and starts loop
-    ;; - Main loop is at MAIN_LOOP ($104b)
-    ;; - ... which calls UPDATE_EVERYTHING ($1170)
-    ;; - Also a NMI interrupt loop ($66)
-    ;; - ... which calls hardware-y stuff
+;; Important Bongo lore:
+;; - We decided "Bongo" is actually name of the lil' jumpy
+;;   guy in the corner of the screen, not the player.
+;;   He's complicated: celebrates the player's death,
+;;   but also parties with player on dino capture.
 
-    ;; Important Bongo lore:
-    ;; - We decided "Bongo" is actually name of the lil' jumpy
-    ;;   guy in the corner of the screen, not the player.
-    ;;   He's complicated: celebrates the player's death,
-    ;;   but also parties with player on dino capture.
+tick_mod_3        = $8000  ; timer for every 3 frames
+tick_mod_6        = $8001  ; timer for every 6 frames
+pl_y_legs_copy    = $8002  ; copy of player y legs?
+_8003             = $8003  ; ? used with 8002 s bunch
+player_num        = $8004  ; current player
+jump_triggered    = $8005  ; jump triggered by setting jump_tbl_idx
+second_timer      = $8006
+p1_time           = $8007  ; time of player's run: never displayed!
+p1_timer_h        = $8008  ; hi byte of timer 1
+p2_time           = $8009  ; ...we could have had speed running!
+p2_timer_h        = $800A  ; hi byte of timer 2
+controls          = $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
+buttons_1         = $800C  ; P1/P2 buttons... and?
+buttons_2         = $800D  ; ... more buttons?
+controlsn         = $800E  ; some kind of "normalized" controls
+jump_tbl_idx      = $800F  ; index into table for physics jump
+walk_anim_timer   = $8010  ; % 7?
+falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
+player_died       = $8012  ; 0 = no, 1 = yep, dead
+p1_score          = $8014  ; (BCD score)
+p1_score_1        = $8015  ; (BCD score)
+p1_score_2        = $8016  ; (BCD score)
+p2_score          = $8017  ; (BCD score)
+p2_score_1        = $8018  ; (BCD score)
+p2_score_2        = $8019  ; (BCD score)
+_unused_1         = $801B  ; unused? Set once, never read
+score_to_add      = $801D  ; amount to add to the current score
 
-    TICK_MOD_3        $8000  ; timer for every 3 frames
-    TICK_MOD_6        $8001  ; timer for every 6 frames
-    PL_Y_LEGS_COPY    $8002  ; copy of player y legs?
-    _8003             $8003  ; ? used with 8002 s bunch
-    PLAYER_NUM        $8004  ; current player
-    JUMP_TRIGGERED    $8005  ; jump triggered by setting jump_tbl_idx
-    SECOND_TIMER      $8006
-    P1_TIME           $8007  ; time of player's run: never displayed!
-    P1_TIMER_H        $8008  ; hi byte of timer 1
-    P2_TIME           $8009  ; ...we could have had speed running!
-    P2_TIMER_H        $800A  ; hi byte of timer 2
-    CONTROLS          $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
-    BUTTONS_1         $800C  ; P1/P2 buttons... and?
-    BUTTONS_2         $800D  ; ... more buttons?
-    CONTROLSN         $800E  ; some kind of "normalized" controls
-    JUMP_TBL_IDX      $800F  ; index into table for physics jump
-    WALK_ANIM_TIMER   $8010  ; % 7?
-    FALLING_TIMER     $8011  ; set to $10 when falling - if hits 0, dead.
-    PLAYER_DIED       $8012  ; 0 = no, 1 = yep, dead
-    P1_SCORE          $8014  ; and 8015, 8016 (BCD score)
-    P2_SCORE          $8017  ; and 8018, 8019 (BCD score)
-    _UNUSED_1         $801B  ; unused? Set once, never read
-    SCORE_TO_ADD      $801D  ; amount to add to the current score
+screen_ram_ptr    = $801E  ; maybe it's where to start drawing bg?
+level_bg_ptr      = $8020  ; screen data pointer (2 byte addr)
 
-    SCREEN_RAM_PTR    $801E  ; maybe it's where to start drawing bg?
-    LEVEL_BG_PTR      $8020  ; screen data pointer (2 byte addr)
+did_init          = $8022  ; set after first init, not really used
+bongo_anim_timer  = $8023  ; [0,1,2] updated every 8 ticks
+bongo_jump_timer  = $8024  ; amount of ticks keep jumping for
+bongo_dir_flag    = $8025  ; 4 = jump | 2 = left | 1 = right
+bongo_timer       = $8027  ; ticks 0-1f for troll
 
-    DID_INIT          $8022  ; set after first init, not really used
-    BONGO_ANIM_TIMER  $8023  ; [0,1,2] updated every 8 ticks
-    BONGO_JUMP_TIMER  $8024  ; amount of ticks keep jumping for
-    BONGO_DIR_FLAG    $8025  ; 4 = jump | 2 = left | 1 = right
-    BONGO_TIMER       $8027  ; ticks 0-1f for troll
+screen_num        = $8029  ; Current screen player is on
+screen_num_p2     = $802A  ; Player 2 screen
+_802c             = $802C  ; ??
+dino_counter      = $802D  ; Ticks up when DINO_TIMER is done
+dino_dir          = $802E  ; 01 = right, ff = left
 
-    SCREEN_NUM        $8029  ; Current screen player is on
-    SCREEN_NUM_P2     $802A  ; Player 2 screen
-    _802C             $802C  ; ??
-    DINO_COUNTER      $802D  ; Ticks up when DINO_TIMER is done
-    DINO_DIR          $802E  ; 01 = right, ff = left
+player_max_x      = $8030  ; furthest x pos (used for move score)
+is_2_players      = $8031  ; 1=2p, 0=1p mode (not used much)
+lives             = $8032
+lives_p2          = $8033
+num_players       = $8034  ; attract mode = 0, 1P = 1, 2P = 2
+credits_umm       = $8035  ; something to do with credits
 
-    PLAYER_MAX_X      $8030  ; furthest x pos (used for move score)
-    IS_2_PLAYERS      $8031  ; 1=2p, 0=1p mode (not used much)
-    LIVES             $8032
-    LIVES_P2          $8033
-    NUM_PLAYERS       $8034  ; attract mode = 0, 1P = 1, 2P = 2
-    CREDITS_UMM       $8035  ; something to do with credits
+;; Enemies: seems to be mix-and-match per screen
+rock_fall_timer   = $8036  ; resets falling pos of rock
+enemy_1_active    = $8037  ; not really "active":  has many values.
+enemy_1_timer     = $8038  ; unused?
+enemy_2_active    = $8039  ;
+enemy_2_timer     = $803A  ;
+enemy_3_active    = $803B  ;
+enemy_3_timer     = $803C  ;
+enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
+rock_left_timer   = $803E  ; Rock left timer
+_803f             = $803F  ; ...2
+_8040             = $8040  ; ?
+enemy_6_active    = $8041  ;
 
-    ;; Enemies: seems to be mix-and-match per screen
-    ROCK_FALL_TIMER   $8036  ; resets falling pos of rock
-    ENEMY_1_ACTIVE    $8037  ; not really "active":  has many values.
-    ENEMY_1_TIMER     $8038  ; unused?
-    ENEMY_2_ACTIVE    $8039  ;
-    ENEMY_2_TIMER     $803A  ;
-    ENEMY_3_ACTIVE    $803B  ;
-    ENEMY_3_TIMER     $803C  ;
-    ENEMY_4_ACTIVE    $803D  ; ...1 - active as well? two kinds of active?
-    ROCK_LEFT_TIMER   $803E  ; Rock left timer
-    _803F             $803F  ; ...2
-    _8040             $8040  ; ?
-    ENEMY_6_ACTIVE    $8041  ;
+ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+ch2_sfx           = $8043  ; SFX channel 2
+sfx_id            = $8044  ; queued sound effect ID to play
 
-    CH1_SFX           $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
-    CH2_SFX           $8043  ; SFX channel 2
-    SFX_ID            $8044  ; queued sound effect ID to play
+lava_tile_offset  = $804B  ; Current lava tile (offset?)
 
-    1UP_SCR_POS       $804C  ; I reckon its where the 1up bonus text is on screen
-    1UP_SCR_POS_2     $804E  ; ... but not used I reckon,
-    1UP_SCR_POS_3     $804F  ; ... as they decided not to clear the text
+1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
+1up_scr_pos_2     = $804E  ; ... but not used I reckon,
+1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
 
-    1UP_TIMER         $8050  ; This is never read- but looks like was going to remove 1up text
-    IS_HIT_CAGE       $8051  ; did player trigger cage?
-    SPEED_DELAY_P1    $805b  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
-    SPEED_DELAY_P2    $805c  ; ...until dead. Smaller delay = faster dino/rock fall
-    DINO_TIMER        $805d  ; timer based on SPEED_DELAY (current round)
+1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
+is_hit_cage       = $8051  ; did player trigger cage?
 
-    BONUSES           $8060  ; How many bonuses collected
-    BONUS_MULT        $8062  ; Bonus multiplier.
+sfx_val_1         = $8052  ; All used in similar looking sfx subs
+sfx_val_2         = $8053  ;
+sfx_val_3         = $8054  ;
+sfx_val_4         = $8055  ;
+sfx_val_5         = $8056  ;
+sfx_val_6         = $8057  ;
 
-    SPLASH_ANIM_FR    $8064  ; cycles 0-2 maybe... splash anim counter
-    SFX_PREV          $8065  ; prevent retrigger effect?
+speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
+speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
+dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
 
-    _8066             $8066  ; ?? OE when alive, 02 when dead?
-    _8067             $8067  ; ?? used with 66
-    _8068             $8068  ; ?? used with 67
+bonuses           = $8060  ; How many bonuses collected
+bonus_mult        = $8062  ; Bonus multiplier.
 
-    EXTRA_GOT_P1      $8070  ; P1 Earned extra life
-    EXTRA_GOT_P2      $8071  ; P2 Earned extra life
+splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
+sfx_prev          = $8065  ; prevent retrigger effect?
 
-    HISCORE_TIMER     $8075  ; Countdown for entering time in hiscore screen
-    HISCORE_TIMER2    $8076  ; 16 counter for countdown
+_8066             = $8066  ; ?? OE when alive, 02 when dead?
+_8067             = $8067  ; ?? used with 66
+_8068             = $8068  ; ?? used with 67
+
+extra_got_p1      = $8070  ; P1 Earned extra life
+extra_got_p2      = $8071  ; P2 Earned extra life
+
+hiscore_timer     = $8075  ; Countdown for entering time in hiscore screen
+hiscore_timer2    = $8076  ; 16 counter for countdown
 
 
-    ;; Bunch of unused/debugs/tmps?
-    _8086             $8086  ; set in hiscore, never read
-    _8090             $8090  ; set to 1, never read?
-    _8093             $8093  ; set to $20 in coinage... hiscore, cursor?
-    _8094             $8094  ; unused? used with 8093
+;; Bunch of unused/debugs/tmps?
+_8080             = $8080  ; set to 3 in unused sub, never read
+_8086             = $8086  ; set in hiscore, never read
+_8090             = $8090  ; set to 1, never read?
+_8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
+_8094             = $8094  ; unused? used with 8093
+_80FF             = $80FF  ; cleared at start (HARD_RESET)
 
-    SCREEN_XOFF_COL   $8100  ; OFFSET and COL for each row of tiles
-                             ; Gets memcpy'd to $9800
+screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
+; Gets memcpy'd to $9800
 
 
 ;;; ======== SPRITES ========
 ;;; all have the form: X, FRAME, COL, Y.
-    PLAYER_X          $8140
-    PLAYER_FRAME      $8141
-    PLAYER_COL        $8142
-    PLAYER_Y          $8143
-    PLAYER_X_LEGS     $8144
-    PLAYER_FRAME_LEGS $8145
-    PLAYER_COL_LEGS   $8146
-    PLAYER_Y_LEGS     $8147
-    BONGO_X           $8148
-    BONGO_FRAME       $8149
-    BONGO_COL         $814A
-    BONGO_Y           $814B
-    DINO_X            $814C
-    DINO_FRAME        $814D
-    DINO_COL          $814E
-    DINO_Y            $814F
-    DINO_X_LEGS       $8150
-    DINO_FRAME_LEGS   $8151
-    DINO_COL_LEGS     $8152
-    DINO_Y_LEGS       $8153
-    ENEMY_1_X         $8154
-    ENEMY_1_FRAME     $8155
-    ENEMY_1_COL       $8156
-    ENEMY_1_Y         $8157
-    ENEMY_2_X         $8158
-    ENEMY_2_FRAME     $8159
-    ENEMY_2_COL       $815A
-    ENEMY_2_Y         $815B
-    ENEMY_3_X         $815C
-    ENEMY_3_FRAME     $815D
-    ENEMY_3_COL       $815E
-    ENEMY_3_Y         $815F
+player_x          = $8140
+player_frame      = $8141
+player_col        = $8142
+player_y          = $8143
+player_x_legs     = $8144
+player_frame_legs = $8145
+player_col_legs   = $8146
+player_y_legs     = $8147
+bongo_x           = $8148
+bongo_frame       = $8149
+bongo_col         = $814A
+bongo_y           = $814B
+dino_x            = $814C
+dino_frame        = $814D
+dino_col          = $814E
+dino_y            = $814F
+dino_x_legs       = $8150
+dino_frame_legs   = $8151
+dino_col_legs     = $8152
+dino_y_legs       = $8153
+enemy_1_x         = $8154
+enemy_1_frame     = $8155
+enemy_1_col       = $8156
+enemy_1_y         = $8157
+enemy_2_x         = $8158
+enemy_2_frame     = $8159
+enemy_2_col       = $815A
+enemy_2_y         = $815B
+enemy_3_x         = $815C
+enemy_3_frame     = $815D
+enemy_3_col       = $815E
+enemy_3_y         = $815F
 ;;; ============================
 
-    PLATFORM_XOFFS    $8180  ; maybe
+platform_xoffs    = $8180  ; maybe
 
-    SYNTH1            $82A0  ; bunch of bytes for sfx
-    SYNTH2            $82A8  ; bunch of bytes for sfx
-    SYNTH3            $82B0  ; bunch of bytes for sfx
+synth1            = $82A0  ; bunch of bytes for sfx
+synth2            = $82A8  ; bunch of bytes for sfx
+synth3            = $82B0  ; bunch of bytes for sfx
 
-    HISCORE           $8300  ;
-    HISCORE+1         $8301  ;
-    HISCORE+2         $8302
+hiscore           = $8300  ;
+hiscore_1         = $8301  ;
+hiscore_2         = $8302
 
-    CREDITS           $8303  ; how many credits in machine
-    _8305             $8305  ; Coins? dunno
-    HISCORE_NAME      $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+credits           = $8303  ; how many credits in machine
+_8305             = $8305  ; Coins? dunno
+hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
-    TICK_NUM          $8312  ; adds 1 every tick
-    ;; NOTE: TICK_MOD is sped up after round 1!
-    TICK_MOD_FAST     $8315  ; % 3 in round 1, % 2 in round 2+
-    TICK_MOD_SLOW     $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
+tick_num          = $8312  ; adds 1 every tick
+;; NOTE: TICK_MOD is sped up after round 1!
+tick_mod_fast     = $8315  ; % 3 in round 1, % 2 in round 2+
+tick_mod_slow     = $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
-    STACK_LOCATION    $83F0  ; I think?
-    INPUT_BUTTONS     $83F1  ; copied to 800C and 800D
-    INPUT_BUTTONS_2   $83F2  ; dunno what buttons
+stack_location    = $83F0  ; I think?
+input_buttons     = $83F1  ; copied to 800C and 800D
+input_buttons_2   = $83F2  ; dunno what buttons
+
+;; TODO: give these symbols a name!
+_8046             = $8046  ; ?
+_8049             = $8049  ; ?
+_804A             = $804A  ; ?
+_8101             = $8101  ; ?
+_8105             = $8105  ; ?
+_8106             = $8106  ; ?
+_8108             = $8108  ; ?
+_8126             = $8126  ; ?
+_8128             = $8128  ; ?
+_8129             = $8129  ; ?
+_812A             = $812A  ; ?
+_8131             = $8131  ; ?
+_8133             = $8133  ; ?
+_8135             = $8135  ; ?
+_8137             = $8137  ; ?
+_8138             = $8138  ; ?
+_813F             = $813F  ; ?
+_82A5             = $82A5  ; ?
+_82AD             = $82AD  ; ?
+_82B5             = $82B5  ; ?
+_82B8             = $82B8  ; ?
+_82D0             = $82D0  ; ?
+_82E8             = $82E8  ; ?
+_8306             = $8306  ; ?
+_8308             = $8308  ; ?
+_8309             = $8309  ; ?
+_830A             = $830A  ; ?
+_830B             = $830B  ; ?
+_830C             = $830C  ; ?
+_830D             = $830D  ; ?
+_830E             = $830E  ; ?
+_830F             = $830F  ; ?
+_8310             = $8310  ; ?
+
+;; 16bit signed sub constants
+JMP_HL_OFFSET     = $4000
+MINUS_95          = $FFA1
+MINUS_64          = $FFC0
+MINUS_36          = $FFDC
 
 ;;;  constants
 
-    SCREEN_WIDTH      $E0  ; 224
-    SCR_TILE_W        $1a  ; 26 columns (just playable? TW=27.)
-    SCR_TILE_H        $1c  ; 28 rows    (only playable area? TH=31.)
-    NUM_SCREENS       $1B  ; 27 screens
+screen_width      = $E0  ; 224
+scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
+scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
+num_screens       = $1B  ; 27 screens
 
-    ROUND1_SPEED      $1f
-    ROUND2_SPEED      $10
-    ROUND3_SPEED      $0D
+round1_speed      = $1F
+round2_speed      = $10
+round3_speed      = $0D
 
-    FR_ROCK_1         $1D
-    FR_SPEAR          $22
-    FR_BIRD_1         $23
-    FR_BIRD_2         $24
-    FR_BLUE_1         $34
-    FR_BLUE_2         $35
+fr_rock_1         = $1D
+fr_spear          = $22
+fr_bird_1         = $23
+fr_bird_2         = $24
+fr_blue_1         = $34
+fr_blue_2         = $35
 
-    TILE_0            $00
-    TILE_9            $09
-    TILE_BLANK        $10
-    TILE_A            $11
-    TILE_E            $15
-    TILE_R            $22
-    TILE_HYPHEN       $2B
+tile_0            = $00
+tile_9            = $09
+tile_blank        = $10
+tile_a            = $11
+tile_z            = $2A
+tile_hyphen       = $2B
 
-    TILE_CAGE         $74       ; - $7f
-    TILE_CURSOR       $89
-    TILE_CROWN_PIKA   $8C ; alt crown
-    TILE_PIK_CROSSA   $8D
-    TILE_PIK_RINGA    $8E
-    TILE_PIK_VASEA    $8F
-    TILE_CROWN_PIK    $9C
-    TILE_PIK_CROSS    $9D
-    TILE_PIK_RING     $9E
-    TILE_PIK_VASE     $9F
-    TILE_LVL_01       $C0
+tile_cage         = $74       ; - $7f
+tile_cursor       = $89
+tile_crown_pika   = $8C ; alt crown
+tile_pik_crossa   = $8D
+tile_pik_ringa    = $8E
+tile_pik_vasea    = $8F
+tile_crown_pik    = $9C
+tile_pik_cross    = $9D
+tile_pik_ring     = $9E
+tile_pik_vase     = $9F
+tile_lvl_01       = $C0
 
-    ;; tile > $F8 is a platform
-    TILE_SOLID        $F8 ; high-wire platform R
-    TILE_PLATFORM_R   $FC
-    TILE_PLATFORM_C   $FD
-    TILE_PLATFORM_L   $FE
+;; tile > $F8 is a platform
+tile_solid        = $F8 ; high-wire platform R
+tile_platform_r   = $FC
+tile_platform_c   = $FD
+tile_platform_l   = $FE
 
-    SCR_LINE_PREV     $FFE0       ; -32 = previous screen line
+scr_line_prev     = $FFE0       ; -32 = previous screen line
 
 ;;; hardware
 
-    SCREEN_RAM        $9000 ; - 0x93ff  videoram
-    START_OF_TILES    $9040 ; top right tile
-    END_OF_TILES      $93BF ; bottom left tile
-    ;; what's all the stuff in herer?
-    XOFF_COL_RAM      $9800 ; xoffset and color data per tile row
-    SPRITES           $9840 ; 0x9800 - 0x98ff is spriteram
-    PORT_IN0          $A000 ;
-    PORT_IN1          $A800 ;
-    PORT_IN2          $B000 ;
-    INT_ENABLE        $b001 ; interrupt enable
-    _B006             $b006 ; set to 1 for P1 or
-    _B007             $b007 ; 0 for P2... why? Controls?
-    WATCHDOG          $b800 ; main timer?
+screen_ram        = $9000 ; - 0x93ff  videoram
+start_of_tiles    = $9040 ; top right tile
+
+;; a hundred-odd screen locations. Figure 'em out, and name them.
+_9010             = $9010  ; ?​​
+_901F             = $901F  ; ?​​
+_9061             = $9061  ; ?​​
+_9081             = $9081  ; ?​​
+_9082             = $9082  ; ?​​
+_908E             = $908E  ; ?​​
+_9090             = $9090  ; ?​​
+_9092             = $9092  ; ?​​
+_90A1             = $90A1  ; ?​​
+_90A2             = $90A2  ; ?​​
+_90C1             = $90C1  ; ?​​
+_90CB             = $90CB  ; ?​​
+_90E1             = $90E1  ; ?​​
+_90E2             = $90E2  ; ?​​
+_9101             = $9101  ; ?​​
+_9102             = $9102  ; ?​​
+_911A             = $911A  ; ?​​
+_9122             = $9122  ; ?​​
+_9142             = $9142  ; ?​​
+_9157             = $9157  ; ?​​
+scr_pik_n_n       = $915A  ; pickup right n_n levels
+_9160             = $9160  ; ?​​
+_9162             = $9162  ; ?​​
+_9177             = $9177  ; ?​​
+_9179             = $9179  ; ?​​
+_9180             = $9180  ; ?​​
+_9182             = $9182  ; ?​​
+_9184             = $9184  ; ?​​
+_9189             = $9189  ; ?​​
+_918A             = $918A  ; ?​​
+_918B             = $918B  ; ?​​
+_918C             = $918C  ; ?​​
+_918E             = $918E  ; ?​​
+_9197             = $9197  ; ?​​
+_9199             = $9199  ; ?​​
+_91A0             = $91A0  ; ?​​
+_91A1             = $91A1  ; ?​​
+_91A2             = $91A2  ; ?​​
+_91A9             = $91A9  ; ?​​
+_91AA             = $91AA  ; ?​​
+_91AB             = $91AB  ; ?​​
+_91AC             = $91AC  ; ?​​
+_91B1             = $91B1  ; ?​​
+_91B7             = $91B7  ; ?​​
+_91C0             = $91C0  ; ?​​
+_91C1             = $91C1  ; ?​​
+_91C9             = $91C9  ; ?​​
+_91CA             = $91CA  ; ?​​
+_91CB             = $91CB  ; ?​​
+_91CC             = $91CC  ; ?​​
+_91D2             = $91D2  ; ?​​
+_91D7             = $91D7  ; ?​​
+_91D8             = $91D8  ; ?​​
+_91E0             = $91E0  ; ?​​
+_91E1             = $91E1  ; ?​​
+_91F7             = $91F7  ; ?​​
+_91F8             = $91F8  ; ?​​
+_91F9             = $91F9  ; ?​​
+_9200             = $9200  ; ?​​
+_9201             = $9201  ; ?​​
+_9217             = $9217  ; ?​​
+_9218             = $9218  ; ?​​
+_9219             = $9219  ; ?​​
+_9220             = $9220  ; ?​​
+_9221             = $9221  ; ?​​
+_9224             = $9224  ; ?​​
+_922B             = $922B  ; ?​​
+_9231             = $9231  ; ?​​
+_9237             = $9237  ; ?​​
+_9238             = $9238  ; ?​​
+_9239             = $9239  ; ?​​
+_9240             = $9240  ; ?​​
+_9241             = $9241  ; ?​​
+_9242             = $9242  ; ?​​
+_9248             = $9248  ; ?​​
+_9257             = $9257  ; ?​​
+_9260             = $9260  ; ?​​
+_9262             = $9262  ; ?​​
+_9277             = $9277  ; ?​​
+_927A             = $927A  ; ?​​
+_9280             = $9280  ; ?​​
+_9282             = $9282  ; ?​​
+_9297             = $9297  ; ?​​
+_92A2             = $92A2  ; ?​​
+_92AB             = $92AB  ; ?​​
+_92C2             = $92C2  ; ?​​
+_92E0             = $92E0  ; ?​​
+_92E1             = $92E1  ; ?​​
+_92EE             = $92EE  ; ?​​
+_9301             = $9301  ; ?​​
+_9302             = $9302  ; ?​​
+_9308             = $9308  ; ?​​
+_930C             = $930C  ; ?​​
+_9310             = $9310  ; ?​​
+_9314             = $9314  ; ?​​
+_9321             = $9321  ; ?​​
+_9322             = $9322  ; ?​​
+_9341             = $9341  ; ?​​
+_934B             = $934B  ; ?​​
+_934C             = $934C  ; ?​​
+_934E             = $934E  ; ?
+_9350             = $9350  ; ?​​
+_9352             = $9352  ; ?​​
+_9361             = $9361  ; ?​​
+_9362             = $9362  ; ?​​
+_936B             = $936B  ; ?​​
+_936C             = $936C  ; ?​​
+_9381             = $9381  ; ?​​
+_9382             = $9382  ; ?​​
+_938B             = $938B  ; ?​​
+_938C             = $938C  ; ?​​
+_93A0             = $93A0  ; ?
+
+end_of_tiles      = $93BF ; bottom left tile
+;; what's all the stuff in herer?
+xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
+sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
+port_in0          = $A000 ;
+port_in1          = $A800 ;
+port_in2          = $B000 ;
+int_enable        = $B001 ; interrupt enable
+_B004             = $B004 ; "galaxian stars enable"?
+_B006             = $B006 ; set to 1 for P1 or
+_B007             = $B007 ; 0 for P2... why? Controls?
+watchdog          = $B800 ; main timer?
+_C000             = $C000 ;
+_C003             = $C003 ;
 
 ;;; ============ START OF BG1.BIN =============
 
-HARD_RESET
-0000: A2          and  d
-0001: 32 01 B0    ld   ($INT_ENABLE),a
-0004: 32 FF 80    ld   ($80FF),a
-0007: 3E FF       ld   a,$FF
-0009: 32 00 B8    ld   ($WATCHDOG),a
-000C: C3 A0 14    jp   $CLEAR_RAM ; jumps back here after clear
-000F: 31 F0 83    ld   sp,$STACK_LOCATION
-0012: CD 00 3F    call $DELAY_83_CALL_WEIRD_A
-0015: CD 48 00    call $INIT_SCREEN
-0018: CD 88 22    call $WRITE_OUT_0_AND_1
-001B: C3 8D 00    jp   $SETUP_THEN_START_GAME
+hard_reset:
+    and  d
+    ld   (int_enable),a
+    ld   (_80FF),a
+    ld   a,$FF
+    ld   (watchdog),a
+    jp   clear_ram ; jumps back here after clear
+_ret_hard_reset:
+    ld   sp,stack_location
+    call delay_83_call_weird_a
+    call init_screen
+    call write_out_0_and_1
+    jp   setup_then_start_game
 
-    ;; data?
-001E: DD 19 DD 19 2B 10 AF
-0025: ED 67 DD 77 ED 6F DD
-002C: DD 19 ED 6F DD
+;; data? no?
+    db  $DD,$19
+_0020:          ; called here once - but looks suspicious
+    db  $DD,$19,$2B,$10,$AF
+    db  $ED,$67,$DD,$77,$ED,$6F,$DD
+    db  $DD,$19,$ED,$6F,$DD
 
-0031: FF ...
+    dc  7, $FF
 
-    ;;  Reset vector
-RESET_VECTOR
-0038: 3A 00 B8    ld   a,($WATCHDOG)
-003B: 18 FB       jr   $RESET_VECTOR
-003D: FF ...
+;;  Reset vector
+reset_vector:
+    ld   a,(watchdog)
+    jr   reset_vector
 
-    ;; Called once at startup
-INIT_SCREEN
-0048: 3A 00 A0    ld   a,($PORT_IN0) ;
-004B: E6 83       and  $83           ; 1000 0011
-004D: C8          ret  z
-004E: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-0051: CD 10 03    call $DRAW_TILES_H
-0054: 09 00
-0056: 13 22 15 14 19 24 10 16 11 25 1C 24 FF ; CREDIT FAULT
-0063: 18 E3       jr   $INIT_SCREEN
-0065: FF          rst  $38
+    dc 11, $FF
 
-    ;; Non-Maskable Interrupt handler. Fires every frame
-NMI_LOOP
-0066: AF          xor  a
-0067: 32 01 B0    ld   ($INT_ENABLE),a
-006A: 3A 00 B8    ld   a,($WATCHDOG)
-006D: CD C0 00    call $NMI_INT_HANDLER
-0070: 3A 34 80    ld   a,($NUM_PLAYERS)
-0073: A7          and  a
-0074: 20 03       jr   nz,$0079
-0076: CD 90 01    call $DID_PLAYER_PRESS_START
-0079: 06 01       ld   b,$01
-007B: CD 00 11    call $TICK_TICKS ; update ticks...
-007E: CD 20 24    call $COPY_INP_TO_BUTTONS_AND_CHECK_BUTTONS
-0081: 00          nop
-0082: 3A 00 A0    ld   a,($PORT_IN0)
-0085: CB 4F       bit  1,a
-0087: C2 03 C0    jp   nz,$C003 ; c003?!
-008A: ED 45       retn          ; NMI return
+;; Called once at startup
+init_screen:
+    ld   a,(port_in0)
+    and  $83 ; 1000 0011
+    ret  z
+    call reset_xoff_sprites_and_clear_screen
+    call draw_tiles_h
+    db   $09, $00
+    db   $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF ; CREDIT FAULT
+    jr   init_screen
 
-008C: FF
+    db   $FF
 
-SETUP_THEN_START_GAME
-008D: CD 48 03    call $SETUP_MORE
-0090: CD 80 30    call $SET_HISCORE_TEXT
-_AFTER_GAME_OVER
-0093: CD A0 13    call $WAIT_VBLANK
-0096: 3A 03 83    ld   a,($CREDITS)
-0099: A7          and  a
-009A: 20 08       jr   nz,$00A4
-009C: CD 70 03    call $RESET_ENTS_ALL
-009F: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-00A2: 18 EF       jr   $0093
-_PLAY_SPLASH
-00A4: CD A0 13    call $WAIT_VBLANK
-00A7: 3A 03 83    ld   a,($CREDITS)
-00AA: FE 01       cp   $01
-00AC: 20 05       jr   nz,$00B3
-00AE: CD D0 00    call $ATTRACT_PRESS_P1_SCREEN
-00B1: 18 03       jr   $00B6
-00B3: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
-00B6: 3A 34 80    ld   a,($NUM_PLAYERS)
-00B9: A7          and  a
-00BA: C2 E7 01    jp   nz,$START_GAME
-00BD: 18 E5       jr   $_PLAY_SPLASH
+;; Non-Maskable Interrupt handler. Fires every frame
+nmi_loop:
+    xor  a
+    ld   (int_enable),a
+    ld   a,(watchdog)
+    call nmi_int_handler
+    ld   a,(num_players)
+    and  a
+    jr   nz,_0079
+    call did_player_press_start
+_0079:
+    ld   b,$01
+    call tick_ticks ; update ticks...
+    call copy_inp_to_buttons_and_check_buttons
+    nop
+    ld   a,(port_in0)
+    bit  1,a
+    jp   nz,_C003 ; c003?!
+    retn ; NMI return
 
-00BF: FF
+    db   $FF
 
-NMI_INT_HANDLER
-00C0: D9          exx
-00C1: CD 88 02    call $COINAGE_ROUTINE
-00C4: CD 50 15    call $COPY_XOFFS_AND_COLS_TO_SCREEN
-00C7: CD 60 29    call $SAVE_IX_AND_?
-00CA: CD D0 01    call $COPY_PORTS_TO_BUTTONS
-00CD: D9          exx
-00CE: C9          ret
-00CF: FF
+setup_then_start_game:
+    call setup_more
+    call set_hiscore_text
+_after_game_over:
+    call wait_vblank
+    ld   a,(credits)
+    and  a
+    jr   nz,_play_splash
+    call reset_ents_all
+    call reset_xoff_sprites_and_clear_screen
+    jr   _after_game_over
+_play_splash:
+    call wait_vblank
+    ld   a,(credits)
+    cp   $01
+    jr   nz,_00B3
+    call attract_press_p1_screen
+    jr   _00B6
+_00B3:
+    call draw_one_or_two_player
+_00B6:
+    ld   a,(num_players)
+    and  a
+    jp   nz,start_game
+    jr   _play_splash
 
-;;;
-ATTRACT_PRESS_P1_SCREEN
-00D0: 3E 01       ld   a,$01
-00D2: 32 90 80    ld   ($8090),a
-00D5: AF          xor  a
-00D6: 32 04 B0    ld   ($B004),a
-00D9: 3A 03 83    ld   a,($CREDITS)
-00DC: 47          ld   b,a
-00DD: 3A 35 80    ld   a,($CREDITS_UMM)
-00E0: B8          cp   b
-00E1: C8          ret  z        ; credits == credits_um
-00E2: 00          nop
-00E3: 00          nop
-00E4: 00          nop
-00E5: CD 80 14    call $CLEAR_SCREEN
-00E8: 21 E0 0F    ld   hl,$0FE0
-00EB: CD 40 08    call $DRAW_SCREEN
-00EE: 00 00                     ; params to DRAW_SCREEN
-00F0: CD 50 24    call $DRAW_SCORE
-00F3: CD 10 03    call $DRAW_TILES_H
-00F6: 09 0B
-00F8: 20 22 15 23 23 FF         ; PRESS
-00FE: CD 10 03    call $DRAW_TILES_H
-0101: 0C 09
-0103: 1F 1E 15 10 20 1C 11 29 15 22 FF ; ONE PLAYER
-010E: CD 10 03    call $DRAW_TILES_H
-0111: 0F 8B
-0113: 12 25 24 24 1F 1E FF      ; BUTTON
-011A: CD 10 03    call $DRAW_TILES_H
-011D: 19 09
-011F: 13 22 15 14 19 24 23 FF   ; CREDITS
-0127: 21 03 83    ld   hl,$CREDITS
-012A: AF          xor  a
-012B: ED 6F       rld  (hl)
-012D: 32 99 91    ld   ($9199),a
-0130: ED 6F       rld  (hl)
-0132: 32 79 91    ld   ($9179),a
-0135: ED 6F       rld  (hl)
-0137: 3A 03 83    ld   a,($CREDITS)
-013A: 32 35 80    ld   ($CREDITS_UMM),a
-013D: C9          ret
+    db   $FF
 
-013E: FF FF
+nmi_int_handler:
+    exx
+    call coinage_routine
+    call copy_xoffs_and_cols_to_screen
+    call save_ix_and_um
+    call copy_ports_to_buttons
+    exx
+    ret
 
-    ;;
-DRAW_ONE_OR_TWO_PLAYER
-0140: CD 30 24    call $2430
-0143: 3A 03 83    ld   a,($CREDITS)
-0146: 47          ld   b,a
-0147: 3A 35 80    ld   a,($CREDITS_UMM)
-014A: B8          cp   b
-014B: 00          nop
-014C: CD D0 00    call $00D0
-014F: CD 10 03    call $DRAW_TILES_H
-0152: 0C 06
-0154: 1F 1E 15 10 1F 22 10 24 27 1F 10 20 1C 11 29 15
-0164: 22 FF C9 FF               ; ONE OR TWO PLAYER
-0168: FF ...
-
-0170: CD 20 00    call $0020
-0173: C9          ret
-0174: FF ...
-
-    ;; called a lot (via... JMP_HL_PLUS_4K)
-    ;; why? Why not just jump?
-    ;; Is there a max jump distance or something?
-DO_JMP_HL_PLUS_4K
-0180: C5          push bc
-0181: 01 00 40    ld   bc,$4000 ;
-0184: 09          add  hl,bc
-0185: C1          pop  bc
-0186: E9          jp   (hl)
-0187: FF ...
-
-DID_PLAYER_PRESS_START ; Did player start the game?
-0190: 3A 03 83    ld   a,($CREDITS) ; check you have credits
-0193: A7          and  a
-0194: C8          ret  z
-0195: 3A F1 83    ld   a,($INPUT_BUTTONS) ; P1 pressed?
-0198: CB 47       bit  0,a
-019A: 28 11       jr   z,$01AD
-019C: CD 60 14    call $DELAY_83
-019F: 3E 01       ld   a,$01    ; start the game, 1 player
-01A1: 32 34 80    ld   ($NUM_PLAYERS),a
-01A4: 3A 03 83    ld   a,($CREDITS) ; use a credit
-01A7: 3D          dec  a
-01A8: 27          daa
-01A9: 32 03 83    ld   ($CREDITS),a
-01AC: C9          ret
-01AD: 3A 03 83    ld   a,($CREDITS)
-01B0: 3D          dec  a
-01B1: C8          ret  z
-01B2: 3A F1 83    ld   a,($INPUT_BUTTONS)
-01B5: CB 4F       bit  1,a      ; is P2 pressed?
-01B7: C8          ret  z
-01B8: CD 60 14    call $DELAY_83
-01BB: 3E 02       ld   a,$02    ; start the game, 2 player
-01BD: 32 34 80    ld   ($NUM_PLAYERS),a
-01C0: 3A 03 83    ld   a,($CREDITS)
-01C3: 3D          dec  a
-01C4: 27          daa
-01C5: 3D          dec  a
-01C6: 27          daa
-01C7: 32 03 83    ld   ($CREDITS),a
-01CA: C9          ret
-
-01CB: FF ...
+    db   $FF
 
 ;;;
-COPY_PORTS_TO_BUTTONS
-01D0: 3A 00 A0    ld   a,($PORT_IN0)
-01D3: 32 0B 80    ld   ($CONTROLS),a
-01D6: 3A F1 83    ld   a,($INPUT_BUTTONS)
-01D9: 32 0C 80    ld   ($BUTTONS_1),a
-01DC: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
-01DF: 32 0D 80    ld   ($BUTTONS_2),a
-01E2: C9          ret
+attract_press_p1_screen:
+    ld   a,$01
+    ld   (_8090),a
+    xor  a
+    ld   (_B004),a
+    ld   a,(credits)
+    ld   b,a
+    ld   a,(credits_umm)
+    cp   b
+    ret  z ; credits == credits_um
+    nop
+    nop
+    nop
+    call clear_screen
+    ld   hl,header_text_data
+    call draw_screen
+    db   $00, $00 ; params to DRAW_SCREEN
+    call draw_score
+    call draw_tiles_h
+    db   $09, $0B
+    db   $20,$22,$15,$23,$23,$FF ; PRESS
+    call draw_tiles_h
+    db   $0C, $09
+    db   $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
+    call draw_tiles_h
+    db   $0F, $8B
+    db   $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
+    call draw_tiles_h
+    db   $19, $09
+    db   $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
+    ld   hl,credits
+    xor  a
+    rld
+    ld   (_9199),a
+    rld
+    ld   (_9179),a
+    rld
+    ld   a,(credits)
+    ld   (credits_umm),a
+    ret
 
-    ;;
-JMP_HL_PLUS_4K
-01E3: C3 80 01    jp   $DO_JMP_HL_PLUS_4K
-01E6: C9          ret
+    dc   2, $FF
 
-START_GAME
-01E7: 3E 1F       ld   a,$ROUND1_SPEED
-01E9: 32 5B 80    ld   ($SPEED_DELAY_P1),a
-01EC: 32 5C 80    ld   ($SPEED_DELAY_P2),a
-01EF: 00          nop
-01F0: 3A F2 83    ld   a,($INPUT_BUTTONS_2) ; from dip-switch settings?
-01F3: E6 06       and  $06
-01F5: CB 2F       sra  a
-01F7: C6 02       add  a,$02
-01F9: 32 32 80    ld   ($LIVES),a
-01FC: 32 33 80    ld   ($LIVES_P2),a
-01FF: 3A 34 80    ld   a,($NUM_PLAYERS)
-0202: 3D          dec  a
-0203: 32 31 80    ld   ($IS_2_PLAYERS),a ; 0 = 1P, 1 = 2P
-0206: 3E 01       ld   a,$01
-0208: 32 04 80    ld   ($PLAYER_NUM),a
-020B: 3A 31 80    ld   a,($IS_2_PLAYERS)
-020E: A7          and  a
-020F: 20 04       jr   nz,$0215
-0211: AF          xor  a
-0212: 32 33 80    ld   ($LIVES_P2),a
-0215: 3E 01       ld   a,$01
-0217: 32 29 80    ld   ($SCREEN_NUM),a
-021A: 32 2A 80    ld   ($SCREEN_NUM_P2),a
-021D: 32 90 80    ld   ($8090),a
-POST_DEATH_RESET
-0220: 31 F0 83    ld   sp,$STACK_LOCATION ; hmm. sets stack pointer?
-0223: 3A 04 80    ld   a,($PLAYER_NUM) ; flip flops?!
-0226: EE 01       xor  $01
-0228: 32 04 80    ld   ($PLAYER_NUM),a
-022B: 21 32 80    ld   hl,$LIVES
-022E: 85          add  a,l
-022F: 6F          ld   l,a
-0230: 7E          ld   a,(hl)
-0231: A7          and  a
-0232: 20 12       jr   nz,$0246
-0234: 3A 04 80    ld   a,($PLAYER_NUM) ; and back again?
-0237: EE 01       xor  $01
-0239: 32 04 80    ld   ($PLAYER_NUM),a
-023C: 21 32 80    ld   hl,$LIVES
-023F: 85          add  a,l
-0240: 6F          ld   l,a
-0241: 7E          ld   a,(hl)
-0242: A7          and  a
-0243: CA 10 04    jp   z,$GAME_OVER
-0246: 3D          dec  a
-0247: 77          ld   (hl),a
-0248: 3A F1 83    ld   a,($INPUT_BUTTONS)
-024B: CB 7F       bit  7,a      ; what is this "button"?!
-024D: 28 11       jr   z,$0260
-024F: 3A 04 80    ld   a,($PLAYER_NUM)
-0252: FE 01       cp   $01
-0254: 20 0A       jr   nz,$0260
-0256: 3E 01       ld   a,$01
-0258: 32 06 B0    ld   ($B006),a ; a = 1 if P1,
-025B: 32 07 B0    ld   ($B007),a
-025E: 18 07       jr   $0267
-0260: AF          xor  a        ; 0 if P2
-0261: 32 06 B0    ld   ($B006),a
-0264: 32 07 B0    ld   ($B007),a
-0267: 3A F2 83    ld   a,($INPUT_BUTTONS_2)
-026A: CB 5F       bit  3,a      ; is this INfinite Lives DIP setting? resets lives on death
-026C: 28 10       jr   z,$027E
-026E: 3E 03       ld   a,$03    ; set 3 lives
-0270: 32 32 80    ld   ($LIVES),a
-0273: 3A 33 80    ld   a,($LIVES_P2)
-0276: A7          and  a
-0277: 28 05       jr   z,$027E
-0279: 3E 03       ld   a,$03
-027B: 32 33 80    ld   ($LIVES_P2),a
-027E: C3 00 10    jp   $BIG_RESET
+;;
+draw_one_or_two_player:
+    call _2430
+    ld   a,(credits)
+    ld   b,a
+    ld   a,(credits_umm)
+    cp   b
+    nop
+    call attract_press_p1_screen
+    call draw_tiles_h
+    db   $0C, $06
+    db   $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
+    db   $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
+;; Does it fall through here?
+    dc   8,$FF
 
-0281: FF ...
+    call _0020
+    ret
 
-COINAGE_ROUTINE
-0288: 3A 06 83    ld   a,($8306)
-028B: A7          and  a
-028C: 28 11       jr   z,$029F
-028E: 3D          dec  a
-028F: 32 06 83    ld   ($8306),a
-0292: C0          ret  nz
-0293: 3A 00 A0    ld   a,($PORT_IN0)
-0296: E6 03       and  $03
-0298: C8          ret  z
-0299: 3E 05       ld   a,$05
-029B: 32 06 83    ld   ($8306),a
-029E: C9          ret
-029F: 3A 00 A0    ld   a,($PORT_IN0)
-02A2: E6 03       and  $03
-02A4: C8          ret  z
-02A5: 47          ld   b,a
-02A6: 3E 20       ld   a,$20
-02A8: 32 93 80    ld   ($8093),a
-02AB: 78          ld   a,b
-02AC: FE 01       cp   $01
-02AE: 20 09       jr   nz,$02B9
-02B0: 3A 05 83    ld   a,($8305)
-02B3: 3C          inc  a
-02B4: 32 05 83    ld   ($8305),a
-02B7: 18 08       jr   $02C1
-02B9: 3A 05 83    ld   a,($8305)
-02BC: C6 06       add  a,$06
-02BE: 32 05 83    ld   ($8305),a
-02C1: 3E 07       ld   a,$07
-02C3: 32 06 83    ld   ($8306),a
-02C6: 3A F1 83    ld   a,($INPUT_BUTTONS)
-02C9: CB 77       bit  6,a ; added credit
-02CB: 28 16       jr   z,$02E3
-02CD: 3A 05 83    ld   a,($8305)
-02D0: A7          and  a
-02D1: C8          ret  z
-02D2: 47          ld   b,a
-02D3: 3A 03 83    ld   a,($CREDITS)
-02D6: 3C          inc  a
-02D7: 27          daa
-02D8: 05          dec  b
-02D9: 20 FB       jr   nz,$02D6
-02DB: 32 03 83    ld   ($CREDITS),a
-02DE: AF          xor  a
-02DF: 32 05 83    ld   ($8305),a
-02E2: C9          ret
-02E3: 3A 05 83    ld   a,($8305)
-02E6: A7          and  a
-02E7: C8          ret  z
-02E8: FE 01       cp   $01
-02EA: C8          ret  z
-02EB: 47          ld   b,a
-02EC: 3A 03 83    ld   a,($CREDITS)
-02EF: 3C          inc  a
-02F0: 27          daa
-02F1: 05          dec  b
-02F2: 28 05       jr   z,$02F9
-02F4: 05          dec  b
-02F5: 28 0D       jr   z,$0304
-02F7: 18 F6       jr   $02EF
-02F9: 3D          dec  a
-02FA: 27          daa
-02FB: 32 03 83    ld   ($CREDITS),a
-02FE: 3E 01       ld   a,$01
-0300: 32 05 83    ld   ($8305),a
-0303: C9          ret
-0304: 32 03 83    ld   ($CREDITS),a
-0307: AF          xor  a
-0308: 32 05 83    ld   ($8305),a
-030B: C9          ret
+    dc   12,$FF
 
-030C: FF ...
+;; called a lot (via... JMP_HL_PLUS_4K)
+;; why? Why not just jump?
+;; Is there a max jump distance or something?
+do_jmp_hl_plus_4k:
+    push bc
+    ld   bc,int_handler
+    add  hl,bc
+    pop  bc
+    jp   (hl)
 
-    ;; draw sequence of tiles at (y, x)
-DRAW_TILES_H
-0310: 3A 00 B8    ld   a,($WATCHDOG)
-0313: 21 40 90    ld   hl,$START_OF_TILES
-0316: C1          pop  bc
-0317: 0A          ld   a,(bc)   ; y pos
-0318: 03          inc  bc
-0319: 85          add  a,l
-031A: 6F          ld   l,a
-031B: 0A          ld   a,(bc)   ; x pos
-031C: 5F          ld   e,a
-031D: 3E 1B       ld   a,$1B
-031F: 93          sub  e
-0320: 5F          ld   e,a
-0321: 16 00       ld   d,$00
-0323: CB 23       sla  e
-0325: CB 23       sla  e
-0327: CB 23       sla  e
-0329: 19          add  hl,de
-032A: 19          add  hl,de
-032B: 19          add  hl,de
-032C: 19          add  hl,de
-032D: 03          inc  bc
-_LP_1
-032E: 0A          ld   a,(bc)   ; read data until 0xff
-032F: 03          inc  bc
-0330: FE FF       cp   $FF
-0332: 20 02       jr   nz,$0336
-0334: C5          push bc
-0335: C9          ret
-0336: 77          ld   (hl),a
-0337: 16 FF       ld   d,$FF
-0339: 1E E0       ld   e,$E0
-033B: 19          add  hl,de
-033C: 18 F0       jr   $_LP_1
+    dc   9,$FF
 
-033E: FF ...
+did_player_press_start:; Did player start the game?
+    ld   a,(credits) ; check you have credits
+    and  a
+    ret  z
+    ld   a,(input_buttons) ; P1 pressed?
+    bit  0,a
+    jr   z,_01AD
+    call delay_83
+    ld   a,$01 ; start the game, 1 player
+    ld   (num_players),a
+    ld   a,(credits) ; use a credit
+    dec  a
+    daa
+    ld   (credits),a
+    ret
+_01AD:
+    ld   a,(credits)
+    dec  a
+    ret  z
+    ld   a,(input_buttons)
+    bit  1,a ; is P2 pressed?
+    ret  z
+    call delay_83
+    ld   a,$02 ; start the game, 2 player
+    ld   (num_players),a
+    ld   a,(credits)
+    dec  a
+    daa
+    dec  a
+    daa
+    ld   (credits),a
+    ret
 
-    ;;
-SETUP_MORE
-0348: 00          nop
-0349: 00          nop
-034A: 00          nop
-034B: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-034E: 21 00 80    ld   hl,$8000 ; reset $8000-$88FF? to 0
-_LP
-0351: 36 00       ld   (hl),$00
-0353: 2C          inc  l
-0354: 20 FB       jr   nz,$_LP
-0356: 24          inc  h
-0357: 3A 00 B8    ld   a,($WATCHDOG)
-035A: 7C          ld   a,h
-035B: FE 88       cp   $88
-035D: 20 F2       jr   nz,$_LP
-035F: 31 F0 83    ld   sp,$STACK_LOCATION
-0362: 3E 01       ld   a,$01
-0364: 32 90 80    ld   ($8090),a
-0367: C3 83 05    jp   $_SETUP_MORE_RET
+    dc   5,$FF
 
-036A: FF ...
+;;;
+copy_ports_to_buttons:
+    ld   a,(port_in0)
+    ld   (controls),a
+    ld   a,(input_buttons)
+    ld   (buttons_1),a
+    ld   a,(input_buttons_2)
+    ld   (buttons_2),a
+    ret
 
-RESET_ENTS_ALL
-0370: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-0373: 21 20 15    ld   hl,$1520 ; RESET_SFX_SOMETHING_1
-0376: CD E3 01    call $JMP_HL_PLUS_4K ; $4520
-0379: 21 20 0E    ld   hl,$0E20 ; ATTRACT_SPLASH_BONGO
-037C: CD E3 01    call $JMP_HL_PLUS_4K ;$4220
-037F: 21 C0 17    ld   hl,$RESET_DINO
-0382: CD E3 01    call $JMP_HL_PLUS_4K ; $57C0
-0385: 21 A0 15    ld   hl,$15A0 ; $CHASED_BY_A_DINO_SCREEN
-0388: CD E3 01    call $JMP_HL_PLUS_4K ; $55A0
-038B: 00          nop
-038C: 00          nop
-038D: 00          nop
-038E: C9          ret
+;;
+jmp_hl_plus_4k:
+    jp   do_jmp_hl_plus_4k
+    ret
 
-038F: FF
+start_game:
+    ld   a,$1F
+    ld   (speed_delay_p1),a
+    ld   (speed_delay_p2),a
+    nop
+    ld   a,(input_buttons_2) ; from dip-switch settings?
+    and  $06
+    sra  a
+    add  a,$02
+    ld   (lives),a
+    ld   (lives_p2),a
+    ld   a,(num_players)
+    dec  a
+    ld   (is_2_players),a ; 0 = 1P, 1 = 2P
+    ld   a,$01
+    ld   (player_num),a
+    ld   a,(is_2_players)
+    and  a
+    jr   nz,_0215
+    xor  a
+    ld   (lives_p2),a
+_0215:
+    ld   a,$01
+    ld   (screen_num),a
+    ld   (screen_num_p2),a
+    ld   (_8090),a
+post_death_reset:
+    ld   sp,stack_location ; hmm. sets stack pointer?
+    ld   a,(player_num) ; flip flops?!
+    xor  $01
+    ld   (player_num),a
+    ld   hl,lives
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    and  a
+    jr   nz,_0246
+    ld   a,(player_num) ; and back again?
+    xor  $01
+    ld   (player_num),a
+    ld   hl,lives
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    and  a
+    jp   z,game_over
+_0246:
+    dec  a
+    ld   (hl),a
+    ld   a,(input_buttons)
+  bit  7,a ; what is this "button"?!
+    jr   z,_0260
+    ld   a,(player_num)
+    cp   $01
+    jr   nz,_0260
+    ld   a,$01
+    ld   (_B006),a ; a = 1 if P1,
+    ld   (_B007),a
+    jr   _0267
+_0260:
+    xor  a ; 0 if P2
+    ld   (_B006),a
+    ld   (_B007),a
+_0267:
+    ld   a,(input_buttons_2)
+    bit  3,a ; is this INfinite Lives DIP setting? resets lives on death
+    jr   z,_027E
+    ld   a,$03 ; set 3 lives
+    ld   (lives),a
+    ld   a,(lives_p2)
+    and  a
+    jr   z,_027E
+    ld   a,$03
+    ld   (lives_p2),a
+_027E:
+    jp   big_reset
 
-0390: CD A0 13    call $WAIT_VBLANK
-0393: 18 FB       jr   $0390
-0395: FF ...
+    dc   7, $FF
 
-DRAW_LIVES
-03A0: CD 08 04    call $SET_LIVES_ROW_COLOR
-03A3: 3A 32 80    ld   a,($LIVES)
-03A6: A7          and  a
-03A7: 47          ld   b,a
-03A8: 3E 8A       ld   a,$8A
-03AA: 28 1B       jr   z,$03C7
-03AC: 05          dec  b
-03AD: 32 C2 92    ld   ($92C2),a
-03B0: 28 15       jr   z,$03C7
-03B2: 05          dec  b
-03B3: 32 A2 92    ld   ($92A2),a
-03B6: 28 0F       jr   z,$03C7
-03B8: 05          dec  b
-03B9: 32 82 92    ld   ($9282),a
-03BC: 28 09       jr   z,$03C7
-03BE: 05          dec  b
-03BF: 32 62 92    ld   ($9262),a
-03C2: 28 03       jr   z,$03C7
-03C4: 32 42 92    ld   ($9242),a
-03C7: 3A 33 80    ld   a,($LIVES_P2)
-03CA: A7          and  a
-03CB: 47          ld   b,a
-03CC: C8          ret  z
-03CD: 3E 8A       ld   a,$8A
-03CF: 05          dec  b
-03D0: 32 22 91    ld   ($9122),a
-03D3: C8          ret  z
-03D4: 05          dec  b
-03D5: 32 42 91    ld   ($9142),a
-03D8: C8          ret  z
-03D9: 05          dec  b
-03DA: 32 62 91    ld   ($9162),a
-03DD: C8          ret  z
-03DE: 05          dec  b
-03DF: 32 82 91    ld   ($9182),a
-03E2: C8          ret  z
-03E3: 32 A2 91    ld   ($91A2),a
-03E6: C9          ret
+coinage_routine:
+    ld   a,(_8306)
+    and  a
+    jr   z,_029F
+    dec  a
+    ld   (_8306),a
+    ret  nz
+    ld   a,(port_in0)
+    and  $03
+    ret  z
+    ld   a,$05
+    ld   (_8306),a
+    ret
+_029F:
+    ld   a,(port_in0)
+    and  $03
+    ret  z
+    ld   b,a
+    ld   a,$20
+    ld   (_8093),a
+    ld   a,b
+    cp   $01
+    jr   nz,_02B9
+    ld   a,(_8305)
+    inc  a
+    ld   (_8305),a
+    jr   _02C1
+_02B9:
+    ld   a,(_8305)
+    add  a,$06
+    ld   (_8305),a
+_02C1:
+    ld   a,$07
+    ld   (_8306),a
+    ld   a,(input_buttons)
+    bit  6,a ; added credit
+    jr   z,_02E3
+    ld   a,(_8305)
+    and  a
+    ret  z
+    ld   b,a
+    ld   a,(credits)
+_02D6:
+    inc  a
+    daa
+    dec  b
+    jr   nz,_02D6
+    ld   (credits),a
+    xor  a
+    ld   (_8305),a
+    ret
+_02E3:
+    ld   a,(_8305)
+    and  a
+    ret  z
+    cp   $01
+    ret  z
+    ld   b,a
+    ld   a,(credits)
+_02EF:
+    inc  a
+    daa
+    dec  b
+    jr   z,_02F9
+    dec  b
+    jr   z,_0304
+    jr   _02EF
+_02F9:
+    dec  a
+    daa
+    ld   (credits),a
+    ld   a,$01
+    ld   (_8305),a
+    ret
+_0304:
+    ld   (credits),a
+    xor  a
+    ld   (_8305),a
+    ret
 
-03E7: FF
+    dc   4, $FF
 
-CLEAR_AFTER_GAME_OVER
-03E8: AF          xor  a
-03E9: 32 34 80    ld   ($NUM_PLAYERS),a
-03EC: 32 35 80    ld   ($CREDITS_UMM),a
-03EF: C3 93 00    jp   $_AFTER_GAME_OVER
+;; draw sequence of tiles at (y, x)
+draw_tiles_h:
+    ld   a,(watchdog)
+    ld   hl,start_of_tiles
+    pop  bc
+    ld   a,(bc) ; y pos
+    inc  bc
+    add  a,l
+    ld   l,a
+    ld   a,(bc) ; x pos
+    ld   e,a
+    ld   a,$1B
+    sub  e
+    ld   e,a
+    ld   d,$00
+    sla  e
+    sla  e
+    sla  e
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    inc  bc
+_lp_032E:
+    ld   a,(bc) ; read data until 0xff
+    inc  bc
+    cp   $FF
+    jr   nz,_0336
+    push bc
+    ret
+_0336:
+    ld   (hl),a
+    ld   d,$FF
+    ld   e,$E0
+    add  hl,de
+    jr   _lp_032E
 
-03F2: FF ...
+    dc   10, $FF
 
-03F8: 0E E0       ld   c,$E0
-03FA: CD A0 13    call $WAIT_VBLANK
-03FD: 0C          inc  c
-03FE: 20 FA       jr   nz,$03FA
-0400: C9          ret
+;;
+setup_more:
+    nop
+    nop
+    nop
+    call reset_xoff_sprites_and_clear_screen
+    ld   hl,tick_mod_3 ; reset $8000-$88FF? to 0
+_lp_0351:
+    ld   (hl),$00
+    inc  l
+    jr   nz,_lp_0351
+    inc  h
+    ld   a,(watchdog)
+    ld   a,h
+    cp   $88
+    jr   nz,_lp_0351
+    ld   sp,stack_location
+    ld   a,$01
+    ld   (_8090),a
+    jp   _setup_more_ret
 
-0401: FF ...
+    dc   6, $FF
 
-SET_LIVES_ROW_COLOR
-0408: 3E 01       ld   a,$01
-040A: 32 05 81    ld   ($SCREEN_XOFF_COL+5),a
-040D: C9          ret
+reset_ents_all:
+    call reset_xoff_sprites_and_clear_screen
+    ld   hl,reset_sfx_something_1 - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ld   hl,attract_splash_bongo - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ld   hl,call_draw_extra_bonus_screen - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ld   hl,chased_by_a_dino_screen - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    nop
+    nop
+    nop
+    ret
 
-040E: FF FF
+    db   $FF
 
-GAME_OVER
-0410: 21 E8 16    ld   hl,$16E8 ; $SFX_RESET_A_BUNCH-$4000
-0413: CD E3 01    call $JMP_HL_PLUS_4K
-0416: CD E0 24    call $DELAY_60_VBLANKS
-0419: CD 30 04    call $CHECK_IF_HISCORE
-041C: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-041F: AF          xor  a
-0420: 32 04 B0    ld   ($B004),a
-0423: C3 00 2D    jp   $SET_HISCORE_AND_RESET_GAME
+_0390:
+    call wait_vblank
+    jr   _0390
 
-0426: FF ...
+    dc   11, $FF
 
-CHECK_IF_HISCORE
-0430: CD 40 04    call $CHECK_IF_HISCORE_P1
-0433: CD 70 04    call $CHECK_IF_HISCORE_P2
-0436: C9          ret
+draw_lives:
+    call set_lives_row_color
+    ld   a,(lives)
+    and  a
+    ld   b,a
+    ld   a,$8A
+    jr   z,_03C7
+    dec  b
+    ld   (_92C2),a
+    jr   z,_03C7
+    dec  b
+    ld   (_92A2),a
+    jr   z,_03C7
+    dec  b
+    ld   (_9282),a
+    jr   z,_03C7
+    dec  b
+    ld   (_9262),a
+    jr   z,_03C7
+    ld   (_9242),a
+_03C7:
+    ld   a,(lives_p2)
+    and  a
+    ld   b,a
+    ret  z
+    ld   a,$8A
+    dec  b
+    ld   (_9122),a
+    ret  z
+    dec  b
+    ld   (_9142),a
+    ret  z
+    dec  b
+    ld   (_9162),a
+    ret  z
+    dec  b
+    ld   (_9182),a
+    ret  z
+    ld   (_91A2),a
+    ret
 
-0437: FF ...
+    db   $FF
 
-CHECK_IF_HISCORE_P1
-0440: 3A 16 80    ld   a,($P1_SCORE+2)
-0443: 4F          ld   c,a
-0444: 3A 02 83    ld   a,($HISCORE+2)
-0447: 37          scf
-0448: 3F          ccf
-0449: 99          sbc  a,c
-044A: DC E0 04    call c,$HISCORE_FOR_P1
-044D: C0          ret  nz
-044E: 3A 15 80    ld   a,($P1_SCORE+1)
-0451: 4F          ld   c,a
-0452: 3A 01 83    ld   a,($HISCORE+1)
-0455: 37          scf
-0456: 3F          ccf
-0457: 99          sbc  a,c
-0458: DC E0 04    call c,$HISCORE_FOR_P1
-045B: C0          ret  nz
-045C: 3A 14 80    ld   a,($P1_SCORE)
-045F: 4F          ld   c,a
-0460: 3A 00 83    ld   a,($HISCORE)
-0463: 37          scf
-0464: 3F          ccf
-0465: 99          sbc  a,c
-0466: DC E0 04    call c,$HISCORE_FOR_P1
-0469: C9          ret
+clear_after_game_over:
+    xor  a
+    ld   (num_players),a
+    ld   (credits_umm),a
+    jp   _after_game_over
 
-046A: FF ...
+    dc   6, $FF
 
-CHECK_IF_HISCORE_P2
-0470: 3A 19 80    ld   a,($P2_SCORE+2)
-0473: 4F          ld   c,a
-0474: 3A 02 83    ld   a,($HISCORE+2)
-0477: 37          scf
-0478: 3F          ccf
-0479: 99          sbc  a,c
-047A: DC 00 05    call c,$HISCORE_FOR_P2
-047D: C0          ret  nz
-047E: 3A 18 80    ld   a,($P2_SCORE+1)
-0481: 4F          ld   c,a
-0482: 3A 01 83    ld   a,($HISCORE+1)
-0485: 37          scf
-0486: 3F          ccf
-0487: 99          sbc  a,c
-0488: DC 00 05    call c,$HISCORE_FOR_P2
-048B: C0          ret  nz
-048C: 3A 17 80    ld   a,($P2_SCORE)
-048F: 4F          ld   c,a
-0490: 3A 00 83    ld   a,($HISCORE_0)
-0493: 37          scf
-0494: 3F          ccf
-0495: 99          sbc  a,c
-0496: DC 00 05    call c,$HISCORE_FOR_P2
-0499: C9          ret
+    ld   c,$E0
+_03FA:
+    call wait_vblank
+    inc  c
+    jr   nz,_03FA
+    ret
 
-049A: FF ...
+    dc  7, $FF
 
-04B0: 0E 01       ld   c,$01
-04B2: CD A0 13    call $WAIT_VBLANK
-04B5: 0D          dec  c
-04B6: 20 FA       jr   nz,$04B2
-04B8: C9          ret
+set_lives_row_color:
+    ld   a,$01
+    ld   (_8105),a
+    ret
 
-04B9: FF
+    dc   2, $FF
+
+game_over:
+    ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    call delay_60_vblanks
+    call check_if_hiscore
+    call reset_xoff_sprites_and_clear_screen
+    xor  a
+    ld   (_B004),a
+    jp   set_hiscore_and_reset_game
+
+    dc   10, $FF
+
+check_if_hiscore:
+    call check_if_hiscore_p1
+    call check_if_hiscore_p2
+    ret
+
+    dc   9, $FF
+
+check_if_hiscore_p1:
+    ld   a,(p1_score_2)
+    ld   c,a
+    ld   a,(hiscore_2)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p1
+    ret  nz
+    ld   a,(p1_score_1)
+    ld   c,a
+    ld   a,(hiscore_1)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p1
+    ret  nz
+    ld   a,(p1_score)
+    ld   c,a
+    ld   a,(hiscore)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p1
+    ret
+
+    dc   6, $FF
+
+check_if_hiscore_p2:
+    ld   a,(p2_score_2)
+    ld   c,a
+    ld   a,(hiscore_2)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p2
+    ret  nz
+    ld   a,(p2_score_1)
+    ld   c,a
+    ld   a,(hiscore_1)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p2
+    ret  nz
+    ld   a,(p2_score)
+    ld   c,a
+    ld   a,(hiscore)
+    scf
+    ccf
+    sbc  a,c
+    call c,hiscore_for_p2
+    ret
+
+    dc   22, $FF
+
+    ld   c,$01
+_04B2:
+    call wait_vblank
+    dec  c
+    jr   nz,_04B2
+    ret
+
+    dc   1, $FF
 
 ;; count up timer - every SPEED_DELAY ticks
-CHECK_DINO_TIMER
-04BA: CD E0 28    call $MOVE_DINO_X
-04BD: 3A 04 80    ld   a,($PLAYER_NUM)
-04C0: A7          and  a
-04C1: 20 05       jr   nz,$04C8
-04C3: 3A 5B 80    ld   a,($SPEED_DELAY_P1)
-04C6: 18 03       jr   $04CB
-04C8: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
-04CB: 47          ld   b,a
-04CC: 3A 5D 80    ld   a,($DINO_TIMER)
-04CF: 3C          inc  a
-04D0: B8          cp   b        ; have done SPEED_DELAY ticks?
-04D1: 20 01       jr   nz,$04D4
-04D3: AF          xor  a
-04D4: 32 5D 80    ld   ($DINO_TIMER),a
-04D7: A7          and  a
-04D8: C0          ret  nz
-04D9: CD F0 22    call $DINO_PATHFIND_NOPSLIDE
-04DC: C9          ret
+check_dino_timer:
+    call move_dino_x
+    ld   a,(player_num)
+    and  a
+    jr   nz,_04C8
+    ld   a,(speed_delay_p1)
+    jr   _04CB
+_04C8:
+    ld   a,(speed_delay_p2)
+_04CB:
+    ld   b,a
+    ld   a,(dino_timer)
+    inc  a
+    cp   b ; have done SPEED_DELAY ticks?
+    jr   nz,_04D4
+    xor  a
+_04D4:
+    ld   (dino_timer),a
+    and  a
+    ret  nz
+    call dino_pathfind_nopslide
+    ret
 
-04DD: FF ...
+    dc   3, $FF
 
-HISCORE_FOR_P1
-04E0: 3A 14 80    ld   a,($P1_SCORE)
-04E3: 32 00 83    ld   ($HISCORE),a
-04E6: 3A 15 80    ld   a,($P1_SCORE+1)
-04E9: 32 01 83    ld   ($HISCORE+1),a
-04EC: 3A 16 80    ld   a,($P1_SCORE+2)
-04EF: 32 02 83    ld   ($HISCORE+2),a
-04F2: E1          pop  hl       ; hmm
-04F3: C9          ret
+hiscore_for_p1:
+    ld   a,(p1_score)
+    ld   (hiscore),a
+    ld   a,(p1_score_1)
+    ld   (hiscore_1),a
+    ld   a,(p1_score_2)
+    ld   (hiscore_2),a
+    pop  hl ; hmm
+    ret
 
-04F4: FF ...
+    dc   12, $FF
 
-HISCORE_FOR_P2
-0500: 3A 17 80    ld   a,($P2_SCORE)
-0503: 32 00 83    ld   ($HISCORE),a
-0506: 3A 18 80    ld   a,($P2_SCORE+1)
-0509: 32 01 83    ld   ($HISCORE+1),a
-050C: 3A 19 80    ld   a,($P2_SCORE+2)
-050F: 32 02 83    ld   ($HISCORE+2),a
-0512: E1          pop  hl       ; hmm
-0513: C9          ret
+hiscore_for_p2:
+    ld   a,(p2_score)
+    ld   (hiscore),a
+    ld   a,(p2_score_1)
+    ld   (hiscore_1),a
+    ld   a,(p2_score_2)
+    ld   (hiscore_2),a
+    pop  hl ; hmm
+    ret
 
-0514: FF ...
+    dc   4, $FF
 
-    ;; who calls?
-    ;; This looks suspicious. 25 bytes written
-    ;; to $8038+, code is never called (or read?)
-    ;; wpset 0518,18,rw doesn't trigger
-0518: 21 38 80    ld   hl,$ENEMY_1_TIMER
-051B: 36 39       ld   (hl),$39 ; 57
-051D: 23          inc  hl
-051E: 36 39       ld   (hl),$39 ; enemy_2_active
-0520: 23          inc  hl
-0521: 36 39       ld   (hl),$39 ; enemy_2_timer
-0523: 23          inc  hl
-0524: 36 39       ld   (hl),$39 ; enemy_3_active
-0526: 23          inc  hl
-0527: 36 38       ld   (hl),$38 ;
-0529: 23          inc  hl
-052A: 36 39       ld   (hl),$39
-052C: 23          inc  hl
-052D: 36 39       ld   (hl),$39
-052F: 23          inc  hl
-0530: 36 39       ld   (hl),$39
-0532: 23          inc  hl       ;8040
-0533: 36 38       ld   (hl),$38
-0535: 23          inc  hl
-0536: 36 39       ld   (hl),$39
-0538: 23          inc  hl
-0539: 36 38       ld   (hl),$38
-053B: 23          inc  hl
-053C: 36 38       ld   (hl),$38
-053E: 23          inc  hl
-053F: 36 31       ld   (hl),$31
-0541: 23          inc  hl
-0542: 36 31       ld   (hl),$31
-0544: 23          inc  hl
-0545: 36 30       ld   (hl),$30
-0547: 23          inc  hl
-0548: 36 31       ld   (hl),$31
-054A: 23          inc  hl
-054B: 36 30       ld   (hl),$30
-054D: 23          inc  hl
-054E: 36 30       ld   (hl),$30
-0550: 23          inc  hl
-0551: 36 30       ld   (hl),$30
-0553: 23          inc  hl
-0554: 36 31       ld   (hl),$31
-0556: 23          inc  hl
-0557: 36 30       ld   (hl),$30
-0559: 23          inc  hl
-055A: 36 30       ld   (hl),$30
-055C: 23          inc  hl
-055D: 36 30       ld   (hl),$30
-055F: 23          inc  hl
-0560: 36 30       ld   (hl),$30
-0562: 23          inc  hl
-0563: 36 30       ld   (hl),$30
-0565: CD 88 08    call $CLEAR_JUMP_BUTTON
-0568: C9          ret
+;; who calls?
+;; This looks suspicious. 25 bytes written
+;; to $8038+, code is never called (or read?)
+;; wpset 0518,18,rw doesn't trigger
+    ld   hl,enemy_1_timer
+    ld   (hl),$39 ; 57
+    inc  hl
+    ld   (hl),$39 ; enemy_2_active
+    inc  hl
+    ld   (hl),$39 ; enemy_2_timer
+    inc  hl
+    ld   (hl),$39 ; enemy_3_active
+    inc  hl
+    ld   (hl),$38
+    inc  hl
+    ld   (hl),$39
+    inc  hl
+    ld   (hl),$39
+    inc  hl
+    ld   (hl),$39
+    inc  hl ; 8040
+    ld   (hl),$38
+    inc  hl
+    ld   (hl),$39
+    inc  hl
+    ld   (hl),$38
+    inc  hl
+    ld   (hl),$38
+    inc  hl
+    ld   (hl),$31
+    inc  hl
+    ld   (hl),$31
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$31
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$31
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    inc  hl
+    ld   (hl),$30
+    call clear_jump_button
+    ret
 
-0569: FF ...
+    dc   23, $FF
 
-    ;; (free bytes?)
-_SETUP_2 ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
-0580: CD 48 03    call $SETUP_MORE
-_SETUP_MORE_RET                 ; returns here after setup_more
-0583: CD 80 30    call $SET_HISCORE_TEXT
-_PLAY_SPLASH_2
-0586: CD A0 13    call $WAIT_VBLANK
-0589: 3A 34 80    ld   a,($NUM_PLAYERS)
-058C: A7          and  a
-058D: 20 1C       jr   nz,$05AB
-058F: 3A 03 83    ld   a,($CREDITS)
-0592: A7          and  a
-0593: 20 08       jr   nz,$059D
-0595: CD 70 03    call $RESET_ENTS_ALL
-0598: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-059B: 18 E9       jr   $_PLAY_SPLASH_2
-059D: FE 01       cp   $01
-059F: 20 05       jr   nz,$05A6
-05A1: CD D0 00    call $ATTRACT_PRESS_P1_SCREEN
-05A4: 18 E0       jr   $_PLAY_SPLASH_2
-05A6: CD 40 01    call $DRAW_ONE_OR_TWO_PLAYER
-05A9: 18 DB       jr   $_PLAY_SPLASH_2
-05AB: C2 E7 01    jp   nz,$START_GAME
-05AE: 18 D6       jr   $_PLAY_SPLASH_2
-05B0: FF ...
+;; (free bytes?)
+_setup_2:;looks a lot like SETUP_THEN_START_GAME - no one calls it?
+    call setup_more
+_setup_more_ret:                ; returns here after setup_more
+    call set_hiscore_text
+_play_splash_2:
+    call wait_vblank
+    ld   a,(num_players)
+    and  a
+    jr   nz,_05AB
+    ld   a,(credits)
+    and  a
+    jr   nz,_059D
+    call reset_ents_all
+    call reset_xoff_sprites_and_clear_screen
+    jr   _play_splash_2
+_059D:
+    cp   $01
+    jr   nz,_05A6
+    call attract_press_p1_screen
+    jr   _play_splash_2
+_05A6:
+    call draw_one_or_two_player
+    jr   _play_splash_2
+_05AB:
+    jp   nz,start_game
+    jr   _play_splash_2
 
-    ;; who calls?
-05B8: 3A 03 83    ld   a,($CREDITS)
-05BB: A7          and  a
-05BC: 20 04       jr   nz,$05C2
-05BE: CD A0 13    call $WAIT_VBLANK
-05C1: C9          ret
-05C2: CD A0 13    call $WAIT_VBLANK
-05C5: E1          pop  hl
-05C6: E1          pop  hl
-05C7: E1          pop  hl
-05C8: C9          ret
+    dc   8, $FF
 
-05C9: FF ...
+;; who calls?
+    ld   a,(credits)
+    and  a
+    jr   nz,_05C2
+    call wait_vblank
+    ret
+_05C2:
+    call wait_vblank
+    pop  hl
+    pop  hl
+    pop  hl
+    ret
 
-    ;; could this ben not P1/P2, but "player" vs "ai" (like
-    ;; in splash screen player jump automatically)
-    ;; AND/OR, could this disable input during transition?
-    ;; (hmm, no... looks like P1/P2... but why?)
-NORMALIZE_INPUT
-05D0: 3A 04 80    ld   a,($PLAYER_NUM)
-05D3: A7          and  a
-05D4: 28 17       jr   z,$05ED
-    ;; p2
-05D6: 3A 0C 80    ld   a,($BUTTONS_1)
-05D9: CB 7F       bit  7,a
-05DB: 28 10       jr   z,$05ED  ;p1 too?
-05DD: 3A 0C 80    ld   a,($BUTTONS_1)
-05E0: E6 3C       and  $3C      ; 0011 1100
-05E2: 47          ld   b,a
-05E3: 3A 0B 80    ld   a,($CONTROLS)
-05E6: E6 40       and  $40      ; 0100 0000
-05E8: 80          add  a,b
-05E9: 32 0E 80    ld   ($CONTROLSN),a
-05EC: C9          ret
-    ;; p1
-05ED: 3A 0B 80    ld   a,($CONTROLS)
-05F0: E6 3C       and  $3C      ; 0011 1100
-05F2: 47          ld   b,a
-05F3: 3A 0B 80    ld   a,($CONTROLS)
-05F6: E6 80       and  $80      ; 1000 0000
-05F8: CB 3F       srl  a
-05FA: 80          add  a,b
-05FB: 32 0E 80    ld   ($CONTROLSN),a
-05FE: C9          ret
+    dc   7, $FF
 
-05FF: FF ...
+;; Not really sure.
+normalize_input:
+    ld   a,(player_num)
+    and  a
+    jr   z,_05ED
+;; p2
+    ld   a,(buttons_1)
+    bit  7,a
+    jr   z,_05ED ; p1 too?
+    ld   a,(buttons_1)
+    and  $3C ; 0011 1100
+    ld   b,a
+    ld   a,(controls)
+    and  $40 ; 0100 0000
+    add  a,b
+    ld   (controlsn),a
+    ret
+;; p1
+_05ED:
+    ld   a,(controls)
+    and  $3C ; 0011 1100
+    ld   b,a
+    ld   a,(controls)
+    and  $80 ; 1000 0000
+    srl  a
+    add  a,b
+    ld   (controlsn),a
+    ret
 
-PLAYER_FRAME_DATA_WALK_RIGHT
-0608: 0C 0E 10 0E 0C 12 14 12
-0610: FF FF FF FF FF FF FF FF
+    dc   9, $FF
 
-PLAYER_MOVE_RIGHT
-0618: 3A 10 80    ld   a,($WALK_ANIM_TIMER)
-061B: 3C          inc  a
-061C: E6 07       and  $07      ; 0111
-061E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
-0621: 21 08 06    ld   hl,$PLAYER_FRAME_DATA_WALK_RIGHT
-0624: 85          add  a,l
-0625: 6F          ld   l,a
-0626: 7E          ld   a,(hl)
-0627: 32 41 81    ld   ($PLAYER_FRAME),a
-062A: 3C          inc  a
-062B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-062E: 3A 40 81    ld   a,($PLAYER_X)
-0631: 3C          inc  a        ; move right 3px.
-0632: 3C          inc  a
-0633: 3C          inc  a
-0634: 32 40 81    ld   ($PLAYER_X),a
-0637: 32 44 81    ld   ($PLAYER_X_LEGS),a
-063A: 00          nop
-063B: 00          nop
-063C: 00          nop
-063D: C9          ret
+player_frame_data_walk_right:
+    db  $0C,$0E,$10,$0E,$0C,$12,$14,$12
+    dc   8, $FF
 
-063E: FF ...
+player_move_right:
+    ld   a,(walk_anim_timer)
+    inc  a
+    and  $07 ; 0111
+    ld   (walk_anim_timer),a
+    ld   hl,player_frame_data_walk_right
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (player_frame),a
+    inc  a
+    ld   (player_frame_legs),a
+    ld   a,(player_x)
+    inc  a ; move right 3px.
+    inc  a
+    inc  a
+    ld   (player_x),a
+    ld   (player_x_legs),a
+    nop
+    nop
+    nop
+    ret
 
-PLAYER_FRAME_DATA_WALK_LEFT
-0648: 8C 8E 90 8E 8C 92 94 92
-0650: FF FF FF FF FF FF FF FF
+    dc   10, $FF
 
-PLAYER_MOVE_LEFT
-0658: 3A 10 80    ld   a,($WALK_ANIM_TIMER)
-065B: 3C          inc  a
-065C: E6 07       and  $07
-065E: 32 10 80    ld   ($WALK_ANIM_TIMER),a
-0661: 21 48 06    ld   hl,$PLAYER_FRAME_DATA_WALK_LEFT
-0664: 85          add  a,l
-0665: 6F          ld   l,a
-0666: 7E          ld   a,(hl)
-0667: 32 41 81    ld   ($PLAYER_FRAME),a
-066A: 3C          inc  a
-066B: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-066E: 3A 40 81    ld   a,($PLAYER_X)
-0671: 3D          dec  a        ; move left 3px
-0672: 3D          dec  a
-0673: 3D          dec  a
-0674: 32 40 81    ld   ($PLAYER_X),a
-0677: 32 44 81    ld   ($PLAYER_X_LEGS),a
-067A: 00          nop
-067B: 00          nop
-067C: 00          nop
-067D: C9          ret
+player_frame_data_walk_left:
+    db   $8C,$8E,$90,$8E,$8C,$92,$94,$92
+    dc   8, $FF
 
-067E: FF ...
+player_move_left:
+    ld   a,(walk_anim_timer)
+    inc  a
+    and  $07
+    ld   (walk_anim_timer),a
+    ld   hl,player_frame_data_walk_left
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (player_frame),a
+    inc  a
+    ld   (player_frame_legs),a
+    ld   a,(player_x)
+    dec  a ; move left 3px
+    dec  a
+    dec  a
+    ld   (player_x),a
+    ld   (player_x_legs),a
+    nop
+    nop
+    nop
+    ret
 
-PLAYER_INPUT
-0688: 3A 12 83    ld   a,($TICK_NUM)
-068B: E6 03       and  $03
-068D: C0          ret  nz
-068E: 3A 12 80    ld   a,($PLAYER_DIED)
-0691: A7          and  a
-0692: C0          ret  nz       ; dead, get out
-0693: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
-0696: A7          and  a
-0697: C0          ret  nz       ; don't do this input if jumping?
-0698: 3A 0E 80    ld   a,($CONTROLSN)
-069B: CB 6F       bit  5,a      ; jump pressed? 0010 0000
-069D: 28 17       jr   z,$_NO_JUMP
-069F: CD 10 07    call $SET_UNUSED_804A_49
-06A2: CB 57       bit  2,a      ; not left? 0000 0100
-06A4: 28 04       jr   z,$06AA
-06A6: CD A0 07    call $TRIGGER_JUMP_RIGHT
-06A9: C9          ret
-06AA: CB 5F       bit  3,a      ; not right?
-06AC: 28 04       jr   z,$06B2
-06AE: CD C0 07    call $TRIGGER_JUMP_LEFT
-06B1: C9          ret
-06B2: CD C0 08    call $TRIGGER_JUMP_STRAIGHT_UP
-06B5: C9          ret
-    ;; no jump: left/right?
-_NO_JUMP
-06B6: CB 57       bit  2,a      ; is left?
-06B8: 28 04       jr   z,$06BE
-06BA: CD 58 06    call $PLAYER_MOVE_LEFT
-06BD: C9          ret
-06BE: CB 5F       bit  3,a      ; is right?
-06C0: 28 04       jr   z,$06C6
-06C2: CD 18 06    call $PLAYER_MOVE_RIGHT
-06C5: C9          ret
-    ;; looks like bit 4 and 6 aren't used (up/dpwn?)
-06C6: CB 67       bit  4,a      ;?
-06C8: 28 04       jr   z,$06CE
-06CA: 00          nop
-06CB: 00          nop
-06CC: 00          nop
-06CD: C9          ret
-    ;; bit 6?
-06CE: CB 77       bit  6,a
-06D0: C8          ret  z
-06D1: 00          nop
-06D2: 00          nop
-06D3: 00          nop
-06D4: C9          ret
+    dc   10, $FF
 
-06D5: FF ...
+player_input:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(player_died)
+    and  a
+    ret  nz ; dead, get out
+    ld   a,(jump_tbl_idx)
+    and  a
+    ret  nz ; don't do this input if jumping?
+    ld   a,(controlsn)
+    bit  5,a ; jump pressed? 0010 0000
+    jr   z,_no_jump
+    call set_unused_804a_49
+    bit  2,a ; not left? 0000 0100
+    jr   z,_06AA
+    call trigger_jump_right
+    ret
+_06AA:
+    bit  3,a ; not right?
+    jr   z,_06B2
+    call trigger_jump_left
+    ret
+_06B2:
+    call trigger_jump_straight_up
+    ret
+;; no jump: left/right?
+_no_jump:
+    bit  2,a ; is left?
+    jr   z,_06BE
+    call player_move_left
+    ret
+_06BE:
+    bit  3,a ; is right?
+    jr   z,_06C6
+    call player_move_right
+    ret
+;; looks like bit 4 and 6 aren't used (up/dpwn?)
+_06C6:
+    bit  4,a ; ?
+    jr   z,_06CE
+    nop
+    nop
+    nop
+    ret
+;; bit 6?
+_06CE:
+    bit  6,a
+    ret  z
+    nop
+    nop
+    nop
+    ret
 
-    ;; "Physics": do jumps according to jump lookup tables
-PLAYER_PHYSICS
-06D8: 00          nop
-06D9: 00          nop
-06DA: 00          nop
-06DB: 00          nop
-06DC: 00          nop
-06DD: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
-06E0: 3D          dec  a        ; idx - 1
-06E1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-06E4: CB 27       sla  a        ; * 2
-06E6: CB 27       sla  a        ; * 2 = 4th byte in table row
-06E8: 85          add  a,l
-06E9: 6F          ld   l,a
-06EA: DD 21 40 81 ld   ix,$PLAYER_X
-06EE: 7E          ld   a,(hl)     ; reads from the PHYS_JUMP_LOOKUP_XXX tables
-06EF: DD 86 00    add  a,(ix+$00) ;player x
-06F2: DD 77 00    ld   (ix+$00),a ;player x
-06F5: DD 77 04    ld   (ix+$04),a ;player_x_legs
-06F8: 23          inc  hl
-06F9: 7E          ld   a,(hl)
-06FA: DD 77 01    ld   (ix+$01),a ; frame
-06FD: 23          inc  hl
-06FE: 7E          ld   a,(hl)
-06FF: DD 77 05    ld   (ix+$05),a ; legs frame
-0702: 23          inc  hl
-0703: 7E          ld   a,(hl)
-0704: DD 86 07    add  a,(ix+$07) ; player y legs?
-0707: DD 77 07    ld   (ix+$07),a
-070A: D6 10       sub  $10
-070C: DD 77 03    ld   (ix+$03),a ; player y
-070F: C9          ret
+    dc   3, $FF
 
-    ;; jump pressed, sets these... why?
-    ;; 804a and 8049 never read?
-    ;; wpset 804a,1,r never triggers?
-SET_UNUSED_804A_49
-0710: F5          push af
-0711: 3E A0       ld   a,$A0
-0713: 32 4A 80    ld   ($804A),a
-0716: 3E 0F       ld   a,$0F
-0718: 32 49 80    ld   ($8049),a
-071B: F1          pop  af
-071C: C9          ret
+;; "Physics": do jumps according to jump lookup tables
+player_physics:
+    nop
+    nop
+    nop
+    nop
+    nop
+    ld   a,(jump_tbl_idx)
+    dec  a ; idx - 1
+    ld   (jump_tbl_idx),a
+    sla  a ; * 2
+    sla  a ; * 2 = 4th byte in table row
+    add  a,l
+    ld   l,a
+    ld   ix,player_x
+    ld   a,(hl) ; reads from the PHYS_JUMP_LOOKUP_XXX tables
+    add  a,(ix+$00) ; player x
+    ld   (ix+$00),a ; player x
+    ld   (ix+$04),a ; player_x_legs
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$01),a ; frame
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$05),a ; legs frame
+    inc  hl
+    ld   a,(hl)
+    add  a,(ix+$07) ; player y legs?
+    ld   (ix+$07),a
+    sub  $10
+    ld   (ix+$03),a ; player y
+    ret
 
-071D: FF          rst  $38
-071E: FF          rst  $38
-071F: FF          rst  $38
-0720: 8C          adc  a,h
-0721: 10 FF       djnz $0722
-0723: FF          rst  $38
-0724: FF          rst  $38
-0725: FF          rst  $38
-0726: FF          rst  $38
-0727: FF          rst  $38
+;; jump pressed, sets these... why?
+;; 804a and 8049 never read?
+;; wpset 804a,1,r never triggers?
+set_unused_804a_49:
+    push af
+    ld   a,$A0
+    ld   (_804A),a
+    ld   a,$0F
+    ld   (_8049),a
+    pop  af
+    ret
 
-    ;; x-off, head-anim, leg-anim, yoff
-PHYS_JUMP_LOOKUP_LEFT
-0728: FA 8C 8D 0C
-072C: FA 8E 8F 0C
-0730: FA 90 91 06
-0734: FA 90 96 00
-0738: FA 90 91 FA
-073C: FA 8E 8F F4
-0740: FA 8C 8D F4
+;; wassis?
+    dc   3, $FF
+    db   $8C,$10 ; rando two bytes (addr?)
+    dc   6, $FF
 
-0744: FF ...
+;; x-off, head-anim, leg-anim, yoff
+phys_jump_lookup_left:
+    db   $FA,$8C,$8D,$0C
+    db   $FA,$8E,$8F,$0C
+    db   $FA,$90,$91,$06
+    db   $FA,$90,$96,$00
+    db   $FA,$90,$91,$FA
+    db   $FA,$8E,$8F,$F4
+    db   $FA,$8C,$8D,$F4
 
-    ;; x-off, head-anim, leg-anim, yoff
-PHYS_JUMP_LOOKUP_RIGHT           ; right?
-0750: 06 0C 0D 0C
-0754: 06 0E 0F 0C
-0758: 06 10 11 06
-075C: 06 10 16 00
-0760: 06 10 11 FA
-0764: 06 0E 0F F4
-0768: 06 0C 0D F4
+    dc   12, $FF
 
-076C: FF ...
+;; x-off, head-anim, leg-anim, yoff
+phys_jump_lookup_right:
+    db   $06,$0C,$0D,$0C
+    db   $06,$0E,$0F,$0C
+    db   $06,$10,$11,$06
+    db   $06,$10,$16,$00
+    db   $06,$10,$11,$FA
+    db   $06,$0E,$0F,$F4
+    db   $06,$0C,$0D,$F4
 
-    ;; only runs every "tick_mod_slow" frames
-APPLY_JUMP_PHYSICS
-0774: 3A 16 83    ld   a,($TICK_MOD_SLOW) ; speeds up after round 1
-0777: E6 07       and  $07
-0779: C0          ret  nz
-077A: 3A 12 80    ld   a,($PLAYER_DIED)
-077D: A7          and  a
-077E: C0          ret  nz       ; dead, get out
-077F: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; return if not mid jump tbl
-0782: A7          and  a
-0783: C8          ret  z
-0784: 3E 01       ld   a,$01             ;
-0786: 32 05 80    ld   (JUMP_TRIGGERED),a ; jump was triggererd
-    ;; set the correct jump lookup table based on left, right, or none.
-0789: 3A 0E 80    ld   a,($CONTROLSN)
-078C: CB 57       bit  2,a      ; not left?
-078E: 28 07       jr   z,$PHYS_JUMP_SET_RIGHT_OR_UP_LOOKUP
-0790: 21 28 07    ld   hl,$PHYS_JUMP_SET_LEFT_LOOKUP
-0793: CD D8 06    call $PLAYER_PHYSICS
-0796: C9          ret
-0797: C3 E0 07    jp   $07E0
+    dc   8, $FF
 
-079A: FF ...
+;; only runs every "tick_mod_slow" frames
+apply_jump_physics:
+    ld   a,(tick_mod_slow) ; speeds up after round 1
+    and  $07
+    ret  nz
+    ld   a,(player_died)
+    and  a
+    ret  nz ; dead, get out
+    ld   a,(jump_tbl_idx) ; return if not mid jump tbl
+    and  a
+    ret  z
+    ld   a,$01
+    ld   (jump_triggered),a ; jump was triggererd
+;; set the correct jump lookup table based on left, right, or none.
+    ld   a,(controlsn)
+    bit  2,a ; not left?
+    jr   z,_0797
+    ld   hl,phys_jump_lookup_left
+    call player_physics
+    ret
+_0797:
+    jp   phys_jump_set_right_or_up_lookup
+
+    dc   6, $FF
 
 ;;; jump button, but not jumping, and on ground, right
-TRIGGER_JUMP_RIGHT
-07A0: 3A 05 80    ld   a,(JUMP_TRIGGERED) ; already jumping, leave
-07A3: A7          and  a
-07A4: C0          ret  nz
-07A5: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; already jumping, leave
-07A8: A7          and  a
-07A9: C0          ret  nz       ;
-07AA: CD 88 09    call $GROUND_CHECK
-07AD: A7          and  a
-07AE: C8          ret  z
-07AF: 3E 07       ld   a,$07
-07B1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-07B4: 3E 8C       ld   a,$8C
-07B6: 32 41 81    ld   ($PLAYER_FRAME),a
-07B9: 3E 8D       ld   a,$8D
-07BB: C3 F4 07    jp   $PLAY_JUMP_SFX
-07BE: C9          ret
+trigger_jump_right:
+    ld   a,(jump_triggered) ; already jumping, leave
+    and  a
+    ret  nz
+    ld   a,(jump_tbl_idx) ; already jumping, leave
+    and  a
+    ret  nz
+    call ground_check
+    and  a
+    ret  z
+    ld   a,$07
+    ld   (jump_tbl_idx),a
+    ld   a,$8C
+    ld   (player_frame),a
+    ld   a,$8D
+    jp   play_jump_sfx
+    ret
 
-07BF: FF
+    dc   1, $FF
 
 ;;; jump button, but not jumping, and on ground, left
-TRIGGER_JUMP_LEFT
-07C0: 3A 05 80    ld   a,(JUMP_TRIGGERED) ; already jumping, leave
-07C3: A7          and  a
-07C4: C0          ret  nz
-07C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX) ; already jumping, leave
-07C8: A7          and  a
-07C9: C0          ret  nz
-07CA: CD 88 09    call $GROUND_CHECK
-07CD: A7          and  a
-07CE: C8          ret  z
-07CF: 3E 07       ld   a,$07
-07D1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-07D4: 3E 0C       ld   a,$0C
-07D6: 32 41 81    ld   ($PLAYER_FRAME),a
-07D9: 3E 0D       ld   a,$0D
-07DB: C3 F4 07    jp   $PLAY_JUMP_SFX
-07DE: C9          ret
+trigger_jump_left:
+    ld   a,(jump_triggered) ; already jumping, leave
+    and  a
+    ret  nz
+    ld   a,(jump_tbl_idx) ; already jumping, leave
+    and  a
+    ret  nz
+    call ground_check
+    and  a
+    ret  z
+    ld   a,$07
+    ld   (jump_tbl_idx),a
+    ld   a,$0C
+    ld   (player_frame),a
+    ld   a,$0D
+    jp   play_jump_sfx
+    ret
 
-07DF: FF
+    dc   1, $FF
 
-    ;; Right or no direction checkt
-PHYS_JUMP_SET_RIGHT_OR_UP_LOOKUP
-07E0: CB 5F       bit  3,a      ; right?
-07E2: 28 07       jr   z,$07EB
-07E4: 21 50 07    ld   hl,$PHYS_JUMP_LOOKUP_RIGHT
-07E7: CD D8 06    call $PLAYER_PHYSICS
-07EA: C9          ret
-07EB: 21 48 09    ld   hl,$PHYS_JUMP_LOOKUP_UP ; not left or right?
-07EE: CD D8 06    call $PLAYER_PHYSICS
-07F1: C9          ret
+;; Right or no direction checkt
+phys_jump_set_right_or_up_lookup:
+    bit  3,a ; right?
+    jr   z,_07EB
+    ld   hl,phys_jump_lookup_right
+    call player_physics
+    ret
+_07EB:
+    ld   hl,phys_jump_lookup_up ; not left or right?
+    call player_physics
+    ret
 
-07F2: FF FF
+    dc   2, $FF
 
-PLAY_JUMP_SFX
-07F4: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-07F7: 3E 04       ld   a,$04    ; jump sfx
-07F9: 32 43 80    ld   ($CH2_SFX),a
-07FC: C9          ret
+play_jump_sfx:
+    ld   (player_frame_legs),a
+    ld   a,$04 ; jump sfx
+    ld   (ch2_sfx),a
+    ret
 
-07FD: FF ...
+    dc   3, $FF
 
-    ;; who calls? (free bytes)
-    ;; this looks similar to other DRAW_TILES code, but tile data
-    ;; is indirectly fetched via (bc) addresses.
-    ;; I set a breakpoint here and played a bunch (even cutscene)
-    ;; but could not get it to trigger... not used? debug?
-0800: 01 00 00    ld   bc,$0000
-0803: 00          nop
-0804: 00          nop
-0805: 00          nop
-0806: 00          nop
-0807: 01 3A 00    ld   bc,$003A
-080A: B8          cp   b        ; really?
-    ;;
-080B: 21 40 90    ld   hl,$START_OF_TILES
-080E: C1          pop  bc       ; stack return pointer into bc (ie, data)
-080F: 0A          ld   a,(bc)   ; start_y
-0810: 03          inc  bc
-0811: 85          add  a,l
-0812: 6F          ld   l,a
-0813: 0A          ld   a,(bc)   ; start_x
-0814: 5F          ld   e,a
-0815: 3E 1B       ld   a,$1B
-0817: 93          sub  e
-0818: 5F          ld   e,a
-0819: 16 00       ld   d,$00
-081B: CB 23       sla  e
-081D: CB 23       sla  e
-081F: CB 23       sla  e
-0821: 19          add  hl,de
-0822: 19          add  hl,de
-0823: 19          add  hl,de
-0824: 19          add  hl,de
-0825: 03          inc  bc
-0826: 0A          ld   a,(bc)   ; addr hi byte
-0827: 5F          ld   e,a
-0828: 03          inc  bc
-0829: 0A          ld   a,(bc)   ; addr lo byte
-082A: 57          ld   d,a
-082B: 03          inc  bc
-082C: C5          push bc
-_LP
-082D: 1A          ld   a,(de)   ;
-082E: FE FF       cp   $FF      ; $FF delimited
-0830: C8          ret  z
-0831: 13          inc  de
-0832: 77          ld   (hl),a
-0833: 06 FF       ld   b,$FF
-0835: 0E E0       ld   c,$E0
-0837: 09          add  hl,bc
-0838: 18 F3       jr   $_LP
-083A: FF ...
+;; who calls? (free bytes)
+;; this looks similar to other DRAW_TILES code, but tile data
+;; is indirectly fetched via (bc) addresses.
+;; I set a breakpoint here and played a bunch (even cutscene)
+;; but could not get it to trigger... not used? debug?
+    ld   bc,hard_reset
+    nop
+    nop
+    nop
+    nop
+    db   $01,$3A,$00
+    cp   b ; really?
+;;
+    ld   hl,start_of_tiles
+    pop  bc ; stack return pointer into bc (ie, data)
+    ld   a,(bc) ; start_y
+    inc  bc
+    add  a,l
+    ld   l,a
+    ld   a,(bc) ; start_x
+    ld   e,a
+    ld   a,$1B
+    sub  e
+    ld   e,a
+    ld   d,$00
+    sla  e
+    sla  e
+    sla  e
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    inc  bc
+    ld   a,(bc) ; addr hi byte
+    ld   e,a
+    inc  bc
+    ld   a,(bc) ; addr lo byte
+    ld   d,a
+    inc  bc
+    push bc
+_lp_082D:
+    ld   a,(de)
+    cp   $FF ; $FF delimited
+    ret  z
+    inc  de
+    ld   (hl),a
+    ld   b,$FF
+    ld   c,$E0
+    add  hl,bc
+    jr   _lp_082D
 
-    ;;
-DRAW_SCREEN
-0840: E5          push hl
-0841: D9          exx
-0842: E1          pop  hl
-0843: 54          ld   d,h      ; de = hl
-0844: 5D          ld   e,l
-0845: 21 40 90    ld   hl,$START_OF_TILES
-0848: C1          pop  bc
-0849: 0A          ld   a,(bc)   ;param 1
-084A: 03          inc  bc
-084B: 85          add  a,l
-084C: 6F          ld   l,a
-084D: 0A          ld   a,(bc)   ; param 2
-084E: 03          inc  bc
-084F: C5          push bc
-0850: D5          push de
-0851: 5F          ld   e,a
-0852: 3E 1D       ld   a,$1D
-0854: 93          sub  e
-0855: 5F          ld   e,a
-0856: 16 00       ld   d,$00
-0858: CB 23       sla  e
-085A: CB 23       sla  e
-085C: CB 23       sla  e
-085E: 19          add  hl,de
-085F: 19          add  hl,de
-0860: 19          add  hl,de
-0861: 19          add  hl,de
-0862: D1          pop  de       ; ret ptr
-0863: DD 21 2C 80 ld   ix,$802C
-0867: DD 36 00 20 ld   (ix+$00),$20
-_LP
-086B: 1A          ld   a,(de)   ; ret
-086C: 77          ld   (hl),a
-086D: 13          inc  de       ; ret + 1
-086E: 01 E0 FF    ld   bc,$SCR_LINE_PREV
-0871: DD 35 00    dec  (ix+$00)
-0874: AF          xor  a
-0875: DD BE 00    cp   (ix+$00)
-0878: 28 06       jr   z,$_DONE
-087A: 09          add  hl,bc
-087B: 3A 00 B8    ld   a,($WATCHDOG)
-087E: 18 EB       jr   $_LP
-_DONE
-0880: D9          exx
-0881: C9          ret
-0882: FF ...
+    dc   6, $FF
 
-CLEAR_JUMP_BUTTON
-0888: 3A 0E 80    ld   a,($CONTROLSN)
-088B: CB 6F       bit  5,a      ; jump
-088D: C0          ret  nz
-088E: AF          xor  a
-088F: 32 05 80    ld   (JUMP_TRIGGERED),a
-0892: C9          ret
+;;
+draw_screen:
+    push hl
+    exx
+    pop  hl
+    ld   d,h ; de = hl
+    ld   e,l
+    ld   hl,start_of_tiles
+    pop  bc
+    ld   a,(bc) ; param 1
+    inc  bc
+    add  a,l
+    ld   l,a
+    ld   a,(bc) ; param 2
+    inc  bc
+    push bc
+    push de
+    ld   e,a
+    ld   a,$1D
+    sub  e
+    ld   e,a
+    ld   d,$00
+    sla  e
+    sla  e
+    sla  e
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    pop  de ; ret ptr
+    ld   ix,_802c
+    ld   (ix+$00),$20
+_lp_086B:
+    ld   a,(de) ; ret
+    ld   (hl),a
+    inc  de ; ret + 1
+    ld   bc,scr_line_prev
+    dec  (ix+$00)
+    xor  a
+    cp   (ix+$00)
+    jr   z,_done_0880
+    add  hl,bc
+    ld   a,(watchdog)
+    jr   _lp_086B
+_done_0880:
+    exx
+    ret
 
-0893: FF ...
+    dc   6, $FF
 
-INIT_PLAYER_SPRITE
-0898: 21 40 81    ld   hl,$PLAYER_X
-089B: 36 10       ld   (hl),$10 ; x
-089D: 23          inc  hl
-089E: 36 0C       ld   (hl),$0C ; frame
-08A0: 23          inc  hl
-08A1: 36 12       ld   (hl),$12 ; color
-08A3: 23          inc  hl
-08A4: 36 CE       ld   (hl),$CE ; y
-08A6: 23          inc  hl
-08A7: 36 10       ld   (hl),$10 ; x legs
-08A9: 23          inc  hl
-08AA: 36 0D       ld   (hl),$0D ; frame legs
-08AC: 23          inc  hl
-08AD: 36 12       ld   (hl),$12 ; color legs
-08AF: 23          inc  hl
-08B0: 36 DE       ld   (hl),$DE ; y legs
-08B2: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
-08B5: C9          ret
+clear_jump_button:
+    ld   a,(controlsn)
+    bit  5,a ; jump
+    ret  nz
+    xor  a
+    ld   (jump_triggered),a
+    ret
 
-08B6: FF ...
+    dc   5, $FF
 
-TRIGGER_JUMP_STRAIGHT_UP
-08C0: 3A 05 80    ld   a,(JUMP_TRIGGERED)
-08C3: A7          and  a
-08C4: C0          ret  nz
-08C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
-08C8: A7          and  a
-08C9: C0          ret  nz
-08CA: CD 88 09    call $GROUND_CHECK
-08CD: A7          and  a
-08CE: C8          ret  z
-08CF: 3E 07       ld   a,$07
-08D1: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-08D4: 3E 17       ld   a,$17
-08D6: 32 41 81    ld   ($PLAYER_FRAME),a
-08D9: C3 30 09    jp   $FACE_BACKWARDS_AND_PLAY_JUMP_SFX
+init_player_sprite:
+    ld   hl,player_x
+    ld   (hl),$10 ; x
+    inc  hl
+    ld   (hl),$0C ; frame
+    inc  hl
+    ld   (hl),$12 ; color
+    inc  hl
+    ld   (hl),$CE ; y
+    inc  hl
+    ld   (hl),$10 ; x legs
+    inc  hl
+    ld   (hl),$0D ; frame legs
+    inc  hl
+    ld   (hl),$12 ; color legs
+    inc  hl
+    ld   (hl),$DE ; y legs
+    call init_player_pos_for_screen
+    ret
 
-08DC: FF ...
+    dc   10, $FF
 
-MOVE_BONGO_RIGHT
-08E8: 3A 12 83    ld   a,($TICK_NUM)
-08EB: E6 07       and  $07
-08ED: 20 15       jr   nz,$0904
-08EF: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
-08F2: 3C          inc  a
-08F3: E6 03       and  $03
-08F5: 00          nop
-08F6: 00          nop
-08F7: 00          nop
-08F8: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
-08FB: 21 18 09    ld   hl,$BONGO_LOOKUP3
-08FE: 85          add  a,l
-08FF: 6F          ld   l,a
-0900: 7E          ld   a,(hl)
-0901: 32 49 81    ld   ($BONGO_FRAME),a
-0904: 3A 12 83    ld   a,($TICK_NUM)
-0907: E6 01       and  $01
-0909: C0          ret  nz
-090A: 3A 48 81    ld   a,($BONGO_X)
-090D: 3C          inc  a
-090E: 32 48 81    ld   ($BONGO_X),a
-0911: C9          ret
+trigger_jump_straight_up:
+    ld   a,(jump_triggered)
+    and  a
+    ret  nz
+    ld   a,(jump_tbl_idx)
+    and  a
+    ret  nz
+    call ground_check
+    and  a
+    ret  z
+    ld   a,$07
+    ld   (jump_tbl_idx),a
+    ld   a,$17
+    ld   (player_frame),a
+    jp   face_backwards_and_play_jump_sfx
 
-0912: FF ...
+    dc   12, $FF
 
-BONGO_LOOKUP3
-0918: 29 2A 2B 2A FF FF FF FF
-0920: A9 AA AB AA FF FF FF FF
-0928: FF FF FF FF FF FF FF FF
+move_bongo_right:
+    ld   a,(tick_num)
+    and  $07
+    jr   nz,_0904
+    ld   a,(bongo_anim_timer)
+    inc  a
+    and  $03
+    nop
+    nop
+    nop
+    ld   (bongo_anim_timer),a
+    ld   hl,bongo_lookup3
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (bongo_frame),a
+_0904:
+    ld   a,(tick_num)
+    and  $01
+    ret  nz
+    ld   a,(bongo_x)
+    inc  a
+    ld   (bongo_x),a
+    ret
 
-FACE_BACKWARDS_AND_PLAY_JUMP_SFX
-0930: 3E 18       ld   a,$18
-0932: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-0935: 3E 04       ld   a,$04
-0937: 32 43 80    ld   ($CH2_SFX),a
-093A: C9          ret
+    dc   6, $FF
 
-093B: FF ...
+bongo_lookup3:
+    db   $29,$2A,$2B,$2A,$FF,$FF,$FF,$FF
+    db   $A9,$AA,$AB,$AA,$FF,$FF,$FF,$FF
 
-    ;; jumping straight up
-    ;; x-off, head-anim, leg-anim, yoff
-PHYS_JUMP_LOOKUP_UP
-0948: 00 17 18 0C
-094C: 00 19 1A 0C
-0950: 00 1B 1C 06
-0954: 00 9B 9C 00
-0958: 00 99 9A FA               ; -6
-095C: 00 97 98 F4               ; -12
-0960: 00 17 18 F4               ; -12
+    dc   8, $FF
 
-0964: FF ...
+face_backwards_and_play_jump_sfx:
+    ld   a,$18
+    ld   (player_frame_legs),a
+    ld   a,$04
+    ld   (ch2_sfx),a
+    ret
 
-    ;; Get tile from x/y
-    ;; in: h = x, l = y
-    ;; out: hl = screen addr of tile
-GET_TILE_ADDR_FROM_XY
-0968: 45          ld   b,l
-0969: AF          xor  a
-096A: 94          sub  h
-096B: E6 F8       and  $F8
-096D: 6F          ld   l,a
-096E: 26 00       ld   h,$00
-0970: 29          add  hl,hl
-0971: 29          add  hl,hl
-0972: 3E 90       ld   a,$90
-0974: 84          add  a,h
-0975: 67          ld   h,a
-0976: 78          ld   a,b
-0977: CB 3F       srl  a
-0979: CB 3F       srl  a
-097B: CB 3F       srl  a
-097D: 85          add  a,l
-097E: 6F          ld   l,a
-097F: C9          ret
+    dc   13, $FF
 
-0980: FF ...
+;; jumping straight up
+;; x-off, head-anim, leg-anim, yoff
+phys_jump_lookup_up:
+    db   $00,$17,$18,$0C
+    db   $00,$19,$1A,$0C
+    db   $00,$1B,$1C,$06
+    db   $00,$9B,$9C,$00
+    db   $00,$99,$9A,$FA  ; -6
+    db   $00,$97,$98,$F4  ; -12
+    db   $00,$17,$18,$F4  ; -12
 
-;;; ground check?
-GROUND_CHECK
-0988: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-098B: C6 10       add  a,$10    ; +  16   : the ground
-098D: CB 3F       srl  a        ; /  2
-098F: CB 3F       srl  a        ; /  2
-0991: E6 FE       and  $FE      ; &  1111 1110
-0993: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-0996: 85          add  a,l
-0997: 6F          ld   l,a
-0998: 3A 44 81    ld   a,($PLAYER_X_LEGS)
-099B: 96          sub  (hl)
-099C: C6 08       add  a,$08    ; offset of 8
-099E: 67          ld   h,a
-099F: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-09A2: C6 10       add  a,$10
-09A4: 6F          ld   l,a
-09A5: CD 68 09    call $GET_TILE_ADDR_FROM_XY
+    dc   4, $FF
 
-09A8: 7E          ld   a,(hl)
-09A9: E6 F8       and  $TILE_SOLID
-09AB: FE F8       cp   $TILE_SOLID
-09AD: 28 02       jr   z,$09B1
-09AF: AF          xor  a        ; walkable tile
-09B0: C9          ret
-09B1: 3E 01       ld   a,$01    ; solid tile
-09B3: C9          ret
+;; Get tile from x/y
+;; in: h = x, l = y
+;; out: hl = screen addr of tile
+get_tile_addr_from_xy:
+    ld   b,l
+    xor  a
+    sub  h
+    and  $F8
+    ld   l,a
+    ld   h,$00
+    add  hl,hl
+    add  hl,hl
+    ld   a,$90
+    add  a,h
+    ld   h,a
+    ld   a,b
+    srl  a
+    srl  a
+    srl  a
+    add  a,l
+    ld   l,a
+    ret
 
-09B4: FF ...
+    dc   8, $FF
 
-CHECK_IF_LANDED_ON_GROUND       ; only when big fall?
-09C0: 3A 12 80    ld   a,($PLAYER_DIED)
-09C3: A7          and  a
-09C4: C0          ret  nz       ; dead, get out
-09C5: 3A 0F 80    ld   a,($JUMP_TBL_IDX)
-09C8: A7          and  a
-09C9: 28 1B       jr   z,$_JUMP_TBL_IDX_0
-09CB: E6 0C       and  $0C      ; 1100 (only last 3 entries are falling)
-09CD: C0          ret  nz       ; not falling, leave
-09CE: CD 88 09    call $GROUND_CHECK
-09D1: A7          and  a
-09D2: C8          ret  z        ; ret if in air?
-09D3: AF          xor  a        ; clear jump_tbl_idx
-09D4: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-09D7: 3A 41 81    ld   a,($PLAYER_FRAME)
-09DA: E6 80       and  $80      ; set/clear face-left bit
-09DC: C6 0C       add  a,$0C    ; reset to first frame
-09DE: 32 41 81    ld   ($PLAYER_FRAME),a ;
-09E1: 3C          inc  a
-09E2: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-09E5: C9          ret
-_JUMP_TBLE_IDX_0
-09E6: CD 88 09    call $GROUND_CHECK
-09E9: A7          and  a
-09EA: 20 0B       jr   nz,$_ON_GROUND
-09EC: 3A 11 80    ld   a,($FALLING_TIMER)
-09EF: A7          and  a
-09F0: C0          ret  nz
-09F1: 3E 10       ld   a,$10    ; start falling timer
-09F3: 32 11 80    ld   ($FALLING_TIMER),a
-09F6: C9          ret
-_ON_GROUND
-09F7: AF          xor  a        ; reset
-09F8: 32 11 80    ld   ($FALLING_TIMER),a
-09FB: CD 68 0A    call $SNAP_Y_TO_8
-09FE: C9          ret
+;;; ground check
+ground_check:
+    ld   a,(player_y_legs)
+    add  a,$10 ; +  16   : the ground
+    srl  a ; /  2
+    srl  a ; /  2
+    and  $FE ; &  1111 1110
+    ld   hl,screen_xoff_col
+    add  a,l
+    ld   l,a
+    ld   a,(player_x_legs)
+    sub  (hl)
+    add  a,$08 ; offset of 8
+    ld   h,a
+    ld   a,(player_y_legs)
+    add  a,$10
+    ld   l,a
+    call get_tile_addr_from_xy
 
-09FF: FF ...
+    ld   a,(hl)
+    and  tile_solid
+    cp   tile_solid
+    jr   z,_09B1
+    xor  a ; walkable tile
+    ret
+_09B1:
+    ld   a,$01 ; solid tile
+    ret
 
-MOVE_BONGO_LEFT
-0A08: 3A 12 83    ld   a,($TICK_NUM)
-0A0B: E6 07       and  $07
-0A0D: 20 15       jr   nz,$0A24
-0A0F: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
-0A12: 3C          inc  a
-0A13: E6 03       and  $03
-0A15: 00          nop
-0A16: 00          nop
-0A17: 00          nop
-0A18: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
-0A1B: 21 20 09    ld   hl,$BONGO_LOOKUP3 + 8
-0A1E: 85          add  a,l
-0A1F: 6F          ld   l,a
-0A20: 7E          ld   a,(hl)
-0A21: 32 49 81    ld   ($BONGO_FRAME),a
-0A24: 3A 12 83    ld   a,($TICK_NUM)
-0A27: E6 01       and  $01
-0A29: C0          ret  nz
-0A2A: 3A 48 81    ld   a,($BONGO_X)
-0A2D: 3D          dec  a
-0A2E: 32 48 81    ld   ($BONGO_X),a
-0A31: C9          ret
-0A32: FF          rst  $38
+    dc   12, $FF
 
-KILL_PLAYER
-0A33: 00          nop  ; weee, nopslide
-0A34: 00          nop
-0A35: 00          nop
-0A36: 00          nop
-0A37: 00          nop
-0A38: 3E 01       ld   a,$01
-0A3A: 32 12 80    ld   ($PLAYER_DIED),a
-0A3D: C9          ret
+check_if_landed_on_ground:      ; only when big fall?
+    ld   a,(player_died)
+    and  a
+    ret  nz ; dead, get out
+    ld   a,(jump_tbl_idx)
+    and  a
+    jr   z,_jump_tble_idx_0
+    and  $0C ; 1100 (only last 3 entries are falling)
+    ret  nz ; not falling, leave
+    call ground_check
+    and  a
+    ret  z ; ret if in air?
+    xor  a ; clear jump_tbl_idx
+    ld   (jump_tbl_idx),a
+    ld   a,(player_frame)
+    and  $80 ; set/clear face-left bit
+    add  a,$0C ; reset to first frame
+    ld   (player_frame),a
+    inc  a
+    ld   (player_frame_legs),a
+    ret
+_jump_tble_idx_0:
+    call ground_check
+    and  a
+    jr   nz,_on_ground
+    ld   a,(falling_timer)
+    and  a
+    ret  nz
+    ld   a,$10 ; start falling timer
+    ld   (falling_timer),a
+    ret
+_on_ground:
+    xor  a ; reset
+    ld   (falling_timer),a
+    call snap_y_to_8
+    ret
 
-0A3E: FF FF
+    dc   9, $FF
 
-    ;; There's a bug in level one/two: if you jump of the
-    ;; edge of level one, and hold jump... it bashes invisible
-    ;; head barrier at the start of level two and dies.
-    ;; (because of falling timer here).
-ADD_GRAVITY_AND_CHECK_BIG_FALL
-0A40: 3A 11 80    ld   a,($FALLING_TIMER) ; did we fall too far?
-0A43: A7          and  a
-0A44: C8          ret  z
-0A45: 3D          dec  a
-0A46: 32 11 80    ld   ($FALLING_TIMER),a
-0A49: A7          and  a
-0A4A: 20 04       jr   nz,$0A50
-0A4C: CD 33 0A    call $KILL_PLAYER ; yep.
-0A4F: C9          ret
-    ;; Ok, what's this... "gravity"? always pushing down 2
-0A50: 3A 43 81    ld   a,($PLAYER_Y)
-0A53: 3C          inc  a             ; Why? Looks suspicious - related to bug?
-0A54: 3C          inc  a             ; force to ground I think
-0A55: 32 43 81    ld   ($PLAYER_Y),a
-0A58: C6 10       add  a,$10
-0A5A: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-0A5D: C9          ret
+move_bongo_left:
+    ld   a,(tick_num)
+    and  $07
+    jr   nz,_0A24
+    ld   a,(bongo_anim_timer)
+    inc  a
+    and  $03
+    nop
+    nop
+    nop
+    ld   (bongo_anim_timer),a
+    ld   hl,$0920
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (bongo_frame),a
+_0A24:
+    ld   a,(tick_num)
+    and  $01
+    ret  nz
+    ld   a,(bongo_x)
+    dec  a
+    ld   (bongo_x),a
+    ret
 
-0A5E: FF ...
+    db   $FF
 
-SNAP_Y_TO_8
-0A68: 3A 43 81    ld   a,($PLAYER_Y)
-0A6B: E6 F8       and  $F8      ; 1111 1000
-0A6D: 32 43 81    ld   ($PLAYER_Y),a
-0A70: C6 10       add  a,$10
-0A72: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-0A75: C9          ret
+kill_player:
+    nop ; weee, nopslide
+    nop
+    nop
+    nop
+    nop
+    ld   a,$01
+    ld   (player_died),a
+    ret
 
-0A76: FF ...
+    dc   2, $FF
 
-CHECK_HEAD_HIT_TILE
-0A80: 3A 12 80    ld   a,($PLAYER_DIED)
-0A83: A7          and  a
-0A84: C0          ret  nz       ; player dead, get outta here
-0A85: 3A 43 81    ld   a,($PLAYER_Y)
-0A88: C6 01       add  a,$01
-0A8A: CB 3F       srl  a
-0A8C: CB 3F       srl  a
-0A8E: E6 FE       and  $FE
-0A90: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-0A93: 85          add  a,l
-0A94: 6F          ld   l,a
-0A95: 3A 40 81    ld   a,($PLAYER_X)
-0A98: 96          sub  (hl)
-0A99: C6 08       add  a,$08
-0A9B: 67          ld   h,a
-0A9C: 3A 43 81    ld   a,($PLAYER_Y)
-0A9F: C6 01       add  a,$01
-0AA1: 6F          ld   l,a
-0AA2: CD 68 09    call $GET_TILE_ADDR_FROM_XY
-0AA5: 7E          ld   a,(hl)
-0AA6: E6 C0       and  $C0      ; 1100 0000
-0AA8: FE C0       cp   $C0      ; whats a C0 tile?
-0AAA: C0          ret  nz
-0AAB: CD B8 0A    call $FALL_UNDER_A_LEDGE
-0AAE: C9          ret
+;; There's a bug in level one/two: if you jump of the
+;; edge of level one, and hold jump... it bashes invisible
+;; head barrier at the start of level two and dies.
+;; (because of falling timer here).
+add_gravity_and_check_big_fall:
+    ld   a,(falling_timer) ; did we fall too far?
+    and  a
+    ret  z
+    dec  a
+    ld   (falling_timer),a
+    and  a
+    jr   nz,_ok_to_fall
+    call kill_player ; yep.
+    ret
+_ok_to_fall:
+    ld   a,(player_y)
+    inc  a ; Why +2? gravity?
+    inc  a ; force to ground I think
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    ret
 
-0AAF: FF ...
+    dc   10, $FF
 
-FALL_UNDER_A_LEDGE
-0AB8: 3A 11 80    ld   a,($FALLING_TIMER)
-0ABB: A7          and  a
-0ABC: C0          ret  nz       ; falling? Get outta here
-0ABD: AF          xor  a
-0ABE: 32 0F 80    ld   ($JUMP_TBL_IDX),a ; clear jump idx
-0AC1: 3E 08       ld   a,$08
-0AC3: 32 11 80    ld   ($FALLING_TIMER),a ; set low fall
-0AC6: CD A0 13    call $WAIT_VBLANK
-0AC9: CD A0 13    call $WAIT_VBLANK
-0ACC: C9          ret
+;; TODO: figure out what this does to gameplay.
+;; what if it was removed?
+;; (Is this why it "snaps upwards" on my fake platform in nTn?)
+snap_y_to_8:
+    ld   a,(player_y)
+    and  $F8 ; 1111 1000
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    ret
 
-0ACD: FF FF FF
+    dc   10, $FF
 
-SET_LEVEL_PLATFORM_XOFFS
-0AD0: 3A 04 80    ld   a,($PLAYER_NUM)
-0AD3: A7          and  a
-0AD4: 20 05       jr   nz,$0ADB ;p2?
-0AD6: 3A 29 80    ld   a,($SCREEN_NUM)
-0AD9: 18 03       jr   $0ADE
-0ADB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-0ADE: 3D          dec  a        ; scr - 1
-0ADF: 21 00 0B    ld   hl,$PLATFORM_SCROLL_DATA_ADDR
-0AE2: CB 27       sla  a        ; scr - 1 * 2
-0AE4: 85          add  a,l
-0AE5: 6F          ld   l,a
-0AE6: 4E          ld   c,(hl)
-0AE7: 23          inc  hl
-0AE8: 46          ld   b,(hl)
-0AE9: 21 80 81    ld   hl,$PLATFORM_XOFFS
-0AEC: 16 23       ld   d,$23
-0AEE: 0A          ld   a,(bc)
-0AEF: 77          ld   (hl),a
-0AF0: 03          inc  bc
-0AF1: 23          inc  hl
-0AF2: 15          dec  d
-0AF3: 20 F9       jr   nz,$0AEE
-0AF5: CD 98 18    call $RESET_XOFFS
-0AF8: C9          ret
+check_head_hit_tile:
+    ld   a,(player_died)
+    and  a
+    ret  nz ; player dead, get outta here
+    ld   a,(player_y)
+    add  a,$01
+    srl  a
+    srl  a
+    and  $FE
+    ld   hl,screen_xoff_col
+    add  a,l
+    ld   l,a
+    ld   a,(player_x)
+    sub  (hl)
+    add  a,$08
+    ld   h,a
+    ld   a,(player_y)
+    add  a,$01
+    ld   l,a
+    call get_tile_addr_from_xy
+    ld   a,(hl)
+    and  $C0 ; 1100 0000
+    cp   $C0 ; whats a C0 tile?
+    ret  nz
+    call fall_under_a_ledge
+    ret
 
-0AF9: FF ...
+    dc   9, $FF
+
+fall_under_a_ledge:
+    ld   a,(falling_timer)
+    and  a
+    ret  nz ; falling? Get outta here
+    xor  a
+    ld   (jump_tbl_idx),a ; clear jump idx
+    ld   a,$08
+    ld   (falling_timer),a ; set low fall
+    call wait_vblank
+    call wait_vblank
+    ret
+
+    dc   3, $FF
+
+set_level_platform_xoffs:
+    ld   a,(player_num)
+    and  a
+    jr   nz,_0ADB ; p2?
+    ld   a,(screen_num)
+    jr   _0ADE
+_0ADB:
+    ld   a,(screen_num_p2)
+_0ADE:
+    dec  a ; scr - 1
+    ld   hl,platform_scroll_data_addr
+    sla  a ; scr - 1 * 2
+    add  a,l
+    ld   l,a
+    ld   c,(hl)
+    inc  hl
+    ld   b,(hl)
+    ld   hl,platform_xoffs
+    ld   d,$23
+_0AEE:
+    ld   a,(bc)
+    ld   (hl),a
+    inc  bc
+    inc  hl
+    dec  d
+    jr   nz,_0AEE
+    call reset_xoffs
+    ret
+
+    dc   7, $FF
 
 ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
-PLATFORM_SCROLL_DATA_ADDR
-0B00: $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B0A: $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B12: $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B1A: $38,$0C,$38,$0C,$38,$0C,$10,$0C ; 16 is $10
-0B22: $38,$0C,$38,$0C,$10,$0C,$38,$0C ; 19 is $10
-0B2A: $38,$0C,$38,$0C,$38,$0C,$38,$0C
-0B32: $38,$0C,$38,$0C,$10,$0C ; 27 is $10.... all S levels.
+platform_scroll_data_addr:
+    db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+    db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+    db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+    db $38,$0C,$38,$0C,$38,$0C,$10,$0C
+    db $38,$0C,$38,$0C,$10,$0C,$38,$0C
+    db $38,$0C,$38,$0C,$38,$0C,$38,$0C
+    db $38,$0C,$38,$0C,$10,$0C
 
-0B36: 00 ...
-0B7C: FF ...
+;; 70 zeros/nops. That's a lotta nops. (free bytes?)
+    dc 70,$0
 
-MOVE_MOVING_PLATFORM
-0B80: DD 7E 01    ld   a,(ix+$01) ;$PLATFORM_XOFFS+1
-0B83: DD 77 03    ld   (ix+$03),a
-0B86: DD CB 02 46 bit  0,(ix+$02)
-0B8A: 20 0A       jr   nz,$0B96
-0B8C: FD 34 00    inc  (iy+$00) ; move right
-0B8F: FD 34 02    inc  (iy+$02)
-0B92: FD 34 04    inc  (iy+$04)
-0B95: C9          ret
-0B96: FD 35 00    dec  (iy+$00) ; move left
-0B99: FD 35 02    dec  (iy+$02)
-0B9C: FD 35 04    dec  (iy+$04)
-0B9F: C9          ret
+    dc   4, $FF
 
-RESET_DINO_COUNTER
-0BA0: AF          xor  a
-0BA1: 32 2D 80    ld   ($DINO_COUNTER),a
-0BA4: C9          ret
-0BA5: FF ...
+move_moving_platform:
+    ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
+    ld   (ix+$03),a
+    bit  0,(ix+$02)
+    jr   nz,_0B96
+    inc  (iy+$00) ; move right
+    inc  (iy+$02)
+    inc  (iy+$04)
+    ret
+_0B96:
+    dec  (iy+$00) ; move left
+    dec  (iy+$02)
+    dec  (iy+$04)
+    ret
 
-MOVING_PLATFORMS
-0BB0: DD 21 80 81 ld   ix,$PLATFORM_XOFFS
-0BB4: FD 21 38 81 ld   iy,$SCREEN_XOFF_COL+38
-0BB8: 16 09       ld   d,$09    ; loop 9 times
-0BBA: DD 7E 01    ld   a,(ix+$01) ; xoff + 1
-0BBD: A7          and  a
-0BBE: 28 26       jr   z,$0BE6
-0BC0: DD 7E 02    ld   a,(ix+$02) ; xoff + 2
-0BC3: E6 FE       and  $FE
-0BC5: 20 0F       jr   nz,$0BD6
-0BC7: DD 7E 00    ld   a,(ix+$00) ; xoff
-0BCA: E6 FE       and  $FE
-0BCC: DD 86 02    add  a,(ix+$02) ; xoff + 2
-0BCF: EE 01       xor  $01
-0BD1: DD 77 02    ld   (ix+$02),a ; xoff + 2
-0BD4: 18 06       jr   $0BDC
-0BD6: DD 35 02    dec  (ix+$02)
-0BD9: DD 35 02    dec  (ix+$02)
-0BDC: DD 7E 03    ld   a,(ix+$03) ; xoff + 3
-0BDF: A7          and  a
-0BE0: CC 80 0B    call z,$MOVE_MOVING_PLATFORM
-0BE3: DD 35 03    dec  (ix+$03)
-0BE6: FD 2B       dec  iy
-0BE8: FD 2B       dec  iy
-0BEA: FD 2B       dec  iy
-0BEC: FD 2B       dec  iy
-0BEE: FD 2B       dec  iy
-0BF0: FD 2B       dec  iy
-0BF2: DD 23       inc  ix
-0BF4: DD 23       inc  ix
-0BF6: DD 23       inc  ix
-0BF8: DD 23       inc  ix
-0BFA: 15          dec  d
-0BFB: 20 BD       jr   nz,$0BBA
-0BFD: C9          ret
+reset_dino_counter:
+    xor  a
+    ld   (dino_counter),a
+    ret
 
-0BFE: FF ...
+    dc   11, $FF
+
+moving_platforms:
+    ld   ix,platform_xoffs
+    ld   iy,_8138
+    ld   d,$09 ; loop 9 times
+_0BBA:
+    ld   a,(ix+$01) ; xoff + 1
+    and  a
+    jr   z,_0BE6
+    ld   a,(ix+$02) ; xoff + 2
+    and  $FE
+    jr   nz,_0BD6
+    ld   a,(ix+$00) ; xoff
+    and  $FE
+    add  a,(ix+$02) ; xoff + 2
+    xor  $01
+    ld   (ix+$02),a ; xoff + 2
+    jr   _0BDC
+_0BD6:
+    dec  (ix+$02)
+    dec  (ix+$02)
+_0BDC:
+    ld   a,(ix+$03) ; xoff + 3
+    and  a
+    call z,move_moving_platform
+    dec  (ix+$03)
+_0BE6:
+    dec  iy
+    dec  iy
+    dec  iy
+    dec  iy
+    dec  iy
+    dec  iy
+    inc  ix
+    inc  ix
+    inc  ix
+    inc  ix
+    dec  d
+    jr   nz,_0BBA
+    ret
+
+    dc   18, $FF
 
 platform_moving_data: ; All "S" levels.
-0C10: $00,$00,$00,$00
-0C14: $00,$00,$00,$00
-0C18: $00,$00,$00,$00
-0C1C: $F0,$03,$80,$03
-0C20: $00,$00,$00,$00
-0C24: $00,$00,$00,$00
-0C28: $00,$00,$00,$00
-0C2C: $00,$00,$00,$00
-0C30: $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $F0,$03,$80,$03
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
 
-0C34: FF          rst  $38
-0C35: FF          rst  $38
-0C36: FF          rst  $38
-0C37: FF          rst  $38
+    dc   4, $FF
 
-platform_static_data ; All non-"S" levels.
-0C38: 00,$00,$00,$00
-0C3C: 00,$00,$00,$00
-0C40: 00,$00,$00,$00
-0C44: 00,$00,$00,$00
-0C48: 00,$00,$00,$00
-0C4C: 00,$00,$00,$00
-0C50: 00,$00,$00,$00
-0C54: 00,$00,$00,$00
-0C58: 00,$00,$00,$00
+platform_static_data: ; All non-"S" levels.
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $00,$00,$00,$00
 
-0C5C: FF          rst  $38
-0C5D: FF          rst  $38
-0C5E: FF          rst  $38
-0C5F: FF          rst  $38
+    dc   4, $FF
 
-ANIMATE_PLAYER_TO_GROUND_IF_DEAD
-0C60: 3A 12 80    ld   a,($PLAYER_DIED)
-0C63: A7          and  a
-0C64: C8          ret  z        ; player still alive... leave.
-_LOOP
-0C65: CD A0 13    call $WAIT_VBLANK
-0C68: 3A 43 81    ld   a,($PLAYER_Y) ; push player towards ground
-0C6B: 3C          inc  a
-0C6C: 3C          inc  a
-0C6D: 3C          inc  a
-0C6E: 32 43 81    ld   ($PLAYER_Y),a
-0C71: C6 10       add  a,$10
-0C73: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-0C76: 37          scf
-0C77: 3F          ccf
-0C78: C6 10       add  a,$10
-0C7A: 38 12       jr   c,$0C8E  ; deaded.
-0C7C: 3A 40 81    ld   a,($PLAYER_X)
-0C7F: 67          ld   h,a
-0C80: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-0C83: C6 20       add  a,$20
-0C85: 6F          ld   l,a
-0C86: CD 68 09    call $GET_TILE_ADDR_FROM_XY
-0C89: 7E          ld   a,(hl)
-0C8A: FE 10       cp   $TILE_BLANK ; are we still in the air?
-0C8C: 28 D7       jr   z,$_LOOP    ; keep falling
-0C8E: CD C0 0C    call $DO_DEATH_SEQUENCE
-0C91: AF          xor  a
-0C92: 32 12 80    ld   ($PLAYER_DIED),a ; clear died
-0C95: CD 20 02    call $POST_DEATH_RESET
-0C98: C9          ret
+animate_player_to_ground_if_dead:
+    ld   a,(player_died)
+    and  a
+    ret  z ; player still alive... leave.
+_loop:
+    call wait_vblank
+    ld   a,(player_y) ; push player towards ground
+    inc  a
+    inc  a
+    inc  a
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    scf
+    ccf
+    add  a,$10
+    jr   c,_0C8E ; deaded.
+    ld   a,(player_x)
+    ld   h,a
+    ld   a,(player_y_legs)
+    add  a,$20
+    ld   l,a
+    call get_tile_addr_from_xy
+    ld   a,(hl)
+    cp   tile_blank ; are we still in the air?
+    jr   z,_loop ; keep falling
+_0C8E:
+    call do_death_sequence
+    xor  a
+    ld   (player_died),a ; clear died
+    call post_death_reset
+    ret
 
-0C99: FF ...
+    dc   7, $FF
 
-DELAY_8_VBLANKS
-0CA0: 1E 08       ld   e,$08
-0CA2: CD A0 13    call $WAIT_VBLANK
-0CA5: 1D          dec  e
-0CA6: 20 FA       jr   nz,$0CA2
-0CA8: C9          ret
-0CA9: FF ...
+delay_8_vblanks:
+    ld   e,$08
+_0CA2:
+    call wait_vblank
+    dec  e
+    jr   nz,_0CA2
+    ret
 
-BONGO_JUMP_ON_PLAYER_DEATH
-0CB0: 1E 03       ld   e,$03    ; jumps 3 times
-0CB2: CD 30 0D    call $START_BONGO_JUMP
-0CB5: CD 60 0D    call $START_BONGO_JUMP ; why twice? Checks before re-setting
-0CB8: CD A0 13    call $WAIT_VBLANK      ; (is this blocking?)
-0CBB: 1D          dec  e
-0CBC: 20 F4       jr   nz,$0CB2
-0CBE: C9          ret
-0CBF: FF
+    dc   7, $FF
 
-DO_DEATH_SEQUENCE
-0CC0: 3E 02       ld   a,$02
-0CC2: 32 42 80    ld   ($CH1_SFX),a
-0CC5: 32 65 80    ld   ($SFX_PREV),a
-0CC8: CD A0 0B    call $RESET_DINO_COUNTER
-0CCB: CD 14 0D    call $_DONE_IF_ZERO
-0CCE: CD A0 0C    call $DELAY_8_VBLANKS
-0CD1: 3E 26       ld   a,$26
-0CD3: 32 41 81    ld   ($PLAYER_FRAME),a
-0CD6: 3E 27       ld   a,$27
-0CD8: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-0CDB: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-0CDE: 32 43 81    ld   ($PLAYER_Y),a
-0CE1: 3A 40 81    ld   a,($PLAYER_X)
-0CE4: D6 10       sub  $10
-0CE6: 32 40 81    ld   ($PLAYER_X),a
-0CE9: CD A0 0C    call $DELAY_8_VBLANKS
-0CEC: 3A 40 81    ld   a,($PLAYER_X)
-0CEF: C6 08       add  a,$08
-0CF1: 32 5C 81    ld   ($ENEMY_3_X),a
-0CF4: 3E 28       ld   a,$28
-0CF6: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-0CF9: 3E 11       ld   a,$11
-0CFB: 32 5E 81    ld   ($ENEMY_3_COL),a
-0CFE: 3A 43 81    ld   a,($PLAYER_Y)
-0D01: D6 10       sub  $10
-0D03: 32 5F 81    ld   ($ENEMY_3_Y),a
-0D06: 16 28       ld   d,$28
-_LP
-0D08: CD B0 0C    call $BONGO_JUMP_ON_PLAYER_DEATH
-0D0B: 3A 5F 81    ld   a,($ENEMY_3_Y)
-0D0E: 3D          dec  a
-0D0F: 3D          dec  a
-0D10: 32 5F 81    ld   ($ENEMY_3_Y),a
-0D13: 15          dec  d
-_DONE_IF_ZERO
-0D14: 20 F2       jr   nz,$_LP
-0D16: C9          ret
+bongo_jump_on_player_death:
+    ld   e,$03 ; jumps 3 times
+_0CB2:
+    call start_bongo_jump
+    call jump_bongo ; why twice? Checks before re-setting
+    call wait_vblank ; (is this blocking?)
+    dec  e
+    jr   nz,_0CB2
+    ret
 
-    ;; who calls?
-MOVE_PLAYER_TOWARDS_GROUND_FOR_A_WHILE
-0D17: 16 08       ld   d,$08    ; 8 frames
-0D19: 3A 43 81    ld   a,($PLAYER_Y)
-0D1C: 3C          inc  a
-0D1D: 3C          inc  a
-0D1E: 3C          inc  a
-0D1F: 32 43 81    ld   ($PLAYER_Y),a
-0D22: C6 10       add  a,$10
-0D24: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-0D27: CD A0 13    call $WAIT_VBLANK
-0D2A: 15          dec  d
-0D2B: 20 EC       jr   nz,$0D19
-0D2D: C9          ret
+    dc   1, $FF
 
-0D2E: FF ...
+do_death_sequence:
+    ld   a,$02
+    ld   (ch1_sfx),a
+    ld   (sfx_prev),a
+    call reset_dino_counter
+    call _done_if_zero
+    call delay_8_vblanks
+    ld   a,$26
+    ld   (player_frame),a
+    ld   a,$27
+    ld   (player_frame_legs),a
+    ld   a,(player_y_legs)
+    ld   (player_y),a
+    ld   a,(player_x)
+    sub  $10
+    ld   (player_x),a
+    call delay_8_vblanks
+    ld   a,(player_x)
+    add  a,$08
+    ld   (enemy_3_x),a
+    ld   a,$28
+    ld   (enemy_3_frame),a
+    ld   a,$11
+    ld   (enemy_3_col),a
+    ld   a,(player_y)
+    sub  $10
+    ld   (enemy_3_y),a
+    ld   d,$28
+_lp_0D08:
+    call bongo_jump_on_player_death
+    ld   a,(enemy_3_y)
+    dec  a
+    dec  a
+    ld   (enemy_3_y),a
+    dec  d
+_done_if_zero:
+    jr   nz,_lp_0D08
+    ret
 
-START_BONGO_JUMP
-0D30: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
-0D33: A7          and  a
-0D34: C0          ret  nz
-0D35: 3E 10       ld   a,$10
-0D37: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
-0D3A: C9          ret
+;; who calls?
+move_player_towards_ground_for_a_while:
+    ld   d,$08 ; 8 frames
+_0D19:
+    ld   a,(player_y)
+    inc  a
+    inc  a
+    inc  a
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    call wait_vblank
+    dec  d
+    jr   nz,_0D19
+    ret
 
-0D3B: FF ...
+    dc   2, $FF
 
-    ;; Oooh, mystery function - commented out.
-    ;; Think it was going to place Bongo on the
-    ;; bottom right for levels where player is
-    ;; up top. Only looks correct for those levels.
-MOVE_BONGO_REDACTED
-0D40: C9          ret           ; just rets.
-0D41: 3A 48 81    ld   a,($BONGO_X)
-0D44: 67          ld   h,a
-0D45: 32 4B 81    ld   ($BONGO_Y),a
-0D48: C6 10       add  a,$10
-0D4A: 6F          ld   l,a
-0D4B: CD 68 09    call $GET_TILE_ADDR_FROM_XY
-0D4E: 7E          ld   a,(hl)
-0D4F: 37          scf
-0D50: 3F          ccf
-0D51: D6 C0       sub  $C0
-0D53: D8          ret  c
-0D54: AF          xor  a
-0D55: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
-0D58: C9          ret
+start_bongo_jump:
+    ld   a,(bongo_jump_timer)
+    and  a
+    ret  nz
+    ld   a,$10
+    ld   (bongo_jump_timer),a
+    ret
 
-0D59: FF ...
+    dc   5, $FF
 
-JUMP_BONGO
-0D60: CD 40 0D    call $MOVE_BONGO_REDACTED ; also called from UPDATE_EVERYTHING
-0D63: 3A 24 80    ld   a,($BONGO_JUMP_TIMER)
-0D66: A7          and  a
-0D67: C8          ret  z
-0D68: 3D          dec  a
-0D69: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
-0D6C: E6 08       and  $08
-0D6E: 28 09       jr   z,$0D79
-0D70: 3A 4B 81    ld   a,($BONGO_Y)
-0D73: 3D          dec  a
-0D74: 3D          dec  a
-0D75: 32 4B 81    ld   ($BONGO_Y),a
-0D78: C9          ret
-0D79: 3A 4B 81    ld   a,($BONGO_Y)
-0D7C: 3C          inc  a
-0D7D: 3C          inc  a
-0D7E: 32 4B 81    ld   ($BONGO_Y),a
-0D81: C9          ret
+;; Oooh, mystery function - commented out.
+;; Think it was going to place Bongo on the
+;; bottom right for levels where player is
+;; up top. Only looks correct for those levels.
+move_bongo_redacted:
+    ret ; just rets.
+    ld   a,(bongo_x)
+    ld   h,a
+    ld   (bongo_y),a
+    add  a,$10
+    ld   l,a
+    call get_tile_addr_from_xy
+    ld   a,(hl)
+    scf
+    ccf
+    sub  $C0
+    ret  c
+    xor  a
+    ld   (bongo_jump_timer),a
+    ret
 
-0D82: FF ...
+    dc   7, $FF
 
-ON_THE_SPOT_BONGO    ; animate on the spot (no left/right)
-0D88: 3A 12 83    ld   a,($TICK_NUM)
-0D8B: E6 07       and  $07
-0D8D: C0          ret  nz
-0D8E: 3A 23 80    ld   a,($BONGO_ANIM_TIMER)
-0D91: 3C          inc  a
-0D92: E6 03       and  $03
-0D94: 00          nop
-0D95: 00          nop
-0D96: 00          nop
-0D97: 32 23 80    ld   ($BONGO_ANIM_TIMER),a
-0D9A: 21 B0 0D    ld   hl,$0DB0
-0D9D: 85          add  a,l
-0D9E: 6F          ld   l,a
-0D9F: 7E          ld   a,(hl)
-0DA0: 32 49 81    ld   ($BONGO_X),a
-0DA3: C9          ret
+jump_bongo:
+    call move_bongo_redacted ; also called from UPDATE_EVERYTHING
+    ld   a,(bongo_jump_timer)
+    and  a
+    ret  z
+    dec  a
+    ld   (bongo_jump_timer),a
+    and  $08
+    jr   z,_0D79
+    ld   a,(bongo_y)
+    dec  a
+    dec  a
+    ld   (bongo_y),a
+    ret
+_0D79:
+    ld   a,(bongo_y)
+    inc  a
+    inc  a
+    ld   (bongo_y),a
+    ret
 
-0DA4: FF ...
+    dc   6, $FF
 
-    ;; wat
-0DB0: 05 06 07 08 FF FF FF FF
+on_the_spot_bongo:   ; animate on the spot (no left/right)
+    ld   a,(tick_num)
+    and  $07
+    ret  nz
+    ld   a,(bongo_anim_timer)
+    inc  a
+    and  $03
+    nop
+    nop
+    nop
+    ld   (bongo_anim_timer),a
+    ld   hl,$0DB0
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (bongo_frame),a
+    ret
 
-DRAW_BONGO
-0DB8: AF          xor  a
-0DB9: 32 24 80    ld   ($BONGO_JUMP_TIMER),a
-0DBC: 32 25 80    ld   ($BONGO_DIR_FLAG),a
-0DBF: 32 27 80    ld   ($BONGO_TIMER),a
-0DC2: 3A 04 80    ld   a,($PLAYER_NUM)
-0DC5: A7          and  a
-0DC6: 20 05       jr   nz,$0DCD
-0DC8: 3A 29 80    ld   a,($SCREEN_NUM)
-0DCB: 18 03       jr   $0DD0
-0DCD: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-0DD0: 3D          dec  a
-0DD1: CB 27       sla  a
-0DD3: 21 00 0E    ld   hl,$BONGO_LOOKUP2
-0DD6: 85          add  a,l
-0DD7: 6F          ld   l,a
-0DD8: 7E          ld   a,(hl)
-0DD9: 32 48 81    ld   ($BONGO_X),a
-0DDC: 23          inc  hl
-0DDD: 7E          ld   a,(hl)
-0DDE: 32 4B 81    ld   ($BONGO_Y),a
-0DE1: 3E 12       ld   a,$12
-0DE3: 32 4A 81    ld   ($BONGO_COL),a
-0DE6: 3E 05       ld   a,$05
-0DE8: 32 49 81    ld   ($BONGO_FRAME),a
-0DEB: C9          ret
+    dc   12, $FF
 
-0DEC: FF ...
+;; wat
+    db   $05,$06,$07,$08,$FF,$FF,$FF,$FF
 
-BONGO_LOOKUP2
-0E00: E0 38 E0 38 E0 38 E0 38
-0E08: E0 38 E0 38 E0 38 E0 38
-0E10: E0 38 E0 38 E0 38 E0 38
-0E18: E0 38 E0 38 E0 38 D0 38
-0E20: E0 38 E0 38 D0 38 E0 38
-0E28: E0 38 E0 38 E0 38 E0 38
-0E30: E0 38 E0 38 D0 38 00 00
-0E38: 00 00 00 00 00 00 FF FF
+draw_bongo:
+    xor  a
+    ld   (bongo_jump_timer),a
+    ld   (bongo_dir_flag),a
+    ld   (bongo_timer),a
+    ld   a,(player_num)
+    and  a
+    jr   nz,_0DCD
+    ld   a,(screen_num)
+    jr   _0DD0
+_0DCD:
+    ld   a,(screen_num_p2)
+_0DD0:
+    dec  a
+    sla  a
+    ld   hl,bongo_lookup2
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (bongo_x),a
+    inc  hl
+    ld   a,(hl)
+    ld   (bongo_y),a
+    ld   a,$12
+    ld   (bongo_col),a
+    ld   a,$05
+    ld   (bongo_frame),a
+    ret
 
-BONGO_MOVE_AND_ANIMATE
-0E40: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
-0E43: E6 03       and  $03      ;left or right
-0E45: 20 05       jr   nz,$0E4C
-0E47: CD 88 0D    call $ON_THE_SPOT_BONGO
-0E4A: 18 0C       jr   $0E58
-0E4C: FE 01       cp   $01
-0E4E: 20 05       jr   nz,$_LEFT
-_RIGHT
-0E50: CD E8 08    call $MOVE_BONGO_RIGHT
-0E53: 18 03       jr   $0E58
-_LEFT
-0E55: CD 08 0A    call $MOVE_BONGO_LEFT
-0E58: 3A 25 80    ld   a,($BONGO_DIR_FLAG)
-0E5B: CB 57       bit  2,a      ; jump
-0E5D: C8          ret  z
-0E5E: CD 30 0D    call $START_BONGO_JUMP
-0E61: C9          ret
+    dc   20, $FF
 
-0E62: FF ...
+bongo_lookup2:
+    db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+    db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+    db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+    db   $E0,$38,$E0,$38,$E0,$38,$D0,$38
+    db   $E0,$38,$E0,$38,$D0,$38,$E0,$38
+    db   $E0,$38,$E0,$38,$E0,$38,$E0,$38
+    db   $E0,$38,$E0,$38,$D0,$38,$00,$00
+    db   $00,$00,$00,$00,$00,$00,$FF,$FF
 
-BONGO_ANIMATE_PER_SCREEN
-0E70: 3A 12 83    ld   a,($TICK_NUM)
-0E73: E6 07       and  $07
-0E75: C0          ret  nz
-0E76: 3A 04 80    ld   a,($PLAYER_NUM)
-0E79: A7          and  a
-0E7A: 20 05       jr   nz,$0E81
-0E7C: 3A 29 80    ld   a,($SCREEN_NUM)
-0E7F: 18 03       jr   $0E84
-0E81: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-0E84: 47          ld   b,a
-0E85: CD 30 0F    call $BONGO_RUN_WHEN_PLAYER_CLOSE
-0E88: 78          ld   a,b
-0E89: 3D          dec  a        ; scr #
-0E8A: CB 27       sla  a        ; * 2
-0E8C: 21 C0 0E    ld   hl,$BONGO_ANIM_LOOKUP
-0E8F: 85          add  a,l
-0E90: 6F          ld   l,a
-0E91: 4E          ld   c,(hl)
-0E92: 23          inc  hl
-0E93: 46          ld   b,(hl)
-0E94: C5          push bc
-0E95: E1          pop  hl
-0E96: 3A 27 80    ld   a,($BONGO_TIMER)
-0E99: 3C          inc  a
-0E9A: FE 20       cp   $20      ; timer hit top, reset
-0E9C: 20 01       jr   nz,$0E9F
-0E9E: AF          xor  a
-0E9F: 32 27 80    ld   ($BONGO_TIMER),a
-0EA2: 85          add  a,l
-0EA3: 6F          ld   l,a
-0EA4: 7E          ld   a,(hl)   ; animation lookup
-0EA5: 32 25 80    ld   ($BONGO_DIR_FLAG),a
-0EA8: C9          ret
+bongo_move_and_animate:
+    ld   a,(bongo_dir_flag)
+    and  $03 ; left or right
+    jr   nz,_0E4C
+    call on_the_spot_bongo
+    jr   _0E58
+_0E4C:
+    cp   $01
+    jr   nz,_left
+_right:
+    call move_bongo_right
+    jr   _0E58
+_left:
+    call move_bongo_left
+_0E58:
+    ld   a,(bongo_dir_flag)
+    bit  2,a ; jump
+    ret  z
+    call start_bongo_jump
+    ret
 
-0EA9: FF ...
+    dc   14, $FF
 
-    ;; addr lookup: 2 bytes per screen, points to BONGO_ANIM_DATA
-BONGO_ANIM_LOOKUP
-0EC0: 08 0F 08 0F 68 0F 08 0F
-0EC8: 08 0F 68 0F 08 0F 08 0F
-0ED0: 68 0F 08 0F 68 0F 08 0F
-0ED8: 08 0F 68 0F 08 0F 08 0F
-0EE0: 08 0F 08 0F 08 0F 08 0F
-0EE8: 68 0F 68 0F 08 0F 68 0F
-0EF0: 68 0F 08 0F 08 0F
-0EF6: 00 ...
-0F00: FF ...
+bongo_animate_per_screen:
+    ld   a,(tick_num)
+    and  $07
+    ret  nz
+    ld   a,(player_num)
+    and  a
+    jr   nz,_0E81
+    ld   a,(screen_num)
+    jr   _0E84
+_0E81:
+    ld   a,(screen_num_p2)
+_0E84:
+    ld   b,a
+    call bongo_run_when_player_close
+    ld   a,b
+    dec  a ; scr #
+    sla  a ; * 2
+    ld   hl,bongo_anim_lookup
+    add  a,l
+    ld   l,a
+    ld   c,(hl)
+    inc  hl
+    ld   b,(hl)
+    push bc
+    pop  hl
+    ld   a,(bongo_timer)
+    inc  a
+    cp   $20 ; timer hit top, reset
+    jr   nz,_0E9F
+    xor  a
+_0E9F:
+    ld   (bongo_timer),a
+    add  a,l
+    ld   l,a
+    ld   a,(hl) ; animation lookup
+    ld   (bongo_dir_flag),a
+    ret
 
-    ;; this looks like bongo anim data
-    ;; 4 = jump | 2 = left | 1 = right
-BONGO_ANIM_DATA
-0F08: 01 01 01 01 06 05 02 02
-0F10: 02 02 04 00 00 00 00 00
-0F18: 00 04 02 02 02 02 05 06
-0F20: 01 01 01 01 00 00 00 00
+    dc   23, $FF
 
-0F28: FF ...
+;; addr lookup: 2 bytes per screen, points to BONGO_ANIM_DATA
+bongo_anim_lookup:
+    db   $08,$0F,$08,$0F,$68,$0F,$08,$0F
+    db   $08,$0F,$68,$0F,$08,$0F,$08,$0F
+    db   $68,$0F,$08,$0F,$68,$0F,$08,$0F
+    db   $08,$0F,$68,$0F,$08,$0F,$08,$0F
+    db   $08,$0F,$08,$0F,$08,$0F,$08,$0F
+    db   $68,$0F,$68,$0F,$08,$0F,$68,$0F
+    db   $68,$0F,$08,$0F,$08,$0F
 
-    ;;
-BONGO_RUN_WHEN_PLAYER_CLOSE
-0F30: 3A 48 81    ld   a,($BONGO_X)
-0F33: 37          scf
-0F34: 3F          ccf
-0F35: C6 08       add  a,$08
-0F37: 30 0B       jr   nc,$0F44
-0F39: AF          xor  a
-0F3A: 32 25 80    ld   ($BONGO_DIR_FLAG),a ; stop moving
-0F3D: 3E FF       ld   a,$FF
-0F3F: 32 48 81    ld   ($BONGO_X),a
-0F42: E1          pop  hl
-0F43: C9          ret
-0F44: 3A 43 81    ld   a,($PLAYER_Y)
-0F47: 37          scf
-0F48: 3F          ccf
-0F49: D6 60       sub  $60
-0F4B: 38 01       jr   c,$0F4E
-0F4D: C9          ret
-0F4E: 3A 40 81    ld   a,($PLAYER_X)
-0F51: 37          scf
-0F52: 3F          ccf
-0F53: C6 70       add  a,$70
-0F55: D0          ret  nc
-0F56: 3E 01       ld   a,$01    ; right
-0F58: 32 25 80    ld   ($BONGO_DIR_FLAG),a
-0F5B: E1          pop  hl
-0F5C: C9          ret
-0F5D: FF ...
+    dc   10, $00
+    dc   8, $FF
 
-    ;; 32 bytes of something
-0F68: 00          nop
-0F69: 00          nop
-0F6A: 00          nop
-0F6B: 00          nop
-0F6C: 04          inc  b
-0F6D: 00          nop
-0F6E: 00          nop
-0F6F: 00          nop
-0F70: 04          inc  b
-0F71: 00          nop
-0F72: 00          nop
-0F73: 00          nop
-0F74: 04          inc  b
-0F75: 00          nop
-0F76: 00          nop
-0F77: 00          nop
-0F78: 00          nop
-0F79: 00          nop
-0F7A: 00          nop
-0F7B: 00          nop
-0F7C: 04          inc  b
-0F7D: 00          nop
-0F7E: 00          nop
-0F7F: 00          nop
-0F80: 04          inc  b
-0F81: 00          nop
-0F82: 00          nop
-0F83: 00          nop
-0F84: 04          inc  b
-0F85: 00          nop
-0F86: 00          nop
-0F87: 00          nop
+;; this looks like bongo anim data
+;; 4 = jump | 2 = left | 1 = right
+bongo_anim_data:
+    db   $01,$01,$01,$01,$06,$05,$02,$02
+    db   $02,$02,$04,$00,$00,$00,$00,$00
+    db   $00,$04,$02,$02,$02,$02,$05,$06
+    db   $01,$01,$01,$01,$00,$00,$00,$00
 
-DRAW_BORDER_1
-    ;;  intro inside border top
-0F88: CD 10 03    call $DRAW_TILES_H
-0F8B: 02 02
-0F8D: E0 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7 E7
-0F8D: E7 E7 E7 E7 E7 E7 E7 DF FF
-    ;; intro inside border right
-0FA6: CD D8 3B    call $DRAW_TILES_V_COPY
-0FA9: 02 03
-0FAB: E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6 E6
-0FBB: E6 E6 E6 E6 E6 E6 E6 E6 FF
-0FC4: C3 D6 1B    jp   $DRAW_BORDER_1_B
-0FC7: FF ...
+    dc   8, $FF
 
-0FD1: 0F          rrca
-0FD2: FF ...
-0FDD: 0F          rrca
-0FDE: FF ...
+;;
+bongo_run_when_player_close:
+    ld   a,(bongo_x)
+    scf
+    ccf
+    add  a,$08
+    jr   nc,_0F44
+    xor  a
+    ld   (bongo_dir_flag),a ; stop moving
+    ld   a,$FF
+    ld   (bongo_x),a
+    pop  hl
+    ret
+_0F44:
+    ld   a,(player_y)
+    scf
+    ccf
+    sub  $60
+    jr   c,_0F4E
+    ret
+_0F4E:
+    ld   a,(player_x)
+    scf
+    ccf
+    add  a,$70
+    ret  nc
+    ld   a,$01 ; right
+    ld   (bongo_dir_flag),a
+    pop  hl
+    ret
 
-HEADER_TEXT_DATA
-0FE0: 10 10 10 10 20 1C 01 10 10 10 10 ; PL1
-0FEB: 18 19 17 18 2B 23 13 1F 22 15 10 ; HIGH-SCORE
-0FF6: 10 10 10 20 1C 02 10 10 10 FF    ; PL2
+    dc   11, $FF
+
+;; 32 bytes of something...
+    db   $00,$00,$00,$00
+    db   $04,$00,$00,$00
+    db   $04,$00,$00,$00
+    db   $04,$00,$00,$00
+    db   $00,$00,$00,$00
+    db   $04,$00,$00,$00
+    db   $04,$00,$00,$00
+    db   $04,$00,$00,$00
+
+draw_border_1:
+;;  intro inside border top
+    call draw_tiles_h
+    db   $02, $02
+    db   $E0,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
+    db   $E7,$E7,$E7,$E7,$E7,$E7,$E7,$DF,$FF
+
+;; intro inside border right
+    call draw_tiles_v_copy
+    db   $02, $03
+    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6
+    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$FF
+
+    jp   draw_border_1_b
+
+;; couple of $0Fs in a sea of $FFs
+    dc   10, $FF
+    rrca
+    dc   11, $FF
+    rrca
+    dc   2, $FF
+
+header_text_data:
+    db   $10,$10,$10,$10,$20,$1C,$01,$10,$10,$10,$10 ; PL1
+    db   $18,$19,$17,$18,$2B,$23,$13,$1F,$22,$15,$10 ; HIGH-SCORE
+    db   $10,$10,$10,$20,$1C,$02,$10,$10,$10,$FF    ; PL2
 
 ;;; === END OF BG1.BIN, START OF BG2.BIN =======
 
-    ;; Reset then run main loop.
-    ;; Happens after death and new round
-BIG_RESET
-1000: 3E 50       ld   a,$50
-1002: 32 1B 80    ld   ($_UNUSED_1),a ; never read?
-1005: AF          xor  a
-1006: 32 0E 80    ld   ($CONTROLSN),a
-1009: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-100C: 32 12 80    ld   ($PLAYER_DIED),a
-100F: 32 11 80    ld   ($FALLING_TIMER),a
-1012: 32 51 80    ld   ($IS_HIT_CAGE),a
-1015: 32 60 80    ld   ($BONUSES),a
-1018: 32 62 80    ld   ($BONUS_MULT),a
-101B: 3E 20       ld   a,$20
-101D: 32 30 80    ld   ($PLAYER_MAX_X),a
-1020: CD 80 1B    call $INIT_SCORE_AND_SCREEN_ONCE
-1023: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-1026: 21 E0 0F    ld   hl,$HEADER_TEXT_DATA ; loaded by DRAW_SCREEN
-1029: CD 40 08    call $DRAW_SCREEN
-102C: 00          nop
-102D: 00          nop
-102E: CD D0 16    call $DRAW_BONUS
-1031: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
-1034: CD 50 24    call $DRAW_SCORE
-1037: CD A0 03    call $DRAW_LIVES
-103A: CD 98 08    call $INIT_PLAYER_SPRITE
-103D: CD B8 12    call $DRAW_BACKGROUND
-1040: CD D0 0A    call $SET_LEVEL_PLATFORM_XOFFS
-1043: CD B8 0D    call $DRAW_BONGO
-1046: 3E 02       ld   a,$02    ; bottom row is red
-1048: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a
+;; Reset then run main loop.
+;; Happens after death and new round
+big_reset:
+    ld   a,$50
+    ld   (_unused_1),a ; never read?
+    xor  a
+    ld   (controlsn),a
+    ld   (jump_tbl_idx),a
+    ld   (player_died),a
+    ld   (falling_timer),a
+    ld   (is_hit_cage),a
+    ld   (bonuses),a
+    ld   (bonus_mult),a
+    ld   a,$20
+    ld   (player_max_x),a
+    call init_score_and_screen_once
+    call reset_xoff_sprites_and_clear_screen
+    ld   hl,header_text_data ; loaded by DRAW_SCREEN
+    call draw_screen
+    nop
+    nop
+    call draw_bonus
+    call copy_hiscore_name_to_screen_2
+    call draw_score
+    call draw_lives
+    call init_player_sprite
+    call draw_background
+    call set_level_platform_xoffs
+    call draw_bongo
+    ld   a,$02 ; bottom row is red
+    ld   (_813F),a
 ;;; falls through to main loop:
 
 ;;; =========================================
-MAIN_LOOP
-104B: CD E0 10    call $SET_TICK_MOD_3_AND_ADD_SCORE
-104E: CD 30 11    call $UPDATE_SCREEN_TILE_ANIMATIONS
-1051: CD 70 11    call $UPDATE_EVERYTHING ; Main logic
-1054: CD A0 13    call $WAIT_VBLANK
-1057: 3A 00 B8    ld   a,($WATCHDOG)    ; why load? ack?
-105A: 3A 00 40    ld   a,($INT_HANDLER) ; why load?
-105D: 18 EC       jr   $MAIN_LOOP
+main_loop:
+    call set_tick_mod_3_and_add_score
+    call update_screen_tile_animations
+    call update_everything ; Main logic
+    call wait_vblank
+    ld   a,(watchdog) ; why load? ack?
+    ld   a,(int_handler) ; why load?
+    jr   main_loop
 
-105F: FF          rst  $38
-1060: F0          ret  p
-1061: FF ...
+    rst  $38
+    ret  p
+
+    dc   15, $FF
+
 ;;; =========================================
 
 ;;;  Extra life
-EXTRA_LIFE
-1070: 3A 04 80    ld   a,($PLAYER_NUM)
-1073: A7          and  a
-1074: 20 04       jr   nz,$107A
-1076: CD 80 10    call $_P1_EXTRA_LIFE
-1079: C9          ret
-107A: CD A8 10    call $_P2_EXTRA_LIFE
-107D: C9          ret
-107E: FF FF
-    ;; P1 extra life
-_P1_EXTRA_LIFE
-1080: 3A 70 80    ld   a,($EXTRA_GOT_P1)
-1083: A7          and  a
-1084: C0          ret  nz
-1085: 3A 15 80    ld   a,($P1_SCORE+1)
-1088: 37          scf
-1089: 3F          ccf
-108A: D6 15       sub  $15      ; bonus at ??
-108C: D8          ret  c
-108D: 3E 01       ld   a,$01
-108F: 32 70 80    ld   ($EXTRA_GOT_P1),a
-1092: 3A 32 80    ld   a,($LIVES) ; Bonus life
-1095: 3C          inc  a
-1096: 32 32 80    ld   ($LIVES),a
-1099: CD A0 03    call $DRAW_LIVES
-109C: 3E 08       ld   a,$08
-109E: 32 44 80    ld   ($SFX_ID),a
-10A1: C9          ret
-10A2: FF ...
-    ;; P2 extra life
-_P2_EXTRA_LIFE
-10A8: 3A 71 80    ld   a,($EXTRA_GOT_P2)
-10AB: A7          and  a
-10AC: C0          ret  nz
-10AD: 3A 18 80    ld   a,($P2_SCORE+1)
-10B0: 37          scf
-10B1: 3F          ccf
-10B2: D6 15       sub  $15
-10B4: D8          ret  c
-10B5: 3E 01       ld   a,$01
-10B7: 32 71 80    ld   ($EXTRA_GOT_P2),a
-10BA: 3A 33 80    ld   a,($LIVES_P2) ; bonus life p2
-10BD: 3C          inc  a
-10BE: 32 33 80    ld   ($LIVES_P2),a
-10C1: CD A0 03    call $DRAW_LIVES
-10C4: 3E 08       ld   a,$08
-10C6: 32 44 80    ld   ($SFX_ID),a
-10C9: C9          ret
+extra_life:
+    ld   a,(player_num)
+    and  a
+    jr   nz,_107A
+    call _p1_extra_life
+    ret
+_107A:
+    call _p2_extra_life
+    ret
 
-10CA: FF ...
+    dc   2, $FF
 
-SET_TICK_MOD_3_AND_ADD_SCORE
-10E0: 3A 00 80    ld   a,($TICK_MOD_3)
-10E3: 3C          inc  a
-10E4: FE 03       cp   $03
-10E6: 20 01       jr   nz,$10E9
-10E8: AF          xor  a        ; reset a
-10E9: 32 00 80    ld   ($TICK_MOD_3),a
-10EC: CB 27       sla  a        ; (tick % 3) * 4
-10EE: CB 27       sla  a
-10F0: CD 90 13    call $JUMP_REL_A ; do one of the three funcs
-_ADD_SCORE
-10F3: CD 00 17    call $ADD_SCORE
-10F6: C9          ret
-_EXTRA_LIFE
-10F7: CD 70 10    call $EXTRA_LIFE
-10FA: C9          ret
-_DINO_COLLISION
-10FB: CD 18 25    call $TEST_THEN_DINO_COLLISION
-10FE: C9          ret
+;; P1 extra life
+_p1_extra_life:
+    ld   a,(extra_got_p1)
+    and  a
+    ret  nz
+    ld   a,(p1_score_1)
+    scf
+    ccf
+    sub  $15 ; bonus at ??
+    ret  c
+    ld   a,$01
+    ld   (extra_got_p1),a
+    ld   a,(lives) ; Bonus life
+    inc  a
+    ld   (lives),a
+    call draw_lives
+    ld   a,$08
+    ld   (sfx_id),a
+    ret
 
-10FF: FF
+    dc   6, $FF
 
-    ;; Ticks the main ticks and speed timers
-TICK_TICKS                      ;
-1100: 3A 12 83    ld   a,($TICK_NUM)
-1103: 3C          inc  a
-1104: 32 12 83    ld   ($TICK_NUM),a ; only place tick_num is set
-1107: CD 80 16    call $UPDATE_SPEED_TIMERS
-110A: C9          ret
+;; P2 extra life
+_p2_extra_life:
+    ld   a,(extra_got_p2)
+    and  a
+    ret  nz
+    ld   a,(p2_score_1)
+    scf
+    ccf
+    sub  $15
+    ret  c
+    ld   a,$01
+    ld   (extra_got_p2),a
+    ld   a,(lives_p2) ; bonus life p2
+    inc  a
+    ld   (lives_p2),a
+    call draw_lives
+    ld   a,$08
+    ld   (sfx_id),a
+    ret
 
-110B: FF ...
+    dc   22, $FF
 
-    ;; ?? is it about dino?
-MYSTERY_8066_FN
-1110: F5          push af
-1111: E5          push hl
-1112: 21 66 80    ld   hl,$8066
-1115: AF          xor  a        ; cp: If A == N, then Z flag is set
-1116: BE          cp   (hl)     ; state == 0?
-1117: 20 08       jr   nz,$1121 ; no, off to AND
-1119: 23          inc  hl       ; yep, what about $8067
-111A: BE          cp   (hl)     ; == 0?
-111B: 20 04       jr   nz,$1121
-111D: 23          inc  hl       ; yep, what about $8068
-111E: BE          cp   (hl)     ; == 0?
-111F: 28 05       jr   z,$1126  ; no, all zero - don't load
-1121: 7E          ld   a,(hl)   ; ...first non-zero
-1122: 36 00       ld   (hl),$00
-1124: C6 18       add  a,$18    ; 0001 1000
-1126: E6 7F       and  $7F      ; 0111 1111
-1128: 00          nop
-1129: 00          nop
-112A: E1          pop  hl
-112B: F1          pop  af
-112C: C9          ret
+set_tick_mod_3_and_add_score:
+    ld   a,(tick_mod_3)
+    inc  a
+    cp   $03
+    jr   nz,_10E9
+    xor  a ; reset a
+_10E9:
+    ld   (tick_mod_3),a
+    sla  a ; (tick % 3) * 4
+    sla  a
+    call jump_rel_a ; do one of the three funcs
+_add_score:
+    call add_score
+    ret
+_extra_life:
+    call extra_life
+    ret
+_dino_collision:
+    call test_then_dino_collision
+    ret
 
-112D: FF ...
+    db   $FF
 
-    ;;
-UPDATE_SCREEN_TILE_ANIMATIONS
-1130: 3A 01 80    ld   a,($TICK_MOD_6) ; set tick % 6
-1133: 3C          inc  a
-1134: FE 06       cp   $06
-1136: 20 01       jr   nz,$1139
-1138: AF          xor  a
-1139: 32 01 80    ld   ($TICK_MOD_6),a
-113C: CB 27       sla  a        ; tick * 2
-113E: CB 27       sla  a        ; tick * 4
-1140: CD 90 13    call $JUMP_REL_A ; anims one-in6-times
-1143: CD 02 3C    call $SCREEN_TILE_ANIMATIONS ; a = 0
-1146: C9          ret
-1147: 00          nop           ; a = 1
-1148: 00          nop
-1149: 00          nop
-114A: C9          ret
-114B: 00          nop           ; a = 2
-114C: 00          nop
-114D: 00          nop
-114E: C9          ret
-114F: 00          nop           ; a = 3
-1150: 00          nop
-1151: 00          nop
-1152: C9          ret
-1153: 00          nop           ; a = 4
-1154: 00          nop
-1155: 00          nop
-1156: C9          ret
-1157: 00          nop           ; a = 5
-1158: 00          nop
-1159: 00          nop
-115A: C9          ret
-115B: 00          nop           ; a = 6
-115C: 00          nop
-115D: 00          nop
-115E: C9          ret
+;; Ticks the main ticks and speed timers
+tick_ticks:                     ;
+    ld   a,(tick_num)
+    inc  a
+    ld   (tick_num),a ; only place tick_num is set
+    call update_speed_timers
+    ret
 
-115F: FF ...
+    dc   5, $FF
 
-UPDATE_EVERYTHING
-1170: CD 04 1A    call $CHECK_EXIT_STAGE_LEFT
-1173: CD D0 13    call $UPDATE_TIME_TIMER
-1176: CD D0 05    call $NORMALIZE_INPUT
-1179: CD 88 06    call $PLAYER_INPUT
-117C: CD 74 07    call $APPLY_JUMP_PHYSICS ; tick_mod_slow
-117F: CD 40 0A    call $ADD_GRAVITY_AND_CHECK_BIG_FALL
-1182: CD 60 0C    call $ANIMATE_PLAYER_TO_GROUND_IF_DEAD
-1185: CD C0 09    call $CHECK_IF_LANDED_ON_GROUND
-1188: CD 80 0A    call $CHECK_HEAD_HIT_TILE
-118B: CD B0 0B    call $MOVING_PLATFORMS
-118E: CD 00 12    call $PLAYER_POS_UPDATE
-1191: CD 90 12    call $PREVENT_CLOUD_JUMP_REDACTED
-1194: CD 50 17    call $CHECK_DONE_SCREEN
-1197: CD 88 08    call $CLEAR_JUMP_BUTTON
-119A: CD 60 0D    call $JUMP_BONGO
-119D: CD 40 0D    call $MOVE_BONGO_REDACTED
-11A0: CD 40 0E    call $BONGO_MOVE_AND_ANIMATE
-11A3: CD 70 0E    call $BONGO_ANIMATE_PER_SCREEN
-11A6: CD F0 19    call $CHECK_FALL_OFF_BOTTOM_SCR
-11A9: CD BA 04    call $CHECK_DINO_TIMER
-11AC: CD 50 2B    call $UPDATE_ENEMIES
-11AF: CD A8 3B    call $PLAYER_ENEMIES_COLLISION
-11B2: 21 20 00    ld   hl,$0020
-11B5: CD E3 01    call $JMP_HL_PLUS_4K ; $UPDATE_EVERYTHING_MORE
-11B8: C9          ret
+;; ?? is it about dino?
+mystery_8066_fn:
+    push af
+    push hl
+    ld   hl,_8066
+    xor  a ; cp: If A == N, then Z flag is set
+    cp   (hl) ; state == 0?
+    jr   nz,_1121 ; no, off to AND
+    inc  hl ; yep, what about _8067
+    cp   (hl) ; == 0?
+    jr   nz,_1121
+    inc  hl ; yep, what about _8068
+    cp   (hl) ; == 0?
+    jr   z,_1126 ; no, all zero - don't load
+_1121:
+    ld   a,(hl) ; ...first non-zero
+    ld   (hl),$00
+    add  a,$18 ; 0001 1000
+_1126:
+    and  $7F ; 0111 1111
+    nop
+    nop
+    pop  hl
+    pop  af
+    ret
 
-11B9: FF ...
+    dc   3, $FF
 
-WRAP_OTHER_SPEARS_LEFT
-11C0: 3A 58 81    ld   a,($ENEMY_2_X)
-11C3: FE 70       cp   $70
-11C5: 28 14       jr   z,$11DB
-11C7: FE 71       cp   $71
-11C9: 28 10       jr   z,$11DB
-11CB: FE 72       cp   $72
-11CD: 28 0C       jr   z,$11DB
-11CF: FE 73       cp   $73
-11D1: 28 08       jr   z,$11DB
-11D3: FE 74       cp   $74
-11D5: 28 04       jr   z,$11DB
-11D7: FE 00       cp   $00
-11D9: 20 03       jr   nz,$11DE
-11DB: CD 60 39    call $SET_SPEAR_LEFT_MIDDLE
-    ;;
-11DE: 3A 5C 81    ld   a,($ENEMY_3_X)
-11E1: FE 60       cp   $60
-11E3: 28 14       jr   z,$11F9
-11E5: FE 61       cp   $61
-11E7: 28 10       jr   z,$11F9
-11E9: FE 62       cp   $62
-11EB: 28 0C       jr   z,$11F9
-11ED: FE 63       cp   $63
-11EF: 28 08       jr   z,$11F9
-11F1: FE 64       cp   $64
-11F3: 28 04       jr   z,$11F9
-11F5: FE 00       cp   $00
-11F7: 20 03       jr   nz,$11FC
-11F9: CD 88 39    call $SET_SPEAR_LEFT_TOP
-11FC: C9          ret
-11FD: FF ...
+;;
+update_screen_tile_animations:
+    ld   a,(tick_mod_6) ; set tick % 6
+    inc  a
+    cp   $06
+    jr   nz,_1139
+    xor  a
+_1139:
+    ld   (tick_mod_6),a
+    sla  a ; tick * 2
+    sla  a ; tick * 4
+    call jump_rel_a ; anims one-in6-times
+    call screen_tile_animations ; a = 0
+    ret
+    nop ; a = 1
+    nop
+    nop
+    ret
+    nop ; a = 2
+    nop
+    nop
+    ret
+    nop ; a = 3
+    nop
+    nop
+    ret
+    nop ; a = 4
+    nop
+    nop
+    ret
+    nop ; a = 5
+    nop
+    nop
+    ret
+    nop ; a = 6
+    nop
+    nop
+    ret
+
+    dc   17, $FF
+
+update_everything:
+    call check_exit_stage_left
+    call update_time_timer
+    call normalize_input
+    call player_input
+    call apply_jump_physics ; tick_mod_slow
+    call add_gravity_and_check_big_fall
+    call animate_player_to_ground_if_dead
+    call check_if_landed_on_ground
+    call check_head_hit_tile
+    call moving_platforms
+    call player_pos_update
+    call prevent_cloud_jump_redacted
+    call check_done_screen
+    call clear_jump_button
+    call jump_bongo
+    call move_bongo_redacted
+    call bongo_move_and_animate
+    call bongo_animate_per_screen
+    call check_fall_off_bottom_scr
+    call check_dino_timer
+    call update_enemies
+    call player_enemies_collision
+    ld   hl,update_everything_more - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ret
+
+    dc   7, $FF
+
+wrap_other_spears_left:
+    ld   a,(enemy_2_x)
+    cp   $70
+    jr   z,_11DB
+    cp   $71
+    jr   z,_11DB
+    cp   $72
+    jr   z,_11DB
+    cp   $73
+    jr   z,_11DB
+    cp   $74
+    jr   z,_11DB
+    cp   $00
+    jr   nz,_11DE
+_11DB:
+    call set_spear_left_middle
+;;
+_11DE:
+    ld   a,(enemy_3_x)
+    cp   $60
+    jr   z,_11F9
+    cp   $61
+    jr   z,_11F9
+    cp   $62
+    jr   z,_11F9
+    cp   $63
+    jr   z,_11F9
+    cp   $64
+    jr   z,_11F9
+    cp   $00
+    jr   nz,_11FC
+_11F9:
+    call set_spear_left_top
+_11FC:
+    ret
+
+    dc   3, $FF
 
 ;;;
-PLAYER_POS_UPDATE
-1200: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-1203: 47          ld   b,a
-1204: 3A 02 80    ld   a,($PL_Y_LEGS_COPY) ; no idea what this is about
-1207: B8          cp   b
-1208: 20 1E       jr   nz,$_DID_LEG_THING ; legs copy different from legs?
-120A: C6 08       add  a,$08              ; they are the same.. add 8
-120C: CB 3F       srl  a                  ; ...
-120E: CB 3F       srl  a
-1210: E6 3E       and  $3E      ; 0011 1110 (62)
-1212: 26 81       ld   h,$81
-1214: 6F          ld   l,a
-1215: 3A 03 80    ld   a,($8003)
-1218: 4F          ld   c,a
-1219: 7E          ld   a,(hl)
-121A: B9          cp   c
-121B: C8          ret  z
-121C: 91          sub  c
-121D: 4F          ld   c,a
-121E: 3A 40 81    ld   a,($PLAYER_X)
-1221: 81          add  a,c
-1222: 32 40 81    ld   ($PLAYER_X),a
-1225: 32 44 81    ld   ($PLAYER_X_LEGS),a
-_DID_LEG_THING
-1228: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-122B: C6 08       add  a,$08
-122D: CB 3F       srl  a
-122F: CB 3F       srl  a
-1231: E6 3E       and  $3E
-1233: 26 81       ld   h,$81
-1235: 6F          ld   l,a
-1236: 7E          ld   a,(hl)
-1237: 32 03 80    ld   ($8003),a
-123A: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-123D: 32 02 80    ld   ($PL_Y_LEGS_COPY),a
-1240: C9          ret
+player_pos_update:
+    ld   a,(player_y_legs)
+    ld   b,a
+    ld   a,(pl_y_legs_copy) ; no idea what this is about
+    cp   b
+    jr   nz,_did_leg_thing ; legs copy different from legs?
+    add  a,$08 ; they are the same.. add 8
+    srl  a ; ...
+    srl  a
+    and  $3E ; 0011 1110 (62)
+    ld   h,$81
+    ld   l,a
+    ld   a,(_8003)
+    ld   c,a
+    ld   a,(hl)
+    cp   c
+    ret  z
+    sub  c
+    ld   c,a
+    ld   a,(player_x)
+    add  a,c
+    ld   (player_x),a
+    ld   (player_x_legs),a
+_did_leg_thing:
+    ld   a,(player_y_legs)
+    add  a,$08
+    srl  a
+    srl  a
+    and  $3E
+    ld   h,$81
+    ld   l,a
+    ld   a,(hl)
+    ld   (_8003),a
+    ld   a,(player_y_legs)
+    ld   (pl_y_legs_copy),a
+    ret
 
-1241: FF ...
+    dc   15, $FF
 
 ;;; only called from PREVENT_CLOUD_JUMP_REDACTED
-PREVENT_CLOUD_JUMP_REDACTED_2
-1250: E5          push hl
-1251: 3A 40 81    ld   a,($PLAYER_X)
-1254: 96          sub  (hl)
-1255: 67          ld   h,a
-1256: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-1259: D6 12       sub  $12
-125B: 5A          ld   e,d
-125C: CB 23       sla  e
-125E: CB 23       sla  e
-1260: CB 23       sla  e
-1262: 83          add  a,e
-1263: 6F          ld   l,a
-1264: CD 68 09    call $GET_TILE_ADDR_FROM_XY
-1267: 00          nop
-1268: 00          nop
-1269: 00          nop
-126A: 00          nop
-126B: 7E          ld   a,(hl)
-126C: E6 C0       and  $C0
-126E: FE C0       cp   $C0
-1270: 28 0B       jr   z,$127D
-1272: 01 C0 FF    ld   bc,$FFC0
-1275: 09          add  hl,bc
-1276: 7E          ld   a,(hl)
-1277: E6 C0       and  $C0
-1279: FE C0       cp   $C0
-127B: 20 03       jr   nz,$1280
-127D: CD B8 0A    call $FALL_UNDER_A_LEDGE
-1280: E1          pop  hl
-1281: C9          ret
-1282: FF ...
+prevent_cloud_jump_redacted_2:
+    push hl
+    ld   a,(player_x)
+    sub  (hl)
+    ld   h,a
+    ld   a,(player_y_legs)
+    sub  $12
+    ld   e,d
+    sla  e
+    sla  e
+    sla  e
+    add  a,e
+    ld   l,a
+    call get_tile_addr_from_xy
+    nop
+    nop
+    nop
+    nop
+    ld   a,(hl)
+    and  $C0
+    cp   $C0
+    jr   z,_127D
+    ld   bc,MINUS_64
+    add  hl,bc
+    ld   a,(hl)
+    and  $C0
+    cp   $C0
+    jr   nz,_1280
+_127D:
+    call fall_under_a_ledge
+_1280:
+    pop  hl
+    ret
 
-    ;; ANOTHER commented out one!
-    ;; This stops a player jumping up through a platform
-    ;; from underneath it. Probably more realistic, but
-    ;; good decision on the devs part to remove it it: it sucks!
-PREVENT_CLOUD_JUMP_REDACTED
-1290: C9          ret
-1291: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-1294: C6 04       add  a,$04
-1296: CB 3F       srl  a
-1298: CB 3F       srl  a
-129A: E6 3E       and  $3E
-129C: 6F          ld   l,a
-129D: 26 81       ld   h,$81
-129F: 16 04       ld   d,$04
-12A1: CD 50 12    call $PREVENT_CLOUD_JUMP_REDACTED_2
-12A4: 2B          dec  hl
-12A5: 2B          dec  hl
-12A6: 15          dec  d
-12A7: 20 F8       jr   nz,$12A1
-12A9: C9          ret
-12AA: FF ...
+    dc   14, $FF
 
-DRAW_BACKGROUND
-    ;; draw first 6 columns
-12B8: CD 10 03    call $DRAW_TILES_H
-12BB: 03 00
-12BD: 40 42 43 42 41 40 FF      ; downward spikes
-12C4: CD 10 03    call $DRAW_TILES_H
-12C7: 09 00
-12C9: FE FD FD FD FD FC FF      ; top left platform
-12D0: CD 10 03    call $DRAW_TILES_H
-12D3: 1E 00
-12D5: FE FD FD FD FD FC FF      ; bottomleft platform
-12DC: CD B0 14    call $SCREEN_RESET
-12DF: 21 E0 92    ld   hl,$92E0 ; screen pos (6,0)
-12E2: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
-12E6: 16 17       ld   d,$17    ; call 23 columns = width - 6
-_DRAW_COLUMN                    ; because first 6 are constant
-12E8: CD 28 13    call $DRAW_SCREEN_COLUMN_FROM_LEVEL_DATA
-12EB: 00          nop
-12EC: 00          nop
-12ED: 00          nop
-12EE: 15          dec  d
-12EF: 20 F7       jr   nz,$_DRAW_COLUMN
-RESET_ENEMIES_AND_DRAW_BOTTOM_ROW
-12F1: 22 1E 80    ld   ($SCREEN_PTR),hl ; hl = 9000 when hits here on death
-12F4: CD 10 35    call $RESET_ENEMIES
-12F7: 21 50 0C    ld   hl,$0C50 ; $ADD_SCREEN_PICKUPS
-12FA: CD E3 01    call $JMP_HL_PLUS_4K
-12FD: C3 10 3F    jp   $DRAW_BOTTOM_ROW_NUMBERS
+;; ANOTHER commented out one!
+;; This stops a player jumping up through a platform
+;; from underneath it. Probably more realistic, but
+;; good decision on the devs part to remove it it: it sucks!
+prevent_cloud_jump_redacted:
+    ret
+    ld   a,(player_y_legs)
+    add  a,$04
+    srl  a
+    srl  a
+    and  $3E
+    ld   l,a
+    ld   h,$81
+    ld   d,$04
+_12A1:
+    call prevent_cloud_jump_redacted_2
+    dec  hl
+    dec  hl
+    dec  d
+    jr   nz,_12A1
+    ret
 
-    ;; scrolls the screen one tile - done in a loop for the transition
-SCROLL_ONE_COLUMN
-1300: 1E 04       ld   e,$04    ; 4 loops of 2 pixels
-1302: E5          push hl
-1303: 21 06 81    ld   hl,$SCREEN_XOFF_COL+6
-1306: 35          dec  (hl)
-1307: 35          dec  (hl)
-1308: 23          inc  hl
-1309: 23          inc  hl
-130A: E5          push hl
-130B: CD 00 12    call $PLAYER_POS_UPDATE
-130E: E1          pop  hl
-130F: 7D          ld   a,l
-1310: FE 3E       cp   $3E
-1312: 20 F2       jr   nz,$1306
-1314: CD A0 13    call $WAIT_VBLANK
-1317: 1D          dec  e
-1318: 20 E9       jr   nz,$1303
-131A: E1          pop  hl
-131B: C9          ret
-131C: FF ...
+    dc  14, $FF
 
-    ;; ix = level data
-    ;; hl = screen pos
+draw_background:
+;; draw first 6 columns
+    call draw_tiles_h
+    db   $03,$00
+    db   $40,$42,$43,$42,$41,$40,$FF ; downward spikes
+    call draw_tiles_h
+    db   $09,$00
+    db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; top left platform
+    call draw_tiles_h
+    db   $1E,$00
+    db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; bottomleft platform
+    call screen_reset
+    ld   hl,_92E0 ; screen pos (6,0)
+    ld   ix,(level_bg_ptr)
+    ld   d,$17 ; call 23 columns = width - 6
+_draw_column:                   ; because first 6 are constant
+    call draw_screen_column_from_level_data
+    nop
+    nop
+    nop
+    dec  d
+    jr   nz,_draw_column
+reset_enemies_and_draw_bottom_row:
+    ld   (screen_ram_ptr),hl ; hl = 9000 when hits here on death
+    call reset_enemies
+    ld   hl,add_screen_pickups - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    jp   draw_bottom_row_numbers
 
-    ;; Level BG data is FF separated, then split on 00.
-    ;; Each row is a column of the screen, starting at col 6
-    ;; first byte of segment is the row #
-DRAW_SCREEN_COLUMN_FROM_LEVEL_DATA
-1328: CD 68 17    call $CLEAR_COLUMN_OF_TILES
-_LP
-132B: DD 7E 00    ld   a,(ix+$00) ; ix + 0 (always 3?)
-132E: E5          push hl
-132F: 85          add  a,l
-1330: 6F          ld   l,a
-1331: DD 23       inc  ix       ; ix++
-_DRAW_CHAR
-1333: DD 7E 00    ld   a,(ix+$00)
-1336: FE FF       cp   $FF        ; 0xff = EOL marker
-1338: 28 09       jr   z,$_DONE
-133A: A7          and  a          ; 0x00 = segment marker
-133B: 28 14       jr   z,$_NEXT_SEG
-133D: 77          ld   (hl),a
-133E: 23          inc  hl
-133F: DD 23       inc  ix       ; ix++
-1341: 18 F0       jr   $_DRAW_CHAR
-_DONE
-1343: DD 23       inc  ix       ; ix++
-1345: E1          pop  hl
-1346: 01 E0 FF    ld   bc,$SCR_LINE_PREV
-1349: 09          add  hl,bc
-134A: 7C          ld   a,h
-134B: FE 8F       cp   $8F
-134D: C0          ret  nz
-134E: 26 93       ld   h,$93
-1350: C9          ret
-__NEXT_SEG
-1351: DD 23       inc  ix       ; ix++
-1353: E1          pop  hl       ; reset screen pos
-1354: 18 D5       jr   $_LP
+;; scrolls the screen one tile - done in a loop for the transition
+scroll_one_column:
+    ld   e,$04 ; 4 loops of 2 pixels
+    push hl
+_1303:
+    ld   hl,_8106
+_1306:
+    dec  (hl)
+    dec  (hl)
+    inc  hl
+    inc  hl
+    push hl
+    call player_pos_update
+    pop  hl
+    ld   a,l
+    cp   $3E
+    jr   nz,_1306
+    call wait_vblank
+    dec  e
+    jr   nz,_1303
+    pop  hl
+    ret
 
-1356: FF ..
+    dc   12, $FF
 
-    ;;
-DURING_TRANSITION_NEXT
-1358: CD B8 13    call $BONGO_RUNS_OFF_SCREEN
-135B: 00          nop
-135C: CD B0 14    call $SCREEN_RESET
-135F: DD 2A 20 80 ld   ix,($LEVEL_BG_PTR)
-1363: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR) ; must point to screen?
-1366: 16 15       ld   d,$15      ; 21 columns to scroll
-_LP
-1368: CD 28 13    call $DRAW_SCREEN_FROM_LEVEL_DATA
-136B: CD 00 13    call $SCROLL_ONE_COLUMN
-136E: 15          dec  d
-136F: 20 F7       jr   nz,$_LP
-_DONE_SCROLLING
-1371: DD 22 20 80 ld   ($LEVEL_BG_PTR),ix
-1375: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl ; hl = 9160 on transition (e on HIGH-SCORE)
-_RESET_FOR_NEXT_LEVEL
-1378: CD C0 19    call $CLEAR_SCR_TO_BLANKS
-137B: CD B8 12    call $DRAW_BACKGROUND
-137E: AF          xor  a
-137F: 32 02 80    ld   ($PL_Y_LEGS_COPY),a
-1382: 32 03 80    ld   ($8003),a
-1385: CD 20 18    call $INIT_PLAYER_POS_FOR_SCREEN
-1388: CD B8 0D    call $DRAW_BONGO
-138B: CD 08 04    call $SET_LIVES_ROW_COLOR
-138E: C9          ret
+;; ix = level data
+;; hl = screen pos
 
-138F: FF
+;; Level BG data is FF separated, then split on 00.
+;; Each row is a column of the screen, starting at col 6
+;; first byte of segment is the row #
+draw_screen_column_from_level_data:
+    call clear_column_of_tiles
+_lp_132B:
+    ld   a,(ix+$00) ; ix + 0 (always 3?)
+    push hl
+    add  a,l
+    ld   l,a
+    inc  ix ; ix++
+_draw_char:
+    ld   a,(ix+$00)
+    cp   $FF ; 0xff = EOL marker
+    jr   z,_done_1343
+    and  a ; 0x00 = segment marker
+    jr   z,__next_seg
+    ld   (hl),a
+    inc  hl
+    inc  ix ; ix++
+    jr   _draw_char
+_done_1343:
+    inc  ix ; ix++
+    pop  hl
+    ld   bc,scr_line_prev
+    add  hl,bc
+    ld   a,h
+    cp   $8F
+    ret  nz
+    ld   h,$93
+    ret
+__next_seg:
+    inc  ix ; ix++
+    pop  hl ; reset screen pos
+    jr   _lp_132B
 
-    ;; "jump relative A": dispatches to address based on A
-JUMP_REL_A
-1390: D9          exx
-1391: E1          pop  hl       ; stack RET pointer
-1392: 06 00       ld   b,$00
-1394: 4F          ld   c,a
-1395: 09          add  hl,bc
-1396: E5          push hl
-1397: D9          exx
-1398: C9          ret           ; sets PC to RET + A
+    dc   2, $FF
 
-1399: FF ...
+;;
+during_transition_next:
+    call bongo_runs_off_screen
+    nop
+    call screen_reset
+    ld   ix,(level_bg_ptr)
+    ld   hl,(screen_ram_ptr) ; must point to screen?
+    ld   d,$15 ; 21 columns to scroll
+_lp_1368:
+    call draw_screen_column_from_level_data
+    call scroll_one_column
+    dec  d
+    jr   nz,_lp_1368
+_done_scrolling:
+    ld   (level_bg_ptr),ix
+    ld   (screen_ram_ptr),hl ; hl = 9160 on transition (e on HIGH-SCORE)
+_reset_for_next_level:
+    call clear_scr_to_blanks
+    call draw_background
+    xor  a
+    ld   (pl_y_legs_copy),a
+    ld   (_8003),a
+    call init_player_pos_for_screen
+    call draw_bongo
+    call set_lives_row_color
+    ret
 
+    db   $FF
+
+;; "jump relative A": dispatches to address based on A
+jump_rel_a:
+    exx
+    pop  hl ; stack RET pointer
+    ld   b,$00
+    ld   c,a
+    add  hl,bc
+    push hl
+    exx
+    ret ; sets PC to RET + A
+
+    dc   7, $FF
 
 ;;; Looks important. VBLANK?
-WAIT_VBLANK
-13A0: 06 00       ld   b,$00
-13A2: 3E 01       ld   a,$01
-13A4: 32 01 B0    ld   ($INT_ENABLE),a ; enable interrupts
-13A7: 3A 00 B8    ld   a,($WATCHDOG)
-13AA: 78          ld   a,b
-13AB: FE 01       cp   $01
-13AD: 20 F3       jr   nz,$13A2
-13AF: AF          xor  a
-13B0: 32 01 B0    ld   ($INT_ENABLE),a ; disable interrupts
-13B3: 3A 00 B8    ld   a,($WATCHDOG)
-13B6: C9          ret
+wait_vblank:
+    ld   b,$00
+_13A2:
+    ld   a,$01
+    ld   (int_enable),a ; enable interrupts
+    ld   a,(watchdog)
+    ld   a,b
+    cp   $01
+    jr   nz,_13A2
+    xor  a
+    ld   (int_enable),a ; disable interrupts
+    ld   a,(watchdog)
+    ret
 
-13B7: FF
+    db   $FF
 
-BONGO_RUNS_OFF_SCREEN
-13B8: 21 48 81    ld   hl,$BONGO_X
-13BB: 36 00       ld   (hl),$00
-13BD: 23          inc  hl
-13BE: 7D          ld   a,l
-13BF: FE 60       cp   $60
-13C1: 20 F8       jr   nz,$13BB
-13C3: C9          ret
+bongo_runs_off_screen:
+    ld   hl,bongo_x
+_13BB:
+    ld   (hl),$00
+    inc  hl
+    ld   a,l
+    cp   $60
+    jr   nz,_13BB
+    ret
 
-13C4: FF ...
+    dc   12, $FF
 
+update_time_timer:
+    ld   a,(second_timer)
+    inc  a
+    ld   (second_timer),a
+    cp   $3C
+    ret  nz
+    xor  a
+    ld   (second_timer),a
+    call update_time
+    call draw_time
+    ret
 
-UPDATE_TIME_TIMER
-13D0: 3A 06 80    ld   a,($SECOND_TIMER)
-13D3: 3C          inc  a
-13D4: 32 06 80    ld   ($SECOND_TIMER),a
-13D7: FE 3C       cp   $3C
-13D9: C0          ret  nz
-13DA: AF          xor  a
-13DB: 32 06 80    ld   ($SECOND_TIMER),a
-13DE: CD F0 13    call $UPDATE_TIME
-13E1: CD 10 14    call $DRAW_TIME
-13E4: C9          ret
+    dc   11, $FF
 
-13E5: FF ...
+update_time:
+    ld   a,(player_num)
+    bit  0,a
+    ld   hl,p1_time
+    jr   z,_13FC
+    inc  hl
+    inc  hl
+_13FC:
+    ld   a,(hl)
+    inc  a
+    daa ; the A register is BCD corrected from flags
+    ld   (hl),a
+    cp   $60 ; minutes
+    ret  nz
+    ld   (hl),$00
+    inc  hl
+    ld   a,(hl)
+    inc  a
+    daa
+    ld   (hl),a ; store it
+    ret
 
+    dc   5, $FF
 
-UPDATE_TIME
-13F0: 3A 04 80    ld   a,($PLAYER_NUM)
-13F3: CB 47       bit  0,a
-13F5: 21 07 80    ld   hl,$P1_TIME
-13F8: 28 02       jr   z,$13FC
-13FA: 23          inc  hl
-13FB: 23          inc  hl
-13FC: 7E          ld   a,(hl)
-13FD: 3C          inc  a
-13FE: 27          daa           ; the A register is BCD corrected from flags
-13FF: 77          ld   (hl),a
-1400: FE 60       cp   $60      ; minutes
-1402: C0          ret  nz
-1403: 36 00       ld   (hl),$00
-1405: 23          inc  hl
-1406: 7E          ld   a,(hl)
-1407: 3C          inc  a
-1408: 27          daa
-1409: 77          ld   (hl),a   ; store it
-140A: C9          ret
+;; draws the player's time under score
+;; ret's immediately: must have been removed! aww :(
+draw_time:
+    ret
+    ld   a,(player_num)
+    bit  0,a
+    jr   nz,_1436
+;; p1 version
+    xor  a
+    ld   hl,p1_time
+    rrd
+    ld   (_9302),a
+    rrd
+    ld   (_9322),a
+    rrd
+    inc  hl
+    rrd
+    ld   (_9362),a
+    rrd
+    ld   (_9382),a
+    rrd
+    ret
+;;  p2 version
+_1436:
+    xor  a
+    ld   hl,p2_time
+    rrd
+    ld   (_9082),a
+    rrd
+    ld   (_90A2),a
+    rrd
+    inc  hl
+    rrd
+    ld   (_90E2),a
+    rrd
+    ld   (_9102),a
+    rrd
+    ret
 
-140B: FF ...
+    dc   12, $FF
 
-    ;; draws the player's time under score
-    ;; ret's immediately: must have been removed! aww :(
-DRAW_TIME
-1410: C9          ret
-1411: 3A 04 80    ld   a,($PLAYER_NUM)
-1414: CB 47       bit  0,a
-1416: 20 1E       jr   nz,$1436
-    ;; p1 version
-1418: AF          xor  a
-1419: 21 07 80    ld   hl,$P1_TIME
-141C: ED 67       rrd  (hl)
-141E: 32 02 93    ld   ($9302),a
-1421: ED 67       rrd  (hl)
-1423: 32 22 93    ld   ($9322),a
-1426: ED 67       rrd  (hl)
-1428: 23          inc  hl
-1429: ED 67       rrd  (hl)
-142B: 32 62 93    ld   ($9362),a
-142E: ED 67       rrd  (hl)
-1430: 32 82 93    ld   ($9382),a
-1433: ED 67       rrd  (hl)
-1435: C9          ret
-    ;;  p2 version
-1436: AF          xor  a
-1437: 21 09 80    ld   hl,$P2_TIME
-143A: ED 67       rrd  (hl)
-143C: 32 82 90    ld   ($9082),a
-143F: ED 67       rrd  (hl)
-1441: 32 A2 90    ld   ($90A2),a
-1444: ED 67       rrd  (hl)
-1446: 23          inc  hl
-1447: ED 67       rrd  (hl)
-1449: 32 E2 90    ld   ($90E2),a
-144C: ED 67       rrd  (hl)
-144E: 32 02 91    ld   ($9102),a
-1451: ED 67       rrd  (hl)
-1453: C9          ret
+delay_83:                       ; maybe a delay?
+    ld   hl,tick_mod_3
+_1463:
+    ld   (hl),$00
+    inc  l
+    jr   nz,_1463
+    inc  h
+    ld   a,h
+    cp   $83 ; 1000 0011
+    jr   nz,_1463
+    ret
 
-1454: FF ...
+    dc   1, $FF
 
-DELAY_83                        ; maybe a delay?
-1460: 21 00 80    ld   hl,$TICK_MOD_3
-1463: 36 00       ld   (hl),$00
-1465: 2C          inc  l
-1466: 20 FB       jr   nz,$1463
-1468: 24          inc  h
-1469: 7C          ld   a,h
-146A: FE 83       cp   $83      ; 1000 0011
-146C: 20 F5       jr   nz,$1463
-146E: C9          ret
-146F: FF
+;; lotsa calls here
+reset_xoff_sprites_and_clear_screen:
+    call reset_xoff_and_cols_and_sprites ; then nop slides
+    nop ; ...
+    nop ; ...
+    nop
+    nop
+    nop
+    inc  hl ; hl++ ?
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop ; end of weird nopslide
 
-    ;; lotsa calls here
-RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-1470: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES ; then nop slides
-1473: 00          nop                                   ;  ...
-1474: 00          nop                                   ; ...
-1475: 00          nop
-1476: 00          nop
-1477: 00          nop
-1478: 23          inc  hl       ; hl++ ?
-1479: 00          nop
-147A: 00          nop
-147B: 00          nop
-147C: 00          nop
-147D: 00          nop
-147E: 00          nop
-147F: 00          nop           ; end of weird nopslide
+clear_screen:
+    ld   hl,screen_ram
+_1483:
+    ld   (hl),tile_blank
+    inc  l
+    jr   nz,_1483
+    inc  h
+    ld   a,h
+    cp   $98
+    jr   nz,_1483
+    ret
 
-CLEAR_SCREEN
-1480: 21 00 90    ld   hl,$SCREEN_RAM
-1483: 36 10       ld   (hl),$TILE_BLANK
-1485: 2C          inc  l
-1486: 20 FB       jr   nz,$1483
-1488: 24          inc  h
-1489: 7C          ld   a,h
-148A: FE 98       cp   $98
-148C: 20 F5       jr   nz,$1483
-148E: C9          ret
+    db   $FF
 
-148F: FF
+;; Lotsa calls here (via $1470);
+reset_xoff_and_cols_and_sprites:    ; sets 128 locations to 0
+    ld   hl,screen_xoff_col
+_1493:
+    ld   (hl),$00
+    inc  hl
+    ld   a,l
+    cp   $80 ; 128
+    jr   nz,_1493
+    ret
 
-    ;; Lotsa calls here (via $1470);
-RESET_XOFF_AND_COLS_AND_SPRITES     ; sets 128 locations to 0
-1490: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-1493: 36 00       ld   (hl),$00
-1495: 23          inc  hl
-1496: 7D          ld   a,l
-1497: FE 80       cp   $80      ; 128
-1499: 20 F8       jr   nz,$1493
-149B: C9          ret
+    dc   4, $FF
 
-149C: FF ...
+;;
+clear_ram:
+    ld   hl,tick_mod_3 ; = $8000, start of ram
+_14A3:
+    ld   (hl),$00
+    inc  hl
+    ld   a,h
+    cp   $84 ; 132
+    jr   nz,_14A3
+    jp   _ret_hard_reset ; Return
 
-    ;;
-CLEAR_RAM
-14A0: 21 00 80    ld   hl,$TICK_MOD_3 ; = $8000, start of ram
-14A3: 36 00       ld   (hl),$00
-14A5: 23          inc  hl
-14A6: 7C          ld   a,h
-14A7: FE 84       cp   $84      ; 132
-14A9: 20 F8       jr   nz,$14A3
-14AB: C3 0F 00    jp   $000F    ; Return
-14AE: FF FF
+    dc   2, $FF
 
-SCREEN_RESET
-14B0: 21 E8 06    ld   hl,$PLAY_TUNE_FOR_CUR_SCREEN-$4000
-14B3: CD E3 01    call $JMP_HL_PLUS_4K
-14B6: CD C8 3B    call $COPY_XOFFS
-    ;; set init player pos
-14B9: 3E 20       ld   a,$20
-14BB: 32 30 80    ld   ($PLAYER_MAX_X),a
-14BE: 3A 04 80    ld   a,($PLAYER_NUM)
-14C1: A7          and  a
-14C2: 20 05       jr   nz,$14C9
-14C4: 3A 29 80    ld   a,($SCREEN_NUM)
-14C7: 18 03       jr   $14CC
-14C9: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-14CC: 21 00 15    ld   hl,$LEVEL_BG_PTR_LOOKUP
-14CF: 06 00       ld   b,$00
-14D1: 3D          dec  a        ; scr# - 1
-14D2: 4F          ld   c,a
-14D3: CB 21       sla  c        ; * 2
-14D5: 09          add  hl,bc
-14D6: 4E          ld   c,(hl)
-14D7: 23          inc  hl
-14D8: 46          ld   b,(hl)
-14D9: ED 43 20 80 ld   ($LEVEL_BG_PTR),bc
-14DD: C9          ret
-14DE: FF FF
+screen_reset:
+    ld   hl,play_tune_for_cur_screen - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    call copy_xoffs
+;; set init player pos
+    ld   a,$20
+    ld   (player_max_x),a
+    ld   a,(player_num)
+    and  a
+    jr   nz,_14C9
+    ld   a,(screen_num)
+    jr   _14CC
+_14C9:
+    ld   a,(screen_num_p2)
+_14CC:
+    ld   hl,level_bg_ptr_lookup
+    ld   b,$00
+    dec  a ; scr# - 1
+    ld   c,a
+    sla  c ; * 2
+    add  hl,bc
+    ld   c,(hl)
+    inc  hl
+    ld   b,(hl)
+    ld   (level_bg_ptr),bc
+    ret
 
-RESET_ENEMIES_2
-14E0: 3A 15 83    ld   a,($TICK_MOD_FAST) ; faster in round 2
-14E3: E6 03       and  $03
-14E5: C0          ret  nz
-14E6: CD 50 3A    call $ENEMY_1_RESET
-14E9: CD 88 3A    call $ENEMY_2_RESET
-14EC: CD C0 3A    call $ENEMY_3_RESET
-14EF: C9          ret
+    dc   2, $FF
 
-14F0: FF ...
+reset_enemies_2:
+    ld   a,(tick_mod_fast) ; faster in round 2
+    and  $03
+    ret  nz
+    call enemy_1_reset
+    call enemy_2_reset
+    call enemy_3_reset
+    ret
 
-    ;; Points to the addr of each screen's level data
-LEVEL_BG_PTR_LOOKUP
-1500: B0 18 B0 18 40 21 B0 18
-1508: 10 1A 40 21 70 1E B0 18
-1510: 40 21 10 1A 40 21 70 1E
-1518: B0 18 40 21 B0 18 00 1D
-1520: 70 1E B0 18 00 1D 70 1E
-1528: E0 1F 40 21 70 1E E0 1F
-1530: 40 21 70 1E 00 1D
-1536: 00 ...
-153C: FF ...
+    dc   16, $FF
 
-COPY_XOFFS_AND_COLS_TO_SCREEN
-1550: E5          push hl
-1551: C5          push bc
-1552: D5          push de
-1553: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-1556: 11 00 98    ld   de,$XOFF_COL_RAM
-1559: 01 80 00    ld   bc,$0080
-155C: ED B0       ldir ; LD (DE),(HL) repeated: copies a chunk of mem
-155E: D1          pop  de
-155F: C1          pop  bc
-1560: E1          pop  hl
-1561: C9          ret
+;; Points to the addr of each screen's level data
+level_bg_ptr_lookup:
+    db   $B0,$18,$B0,$18,$40,$21,$B0,$18
+    db   $10,$1A,$40,$21,$70,$1E,$B0,$18
+    db   $40,$21,$10,$1A,$40,$21,$70,$1E
+    db   $B0,$18,$40,$21,$B0,$18,$00,$1D
+    db   $70,$1E,$B0,$18,$00,$1D,$70,$1E
+    db   $E0,$1F,$40,$21,$70,$1E,$E0,$1F
+    db   $40,$21,$70,$1E,$00,$1D
+    dc   6, $00
 
-1562: FF FF
+    dc   20, $FF
 
-    ;; Why?
-ANIMATE_SPLASH_PICKUP_NOPS
-1564: 00          nop
-1565: 00          nop
-ANIMATE_SPLASH_PICKUPS
-1566: 3A 08 93    ld   a,($9308) ;
-1569: FE 10       cp   $TILE_BLANK
-156B: 28 10       jr   z,$157D
-156D: FE 8C       cp   $TILE_CROWN_PIKA
-156F: 20 07       jr   nz,$1578
-1571: 3E 9C       ld   a,$TILE_CROWN_PIK
-1573: 32 08 93    ld   ($9308),a
-1576: 18 05       jr   $157D
-1578: 3E 8C       ld   a,$TILE_CROWN_PIKA
-157A: 32 08 93    ld   ($9308),
-    ;;
-157D: 3A 0C 93    ld   a,($930C) ;
-1580: FE 10       cp   $TILE_BLANK
-1582: 28 10       jr   z,$1594
-1584: FE 8D       cp   $TILE_PIK_CROSSA
-1586: 20 07       jr   nz,$158F
-1588: 3E 9D       ld   a,$TILE_PIK_CROSS
-158A: 32 0C 93    ld   ($930C),a
-158D: 18 05       jr   $1594
-158F: 3E 8D       ld   a,$TILE_PIK_CROSSA
-1591: 32 0C 93    ld   ($930C),a
-    ;;
-1594: 3A 10 93    ld   a,($9310)
-1597: FE 10       cp   $TILE_BLANK
-1599: 28 10       jr   z,$15AB
-159B: FE 8E       cp   $TILE_PIK_RINGA
-159D: 20 07       jr   nz,$15A6
-159F: 3E 9E       ld   a,$TILE_PIK_RING
-15A1: 32 10 93    ld   ($9310),a
-15A4: 18 05       jr   $15AB
-15A6: 3E 8E       ld   a,$TILE_PIK_RINGA
-15A8: 32 10 93    ld   ($9310),a
+copy_xoffs_and_cols_to_screen:
+    push hl
+    push bc
+    push de
+    ld   hl,screen_xoff_col
+    ld   de,xoff_col_ram
+    ld   bc,$0080
+    ldir ; LD (DE),(HL) repeated: copies a chunk of mem
+    pop  de
+    pop  bc
+    pop  hl
+    ret
 
-15AB: 3A 14 93    ld   a,($9314)
-15AE: FE 10       cp   $TILE_BLANK
-15B0: 28 10       jr   z,$15C2
-15B2: FE 8F       cp   $TILE_PIK_VASEA
-15B4: 20 07       jr   nz,$15BD
-15B6: 3E 9F       ld   a,$TILE_PIK_VASE
-15B8: 32 14 93    ld   ($9314),a
-15BB: 18 05       jr   $15C2
-15BD: 3E 8F       ld   a,$TILE_PIK_VASEA
-15BF: 32 14 93    ld   ($9314),a
-15C2: C9          ret
-15C3: FF          rst  $38
-15C4: D5          push de
-15C5: 21 A8 1B    ld   hl,$1BA8
-15C8: CD E3 01    call $JMP_HL_PLUS_4K
-15CB: D1          pop  de
-15CC: C9          ret
-15CD: FF ...
+    dc   2, $FF
 
-ATTRACT_BONUS_SCREEN
-15D0: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-15D3: CD 88 0F    call $DRAW_BORDER_1
-15D6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15D9: 3E 8C       ld   a,$8C
-15DB: 32 08 93    ld   ($9308),a
-15DE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15E1: CD 10 03    call $DRAW_TILES_H
-15E4: 08 10
-15E6: 02 00 00 10 20 24 23 FF   ; 200
-15EE: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15F1: 3E 8D       ld   a,$8D
-15F3: 32 0C 93    ld   ($930C),a
-15F6: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-15F9: CD 10 03    call $DRAW_TILES_H
-15FC: 0C 10
-15FD: 04 00 00 10 20 24 23 FF   ; 400 ...
-1606: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1609: 3E 8E       ld   a,$8E
-160B: 32 10 93    ld   ($9310),a
-160E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1611: CD 10 03    call $DRAW_TILES_H
-1614: 10 10
-1616: 06 00 00 10 20 24 23 FF   ; 600 ...
-161E: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1621: 3E 8F       ld   a,$8F
-1623: 32 14 93    ld   ($9314),a
-1626: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1629: CD 10 03    call $DRAW_TILES_H
-162C: 14 10
-162E: 01 00 00 00 10 20 24 23 FF ; 1000 ...
-1637: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-163A: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-163D: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1640: CD 60 16    call $ANIMATE_SPLASH_SCREEN
-1643: 21 94 14    ld   hl,$1494 ; $ATTRACT_CATCH_DINO
-1646: CD E3 01    call $JMP_HL_PLUS_4K
-1649: C9          ret
-164A: FF
+;; Why?
+animate_splash_pickup_nops:
+    nop
+    nop
+animate_splash_pickups:
+    ld   a,(_9308)
+    cp   tile_blank
+    jr   z,_157D
+    cp   tile_crown_pika
+    jr   nz,_1578
+    ld   a,$9C
+    ld   (_9308),a
+    jr   _157D
+_1578:
+    ld   a,tile_crown_pika
+    ld   (_9308),a
+;;
+_157D:
+    ld   a,(_930C)
+    cp   tile_blank
+    jr   z,_1594
+    cp   $8D
+    jr   nz,_158F
+    ld   a,$9D
+    ld   (_930C),a
+    jr   _1594
+_158F:
+    ld   a,$8D
+    ld   (_930C),a
+;;
+_1594:
+    ld   a,(_9310)
+    cp   tile_blank
+    jr   z,_15AB
+    cp   $8E
+    jr   nz,_15A6
+    ld   a,$9E
+    ld   (_9310),a
+    jr   _15AB
+_15A6:
+    ld   a,$8E
+    ld   (_9310),a
 
-CLEAR_AND_DRAW_SCREEN
-164B: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-164E: 21 E0 0F    ld   hl,$0FE0
-1651: CD 40 08    call $DRAW_SCREEN
-1654: 00 00                     ; data
-1656: CD 50 24    call $DRAW_SCORE
-1659: C9          ret
-165A: FF ...
+_15AB:
+    ld   a,(_9314)
+    cp   tile_blank
+    jr   z,_15C2
+    cp   $8F
+    jr   nz,_15BD
+    ld   a,$9F
+    ld   (_9314),a
+    jr   _15C2
+_15BD:
+    ld   a,$8F
+    ld   (_9314),a
+_15C2:
+    ret
 
-ANIMATE_SPLASH_SCREEN
-1660: 16 10       ld   d,$10
-1662: CD 64 15    call $ANIMATE_SPLASH_PICKUPS
-1665: CD C4 15    call $15C4
-1668: 1E 04       ld   e,$04
-166A: D5          push de
-166B: CD 28 21    call $WAIT_FOR_START_BUTTON
-166E: D1          pop  de
-166F: 1D          dec  e
-1670: 20 F8       jr   nz,$166A
-1672: 15          dec  d
-1673: 20 ED       jr   nz,$1662
-1675: C9          ret
+    db   $FF
 
-1676: FF ...
+_15C4:
+    push de
+    ld   hl,animate_circle_border - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    pop  de
+    ret
 
-    ;; ? data for something?
-1678: E8          ret  pe
-1679: EC EE F0    call pe,$F0EE
-167C: E9          jp   (hl)
-167D: ED          db   $ed
-167E: EF          rst  $28
-167F: F1          pop  af
+    dc   3, $FF
 
-UPDATE_SPEED_TIMERS
-1680: 3A 04 80    ld   a,($PLAYER_NUM)
-1683: A7          and  a
-1684: 20 05       jr   nz,$168B
-1686: 3A 5B 80    ld   a,($SPEED_DELAY_P1)
-1689: 18 03       jr   $168E
-168B: 3A 5C 80    ld   a,($SPEED_DELAY_P2)
-168E: FE 1F       cp   $ROUND1_SPEED
-1690: 20 19       jr   nz,$16AB
-    ;;  Round 1
-1692: 3A 15 83    ld   a,($TICK_MOD_FAST)
-1695: 3C          inc  a
-1696: FE 03       cp   $03
-1698: 20 01       jr   nz,$169B
-169A: AF          xor  a
-169B: 32 15 83    ld   ($TICK_MOD_FAST),a
-169E: 3A 16 83    ld   a,($TICK_MOD_SLOW)
-16A1: 3C          inc  a
-16A2: FE 06       cp   $06
-16A4: 20 01       jr   nz,$16A7
-16A6: AF          xor  a
-16A7: 32 16 83    ld   ($TICK_MOD_SLOW),a
-16AA: C9          ret
+attract_bonus_screen:
+    call reset_xoff_sprites_and_clear_screen
+    call draw_border_1
+    call animate_splash_screen
+    ld   a,tile_crown_pika
+    ld   (_9308),a
+    call animate_splash_screen
+    call draw_tiles_h
+    db   $08,$10
+    db   $02,$00,$00,$10,$20,$24,$23,$FF ;  200
+    call animate_splash_screen
+    ld   a,$8D
+    ld   (_930C),a
+    call animate_splash_screen
+    call draw_tiles_h
+    db   $0C,$10
+    db   $04,$00,$00,$10,$20,$24,$23,$FF ;  400 ...
+    call animate_splash_screen
+    ld   a,$8E
+    ld   (_9310),a
+    call animate_splash_screen
+    call draw_tiles_h
+    db   $10,$10
+    db   $06,$00,$00,$10,$20,$24,$23,$FF ;  600 ...8
+    call animate_splash_screen
+    ld   a,$8F
+    ld   (_9314),a
+    call animate_splash_screen
+    call draw_tiles_h
+    db   $14,$10
+    db   $01,$00,$00,$00,$10,$20,$24,$23,$FF ;  1000 ...8
+    call animate_splash_screen
+    call animate_splash_screen
+    call animate_splash_screen
+    call animate_splash_screen
+    ld   hl,attract_catch_dino - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ret
+
+    db   $FF
+
+clear_and_draw_screen:
+    call reset_xoff_sprites_and_clear_screen
+    ld   hl,header_text_data
+    call draw_screen
+    nop ; data
+    nop
+    call draw_score
+    ret
+
+    dc   6, $FF
+
+animate_splash_screen:
+    ld   d,$10
+_1662:
+    call animate_splash_pickup_nops
+    call _15C4
+    ld   e,$04
+_166A:
+    push de
+    call wait_for_start_button
+    pop  de
+    dec  e
+    jr   nz,_166A
+    dec  d
+    jr   nz,_1662
+    ret
+
+    dc   2, $FF
+
+;;
+bonus_multplier_data:
+    db   $E8
+    db   $EC,$EE,$F0
+    db   $E9
+    db   $ED
+    db   $EF
+    db   $F1
+
+update_speed_timers:
+    ld   a,(player_num)
+    and  a
+    jr   nz,_168B
+    ld   a,(speed_delay_p1)
+    jr   _168E
+_168B:
+    ld   a,(speed_delay_p2)
+_168E:
+    cp   round1_speed
+    jr   nz,_16AB
+;;  Round 1
+    ld   a,(tick_mod_fast)
+    inc  a
+    cp   $03
+    jr   nz,_169B
+    xor  a
+_169B:
+    ld   (tick_mod_fast),a
+    ld   a,(tick_mod_slow)
+    inc  a
+    cp   $06
+    jr   nz,_16A7
+    xor  a
+_16A7:
+    ld   (tick_mod_slow),a
+    ret
 ;;; Round 2+
-16AB: 3A 15 83    ld   a,($TICK_MOD_FAST)
-16AE: 3C          inc  a
-16AF: FE 02       cp   $02
-16B1: 20 01       jr   nz,$16B4
-16B3: AF          xor  a
-16B4: 32 15 83    ld   ($TICK_MOD_FAST),a
-16B7: 3A 16 83    ld   a,($TICK_MOD_SLOW)
-16BA: 3C          inc  a
-16BB: FE 04       cp   $04
-16BD: 20 01       jr   nz,$16C0
-16BF: AF          xor  a
-16C0: 32 16 83    ld   ($TICK_MOD_SLOW),a
-16C3: C9          ret
+_16AB:
+    ld   a,(tick_mod_fast)
+    inc  a
+    cp   $02
+    jr   nz,_16B4
+    xor  a
+_16B4:
+    ld   (tick_mod_fast),a
+    ld   a,(tick_mod_slow)
+    inc  a
+    cp   $04
+    jr   nz,_16C0
+    xor  a
+_16C0:
+    ld   (tick_mod_slow),a
+    ret
 
-16C4: FF ...
+    dc   12, $FF
 
+draw_bonus:
+    call draw_tiles_h
+    db   $0A,$00
+    db   $E0,$DC,$DD,$DE,$DF,$FF
+    call draw_tiles_h
+    db   $0B,$00
+    db   $E1,$E5,$E5,$E5,$E6,$FF
+    call draw_tiles_h
+    db   $0C,$00
+    db   $E1,$E5,$E5,$E5,$E6,$FF
+    call draw_tiles_h
+    db   $0D,$00
+    db   $E2,$E3,$E3,$E3,$E4,$FF
+    ret
 
-DRAW_BONUS
-16D0: CD 10 03    call $DRAW_TILES_H
-16D3: 0A 00
-16D5: E0 DC DD DE DF FF
-16DB: CD 10 03    call $DRAW_TILES_H
-16DE: 0B 00
-16E0: E1 E5 E5 E5 E6 FF
-16E6: CD 10 03    call $DRAW_TILES_H
-16E9: 0C 00
-16EB: E1 E5 E5 E5 E6 FF
-16F1: CD 10 03    call $DRAW_TILES_H
-16F4: 0D 00
-16F6: E2 E3 E3 E3 E4 FF
-16FC: C9          ret
-16FD: FF ...
+    dc   3, $FF
 
-    ;; Adds whatever is in 801d
-ADD_SCORE
-1700: 3A 34 80    ld   a,($NUM_PLAYERS)
-1703: A7          and  a
-1704: C8          ret  z
-1705: 3A 04 80    ld   a,($PLAYER_NUM)
-1708: A7          and  a
-1709: 20 17       jr   nz,$1722
+;; Adds whatever is in 801d
+add_score:
+    ld   a,(num_players)
+    and  a
+    ret  z
+    ld   a,(player_num)
+    and  a
+    jr   nz,_1722
 ;;; player 1
-170B: 3A 1D 80    ld   a,($SCORE_TO_ADD) ; amount to add
-170E: A7          and  a
-170F: C8          ret  z        ; nothing to add... leave.
-1710: 4F          ld   c,a
-1711: 26 80       ld   h,$80    ; 8014 for p1 8017 for p2
-1713: 06 00       ld   b,$00
-1715: 2E 14       ld   l,$14
-1717: CD A0 17    call $ADD_AMOUNT_BDC
-171A: CD 50 24    call $DRAW_SCORE
-171D: AF          xor  a
-171E: 32 1D 80    ld   ($SCORE_TO_ADD),a ; clear
-1721: C9          ret
+    ld   a,(score_to_add) ; amount to add
+    and  a
+    ret  z ; nothing to add... leave.
+    ld   c,a
+    ld   h,$80 ; 8014 for p1 8017 for p2
+    ld   b,$00
+    ld   l,$14
+    call add_amount_bdc
+    call draw_score
+    xor  a
+    ld   (score_to_add),a ; clear
+    ret
 ;;; player 2
-1722: 3A 1D 80    ld   a,($SCORE_TO_ADD)
-1725: A7          and  a
-1726: C8          ret  z
-1727: 4F          ld   c,a
-1728: 26 80       ld   h,$80
-172A: 06 00       ld   b,$00
-172C: 2E 17       ld   l,$17
-172E: CD A0 17    call $ADD_AMOUNT_BDC
-1731: CD 50 24    call $DRAW_SCORE
-1734: AF          xor  a
-1735: 32 1D 80    ld   ($SCORE_TO_ADD),a
-1738: C9          ret
+_1722:
+    ld   a,(score_to_add)
+    and  a
+    ret  z
+    ld   c,a
+    ld   h,$80
+    ld   b,$00
+    ld   l,$17
+    call add_amount_bdc
+    call draw_score
+    xor  a
+    ld   (score_to_add),a
+    ret
 
-1739: FF ...
+    dc   23, $FF
 
-CHECK_DONE_SCREEN
-1750: 37          scf
-1751: 3F          ccf
-1752: 3A 43 81    ld   a,($PLAYER_Y) ; Test if player is at top or bottom
-1755: C6 48       add  a,$48         ; Y + 72 > 255?
-1757: 38 03       jr   c,$175C       ; ...yep, check x
-1759: D6 78       sub  $78           ; Y - 120 < 0?
-175B: D0          ret  nc            ; ...no, can't finish level here...
-    ;; check if gone past edge of screen
-175C: 3A 40 81    ld   a,($PLAYER_X)
-175F: 37          scf
-1760: 3F          ccf
-1761: D6 E0       sub  $SCREEN_WIDTH  ;out of screen?
-1763: D8          ret  c
-1764: CD 78 17    call $TRANSITION_TO_NEXT_SCREEN    ; jump to next screen
-1767: C9          ret
+check_done_screen:
+    scf
+    ccf
+    ld   a,(player_y) ; Test if player is at top or bottom
+    add  a,$48 ; Y + 72 > 255?
+    jr   c,_175C ; ...yep, check x
+    sub  $78 ; Y - 120 < 0?
+    ret  nc ; ...no, can't finish level here...
+;; check if gone past edge of screen
+_175C:
+    ld   a,(player_x)
+    scf
+    ccf
+    sub  screen_width ; out of screen?
+    ret  c
+    call transition_to_next_screen ; jump to next screen
+    ret
 
-    ;;
-CLEAR_COLUMN_OF_TILES
-1768: E5          push hl
-1769: 3E 03       ld   a,$03
-176B: 85          add  a,l
-176C: 6F          ld   l,a
-176D: 1E 1C       ld   e,$1C    ;24 loops
-_LP
-176F: 36 10       ld   (hl),$TILE_BLANK
-1771: 23          inc  hl
-1772: 1D          dec  e
-1773: 20 FA       jr   nz,$_LP
-1775: E1          pop  hl
-1776: C9          ret
+;;
+clear_column_of_tiles:
+    push hl
+    ld   a,$03
+    add  a,l
+    ld   l,a
+    ld   e,$1C ; 24 loops
+_lp_176F:
+    ld   (hl),tile_blank
+    inc  hl
+    dec  e
+    jr   nz,_lp_176F
+    pop  hl
+    ret
 
-1777: FF
+    db   $FF
 
-TRANSITION_TO_NEXT_SCREEN
-1778: CD C0 17    call $RESET_DINO
-177B: 3A 04 80    ld   a,($PLAYER_NUM)
-177E: A7          and  a
-177F: 20 09       jr   nz,$178A
-1781: 3A 29 80    ld   a,($SCREEN_NUM)
-1784: 3C          inc  a        ; next screen if p1
-1785: 32 29 80    ld   ($SCREEN_NUM),a
-1788: 18 07       jr   $1791
-178A: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-178D: 3C          inc  a        ; next screen if p2
-178E: 32 2A 80    ld   ($SCREEN_NUM_P2),a
-1791: CD E0 27    call $SET_PLAYER_Y_LEVEL_START
-1794: CD 58 13    call $DURING_TRANSITION_NEXT ; wipes to next
-1797: CD D0 0A    call $SET_LEVEL_PLATFORM_XOFFS
-179A: 3E 02       ld   a,$02
-    ;; I think that should be call not jump. It rets anyway.
-179C: C3 B4 17    jp   $RESET_JUMP_AND_REDIFY_BOTTOM_ROW
-179F: C9          ret
+transition_to_next_screen:
+    call reset_dino
+    ld   a,(player_num)
+    and  a
+    jr   nz,_178A
+    ld   a,(screen_num)
+    inc  a ; next screen if p1
+    ld   (screen_num),a
+    jr   _1791
+_178A:
+    ld   a,(screen_num_p2)
+    inc  a ; next screen if p2
+    ld   (screen_num_p2),a
+_1791:
+    call set_player_y_level_start
+    call during_transition_next ; wipes to next
+    call set_level_platform_xoffs
+    ld   a,$02
+;; I think that should be call not jump. It rets anyway.
+    jp   reset_jump_and_redify_bottom_row
+    ret
 
 ;; (might be just "add bcd to addr")
-    ;; hl is either 8014 for p1 or 8017 for p2
-    ;; c contains score to add
-ADD_AMOUNT_BDC
-17A0: 7E          ld   a,(hl)
-17A1: 37          scf
-17A2: 3F          ccf
-17A3: 81          add  a,c
-17A4: 27          daa
-17A5: 77          ld   (hl),a
-17A6: 2C          inc  l
-17A7: 7E          ld   a,(hl)
-17A8: 88          adc  a,b
-17A9: 27          daa
-17AA: 77          ld   (hl),a
-17AB: 2C          inc  l
-17AC: 7E          ld   a,(hl)
-17AD: CE 00       adc  a,$00
-17AF: 27          daa
-17B0: 77          ld   (hl),a
-17B1: C9          ret
+;; hl is either 8014 for p1 or 8017 for p2
+;; c contains score to add
+add_amount_bdc:
+    ld   a,(hl)
+    scf
+    ccf
+    add  a,c
+    daa
+    ld   (hl),a
+    inc  l
+    ld   a,(hl)
+    adc  a,b
+    daa
+    ld   (hl),a
+    inc  l
+    ld   a,(hl)
+    adc  a,$00
+    daa
+    ld   (hl),a
+    ret
 
-17B2: FF FF
+    dc   2, $FF
 
-RESET_JUMP_AND_REDIFY_BOTTOM_ROW
-17B4: 32 3F 81    ld   ($SCREEN_XOFF_COL+3F),a ; set bottom row col
-17B7: AF          xor  a
-17B8: 32 0F 80    ld   ($JUMP_TBL_IDX),a
-17BB: 32 05 80    ld   ($JUMP_TRIGGERED),a
-17BE: C9          ret
+reset_jump_and_redify_bottom_row:
+    ld   (_813F),a ; set bottom row col
+    xor  a
+    ld   (jump_tbl_idx),a
+    ld   (jump_triggered),a
+    ret
 
-17BF: FF
+    db   $FF
 
-RESET_DINO
-17C0: AF          xor  a
-17C1: 32 2D 80    ld   ($DINO_COUNTER),a
-17C4: 3A 4C 81    ld   a,($DINO_X)
-17C7: 32 50 81    ld   ($DINO_X_LEGS),a
-17CA: C9          ret
+reset_dino:
+    xor  a
+    ld   (dino_counter),a
+    ld   a,(dino_x)
+    ld   (dino_x_legs),a
+    ret
 
-17CB: FF ...
+    dc   5, $FF
 
-DRAW_BONUS_BOX
-17D0: CD 10 03    call $DRAW_TILES_H
-17D3: 0A 00
-17D5: B8 B4 B5 B6 B7 FF
-17DB: CD 10 03    call $DRAW_TILES_H
-17DE: 0B 00
-17E0: B9 FF
-17E2: CD 10 03    call $DRAW_TILES_H
-17E5: 0B 04
-17E7: BE FF
-17E9: CD 10 03    call $DRAW_TILES_H
-17EC: 0C 00
-17EE: B9 FF
-17F0: CD 10 03    call $DRAW_TILES_H
-17F3: 0C 04
-17F5: BE FF
-17F7: CD 10 03    call $DRAW_TILES_H
-17FA: 0D 00
-17FC: BA BB BB BB BC FF
-1802: C9          ret
-1803: FF ...
+draw_bonus_box:
+    call draw_tiles_h
+    db   $0A,$00
+    db   $B8,$B4,$B5,$B6,$B7,$FF
+    call draw_tiles_h
+    db   $0B,$00
+    db   $B9,$FF
+    call draw_tiles_h
+    db   $0B,$04
+    db   $BE,$FF
+    call draw_tiles_h
+    db   $0C,$00
+    db   $B9,$FF
+    call draw_tiles_h
+    db   $0C,$04
+    db   $BE,$FF
+    call draw_tiles_h
+    db   $0D,$00
+    db   $BA,$BB,$BB,$BB,$BC,$FF
+    ret
 
-RESET_PLAYER_SPRITE_FRAME_COL
-1808: 3E 0C       ld   a,$0C
-180A: 32 41 81    ld   ($PLAYER_FRAME),a
-180D: 3C          inc  a
-180E: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-1811: 3E 11       ld   a,$11
-1813: 32 42 81    ld   ($PLAYER_COL),a
-1816: 32 46 81    ld   ($PLAYER_COL_LEGS),a
-1819: C9          ret
-181A: FF ...
+    dc   5, $FF
 
-INIT_PLAYER_POS_FOR_SCREEN
-1820: 3A 04 80    ld   a,($PLAYER_NUM)
-1823: A7          and  a
-1824: 20 05       jr   nz,$182B
-1826: 3A 29 80    ld   a,($SCREEN_NUM)
-1829: 18 03       jr   $182E
-182B: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-182E: 21 50 18    ld   hl,$PLAYER_START_POS_DATA
-1831: 3D          dec  a
-1832: CB 27       sla  a
-1834: 85          add  a,l
-1835: 6F          ld   l,a
-1836: 7E          ld   a,(hl)
-1837: 32 40 81    ld   ($PLAYER_X),a
-183A: 32 44 81    ld   ($PLAYER_X_LEGS),a
-183D: 23          inc  hl
-183E: 7E          ld   a,(hl)
-183F: 32 43 81    ld   ($PLAYER_Y),a
-1842: C6 10       add  a,$10
-1844: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-1847: CD 08 18    call $RESET_PLAYER_SPRITE_FRAME_COL
-184A: C9          ret
-184B: FF ...
+reset_player_sprite_frame_col:
+    ld   a,$0C
+    ld   (player_frame),a
+    inc  a
+    ld   (player_frame_legs),a
+    ld   a,$11
+    ld   (player_col),a
+    ld   (player_col_legs),a
+    ret
 
-    ;; [x, y]
-PLAYER_START_POS_DATA
-1850: 20 D0
-1852: 20 D0
-1854: 20 D0
-1856: 20 D0
-1858: 20 D0
-185A: 20 26
-185C: 20 26
-185E: 20 D0
-1860: 20 D0
-1862: 20 D0
-1864: 20 26
-1866: 20 26
-1868: 20 D0
-186A: 20 D0
-186C: 20 D0
-186E: 20 D0
-1870: 20 26
-1872: 20 D0
-1874: 20 D0
-1876: 20 26
-1878: 20 D0
-187A: 20 26
-187C: 20 26
-187E: 20 D0
-1880: 20 26
-1882: 20 26
-1884: 20 D0
-1886: 00 00 00 00 00 00 00 00 00 00
+    dc   6, $FF
 
-1890: FF ...
+init_player_pos_for_screen:
+    ld   a,(player_num)
+    and  a
+    jr   nz,_182B
+    ld   a,(screen_num)
+    jr   _182E
+_182B:
+    ld   a,(screen_num_p2)
+_182E:
+    ld   hl,player_start_pos_data
+    dec  a
+    sla  a
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (player_x),a
+    ld   (player_x_legs),a
+    inc  hl
+    ld   a,(hl)
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    call reset_player_sprite_frame_col
+    ret
 
-RESET_XOFFS
-1898: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-189B: 36 00       ld   (hl),$00
-189D: 23          inc  hl
-189E: 23          inc  hl
-189F: 7D          ld   a,l
-18A0: FE 40       cp   $40
-18A2: 20 F7       jr   nz,$189B
-18A4: C9          ret
-18A5: FF ...
+    dc   5, $FF
 
-    ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
-    ;; (all `n_n` screens).
-    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__n_n
-18B0: 03 41 00 09 FE 00 1E 39 FF
-18B9: 03 43 00 09 FD 45 41 00 1B FE 3B 45 45 FF
-18C7: 03 40 00 09 FD 42 00 1B FD 3F 3F 3B FF
-18D4: 03 43 00 09 FC 41 00 1B FD 3B 3B 3F FF
-18E1: 03 42 00 1B FD 3F 3B 3B FF
-18EA: 03 3F 00 1B FD 3F 3F 3B FF
-18F3: 03 3E 43 00 1B FD 3B 3F 3B FF
-18FD: 03 3F 40 00 1B FC 47 3B 47 FF
-1907: 03 3B 42 00 1D 3D 3F FF
-190F: 03 3B 40 00 1D 3C 3E FF
-1917: 03 3F 43 00 1D 3A 3F FF
-191F: 03 3E 41 00 1B FE 10 3D 3E FF
-1929: 03 3B 40 00 1B FD 47 3E 47 FF
-1933: 03 3F 42 00 1B FD 3B 3B 3B FF
-193D: 03 3E 00 1B FD 3E 3F 3F FF
-1946: 03 42 00 09 FE 00 1B FD 3F 3B 3E FF
-1952: 03 43 00 09 FD 47 41 00 1B FD 3B 3E 3E FF
-1960: 03 41 00 09 FD 00 1B FC 3E 3B 3B FF
-196C: 03 42 00 09 FD 00 1E FE FF
-1975: 03 43 00 09 FD 00 1E FD FF
-197E: 03 42 00 09 FD 00 1E FD FF
-1987: 03 41 00 09 FD 00 1E FD FF
-1990: 03 40 00 09 FD 00 1E FC FF
+;; [x, y]
+player_start_pos_data:
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$26
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$26
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$D0
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$26
+    db   $20,$D0
+    db   $20,$26
+    db   $20,$26
+    db   $20,$D0
 
-1999: FF ...
+    dc   10, $00
+    dc   8, $FF
+
+reset_xoffs:
+    ld   hl,screen_xoff_col
+_189B:
+    ld   (hl),$00
+    inc  hl
+    inc  hl
+    ld   a,l
+    cp   $40
+    jr   nz,_189B
+    ret
+
+    dc   11, $FF
+
+;; Level data for screens 1, 2, 4, 8, 13, 15, 18
+;; (all `n_n` screens).
+;; See by DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__n_n:
+    db   $03,$41,$00,$09,$FE,$00,$1E,$39,$FF
+    db   $03,$43,$00,$09,$FD,$45,$41,$00,$1B,$FE,$3B,$45,$45,$FF
+    db   $03,$40,$00,$09,$FD,$42,$00,$1B,$FD,$3F,$3F,$3B,$FF
+    db   $03,$43,$00,$09,$FC,$41,$00,$1B,$FD,$3B,$3B,$3F,$FF
+    db   $03,$42,$00,$1B,$FD,$3F,$3B,$3B,$FF
+    db   $03,$3F,$00,$1B,$FD,$3F,$3F,$3B,$FF
+    db   $03,$3E,$43,$00,$1B,$FD,$3B,$3F,$3B,$FF
+    db   $03,$3F,$40,$00,$1B,$FC,$47,$3B,$47,$FF
+    db   $03,$3B,$42,$00,$1D,$3D,$3F,$FF
+    db   $03,$3B,$40,$00,$1D,$3C,$3E,$FF
+    db   $03,$3F,$43,$00,$1D,$3A,$3F,$FF
+    db   $03,$3E,$41,$00,$1B,$FE,$10,$3D,$3E,$FF
+    db   $03,$3B,$40,$00,$1B,$FD,$47,$3E,$47,$FF
+    db   $03,$3F,$42,$00,$1B,$FD,$3B,$3B,$3B,$FF
+    db   $03,$3E,$00,$1B,$FD,$3E,$3F,$3F,$FF
+    db   $03,$42,$00,$09,$FE,$00,$1B,$FD,$3F,$3B,$3E,$FF
+    db   $03,$43,$00,$09,$FD,$47,$41,$00,$1B,$FD,$3B,$3E,$3E,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1B,$FC,$3E,$3B,$3B,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FE,$FF
+    db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FD,$00,$1E,$FC,$FF
+
+    dc   3, $FF
 
 ;;; Skip level AFTER getting bonus
-BONUS_SKIP_SCREEN
-    ;; Draws the Bongo Tree. I thought this must have been a glitch,
-    ;; but nope: the Bongo Tree is meant to be like that!
-199C: 3E F0       ld   a,$F0    ; right of screen (scrolls to left)
-199E: 32 40 81    ld   ($PLAYER_X),a
-19A1: 32 44 81    ld   ($PLAYER_X_LEGS),a
-19A4: 3E 26       ld   a,$26    ; top of screen
-19A6: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-19A9: 3E 16       ld   a,$16
-19AB: 32 43 81    ld   ($PLAYER_Y),a
-19AE: 3E 17       ld   a,$17    ; backwards player for both head and legs, lol
-19B0: 32 41 81    ld   ($PLAYER_FRAME),a
-19B3: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-19B6: AF          xor  a        ; red and green for the bongo tree.
-19B7: 32 42 81    ld   ($PLAYER_COL),a
-19BA: 32 46 81    ld   ($PLAYER_COL_LEGS),a
-19BD: C3 78 17    jp   $TRANSITION_TO_NEXT_SCREEN
+bonus_skip_screen:
+;; Draws the Bongo Tree. I thought this must have been a glitch,
+;; but nope: the Bongo Tree is meant to be like that!
+    ld   a,$F0 ; right of screen (scrolls to left)
+    ld   (player_x),a
+    ld   (player_x_legs),a
+    ld   a,$26 ; top of screen
+    ld   (player_y_legs),a
+    ld   a,$16
+    ld   (player_y),a
+    ld   a,$17 ; backwards player for both head and legs, lol
+    ld   (player_frame),a
+    ld   (player_frame_legs),a
+    xor  a ; red and green for the bongo tree.
+    ld   (player_col),a
+    ld   (player_col_legs),a
+    jp   transition_to_next_screen
 
-    ;; Clear screen to blanks
-CLEAR_SCR_TO_BLANKS
-19C0: 21 00 90    ld   hl,$SCREEN_RAM
-19C3: 23          inc  hl
-19C4: 23          inc  hl
-19C5: 23          inc  hl
-19C6: 16 1D       ld   d,$1D    ; 29
-19C8: 36 10       ld   (hl),$TILE_BLANK
-19CA: 23          inc  hl
-19CB: 15          dec  d
-19CC: 20 FA       jr   nz,$19C8
-19CE: 7C          ld   a,h
-19CF: FE 94       cp   $94      ; 148
-19D1: 20 F0       jr   nz,$19C3
-19D3: 00          nop
-19D4: 00          nop
-19D5: 00          nop
-19D6: 00          nop
-19D7: 00          nop
-_CLEAR_XOFF_COL_SPR   ; Same code as $RESET_XOFF_AND_COLS_AND_SPRITES
-19D8: 21 00 81    ld   hl,$SCREEN_XOFF_COL
-19DB: 36 00       ld   (hl),$00
-19DD: 23          inc  hl
-19DE: 7D          ld   a,l
-19DF: FE 80       cp   $80
-19E1: 20 F8       jr   nz,$19DB
-_DONE
-19E3: CD A0 13    call $WAIT_VBLANK
-19E6: C9          ret
+;; Clear screen to blanks
+clear_scr_to_blanks:
+    ld   hl,screen_ram
+_19C3:
+    inc  hl
+    inc  hl
+    inc  hl
+    ld   d,$1D ; 29
+_19C8:
+    ld   (hl),tile_blank
+    inc  hl
+    dec  d
+    jr   nz,_19C8
+    ld   a,h
+    cp   $94 ; 148
+    jr   nz,_19C3
+    nop
+    nop
+    nop
+    nop
+    nop
+_clear_xoff_col_spr:  ; Same code as $RESET_XOFF_AND_COLS_AND_SPRITES
+    ld   hl,screen_xoff_col
+_19DB:
+    ld   (hl),$00
+    inc  hl
+    ld   a,l
+    cp   $80
+    jr   nz,_19DB
+_done_19E3:
+    call wait_vblank
+    ret
 
-19E7: FF ...
+    dc   9, $FF
 
-CHECK_FALL_OFF_BOTTOM_SCR
-19F0: 3A 47 81    ld   a,($PLAYER_Y_LEGS)
-19F3: 37          scf
-19F4: 3F          ccf
-19F5: C6 18       add  a,$18    ; +24 (ground = 255-24?)
-19F7: D0          ret  nc
-19F8: CD C0 0C    call $DO_DEATH_SEQUENCE
-19FB: AF          xor  a
-19FC: 32 12 80    ld   ($PLAYER_DIED),a
-19FF: CD 20 02    call $POST_DEATH_RESET
-1A02: C9          ret
+check_fall_off_bottom_scr:
+    ld   a,(player_y_legs)
+    scf
+    ccf
+    add  a,$18 ; +24 (ground = 255-24?)
+    ret  nc
+    call do_death_sequence
+    xor  a
+    ld   (player_died),a
+    call post_death_reset
+    ret
 
-1A03: FF
+    db   $FF
 
-    ;; Die if you go out the screen to the left (16px)
-CHECK_EXIT_STAGE_LEFT
-1A04: 3A 40 81    ld   a,($PLAYER_X)
-1A07: 37          scf
-1A08: 3F          ccf
-1A09: D6 10       sub  $10      ; out the start of the screen?
-1A0B: D0          ret  nc       ; ... nope, you're good
-1A0C: C3 48 1B    jp   $CALL_DO_DEATH_SEQUENCE  ; ... yep, you're dead
-1A0F: C9          ret
+;; Die if you go out the screen to the left (16px)
+check_exit_stage_left:
+    ld   a,(player_x)
+    scf
+    ccf
+    sub  $10 ; out the start of the screen?
+    ret  nc ; ... nope, you're good
+    jp   call_do_death_sequence ; ... yep, you're dead
+    ret
 
-    ;; Level data for screens 5, 10
-    ;; (`/` screens)
-    ;; See DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__STAIRS_UP
-1A10: 03 3F 00 1B FE 30 31 3C FF
-1A19: 03 3F 3E 3B 40 00 1B FC 10 3A 3F FF
-1A25: 03 3B 3B 3E 3F 42 00 1B 36 10 3D 3F FF
-1A32: 03 3F 3B 3F 3E 3B 41 00 18 FE 30 31 10 3C 3F 3E FF
-1A43: 03 3F 3B 3E 3B 3E 3F 40 00 18 FC 00 1D 39 3E FF
-1A53: 03 3B 3F 3B 3E 3B 41 00 18 36 10 10 3D 3F 3E 3B FF
-1A64: 03 3F 3B 3B 3B 00 15 FE 30 31 30 10 3A 3E 3B 3B 3F FF
-1A76: 03 3E 3E 3B 00 15 FC 00 1A 3C 3F 3E 3E 3F FF
-1A85: 03 3B 00 15 37 10 10 10 39 3E 3E 3F 3B 3F FF
-1A94: 03 3E 42 00 12 FE 31 30 31 10 10 10 3A 3F 3E 3B 3E 3F FF
-1AA7: 03 3F 41 00 12 FC 00 1A 38 3E 3B 3B 3F FF
-1AB5: 03 3E 40 00 12 36 00 1B 39 3F 3B 3F FF
-1AC2: 03 42 00 0F FE 30 31 00 1B 3C 3F 3E 3E FF
-1AD0: 03 43 00 0F FC 00 1C 3E 3E 3B FF
-1ADB: 03 41 00 0F 37 00 1D 3A 3B FF
-1AE5: 03 42 00 0C FE 34 35 36 00 1E 3C FF
-1AF1: 03 41 00 0C FC 00 1E 39 FF
-1AFA: 03 40 00 0C 36 00 1E 3E FF
-1B03: 03 42 00 09 FE 00 1E FE FF
-1B0C: 03 43 00 09 FD 00 1E FD FF
-1B15: 03 42 00 09 FD 00 1E FD FF
-1B1E: 03 41 00 09 FD 00 1E FD FF
-1B27: 03 40 00 09 FC 00 1E FC FF
+;; Level data for screens 5, 10
+;; (`/` screens)
+;; See DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__stairs_up:
+    db   $03,$3F,$00,$1B,$FE,$30,$31,$3C,$FF
+    db   $03,$3F,$3E,$3B,$40,$00,$1B,$FC,$10,$3A,$3F,$FF
+    db   $03,$3B,$3B,$3E,$3F,$42,$00,$1B,$36,$10,$3D,$3F,$FF
+    db   $03,$3F,$3B,$3F,$3E,$3B,$41,$00,$18,$FE,$30,$31,$10,$3C,$3F,$3E,$FF
+    db   $03,$3F,$3B,$3E,$3B,$3E,$3F,$40,$00,$18,$FC,$00,$1D,$39,$3E,$FF
+    db   $03,$3B,$3F,$3B,$3E,$3B,$41,$00,$18,$36,$10,$10,$3D,$3F,$3E,$3B,$FF
+    db   $03,$3F,$3B,$3B,$3B,$00,$15,$FE,$30,$31,$30,$10,$3A,$3E,$3B,$3B,$3F,$FF
+    db   $03,$3E,$3E,$3B,$00,$15,$FC,$00,$1A,$3C,$3F,$3E,$3E,$3F,$FF
+    db   $03,$3B,$00,$15,$37,$10,$10,$10,$39,$3E,$3E,$3F,$3B,$3F,$FF
+    db   $03,$3E,$42,$00,$12,$FE,$31,$30,$31,$10,$10,$10,$3A,$3F,$3E,$3B,$3E,$3F,$FF
+    db   $03,$3F,$41,$00,$12,$FC,$00,$1A,$38,$3E,$3B,$3B,$3F,$FF
+    db   $03,$3E,$40,$00,$12,$36,$00,$1B,$39,$3F,$3B,$3F,$FF
+    db   $03,$42,$00,$0F,$FE,$30,$31,$00,$1B,$3C,$3F,$3E,$3E,$FF
+    db   $03,$43,$00,$0F,$FC,$00,$1C,$3E,$3E,$3B,$FF
+    db   $03,$41,$00,$0F,$37,$00,$1D,$3A,$3B,$FF
+    db   $03,$42,$00,$0C,$FE,$34,$35,$36,$00,$1E,$3C,$FF
+    db   $03,$41,$00,$0C,$FC,$00,$1E,$39,$FF
+    db   $03,$40,$00,$0C,$36,$00,$1E,$3E,$FF
+    db   $03,$42,$00,$09,$FE,$00,$1E,$FE,$FF
+    db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
-    ;; who calls? Can't see it triggered in debugger
-1B30: 2A 20 80    ld   hl,($LEVEL_BG_PTR)
-1B33: 01 14 00    ld   bc,$0014 ; add 20 bytes to bg_ptr
-1B36: 09          add  hl,bc
-1B37: 22 20 80    ld   ($LEVEL_BG_PTR),hl
-1B3A: 2A 1E 80    ld   hl,($SCREEN_RAM_PTR)
-1B3D: 01 14 00    ld   bc,$0014 ; add 20 bytes to SCREEN_RAM_PTR
-1B40: 09          add  hl,bc
-1B41: 22 1E 80    ld   ($SCREEN_RAM_PTR),hl
-1B44: C9          ret
-1B45: FF ...
+    ld   hl,(level_bg_ptr)
+    ld   bc,$0014 ; add 20 bytes to bg_ptr
+    add  hl,bc
+    ld   (level_bg_ptr),hl
+    ld   hl,(screen_ram_ptr)
+    ld   bc,$0014 ; add 20 bytes to SCREEN_RAM_PTR
+    add  hl,bc
+    ld   (screen_ram_ptr),hl
+    ret
 
-CALL_DO_DEATH_SEQUENCE
-1B48: CD C0 0C    call $DO_DEATH_SEQUENCE
-1B4B: CD 20 02    call $POST_DEATH_RESET
-1B4E: C9          ret
-1B4F: FF
+    dc   3, $FF
 
-    ;; ?
-1B50: 3E 03       ld   a,$03
-1B52: 32 80 80    ld   ($8080),a
-1B55: CD 00 17    call $ADD_SCORE
-1B58: CD E0 24    call $DELAY_60_VBLANKS
-1B5B: 3A 04 80    ld   a,($PLAYER_NUM)
-1B5E: A7          and  a
-1B5F: 20 05       jr   nz,$1B66
-1B61: 21 29 80    ld   hl,$SCREEN_NUM
-1B64: 18 03       jr   $1B69
-1B66: 21 2A 80    ld   hl,$SCREEN_NUM_P2
-1B69: 7E          ld   a,(hl)
-1B6A: 3C          inc  a
-1B6B: 27          daa
-1B6C: 77          ld   (hl),a
-1B6D: CD B0 2C    call $NOPPED_OUT_DISPATCH ; calls nothing based on screen
-1B70: C3 00 10    jp   $BIG_RESET
+call_do_death_sequence:
+    call do_death_sequence
+    call post_death_reset
+    ret
 
-1B73: FF ...
+    db   $FF
 
-INIT_SCORE_AND_SCREEN_ONCE
-1B80: 3A 31 80    ld   a,($IS_2_PLAYERS)
-1B83: A7          and  a
-1B84: 20 0B       jr   nz,$_BOTH
-_2_PLAYERS
-1B86: 3A 22 80    ld   a,($DID_INIT) ; $8022 never used anywhere else
-1B89: A7          and  a
-1B8A: 28 01       jr   z,$_DID_INIT
-1B8C: C9          ret           ; p2 hasn't inited?
-_DID_INIT
-1B8D: 3C          inc  a
-1B8E: 32 22 80    ld   ($DID_INIT),a ; (except here)
-_BOTH
-1B91: CD 00 17    call $ADD_SCORE
-1B94: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-    ;;
-1B97: 00          nop
-1B98: 00          nop
-1B99: CD A0 03    call $DRAW_LIVES
-1B9C: 21 E0 0F    ld   hl,$0FE0
-1B9F: CD 40 08    call $DRAW_SCREEN
-1BA2: 00 00                     ; data
-1BA4: CD 50 24    call $DRAW_SCORE
-1BA7: 3A 04 80    ld   a,($PLAYER_NUM)
-1BAA: A7          and  a
-1BAB: 20 10       jr   nz,$1BBD
-1BAD: CD 10 03    call $DRAW_TILES_H
-1BB0: 10 0A
-1BB2: 20 1C 11 29 15 22 10 01 FF ; PLAYER 1
-1BBB: 18 0E       jr   $1BCB
-1BBD: CD 10 03    call $DRAW_TILES_H
-1BC0: 10 0A
-1BC2: 20 1C 11 29 15 22 10 02 FF ; PLAYER 2
-1BCB: CD 41 1C    call $PLAY_INTRO_JINGLE
-1BCE: C9          ret
+;; ? unused?
+    ld   a,$03
+    ld   (_8080),a
+    call add_score
+    call delay_60_vblanks
+    ld   a,(player_num)
+    and  a
+    jr   nz,_1B66
+    ld   hl,screen_num
+    jr   _1B69
+_1B66:
+    ld   hl,screen_num_p2
+_1B69:
+    ld   a,(hl)
+    inc  a
+    daa
+    ld   (hl),a
+    call nopped_out_dispatch ; calls nothing (nopped dispatch) based on screen
+    jp   big_reset
 
-1BCF: 3E 08       ld   a,$08
-1BD1: 32 86 80    ld   ($8086),a
-1BD4: C9          ret
+    dc   13, $FF
 
-1BD5: FF
+init_score_and_screen_once:
+    ld   a,(is_2_players)
+    and  a
+    jr   nz,_both
+_2_players:
+    ld   a,(did_init) ; $8022 never used anywhere else
+    and  a
+    jr   z,_did_init
+    ret ; p2 hasn't inited?
+_did_init:
+    inc  a
+    ld   (did_init),a ; (except here)
+_both:
+    call add_score
+    call reset_xoff_sprites_and_clear_screen
+;;
+    nop
+    nop
+    call draw_lives
+    ld   hl,header_text_data
+    call draw_screen
+    db   $00,$00 ; data
+    call draw_score
+    ld   a,(player_num)
+    and  a
+    jr   nz,_1BBD
+    call draw_tiles_h
+    db   $10,$0A
+    db   $20,$1C,$11,$29,$15,$22,$10,$01,$FF ;  PLAYER 1
+    jr   _1BCB
+_1BBD:
+    call draw_tiles_h
+    db   $10,$0A
+    db   $20,$1C,$11,$29,$15,$22,$10,$02,$FF ;  PLAYER 2
+_1BCB:
+    call play_intro_jingle
+    ret
 
-DRAW_BORDER_1_B
-1BD6: CD 10 03    call $DRAW_TILES_H
-1BD9: 1B 02
-1BDB: E2 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3
-1BEB: E3 E3 E3 E3 E3 E3 E3 E4 FF
-1BF4: C3 D8 1C    jp   $DRAW_BORDER_1_C
+    ld   a,$08
+    ld   (_8086),a
+    ret
 
-1BF7: FF ...
+    dc   1, $FF
 
-DELAY_18_VBLANKS
-1C00: 1E 18       ld   e,$18
-1C02: CD A0 13    call $WAIT_VBLANK
-1C05: 1D          dec  e
-1C06: 20 FA       jr   nz,$1C02
-1C08: C9          ret
+draw_border_1_b:
+    call draw_tiles_h
+    db   $1B,$02
+    db   $E2,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3
+    db   $E3,$E3,$E3,$E3,$E3,$E3,$E3,$E4,$FF
 
-1C09: FF ...
+    jp   draw_border_1_c
 
-DINO_CAUGHT_PLAYER_RIGHT
-1C10: 3A 40 81    ld   a,($PLAYER_X)
-1C13: C6 08       add  a,$08
-1C15: 32 4C 81    ld   ($DINO_X),a
-1C18: C6 08       add  a,$08
-1C1A: 32 50 81    ld   ($DINO_X_LEGS),a
-1C1D: 3A 43 81    ld   a,($PLAYER_Y)
-1C20: 32 4F 81    ld   ($DINO_Y),a
-1C23: C6 10       add  a,$10
-1C25: 32 53 81    ld   ($DINO_Y_LEGS),a
-1C28: 3E AC       ld   a,$AC
-1C2A: 32 4D 81    ld   ($DINO_FRAME),a
-1C2D: 3E B0       ld   a,$B0
-1C2F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-1C32: CD 00 1C    call $DELAY_18_VBLANKS
-1C35: 3E AD       ld   a,$AD
-1C37: 32 4D 81    ld   ($DINO_FRAME),a
-1C3A: CD 00 1C    call $DELAY_18_VBLANKS
-1C3D: CD 33 0A    call $KILL_PLAYER
-1C40: C9          ret
+    dc   9, $FF
 
-PLAY_INTRO_JINGLE
-1C41: 3E 0F       ld   a,$0F    ;intro jingle
-1C43: 32 44 80    ld   ($SFX_ID),a
-1C46: AF          xor  a
-1C47: 32 42 80    ld   ($CH1_SFX),a
-1C4A: CD E0 24    call $DELAY_60_VBLANKS
-1C4D: C9          ret
+delay_18_vblanks:
+    ld   e,$18
+_1C02:
+    call wait_vblank
+    dec  e
+    jr   nz,_1C02
+    ret
 
-1C4E: FF FF
+    dc   7, $FF
 
-DINO_CAUGHT_PLAYER_LEFT
-1C50: 3A 40 81    ld   a,($PLAYER_X)
-1C53: D6 08       sub  $08
-1C55: 32 4C 81    ld   ($DINO_X),a
-1C58: D6 08       sub  $08
-1C5A: 32 50 81    ld   ($DINO_X_LEGS),a
-1C5D: 3A 43 81    ld   a,($PLAYER_Y)
-1C60: 32 4F 81    ld   ($DINO_Y),a
-1C63: C6 10       add  a,$10
-1C65: 32 53 81    ld   ($DINO_Y_LEGS),a
-1C68: 3E 2C       ld   a,$2C
-1C6A: 32 4D 81    ld   ($DINO_FRAME),a
-1C6D: 3E 30       ld   a,$30
-1C6F: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-1C72: CD 00 1C    call $DELAY_18_VBLANKS
-1C75: 3E 2D       ld   a,$2D
-1C77: 32 4D 81    ld   ($DINO_FRAME),a
-1C7A: CD 00 1C    call $DELAY_18_VBLANKS
-1C7D: CD 33 0A    call $KILL_PLAYER
-1C80: C9          ret
+dino_caught_player_right:
+    ld   a,(player_x)
+    add  a,$08
+    ld   (dino_x),a
+    add  a,$08
+    ld   (dino_x_legs),a
+    ld   a,(player_y)
+    ld   (dino_y),a
+    add  a,$10
+    ld   (dino_y_legs),a
+    ld   a,$AC
+    ld   (dino_frame),a
+    ld   a,$B0
+    ld   (dino_frame_legs),a
+    call delay_18_vblanks
+    ld   a,$AD
+    ld   (dino_frame),a
+    call delay_18_vblanks
+    call kill_player
+    ret
 
-1C81: E9          jp   (hl)
-1C82: 10 40       djnz $1CC4
-1C84: 01 81 1C    ld   bc,$1C81
-1C87: C5          push bc
-1C88: E5          push hl
-1C89: C9          ret
+play_intro_jingle:
+    ld   a,$0F ; intro jingle
+    ld   (sfx_id),a
+    xor  a
+    ld   (ch1_sfx),a
+    call delay_60_vblanks
+    ret
 
-1C8A: FF ...
+    dc   2, $FF
 
-DINO_GOT_PLAYER_LEFT_OR_RIGHT
-1C90: 3A 40 81    ld   a,($PLAYER_X)
-1C93: 47          ld   b,a
-1C94: 3A 4C 81    ld   a,($DINO_X)
-1C97: 37          scf
-1C98: 3F          ccf
-1C99: 90          sub  b
-1C9A: 38 04       jr   c,$1CA0
-1C9C: CD 10 1C    call $DINO_CAUGHT_PLAYER_RIGHT
-1C9F: C9          ret
-1CA0: CD 50 1C    call $DINO_CAUGHT_PLAYER_LEFT
-1CA3: C9          ret
+dino_caught_player_left:
+    ld   a,(player_x)
+    sub  $08
+    ld   (dino_x),a
+    sub  $08
+    ld   (dino_x_legs),a
+    ld   a,(player_y)
+    ld   (dino_y),a
+    add  a,$10
+    ld   (dino_y_legs),a
+    ld   a,$2C
+    ld   (dino_frame),a
+    ld   a,$30
+    ld   (dino_frame_legs),a
+    call delay_18_vblanks
+    ld   a,$2D
+    ld   (dino_frame),a
+    call delay_18_vblanks
+    call kill_player
+    ret
 
-1CA4: FF ...
+_1C81:
+    jp   (hl)
+    djnz _1CC4
+    ld   bc,_1C81
+    push bc
+    push hl
+    ret
 
-DINO_COLLISION
-1CB0: 3A 4C 81    ld   a,($DINO_X)
-1CB3: 47          ld   b,a
-1CB4: 3A 40 81    ld   a,($PLAYER_X)
-1CB7: 90          sub  b
-1CB8: 37          scf
-1CB9: 3F          ccf
-1CBA: D6 18       sub  $18
-1CBC: 38 03       jr   c,$1CC1
-1CBE: C6 30       add  a,$30
-1CC0: D0          ret  nc
-1CC1: 3A 4F 81    ld   a,($DINO_Y)
-1CC4: 47          ld   b,a
-1CC5: 3A 43 81    ld   a,($PLAYER_Y)
-1CC8: 90          sub  b
-1CC9: 37          scf
-1CCA: 3F          ccf
-1CCB: D6 28       sub  $28
-1CCD: 38 03       jr   c,$1CD2
-1CCF: C6 50       add  a,$50
-1CD1: D0          ret  nc
-1CD2: CD 90 1C    call $DINO_GOT_PLAYER_LEFT_OR_RIGHT
-1CD5: C9          ret
+    dc   6, $FF
 
-1CD6: FF ..
+dino_got_player_left_or_right:
+    ld   a,(player_x)
+    ld   b,a
+    ld   a,(dino_x)
+    scf
+    ccf
+    sub  b
+    jr   c,_1CA0
+    call dino_caught_player_right
+    ret
+_1CA0:
+    call dino_caught_player_left
+    ret
 
-DRAW_BORDER_1_C
-1CD8: CD D8 3B    call $DRAW_TILES_V_COPY
-1CDB: 19 03
-1CDD: E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1
-1CED: E1 E1 E1 E1 E1 E1 E1 E1 FF
-1CF6: C9          ret
-1CF7: FF ...
+    dc   12, $FF
 
-    ;; Level data for screens: 16, 19, 27
-    ;; (all `S` screens)
-    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__S
-1D00: 03 3B 3E 3F 00 0F FE 00 1B FE 10 3D 3E FF
-1D0E: 03 3E 3E 3F 3E 00 0F FD 00 1B FD 10 3C 3F FF
-1D1D: 03 3E 3B 3B 3F 3B 00 0F FD 00 1B FD 10 3A 3B FF
-1D2D: 03 3B 3E 3B 3F 3F 41 00 0F FD 00 1B FD 10 3C 3B FF
-1D3E: 03 3B 3E 3F 3B 00 0F FC 00 19 35 34 3C 10 39 3E FF
-1D4F: 03 3F 3E 3B 3E 00 0D 36 31 00 18 37 10 10 10 3D 3F 3E FF
-1D62: 03 3B 3B 40 00 0C 33 00 12 FE 00 18 FE 10 10 3C 3E 3F 3F FF
-1D76: 03 3E 40 00 0C FE 00 12 FD 00 18 FD 10 10 3D 3B 3F 3B FF
-1D89: 03 3F 41 00 0C FD 00 12 FD 00 18 FD 10 3A 3F 3F 3E 3B FF
-1D9C: 03 3F 40 00 0C FD 00 12 FD 00 18 FD 10 38 3E 3F 3E 3B FF
-1DAF: 03 40 00 0C FD 00 12 FD 00 18 FD 10 10 3A 3B 3B 3F FF
-1DC1: 03 42 00 0C FC 00 12 FC 00 18 FC 10 10 3A 3F 3E 3B FF
-1DD3: 03 43 00 0A 33 31 00 17 36 10 10 3C 3F 3B 3B 3E FF
-1DE4: 03 41 00 0A 36 00 16 36 10 10 3D 3B 3F 3E 3B 3B FF
-1DF5: 03 43 00 09 FE 00 15 FE 10 10 3A 3E 3F 3B 3F 3B 3F FF
-1E07: 03 42 00 09 FD 00 15 FD 10 10 10 10 3E 3B 3F 3F 3E FF
-1E19: 03 41 00 09 FD 00 15 FD 10 10 10 10 10 3A 3F 3B 3E FF
-1E2B: 03 40 00 09 FD 00 15 FC 00 1E FD FF
-1E37: 03 42 00 09 FD 00 1E FE FF
-1E40: 03 43 00 09 FD 00 1E FD FF
-1E49: 03 42 00 09 FD 00 1E FD FF
-1E52: 03 41 00 09 FD 00 1E FD FF
-1E5B: 03 40 00 09 FC 00 1E FC FF
+dino_collision:
+    ld   a,(dino_x)
+    ld   b,a
+    ld   a,(player_x)
+    sub  b
+    scf
+    ccf
+    sub  $18
+    jr   c,_1CC1
+    add  a,$30
+    ret  nc
+_1CC1:
+    ld   a,(dino_y)
+_1CC4:
+    ld   b,a
+    ld   a,(player_y)
+    sub  b
+    scf
+    ccf
+    sub  $28
+    jr   c,_1CD2
+    add  a,$50
+    ret  nc
+_1CD2:
+    call dino_got_player_left_or_right
+    ret
 
-1E64: FF ...
+    dc   2, $FF
 
-    ;; Level data for screens 7, 12, 17, 20, 23, 26
-    ;; (all `\` screens)
-    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__STAIRS_DOWN
-1E70: 03 42 00 0A 30 32 00 1D 3C 3F FF
-1E7B: 03 43 00 0C FE 00 1C 3A 3B 3F FF
-1E86: 03 41 00 0C FC 00 19 38 3E 3B 3F 3F 3B FF
-1E94: 03 3B 40 00 0D 31 32 00 16 3A 3F 3E 3B 3B 3E 3F 3B 3F FF
-1EA7: 03 3B 00 0F FE 00 15 39 3E 3E 3F 3B 3F 3F 3B 3E 3F FF
-1EB9: 03 3F 40 00 0F FC 00 14 38 3F 3B 3E 3B 3F 3E 3B 3F 3E 3E FF
-1ECD: 03 3B 3E 41 00 10 30 32 00 14 3A 3B 3F 3E 3F 3F 3B 3B 3E 3F 3E FF
-1EE3: 03 3E 3F 3B 3B 40 00 12 FE 3F 3F 3B 3E 3F 3E 3B 3B 3E 3F 3E 3B FF
-1EF9: 03 3B 3F 3F 3E 40 00 12 FD 3B 3F 3E 3B 3E 3F 3F 3B 3B 3F 3E 3E FF
-1F0F: 03 3F 3F 3E 3B 3B 00 16 39 3B 3F 3E 3F 3F 3B 3B 3E FF
-1F21: 03 3F 3B 3B 3E 40 00 15 FE 3B 3E 3F 3B 3E 3F 3B 3E 3F FF
-1F34: 03 3B 3F 3E 3E 3B 41 00 15 FC 3E 3B 3F 3E 3B 3F 3E 3B 3F FF
-1F48: 03 3F 3E 3E 3F 3F 00 19 3A 3E 3F 3B 3F 3B FF
-1F57: 03 3F 3E 3F 3B 40 00 18 FE 3B 3E 3F 3F 3E 3B FF
-1F67: 03 3F 3E 3E 3B 3F 40 00 18 FC 3E 3B 3E 3B 3E 3F FF
-1F78: 03 3E 3B 3B 41 00 1C 38 3F 3F FF
-1F83: 03 3F 3E 42 00 1B FE 3E 3B 3B FF
-1F8E: 03 3F 40 00 1B FC 3B 3E 3F FF
-1F98: 03 42 00 09 FE 00 1E FE FF
-1FA1: 03 43 00 09 FD 00 1E FD FF
-1FAA: 03 42 00 09 FD 00 1E FD FF
-1FB3: 03 41 00 09 FD 00 1E FD FF
-1FBC: 03 40 00 09 FC 00 1E FC FF
+draw_border_1_c:
+    call draw_tiles_v_copy
+    db   $19,$03
+    db   $E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1
+    db   $E1,$E1,$E1,$E1,$E1,$E1,$E1,$E1,$FF
+    ret
 
-1FC5: FF ...
+    dc   9, $FF
 
-    ;; Level data for screens 21, 24
-    ;; (all `S_S` screens)
-    ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__S_S
-1FE0: 03 42 00 1D 3D 3B FF
-1FE7: 03 41 00 0F FE 00 1B FE 3F 3E 3B FF
-1FF3: 03 40 00 0F FD 00 1B FD 3B 3E 3F FF
-1FFF: 03        ; ...to be continued...
+;; Level data for screens: 16, 19, 27
+;; (all `S` screens)
+;; See by DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__S:
+    db   $03,$3B,$3E,$3F,$00,$0F,$FE,$00,$1B,$FE,$10,$3D,$3E,$FF
+    db   $03,$3E,$3E,$3F,$3E,$00,$0F,$FD,$00,$1B,$FD,$10,$3C,$3F,$FF
+    db   $03,$3E,$3B,$3B,$3F,$3B,$00,$0F,$FD,$00,$1B,$FD,$10,$3A,$3B,$FF
+    db   $03,$3B,$3E,$3B,$3F,$3F,$41,$00,$0F,$FD,$00,$1B,$FD,$10,$3C,$3B,$FF
+    db   $03,$3B,$3E,$3F,$3B,$00,$0F,$FC,$00,$19,$35,$34,$3C,$10,$39,$3E,$FF
+    db   $03,$3F,$3E,$3B,$3E,$00,$0D,$36,$31,$00,$18,$37,$10,$10,$10,$3D,$3F,$3E,$FF
+    db   $03,$3B,$3B,$40,$00,$0C,$33,$00,$12,$FE,$00,$18,$FE,$10,$10,$3C,$3E,$3F,$3F,$FF
+    db   $03,$3E,$40,$00,$0C,$FE,$00,$12,$FD,$00,$18,$FD,$10,$10,$3D,$3B,$3F,$3B,$FF
+    db   $03,$3F,$41,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$3A,$3F,$3F,$3E,$3B,$FF
+    db   $03,$3F,$40,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$38,$3E,$3F,$3E,$3B,$FF
+    db   $03,$40,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$10,$10,$3A,$3B,$3B,$3F,$FF
+    db   $03,$42,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$10,$10,$3A,$3F,$3E,$3B,$FF
+    db   $03,$43,$00,$0A,$33,$31,$00,$17,$36,$10,$10,$3C,$3F,$3B,$3B,$3E,$FF
+    db   $03,$41,$00,$0A,$36,$00,$16,$36,$10,$10,$3D,$3B,$3F,$3E,$3B,$3B,$FF
+    db   $03,$43,$00,$09,$FE,$00,$15,$FE,$10,$10,$3A,$3E,$3F,$3B,$3F,$3B,$3F,$FF
+    db   $03,$42,$00,$09,$FD,$00,$15,$FD,$10,$10,$10,$10,$3E,$3B,$3F,$3F,$3E,$FF
+    db   $03,$41,$00,$09,$FD,$00,$15,$FD,$10,$10,$10,$10,$10,$3A,$3F,$3B,$3E,$FF
+    db   $03,$40,$00,$09,$FD,$00,$15,$FC,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FE,$FF
+    db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+    dc   12, $FF
+
+;; Level data for screens 7, 12, 17, 20, 23, 26
+;; (all `\` screens)
+;; See by DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__stairs_down:
+    db   $03,$42,$00,$0A,$30,$32,$00,$1D,$3C,$3F,$FF
+    db   $03,$43,$00,$0C,$FE,$00,$1C,$3A,$3B,$3F,$FF
+    db   $03,$41,$00,$0C,$FC,$00,$19,$38,$3E,$3B,$3F,$3F,$3B,$FF
+    db   $03,$3B,$40,$00,$0D,$31,$32,$00,$16,$3A,$3F,$3E,$3B,$3B,$3E,$3F,$3B,$3F,$FF
+    db   $03,$3B,$00,$0F,$FE,$00,$15,$39,$3E,$3E,$3F,$3B,$3F,$3F,$3B,$3E,$3F,$FF
+    db   $03,$3F,$40,$00,$0F,$FC,$00,$14,$38,$3F,$3B,$3E,$3B,$3F,$3E,$3B,$3F,$3E,$3E,$FF
+    db   $03,$3B,$3E,$41,$00,$10,$30,$32,$00,$14,$3A,$3B,$3F,$3E,$3F,$3F,$3B,$3B,$3E,$3F,$3E,$FF
+    db   $03,$3E,$3F,$3B,$3B,$40,$00,$12,$FE,$3F,$3F,$3B,$3E,$3F,$3E,$3B,$3B,$3E,$3F,$3E,$3B,$FF
+    db   $03,$3B,$3F,$3F,$3E,$40,$00,$12,$FD,$3B,$3F,$3E,$3B,$3E,$3F,$3F,$3B,$3B,$3F,$3E,$3E,$FF
+    db   $03,$3F,$3F,$3E,$3B,$3B,$00,$16,$39,$3B,$3F,$3E,$3F,$3F,$3B,$3B,$3E,$FF
+    db   $03,$3F,$3B,$3B,$3E,$40,$00,$15,$FE,$3B,$3E,$3F,$3B,$3E,$3F,$3B,$3E,$3F,$FF
+    db   $03,$3B,$3F,$3E,$3E,$3B,$41,$00,$15,$FC,$3E,$3B,$3F,$3E,$3B,$3F,$3E,$3B,$3F,$FF
+    db   $03,$3F,$3E,$3E,$3F,$3F,$00,$19,$3A,$3E,$3F,$3B,$3F,$3B,$FF
+    db   $03,$3F,$3E,$3F,$3B,$40,$00,$18,$FE,$3B,$3E,$3F,$3F,$3E,$3B,$FF
+    db   $03,$3F,$3E,$3E,$3B,$3F,$40,$00,$18,$FC,$3E,$3B,$3E,$3B,$3E,$3F,$FF
+    db   $03,$3E,$3B,$3B,$41,$00,$1C,$38,$3F,$3F,$FF
+    db   $03,$3F,$3E,$42,$00,$1B,$FE,$3E,$3B,$3B,$FF
+    db   $03,$3F,$40,$00,$1B,$FC,$3B,$3E,$3F,$FF
+    db   $03,$42,$00,$09,$FE,$00,$1E,$FE,$FF
+    db   $03,$43,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
+
+    dc   27, $FF
+
+;; Level data for screens 21, 24
+;; (all `S_S` screens)
+;; See by DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__S_S:
+    db   $03,$42,$00,$1D,$3D,$3B,$FF
+    db   $03,$41,$00,$0F,$FE,$00,$1B,$FE,$3F,$3E,$3B,$FF
+    db   $03,$40,$00,$0F,$FD,$00,$1B,$FD,$3B,$3E,$3F,$FF
+    db   $03     ; ...to be continued...
 ;;; ======END OF BG2.BIN, START OF BG3.BIN ===========
-2000: 3F 43 00 0F FC 00 1B FC 3F 3E 3B FF
-200C: 03 3E 3B 41 00 0E 36 10 32 00 1B 38 3B 3F 3E FF
-201C: 03 3B 3E 3E 40 00 0D 36 10 10 10 32 00 1A 3D 3B 3B 3F 3F FF
-2030: 03 3B 3E 3E 40 00 0C FE 00 12 FE 00 18 FE 3E 3F 3B 3B 3E 3F FF
-2045: 03 3F 3E 3B 00 0C FD 00 12 FD 00 18 FD 3F 3E 3B 3F 3E 3B FF
-2059: 03 3E 3B 41 00 0C FC 00 12 FC 00 18 FC 3E 3F 3E 3F 3B 3F FF
-206D: 03 3F 42 00 19 3C 3F 3E 3B 3B 3F FF
-2079: 03 3B 43 00 19 3A 3E 3F 3E 3F 3E FF
-2085: 03 3B 42 00 19 3C 3B 3B 3E 3B 3B FF
-2091: 03 3F 3F 41 00 19 3C 3F 3E 3F 3B 3E FF
-209E: 03 3E 43 00 1A 3E 3F 3F 3E 3B FF
-20A9: 03 3B 3B 40 00 0C FE 00 12 FE 00 18 FE 3E 3F 3B 3B 3F 3E FF
-20BD: 03 3F 00 0C FD 00 12 FD 00 18 FD 3E 3E 3F 3B 3F 3B FF
-20CF: 03 40 00 0C FC 00 12 FC 00 18 FC 3F 3E 3B 3B 3E FF
-20E1: 03 42 00 0B 36 00 13 32 00 19 30 31 31 30 30 FE FF
-20F2: 03 43 00 0A 36 00 14 32 00 1E FD FF
-20FE: 03 42 00 09 FE 00 15 FE 00 1E FD FF
-210A: 03 41 00 09 FD 00 15 FD 00 1E FD FF
-2116: 03 40 00 09 FC 00 15 FC 00 1E FC FF
+    db   $3F,$43,$00,$0F,$FC,$00,$1B,$FC,$3F,$3E,$3B,$FF
+    db   $03,$3E,$3B,$41,$00,$0E,$36,$10,$32,$00,$1B,$38,$3B,$3F,$3E,$FF
+    db   $03,$3B,$3E,$3E,$40,$00,$0D,$36,$10,$10,$10,$32,$00,$1A,$3D,$3B,$3B,$3F,$3F,$FF
+    db   $03,$3B,$3E,$3E,$40,$00,$0C,$FE,$00,$12,$FE,$00,$18,$FE,$3E,$3F,$3B,$3B,$3E,$3F,$FF
+    db   $03,$3F,$3E,$3B,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$3F,$3E,$3B,$3F,$3E,$3B,$FF
+    db   $03,$3E,$3B,$41,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$3E,$3F,$3E,$3F,$3B,$3F,$FF
+    db   $03,$3F,$42,$00,$19,$3C,$3F,$3E,$3B,$3B,$3F,$FF
+    db   $03,$3B,$43,$00,$19,$3A,$3E,$3F,$3E,$3F,$3E,$FF
+    db   $03,$3B,$42,$00,$19,$3C,$3B,$3B,$3E,$3B,$3B,$FF
+    db   $03,$3F,$3F,$41,$00,$19,$3C,$3F,$3E,$3F,$3B,$3E,$FF
+    db   $03,$3E,$43,$00,$1A,$3E,$3F,$3F,$3E,$3B,$FF
+    db   $03,$3B,$3B,$40,$00,$0C,$FE,$00,$12,$FE,$00,$18,$FE,$3E,$3F,$3B,$3B,$3F,$3E,$FF
+    db   $03,$3F,$00,$0C,$FD,$00,$12,$FD,$00,$18,$FD,$3E,$3E,$3F,$3B,$3F,$3B,$FF
+    db   $03,$40,$00,$0C,$FC,$00,$12,$FC,$00,$18,$FC,$3F,$3E,$3B,$3B,$3E,$3F,$FF
+    db   $03,$42,$00,$0B,$36,$00,$13,$32,$00,$19,$30,$31,$31,$30,$30,$FE,$FF
+    db   $03,$43,$00,$0A,$36,$00,$14,$32,$00,$1E,$FD,$FF
+    db   $03,$42,$00,$09,$FE,$00,$15,$FE,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$15,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FC,$00,$15,$FC,$00,$1E,$FC,$FF
 
-2122: FF ...
+    dc   6, $FF
 
-    ;; Waits 1 vblank, checks if credit is added yet
-WAIT_FOR_START_BUTTON
-2128: CD A0 13    call $WAIT_VBLANK
-212B: 3A 03 83    ld   a,($CREDITS)
-212E: A7          and  a
-212F: C8          ret  z
-    ;; credit added! - start the game
-2130: CD 90 14    call $RESET_XOFF_AND_COLS_AND_SPRITES
-2133: C3 A4 00    jp   $_PLAY_SPLASH
-    ;;
-2136: FF ...
+;; Waits 1 vblank, checks if credit is added yet
+wait_for_start_button:
+    call wait_vblank
+    ld   a,(credits)
+    and  a
+    ret  z
+;; credit added! - start the game
+    call reset_xoff_and_cols_and_sprites
+    jp   _play_splash
+;;
+    dc   10, $FF
 
-    ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
-    ;; (all `nTn` and `W` levels)
-    ;; See DRAW_SCREEN_FROM_LEVEL_DATA
-LEVEL_BG__nTn
-2140: 03 40 00 0A 48 00 1E 39 FF
-2149: 03 41 00 0B 48 00 1D 3A 3B FF
-2153: 03 3F 46 46 46 46 46 46 46 46 FA 00 1B FE 3E 3F 3E FF
-2165: 03 3E 40 44 44 44 44 44 44 44 F8 00 1B FD 3B 3F 3E FF
-2177: 03 42 00 0D 48 00 1B FC 3A 3B 3B FF
-2183: 03 3B 3B 41 00 0E 48 00 1B 3C 3B 3E 3E FF
-2191: 03 3B 3E 00 0F 48 00 1B 3A 3E 3F 3F FF
-219E: 03 3F 3F 40 46 46 46 46 46 46 46 46 46 FA 00 18 FE 10 10 39 3B 3F 3F FF
-21B6: 03 3E 3B 3B 41 44 44 44 44 44 44 44 44 F8 00 18 FD 3F 3E 3B 3F 3E 3B FF
-21CE: 03 3F 3B 3E 40 00 0F 4A 00 18 FC 3F 3F 3E 3E 3B 3E FF
-21E0: 03 3B 3E 43 00 0F 4A 00 1B 3C 3E 3F 3B FF
-21EE: 03 3F 41 46 46 46 46 46 46 46 46 46 46 FA 00 1B 3C 3B 3F 3E FF
-2203: 03 40 44 44 44 44 44 44 44 44 44 44 44 F8 00 1C 39 3E 3F FF
-2217: 03 42 00 0F 49 00 1C 3C 3B 3B FF
-2222: 03 41 00 0E 49 00 1B FE 3F 3E 3B FF
-222E: 03 43 00 0D 49 00 1B FC 3E 3F 3B FF
-223A: 03 3F 41 46 46 46 46 46 46 46 FA 00 1C 39 3E 3B FF
-224B: 03 40 44 44 44 44 44 44 44 44 F8 00 1D 3C 3F FF
-225B: 03 42 00 0B 49 00 1E 3C FF
-2264: 03 43 00 0A 49 00 1E FE FF
-226D: 03 42 00 09 FE 00 1E FD FF
-2276: 03 41 00 09 FD 00 1E FD FF
-227F: 03 40 00 09 FC 00 1E FC FF
+;; Level data for screens 3, 6, 9, 11, 14, 22, 25
+;; (all `nTn` and `W` levels)
+;; See DRAW_SCREEN_FROM_LEVEL_DATA
+level_bg__nTn:
+    db   $03,$40,$00,$0A,$48,$00,$1E,$39,$FF
+    db   $03,$41,$00,$0B,$48,$00,$1D,$3A,$3B,$FF
+    db   $03,$3F,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1B,$FE,$3E,$3F,$3E,$FF
+    db   $03,$3E,$40,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1B,$FD,$3B,$3F,$3E,$FF
+    db   $03,$42,$00,$0D,$48,$00,$1B,$FC,$3A,$3B,$3B,$FF
+    db   $03,$3B,$3B,$41,$00,$0E,$48,$00,$1B,$3C,$3B,$3E,$3E,$FF
+    db   $03,$3B,$3E,$00,$0F,$48,$00,$1B,$3A,$3E,$3F,$3F,$FF
+    db   $03,$3F,$3F,$40,$46,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$18,$FE,$10,$10,$39,$3B,$3F,$3F,$FF
+    db   $03,$3E,$3B,$3B,$41,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$18,$FD,$3F,$3E,$3B,$3F,$3E,$3B,$FF
+    db   $03,$3F,$3B,$3E,$40,$00,$0F,$4A,$00,$18,$FC,$3F,$3F,$3E,$3E,$3B,$3E,$FF
+    db   $03,$3B,$3E,$43,$00,$0F,$4A,$00,$1B,$3C,$3E,$3F,$3B,$FF
+    db   $03,$3F,$41,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1B,$3C,$3B,$3F,$3E,$FF
+    db   $03,$40,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1C,$39,$3E,$3F,$FF
+    db   $03,$42,$00,$0F,$49,$00,$1C,$3C,$3B,$3B,$FF
+    db   $03,$41,$00,$0E,$49,$00,$1B,$FE,$3F,$3E,$3B,$FF
+    db   $03,$43,$00,$0D,$49,$00,$1B,$FC,$3E,$3F,$3B,$FF
+    db   $03,$3F,$41,$46,$46,$46,$46,$46,$46,$46,$FA,$00,$1C,$39,$3E,$3B,$FF
+    db   $03,$40,$44,$44,$44,$44,$44,$44,$44,$44,$F8,$00,$1D,$3C,$3F,$FF
+    db   $03,$42,$00,$0B,$49,$00,$1E,$3C,$FF
+    db   $03,$43,$00,$0A,$49,$00,$1E,$FE,$FF
+    db   $03,$42,$00,$09,$FE,$00,$1E,$FD,$FF
+    db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
+    db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
-WRITE_OUT_0_AND_1
-2288: 3E 07       ld   a,$07
-228A: D3 00       out  ($00),a
-228C: 3E 38       ld   a,$38
-228E: D3 01       out  ($01),a
-2290: C9          ret
+write_out_0_and_1:
+    ld   a,$07
+    out  ($00),a
+    ld   a,$38
+    out  ($01),a
+    ret
 
-2291: FF ...
+    dc   15, $FF
 
-UPDATE_DINO
-22A0: 7E          ld   a,(hl)
-22A1: 32 4C 81    ld   ($DINO_X),a
-22A4: 23          inc  hl
-22A5: 7E          ld   a,(hl)
-22A6: 32 4F 81    ld   ($DINO_Y),a
-22A9: 23          inc  hl
-22AA: 3E 12       ld   a,$12
-22AC: 32 4E 81    ld   ($DINO_COL),a
-22AF: 32 52 81    ld   ($DINO_COL_LEGS),a
-22B2: 7E          ld   a,(hl)   ; anim height (for hiding dino)
-22B3: E6 FC       and  $FC      ; 1111 1100
-22B5: 28 1D       jr   z,$_THIS
-22B7: E6 F8       and  $F8      ; 1111 1000
-22B9: 20 07       jr   nz,$22C2
-22BB: 3A 4C 81    ld   a,($DINO_X)
-22BE: D6 08       sub  $08
-22C0: 18 05       jr   $22C7
-22C2: 3A 4C 81    ld   a,($DINO_X)
-22C5: C6 08       add  a,$08
-22C7: 32 50 81    ld   ($DINO_X_LEGS),a
-22CA: 3A 4F 81    ld   a,($DINO_Y)
-22CD: C6 10       add  a,$10
-22CF: 32 53 81    ld   ($DINO_Y_LEGS),a
-22D2: 18 04       jr   $22D8
-_THIS
-22D4: AF          xor  a
-22D5: 32 50 81    ld   ($DINO_X_LEGS),a
-22D8: 7E          ld   a,(hl)
-22D9: CB 27       sla  a
-22DB: 01 00 24    ld   bc,$DINO_ANIM_LOOKUP
-22DE: 81          add  a,c
-22DF: 4F          ld   c,a
-22E0: 0A          ld   a,(bc)
-22E1: 32 4D 81    ld   ($DINO_FRAME),a
-22E4: 03          inc  bc
-22E5: 0A          ld   a,(bc)
-22E6: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-22E9: CD 20 29    call $SET_DINO_DIR
-22EC: C3 E0 23    jp   $23E0
-22EF: FF          rst  $38
+update_dino:
+    ld   a,(hl)
+    ld   (dino_x),a
+    inc  hl
+    ld   a,(hl)
+    ld   (dino_y),a
+    inc  hl
+    ld   a,$12
+    ld   (dino_col),a
+    ld   (dino_col_legs),a
+    ld   a,(hl) ; anim height (for hiding dino)
+    and  $FC ; 1111 1100
+    jr   z,_this
+    and  $F8 ; 1111 1000
+    jr   nz,_22C2
+    ld   a,(dino_x)
+    sub  $08
+    jr   _22C7
+_22C2:
+    ld   a,(dino_x)
+    add  a,$08
+_22C7:
+    ld   (dino_x_legs),a
+    ld   a,(dino_y)
+    add  a,$10
+    ld   (dino_y_legs),a
+    jr   _22D8
+_this:
+    xor  a
+    ld   (dino_x_legs),a
+_22D8:
+    ld   a,(hl)
+    sla  a
+    ld   bc,dino_anim_lookup
+    add  a,c
+    ld   c,a
+    ld   a,(bc)
+    ld   (dino_frame),a
+    inc  bc
+    ld   a,(bc)
+    ld   (dino_frame_legs),a
+    call set_dino_dir
+    jp   _23E0
 
-DINO_PATHFIND_NOPSLIDE
-22F0: 00          nop
-22F1: 00          nop
-22F2: 00          nop
-22F3: 00          nop
-22F4: 00          nop
-22F5: 00          nop
-22F6: 00          nop
-22F7: 00          nop
-22F8: 00          nop
-22F9: 00          nop
-22FA: 00          nop
+    db   $FF
 
-    ;; Check if it's time to start the dino,
-    ;; if started - follow path.
-DINO_PATHFIND
-22FB: 3A 2D 80    ld   a,($DINO_COUNTER)
-22FE: 3C          inc  a
-22FF: 32 2D 80    ld   ($DINO_COUNTER),a
-2302: 5F          ld   e,a
-2303: 37          scf
-2304: 3F          ccf
-2305: D6 0B       sub  $0B      ; 11 ticks till dino time
-2307: D8          ret  c
-2308: 3A 04 80    ld   a,($PLAYER_NUM) ; start dino!
-230B: A7          and  a
-230C: 20 05       jr   nz,$2313
-230E: 3A 29 80    ld   a,($SCREEN_NUM)
-2311: 18 03       jr   $2316
-2313: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-2316: 3D          dec  a
-2317: 21 30 23    ld   hl,$DINO_PATH_LOOKUP
-231A: CB 27       sla  a  ; screen # x 2
-231C: 85          add  a,l ; dino_lookup + scr*2
-231D: 6F          ld   l,a
-231E: 4E          ld   c,(hl)
-231F: 23          inc  hl
-2320: 46          ld   b,(hl)
-2321: 7B          ld   a,e      ; add dino counter
-2322: D6 0B       sub  $0B
-2324: CB 27       sla  a
-2326: CB 27       sla  a
-2328: 81          add  a,c
-2329: 6F          ld   l,a
-232A: 60          ld   h,b      ; hl points to dino x/y
-232B: CD A0 22    call $UPDATE_DINO
-232E: C9          ret
+dino_pathfind_nopslide:
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
-232F: FF
+;; Check if it's time to start the dino,
+;; if started - follow path.
+dino_pathfind:
+    ld   a,(dino_counter)
+    inc  a
+    ld   (dino_counter),a
+    ld   e,a
+    scf
+    ccf
+    sub  $0B ; 11 ticks till dino time
+    ret  c
+    ld   a,(player_num) ; start dino!
+    and  a
+    jr   nz,_2313
+    ld   a,(screen_num)
+    jr   _2316
+_2313:
+    ld   a,(screen_num_p2)
+_2316:
+    dec  a
+    ld   hl,dino_path_lookup
+    sla  a ; screen # x 2
+    add  a,l ; dino_lookup + scr*2
+    ld   l,a
+    ld   c,(hl)
+    inc  hl
+    ld   b,(hl)
+    ld   a,e ; add dino counter
+    sub  $0B
+    sla  a
+    sla  a
+    add  a,c
+    ld   l,a
+    ld   h,b ; hl points to dino x/y
+    call update_dino
+    ret
 
-    ;; location of path data for each screen
-DINO_PATH_LOOKUP
-2330: 78 23 ; DINO_PATH_1 (screen1)
-2332: 78 23
-2334: 00 26 ; DINO_PATH_2
-2336: 78 23
-2338: 80 26 ; DINO_PATH_3
-2340: 00 27 ; DINO_PATH_4
-233C: 70 27 ; DINO_PATH_5
-233E: 78 23
-2340: 00 26
-2342: 80 26
-2344: 00 27
-2346: 70 27
-2348: 78 23
-234A: 00 26
-234C: 78 23
-234E: 00 28 ; DINO_PATH_6
-2350: 70 27
-2352: 78 23
-2354: 00 28
-2356: 70 27
-2358: 00 2A ; DINO_PATH_7
-235A: 00 27
-235C: 70 27
-235E: 00 2A
-2360: 00 27
-2362: 70 27
-2364: 00 28 ; (screen 27)
+    db   $FF
 
-2366: 00 ...
-2370: FF ...
+;; location of path data for each screen
+dino_path_lookup:
+    db   $78,$23 ;  DINO_PATH_1 (screen1)
+    db   $78,$23
+    db   $00,$26 ;  DINO_PATH_2
+    db   $78,$23
+    db   $80,$26 ;  DINO_PATH_3
+    db   $00,$27 ;  DINO_PATH_4
+    db   $70,$27 ;  DINO_PATH_5
+    db   $78,$23
+    db   $00,$26
+    db   $80,$26
+    db   $00,$27
+    db   $70,$27
+    db   $78,$23
+    db   $00,$26
+    db   $78,$23
+    db   $00,$28 ;  DINO_PATH_6
+    db   $70,$27
+    db   $78,$23
+    db   $00,$28
+    db   $70,$27
+    db   $00,$2A ;  DINO_PATH_7
+    db   $00,$27
+    db   $70,$27
+    db   $00,$2A
+    db   $00,$27
+    db   $70,$27
+    db   $00,$28 ;  (screen 27)
 
-    ;; Nodes for dino to follow: 25 nodes,
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_1
-2378: 18 E0 00 00 1C E0 01 00
-2380: 20 E0 02 00 28 E0 03 00
-2388: 30 E0 02 00 38 E0 01 00
-2390: 48 C8 00 00 50 C8 01 00
-2398: 58 C8 02 00 60 C8 03 00
-23A0: 68 C8 02 00 70 C8 03 00
-23A8: 80 C8 07 00 88 C8 05 00
-23B0: 98 C8 03 00 A0 C8 02 00
-23B8: A8 C8 03 00 B0 C8 02 00
-23C0: B8 C8 03 00 C0 C8 01 00
-23C8: D0 D0 07 00 D8 D0 05 00
-23D0: E0 D0 06 00 E8 D0 05 00
-23D8: F0 D0 04 00 FF FF FF FF
+    dc   10, $0
+    dc   8, $FF
 
-    ;;
-23E0: 3A 4C 81    ld   a,($DINO_X)
-23E3: FE 18       cp   $18
-23E5: C0          ret  nz
-23E6: 3E 07       ld   a,$07
-23E8: 32 44 80    ld   ($SFX_ID),a
-23EB: C9          ret
+;; Nodes for dino to follow: 25 nodes,
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_1:
+    db   $18,$E0,$00,$00,$1C,$E0,$01,$00
+    db   $20,$E0,$02,$00,$28,$E0,$03,$00
+    db   $30,$E0,$02,$00,$38,$E0,$01,$00
+    db   $48,$C8,$00,$00,$50,$C8,$01,$00
+    db   $58,$C8,$02,$00,$60,$C8,$03,$00
+    db   $68,$C8,$02,$00,$70,$C8,$03,$00
+    db   $80,$C8,$07,$00,$88,$C8,$05,$00
+    db   $98,$C8,$03,$00,$A0,$C8,$02,$00
+    db   $A8,$C8,$03,$00,$B0,$C8,$02,$00
+    db   $B8,$C8,$03,$00,$C0,$C8,$01,$00
+    db   $D0,$D0,$07,$00,$D8,$D0,$05,$00
+    db   $E0,$D0,$06,$00,$E8,$D0,$05,$00
+    db   $F0,$D0,$04,$00,$FF,$FF,$FF,$FF
 
-23EC: FF ...
+;;
+_23E0:
+    ld   a,(dino_x)
+    cp   $18
+    ret  nz
+    ld   a,$07
+    ld   (sfx_id),a
+    ret
 
-DINO_ANIM_LOOKUP
-2400: 2F 00 2E 00
-2404: 2D 00 2C 00
-2408: 2D 30 2C 31
-240C: 2D 32
-240E: 2C 33 AD B0
-2412: AC B1 AD B2
-2416: AC B3
+    dc   20, $FF
 
-2418: FF ...
+dino_anim_lookup:
+    db   $2F,$00,$2E,$00
+    db   $2D,$00,$2C,$00
+    db   $2D,$30,$2C,$31
+    db   $2D,$32
+    db   $2C,$33,$AD,$B0
+    db   $AC,$B1,$AD,$B2
+    db   $AC,$B3
 
-    ;;
-COPY_INP_TO_BUTTONS_AND_CHECK_BUTTONS
-2420: 3A 00 A8    ld   a,($PORT_IN1)
-2423: 32 F1 83    ld   ($INPUT_BUTTONS),a
-2426: 3A 00 B0    ld   a,($PORT_IN2)
-2429: 32 F2 83    ld   ($INPUT_BUTTONS_2),a
-242C: CD 40 36    call $CHECK_BUTTONS_FOR_SOMETHING
-242F: C9          ret
+    dc   8, $FF
 
-2430: 06 00       ld   b,$00
-2432: 3A 00 B8    ld   a,($WATCHDOG)
-2435: 05          dec  b
-2436: 20 FA       jr   nz,$2432
-2438: C9          ret
-2439: FF ...
+;;
+copy_inp_to_buttons_and_check_buttons:
+    ld   a,(port_in1)
+    ld   (input_buttons),a
+    ld   a,(port_in2)
+    ld   (input_buttons_2),a
+    call check_buttons_for_something
+    ret
 
-DRAW_SCORE
-2450: AF          xor  a
-2451: 21 14 80    ld   hl,$P1_SCORE
-2454: ED 67       rrd  (hl)
-2456: 32 01 93    ld   ($9301),a
-2459: ED 67       rrd  (hl)
-245B: 32 21 93    ld   ($9321),a
-245E: ED 67       rrd  (hl)
-2460: 2C          inc  l
-2461: ED 67       rrd  (hl)
-2463: 32 41 93    ld   ($9341),a
-2466: ED 67       rrd  (hl)
-2468: 32 61 93    ld   ($9361),a
-246B: ED 67       rrd  (hl)
-246D: 2C          inc  l
-246E: ED 67       rrd  (hl)
-2470: 32 81 93    ld   ($9381),a
-2473: ED 67       rrd  (hl)
-2475: ED 67       rrd  (hl)
-2477: AF          xor  a
-2478: 32 E1 92    ld   ($92E1),a
-247B: 21 17 80    ld   hl,$P2_SCORE
-247E: ED 67       rrd  (hl)
-2480: 32 81 90    ld   ($9081),a
-2483: ED 67       rrd  (hl)
-2485: 32 A1 90    ld   ($90A1),a
-2488: ED 67       rrd  (hl)
-248A: 2C          inc  l
-248B: ED 67       rrd  (hl)
-248D: 32 C1 90    ld   ($90C1),a
-2490: ED 67       rrd  (hl)
-2492: 32 E1 90    ld   ($90E1),a
-2495: ED 67       rrd  (hl)
-2497: 2C          inc  l
-2498: ED 67       rrd  (hl)
-249A: 32 01 91    ld   ($9101),a
-249D: ED 67       rrd  (hl)
-249F: ED 67       rrd  (hl)
-24A1: AF          xor  a
-24A2: 32 61 90    ld   ($9061),a
-24A5: 21 00 83    ld   hl,$HISCORE
-24A8: ED 67       rrd  (hl)
-24AA: 32 C1 91    ld   ($91C1),a
-24AD: ED 67       rrd  (hl)
-24AF: 32 E1 91    ld   ($91E1),a
-24B2: ED 67       rrd  (hl)
-24B4: 2C          inc  l
-24B5: ED 67       rrd  (hl)
-24B7: 32 01 92    ld   ($9201),a
-24BA: ED 67       rrd  (hl)
-24BC: 32 21 92    ld   ($9221),a
-24BF: ED 67       rrd  (hl)
-24C1: 2C          inc  l
-24C2: ED 67       rrd  (hl)
-24C4: 32 41 92    ld   ($9241),a
-24C7: ED 67       rrd  (hl)
-24C9: ED 67       rrd  (hl)
-24CB: AF          xor  a
-24CC: 32 A1 91    ld   ($91A1),a
-24CF: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
-24D2: C9          ret
+_2430:
+    ld   b,$00
+_2432:
+    ld   a,(watchdog)
+    dec  b
+    jr   nz,_2432
+    ret
 
-24D3: FF ...
+    dc   23, $FF
 
-DELAY_60_VBLANKS
-24E0: 26 60       ld   h,$60
-24E2: CD A0 13    call $WAIT_VBLANK
-24E5: 24          inc  h
-24E6: 20 FA       jr   nz,$24E2
-24E8: C9          ret
-24E9: FF ...
+draw_score:
+    xor  a
+    ld   hl,p1_score
+    rrd
+    ld   (_9301),a
+    rrd
+    ld   (_9321),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9341),a
+    rrd
+    ld   (_9361),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9381),a
+    rrd
+    rrd
+    xor  a
+    ld   (_92E1),a
+    ld   hl,p2_score
+    rrd
+    ld   (_9081),a
+    rrd
+    ld   (_90A1),a
+    rrd
+    inc  l
+    rrd
+    ld   (_90C1),a
+    rrd
+    ld   (_90E1),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9101),a
+    rrd
+    rrd
+    xor  a
+    ld   (_9061),a
+    ld   hl,hiscore
+    rrd
+    ld   (_91C1),a
+    rrd
+    ld   (_91E1),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9201),a
+    rrd
+    ld   (_9221),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9241),a
+    rrd
+    rrd
+    xor  a
+    ld   (_91A1),a
+    call copy_hiscore_name_to_screen_2
+    ret
 
-DELAY_8_PLAY_SOUND
-24EC: C5          push bc
-24ED: 06 08       ld   b,$08
-24EF: C5          push bc
-24F0: CD A0 13    call $WAIT_VBLANK
-24F3: C1          pop  bc
-24F4: 10 F9       djnz $24EF
-24F6: C1          pop  bc
-24F7: 3E 0A       ld   a,$0A
-24F9: 32 44 80    ld   ($SFX_ID),a
-24FC: C9          ret
+    dc   13, $FF
 
-24FD: FF ....
+delay_60_vblanks:
+    ld   h,$60
+_24E2:
+    call wait_vblank
+    inc  h
+    jr   nz,_24E2
+    ret
 
-2500: 21 00 83    ld   hl,$HISCORE
-2503: 36 00       ld   (hl),$00
-2505: 2C          inc  l
-2506: 7D          ld   a,l
-2507: FE E1       cp   $E1
-2509: 20 F8       jr   nz,$2503
-250B: C9          ret
-250C: FF ...
+    dc   3, $FF
 
-TEST_THEN_DINO_COLLISION
-2518: 3A 2D 80    ld   a,($DINO_COUNTER)
-251B: E6 F8       and  $F8
-251D: C8          ret  z
-251E: CD B0 1C    call $DINO_COLLISION
-2521: C9          ret
+delay_8_play_sound:
+    push bc
+    ld   b,$08
+_24EF:
+    push bc
+    call wait_vblank
+    pop  bc
+    djnz _24EF
+    pop  bc
+    ld   a,$0A
+    ld   (sfx_id),a
+    ret
 
-2522: FF ...
+    dc   3, $FF
 
-    ;; who calls? (free bytes)
-    ;; Appears to draw [21] (the 21 in a box from the level indicators)
-    ;; through a thick horizontal band in the middle of the screen.
-    ;; ... for some reason
-UNUSED_DRAW_D4_EVERYWHERE
-2538: 11 16 00    ld   de,$0016 ; +22 each outer loop?
-253B: 0E 20       ld   c,$20
-253D: 21 10 90    ld   hl,$9000+10
-_J                              ; 32 loops
-2540: 06 0A       ld   b,$0A
-_I                              ; 10 loops
-2542: 36 D4       ld   (hl),$D4 ; tile [21] (level indicator number)
-2544: 23          inc  hl
-2545: 05          dec  b
-2546: 20 FA       jr   nz,$_I
-2548: 19          add  hl,de
-2549: 0D          dec  c
-254A: C8          ret  z
-254B: 18 F3       jr   $J
-254D: FF ...
+    ld   hl,hiscore
+_2503:
+    ld   (hl),$00
+    inc  l
+    ld   a,l
+    cp   $E1
+    jr   nz,_2503
+    ret
 
-    ;; (free bytes... if you don't want a cool transition)
-    ;; whoa! Draws some weird spirtal cage flood-fill thing
-    ;; inward spiral fill of screen, then clear.
-    ;; (it's right in the dino code - maybe was supposed to happen
-    ;; if you got caught by a dino, or if you caught the dino)
-UNUSED_SPIRAL_CAGE_FILL_TRANSITION
-2550: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-2553: CD A0 13    call $WAIT_VBLANK
-2556: 21 40 90    ld   hl,$START_OF_TILES
-2559: 1E 79       ld   e,$79
-255B: CD 88 25    call $_PART_TWO
-255E: 21 A0 93    ld   hl,$93A0
-2561: CD 88 25    call $_PART_TWO
-2564: 21 00 90    ld   hl,$SCREEN_RAM
-2567: CD 98 25    call $_PART_THREE
-256A: 21 1F 90    ld   hl,$901F
-256D: CD 98 25    call $_PART_THREE
-2570: 16 10       ld   d,$10
-2572: 21 61 90    ld   hl,$9061
-_LP
-2575: CD A8 25    call $_PART_FOUR
-2578: CD C0 25    call $_PART_FIVE
-257B: CD D0 25    call $_PART_SIX
-257E: CD E8 25    call $_PART_SEVEN
-2581: 15          dec  d
-2582: 20 F1       jr   nz,$_LP
-2584: CD 80 14    call $CLEAR_SCREEN
-2587: C9          ret
-_PART_TWO
-2588: 73          ld   (hl),e
-2589: 2C          inc  l
-258A: 7D          ld   a,l
-258B: E6 1F       and  $1F
-258D: C8          ret  z
-258E: 18 F8       jr   $2588
-2590: FF ...
-_PART_THREE
-2598: 73          ld   (hl),e
-2599: 01 20 00    ld   bc,$0020
-259C: 09          add  hl,bc
-259D: 7C          ld   a,h
-259E: FE 94       cp   $94
-25A0: C8          ret  z
-25A1: 18 F5       jr   $2598
-25A3: FF ...
-_PART_FOUR
-25A8: CD A0 13    call $WAIT_VBLANK
-25AB: 73          ld   (hl),e
-25AC: 01 20 00    ld   bc,$0020
-25AF: 09          add  hl,bc
-25B0: 7E          ld   a,(hl)
-25B1: BB          cp   e
-25B2: 20 F7       jr   nz,$25AB
-25B4: ED 42       sbc  hl,bc
-25B6: C9          ret
-25B7: FF ...
-_PART_FIVE
-25C0: CD A0 13    call $WAIT_VBLANK
-25C3: 73          ld   (hl),e
-25C4: 23          inc  hl
-25C5: 7E          ld   a,(hl)
-25C6: BB          cp   e
-25C7: 20 FA       jr   nz,$25C3
-25C9: 2B          dec  hl
-25CA: C9          ret
-25CB: FF ...
-_PART_SIX
-25D0: CD A0 13    call $WAIT_VBLANK
-25D3: 73          ld   (hl),e
-25D4: 01 20 00    ld   bc,$0020
-25D7: ED 42       sbc  hl,bc
-25D9: 7E          ld   a,(hl)
-25DA: BB          cp   e
-25DB: 20 F3       jr   nz,$25D0
-25DD: 09          add  hl,bc
-25DE: C9          ret
-25DF: FF ...
-_PART_SEVEN
-25E8: CD A0 13    call $WAIT_VBLANK
-25EB: 73          ld   (hl),e
-25EC: 2B          dec  hl
-25ED: 7E          ld   a,(hl)
-25EE: BB          cp   e
-25EF: 20 FA       jr   nz,$25EB
-25F1: 23          inc  hl
-25F2: C9          ret
-25F3: FF ...
+    dc   12, $FF
 
-    ;; Nodes for dino to follow: 31 nodes,
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_2
-2600: 18 E0 00 00 1C E0 01 00
-2608: 20 E0 02 00 28 E0 03 00
-2610: 30 E0 02 00 38 E0 01 00
-2618: 40 D8 02 00 48 D0 04 00
-2620: 50 C8 00 00 58 C8 01 00
-2628: 60 C8 02 00 68 CC 03 00
-2630: 70 CC 02 00 70 C0 04 00
-2638: 80 B0 00 00 88 B0 01 00
-2640: 90 B0 07 00 98 B8 04 00
-2648: A0 C0 05 00 A8 B8 06 00
-2650: B0 B8 05 00 B8 B8 04 00
-2658: C0 C8 07 00 C8 C8 05 00
-2660: D0 D0 06 00 D8 D0 04 00
-2668: E0 D0 05 00 E8 D0 06 00
-2670: F0 D0 05 00
+test_then_dino_collision:
+    ld   a,(dino_counter)
+    and  $F8
+    ret  z
+    call dino_collision
+    ret
 
-2674: FF ...
+    dc   22, $FF
 
-    ;; Nodes for dino to follow: 27 nodes,
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_3
-2680: 18 E0 00 00 20 E0 01 00
-2688: 28 E0 02 00 30 D0 04 00
-2690: 38 C0 05 00 48 B8 06 00
-2698: 50 B8 04 00 58 A8 05 00
-26A0: 58 A0 06 00 60 A0 04 00
-26A8: 68 90 05 00 70 88 06 00
-26B0: 78 88 04 00 80 78 05 00
-26B8: 88 70 06 00 90 70 04 00
-26C0: 98 60 05 00 A0 58 06 00
-26C8: A8 58 04 00 B0 48 05 00
-26D0: B8 40 06 00 C0 40 04 00
-26D8: C8 30 05 00 D0 28 06 00
-26E0: D8 28 04 00 E0 28 05 00
-26E8: E8 28 06 00
+;; who calls? (free bytes)
+;; Appears to draw [21] (the 21 in a box from the level indicators)
+;; through a thick horizontal band in the middle of the screen.
+;; ... for some reason
+unused_draw_d4_everywhere:
+    ld   de,$0016 ; +22 each outer loop?
+    ld   c,$20
+    ld   hl,_9010
+_j_1:                             ; 32 loops
+    ld   b,$0A
+_i_1:                             ; 10 loops
+    ld   (hl),$D4 ; tile [21] (level indicator number)
+    inc  hl
+    dec  b
+    jr   nz,_i_1
+    add  hl,de
+    dec  c
+    ret  z
+    jr   _j_1
 
-26EC: FF ...
+    dc   3, $FF
 
-    ;; Nodes for dino to follow: 24 nodes,
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_4
-2700: 18 38 00 00 20 38 01 00
-2708: 28 38 02 00 30 38 03 00
-2710: 38 38 07 00 40 40 04 00
-2718: 48 40 05 00 50 40 06 00
-2720: 58 40 04 00 68 58 05 00
-2728: 70 58 06 00 78 58 04 00
-2730: 80 58 05 00 88 58 06 00
-2738: 90 58 04 00 98 58 05 00
-2740: A0 58 06 00 A8 58 04 00
-2748: B8 40 05 00 C0 40 06 00
-2750: C8 40 04 00 D0 30 05 00
-2758: D8 48 06 00 E0 28 04 00
+;; (free bytes... if you don't want a cool transition)
+;; whoa! Draws some weird spirtal cage flood-fill thing
+;; inward spiral fill of screen, then clear.
+;; (it's right in the dino code - maybe was supposed to happen
+;; if you got caught by a dino, or if you caught the dino)
+unused_spiral_cage_fill_transition:
+    call reset_xoff_sprites_and_clear_screen
+    call wait_vblank
+    ld   hl,start_of_tiles
+    ld   e,$79
+    call _part_two
+    ld   hl,_93A0
+    call _part_two
+    ld   hl,screen_ram
+    call _part_three
+    ld   hl,_901F
+    call _part_three
+    ld   d,$10
+    ld   hl,_9061
+_lp_2575:
+    call _part_four
+    call _part_five
+    call _part_six
+    call _part_seven
+    dec  d
+    jr   nz,_lp_2575
+    call clear_screen
+    ret
+_part_two:
+    ld   (hl),e
+    inc  l
+    ld   a,l
+    and  $1F
+    ret  z
+    jr   _part_two
+    dc   8, $FF
+_part_three:
+    ld   (hl),e
+    ld   bc,_0020
+    add  hl,bc
+    ld   a,h
+    cp   $94
+    ret  z
+    jr   _part_three
+    dc   5, $FF
+_part_four:
+    call wait_vblank
+_25AB:
+    ld   (hl),e
+    ld   bc,_0020
+    add  hl,bc
+    ld   a,(hl)
+    cp   e
+    jr   nz,_25AB
+    sbc  hl,bc
+    ret
+    dc   9, $FF
+_part_five:
+    call wait_vblank
+_25C3:
+    ld   (hl),e
+    inc  hl
+    ld   a,(hl)
+    cp   e
+    jr   nz,_25C3
+    dec  hl
+    ret
+    dc   5, $FF
+_part_six:
+    call wait_vblank
+    ld   (hl),e
+    ld   bc,_0020
+    sbc  hl,bc
+    ld   a,(hl)
+    cp   e
+    jr   nz,_part_six
+    add  hl,bc
+    ret
+    dc   9, $FF
+_part_seven:
+    call wait_vblank
+_25EB:
+    ld   (hl),e
+    dec  hl
+    ld   a,(hl)
+    cp   e
+    jr   nz,_25EB
+    inc  hl
+    ret
+    dc   13, $FF
 
-2760: FF ...
+;; Nodes for dino to follow: 31 nodes,
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_2:
+    db   $18,$E0,$00,$00,$1C,$E0,$01,$00
+    db   $20,$E0,$02,$00,$28,$E0,$03,$00
+    db   $30,$E0,$02,$00,$38,$E0,$01,$00
+    db   $40,$D8,$02,$00,$48,$D0,$04,$00
+    db   $50,$C8,$00,$00,$58,$C8,$01,$00
+    db   $60,$C8,$02,$00,$68,$CC,$03,$00
+    db   $70,$CC,$02,$00,$70,$C0,$04,$00
+    db   $80,$B0,$00,$00,$88,$B0,$01,$00
+    db   $90,$B0,$07,$00,$98,$B8,$04,$00
+    db   $A0,$C0,$05,$00,$A8,$B8,$06,$00
+    db   $B0,$B8,$05,$00,$B8,$B8,$04,$00
+    db   $C0,$C8,$07,$00,$C8,$C8,$05,$00
+    db   $D0,$D0,$06,$00,$D8,$D0,$04,$00
+    db   $E0,$D0,$05,$00,$E8,$D0,$06,$00
+    db   $F0,$D0,$05,$00
 
-    ;; Nodes for dino to follow: 24 nodes,
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_5
-2770: 18 38 00 00 20 38 01 00
-2778: 28 38 02 00 30 38 03 00
-2780: 38 38 02 00 40 38 07 00
-2788: 48 40 04 00 50 40 05 00
-2790: 58 40 06 00 60 58 04 00
-2798: 68 58 05 00 70 58 06 00
-27A0: 78 70 04 00 80 70 05 00
-27A8: 88 70 06 00 90 88 04 00
-27B0: 98 88 05 00 A0 88 06 00
-27B8: A8 A0 04 00 B0 A0 05 00
-27C0: B8 A0 06 00 C0 B8 04 00
-27C8: C8 B8 05 00 D0 B8 06 00
-27D0: D8 D0 04 00 E0 D0 05 00
+    dc   12, $FF
 
-27D8: FF ...
+;; Nodes for dino to follow: 27 nodes,
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_3:
+    db   $18,$E0,$00,$00,$20,$E0,$01,$00
+    db   $28,$E0,$02,$00,$30,$D0,$04,$00
+    db   $38,$C0,$05,$00,$48,$B8,$06,$00
+    db   $50,$B8,$04,$00,$58,$A8,$05,$00
+    db   $58,$A0,$06,$00,$60,$A0,$04,$00
+    db   $68,$90,$05,$00,$70,$88,$06,$00
+    db   $78,$88,$04,$00,$80,$78,$05,$00
+    db   $88,$70,$06,$00,$90,$70,$04,$00
+    db   $98,$60,$05,$00,$A0,$58,$06,$00
+    db   $A8,$58,$04,$00,$B0,$48,$05,$00
+    db   $B8,$40,$06,$00,$C0,$40,$04,$00
+    db   $C8,$30,$05,$00,$D0,$28,$06,$00
+    db   $D8,$28,$04,$00,$E0,$28,$05,$00
+    db   $E8,$28,$06,$00
+
+    dc   20, $FF
+
+;; Nodes for dino to follow: 24 nodes,
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_4:
+    db   $18,$38,$00,$00,$20,$38,$01,$00
+    db   $28,$38,$02,$00,$30,$38,$03,$00
+    db   $38,$38,$07,$00,$40,$40,$04,$00
+    db   $48,$40,$05,$00,$50,$40,$06,$00
+    db   $58,$40,$04,$00,$68,$58,$05,$00
+    db   $70,$58,$06,$00,$78,$58,$04,$00
+    db   $80,$58,$05,$00,$88,$58,$06,$00
+    db   $90,$58,$04,$00,$98,$58,$05,$00
+    db   $A0,$58,$06,$00,$A8,$58,$04,$00
+    db   $B8,$40,$05,$00,$C0,$40,$06,$00
+    db   $C8,$40,$04,$00,$D0,$30,$05,$00
+    db   $D8,$48,$06,$00,$E0,$28,$04,$00
+
+    dc   16, $FF
+
+;; Nodes for dino to follow: 24 nodes,
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_5:
+    db   $18,$38,$00,$00,$20,$38,$01,$00
+    db   $28,$38,$02,$00,$30,$38,$03,$00
+    db   $38,$38,$02,$00,$40,$38,$07,$00
+    db   $48,$40,$04,$00,$50,$40,$05,$00
+    db   $58,$40,$06,$00,$60,$58,$04,$00
+    db   $68,$58,$05,$00,$70,$58,$06,$00
+    db   $78,$70,$04,$00,$80,$70,$05,$00
+    db   $88,$70,$06,$00,$90,$88,$04,$00
+    db   $98,$88,$05,$00,$A0,$88,$06,$00
+    db   $A8,$A0,$04,$00,$B0,$A0,$05,$00
+    db   $B8,$A0,$06,$00,$C0,$B8,$04,$00
+    db   $C8,$B8,$05,$00,$D0,$B8,$06,$00
+    db   $D8,$D0,$04,$00,$E0,$D0,$05,$00
+
+    dc   8, $FF
 
 ;;;
-SET_PLAYER_Y_LEVEL_START
-27E0: 3A 43 81    ld   a,($PLAYER_Y)
-27E3: 37          scf
-27E4: 3F          ccf
-27E5: C6 60       add  a,$60    ; at top of screen?
-27E7: 30 0B       jr   nc,$27F4
-27E9: 3E D0       ld   a,$D0    ; no, set to bottom
-27EB: 32 43 81    ld   ($PLAYER_Y),a
-27EE: C6 10       add  a,$10
-27F0: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-27F3: C9          ret
-27F4: 3E 28       ld   a,$28    ; yes, set to top
-27F6: 32 43 81    ld   ($PLAYER_Y),a
-27F9: C6 10       add  a,$10
-27FB: 32 47 81    ld   ($PLAYER_Y_LEGS),a
-27FE: C9          ret
+set_player_y_level_start:
+    ld   a,(player_y)
+    scf
+    ccf
+    add  a,$60 ; at top of screen?
+    jr   nc,_27F4
+    ld   a,$D0 ; no, set to bottom
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    ret
+_27F4:
+    ld   a,$28 ; yes, set to top
+    ld   (player_y),a
+    add  a,$10
+    ld   (player_y_legs),a
+    ret
 ;;;
-27FF: FF
+    db   $FF
 
-    ;; Nodes for dino to follow
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_6
-2800: 18 E0 00 00 20 E0 01 00
-2808: 28 E0 02 00 30 D0 04 00
-2810: 38 D0 05 00 40 B8 05 00
-2818: 48 B8 06 00 50 B8 04 00
-2820: 58 B8 05 00 60 B8 06 00
-2828: 68 B8 04 00 68 A0 05 00
-2830: 70 A0 06 00 78 A0 04 00
-2838: 80 A0 05 00 88 A0 06 00
-2840: 90 A0 04 00 98 A0 05 00
-2848: A0 88 06 00 B0 88 04 00
-2850: B0 88 08 00 A8 88 09 00
-2858: A0 88 0A 00 90 70 08 00
-2860: 88 70 09 00 80 70 0A 00
-2868: 78 70 08 00 70 70 09 00
-2870: 68 60 0A 00 60 58 08 00
-2878: 58 58 09 00 50 58 0A 00
-2880: 48 58 04 00 50 58 05 00
-2888: 58 58 06 00 60 58 04 00
-2890: 68 58 05 00 70 48 06 00
-2898: 78 40 04 00 80 40 05 00
-28A0: 88 40 06 00 90 40 04 00
-28A8: 98 40 05 00 A0 38 06 00
-28B0: A8 30 04 00 B0 28 05 00
-28B8: B8 28 06 00 C0 28 04 00
-28C0: C8 28 05 00 D0 28 06 00
-28C8: D8 28 04 00 E0 28 05 00
+;; Nodes for dino to follow
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_6:
+    db   $18,$E0,$00,$00,$20,$E0,$01,$00
+    db   $28,$E0,$02,$00,$30,$D0,$04,$00
+    db   $38,$D0,$05,$00,$40,$B8,$05,$00
+    db   $48,$B8,$06,$00,$50,$B8,$04,$00
+    db   $58,$B8,$05,$00,$60,$B8,$06,$00
+    db   $68,$B8,$04,$00,$68,$A0,$05,$00
+    db   $70,$A0,$06,$00,$78,$A0,$04,$00
+    db   $80,$A0,$05,$00,$88,$A0,$06,$00
+    db   $90,$A0,$04,$00,$98,$A0,$05,$00
+    db   $A0,$88,$06,$00,$B0,$88,$04,$00
+    db   $B0,$88,$08,$00,$A8,$88,$09,$00
+    db   $A0,$88,$0A,$00,$90,$70,$08,$00
+    db   $88,$70,$09,$00,$80,$70,$0A,$00
+    db   $78,$70,$08,$00,$70,$70,$09,$00
+    db   $68,$60,$0A,$00,$60,$58,$08,$00
+    db   $58,$58,$09,$00,$50,$58,$0A,$00
+    db   $48,$58,$04,$00,$50,$58,$05,$00
+    db   $58,$58,$06,$00,$60,$58,$04,$00
+    db   $68,$58,$05,$00,$70,$48,$06,$00
+    db   $78,$40,$04,$00,$80,$40,$05,$00
+    db   $88,$40,$06,$00,$90,$40,$04,$00
+    db   $98,$40,$05,$00,$A0,$38,$06,$00
+    db   $A8,$30,$04,$00,$B0,$28,$05,$00
+    db   $B8,$28,$06,$00,$C0,$28,$04,$00
+    db   $C8,$28,$05,$00,$D0,$28,$06,$00
+    db   $D8,$28,$04,$00,$E0,$28,$05,$00
 
-28D0: FF ...
+    dc   16, $FF
 
-MOVE_DINO_X
-28E0: 3A 12 83    ld   a,($TICK_NUM)
-28E3: E6 03       and  $03
-28E5: C0          ret  nz
-28E6: 3A 4C 81    ld   a,($DINO_X)
-28E9: A7          and  a
-28EA: C8          ret  z        ; no dino out, leave
-28EB: 47          ld   b,a
-28EC: 3A 2E 80    ld   a,($DINO_DIR)
-28EF: 80          add  a,b
-28F0: 32 4C 81    ld   ($DINO_X),a
-28F3: 3A 50 81    ld   a,($DINO_X_LEGS)
-28F6: A7          and  a
-28F7: C8          ret  z
-28F8: 47          ld   b,a
-28F9: 3A 2E 80    ld   a,($DINO_DIR)
-28FC: 80          add  a,b
-28FD: 32 50 81    ld   ($DINO_X_LEGS),a
-2900: C9          ret
+move_dino_x:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(dino_x)
+    and  a
+    ret  z ; no dino out, leave
+    ld   b,a
+    ld   a,(dino_dir)
+    add  a,b
+    ld   (dino_x),a
+    ld   a,(dino_x_legs)
+    and  a
+    ret  z
+    ld   b,a
+    ld   a,(dino_dir)
+    add  a,b
+    ld   (dino_x_legs),a
+    ret
 
-    ;;
-2901: 21 00 02    ld   hl,$0200
-2904: CD E3 01    call $JMP_HL_PLUS_4K ; $4200: sfx something
-2907: CD 10 11    call $MYSTERY_8066_FN
-290A: 21 20 02    ld   hl,$0220 ; $4220 = SFX_SUMFIN_1
-290D: CD E3 01    call $JMP_HL_PLUS_4K
-2910: 21 40 02    ld   hl,$0240 ; $4240 = SFX_SUMFIN_2
-2913: CD E3 01    call $JMP_HL_PLUS_4K
-2916: CD 10 11    call $MYSTERY_8066_FN
-2919: 21 40 08    ld   hl,$DRAW_SCREEN
-291C: 18 22       jr   $JMP_HL_PL_4K_AND_MYSTERY_8066_FN
+;;
+_2901:
+    ld   hl,sfx_sumfin_0 - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    call mystery_8066_fn
+    ld   hl,sfx_sumfin_1 - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ld   hl,sfx_sumfin_2 - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    call mystery_8066_fn
+    ld   hl,sfx_queuer - JMP_HL_OFFSET
+    jr   jmp_hl_pl_4k_and_mystery_8066_fn
 
-291E: FF FF
+    dc   2, $FF
 
-    ;;
-SET_DINO_DIR
-2920: 23          inc  hl
-2921: 23          inc  hl
-2922: 46          ld   b,(hl)   ; read DINO_PATH_X
-2923: 3A 4C 81    ld   a,($DINO_X)
-2926: 37          scf
-2927: 3F          ccf
-2928: 90          sub  b
-2929: 38 04       jr   c,$292F  ; reset
-292B: 3E FF       ld   a,$FF
-292D: 18 02       jr   $2931
-292F: 3E 01       ld   a,$01
-2931: 32 2E 80    ld   ($DINO_DIR),a
-2934: C9          ret
+;;
+set_dino_dir:
+    inc  hl
+    inc  hl
+    ld   b,(hl) ; read DINO_PATH_X
+    ld   a,(dino_x)
+    scf
+    ccf
+    sub  b
+    jr   c,_292F ; reset
+    ld   a,$FF
+    jr   _2931
+_292F:
+    ld   a,$01
+_2931:
+    ld   (dino_dir),a
+    ret
 
-2935: FF ...
+    dc   11, $FF
 
-JMP_HL_PL_4K_AND_MYSTERY_8066_FN
-2940: CD E3 01    call $JMP_HL_PLUS_4K ; hl = DRAW_SCREEN
-2943: CD 10 11    call $MYSTERY_8066_FN
-2946: C9          ret
+jmp_hl_pl_4k_and_mystery_8066_fn:
+    call jmp_hl_plus_4k ; hl = DRAW_SCREEN
+    call mystery_8066_fn
+    ret
 
-2947: FF ...
+    dc   25, $FF
 
-SAVE_IX_AND_?
-2960: DD E5       push ix
-2962: CD 01 29    call $2901
-2965: DD E1       pop  ix
-2967: C9          ret
+save_ix_and_um: ; called?
+    push ix
+    call _2901
+    pop  ix
+    ret
 
-2968: FF ...
+    dc   24, $FF
 
-GOT_A_BONUS
-2980: 3A 60 80    ld   a,($BONUSES)
-2983: 3C          inc  a
-2984: 32 60 80    ld   ($BONUSES),a
-2987: FE 01       cp   $01
-2989: 20 06       jr   nz,$2991
-298B: 3E F2       ld   a,$F2
-298D: 32 4B 93    ld   ($934B),a ; uncovering bonus red squares
-2990: C9          ret
-2991: FE 02       cp   $02
-2993: 20 06       jr   nz,$299B
-2995: 3E F3       ld   a,$F3
-2997: 32 4C 93    ld   ($934C),a
-299A: C9          ret
-299B: FE 03       cp   $03
-299D: 20 06       jr   nz,$29A5
-299F: 3E EA       ld   a,$EA
-29A1: 32 6B 93    ld   ($936B),a
-29A4: C9          ret
-29A5: FE 04       cp   $04
-29A7: 20 06       jr   nz,$29AF
-29A9: 3E EB       ld   a,$EB
-29AB: 32 6C 93    ld   ($936C),a
-29AE: C9          ret
-29AF: FE 05       cp   $05
-29B1: 20 0D       jr   nz,$29C0
-29B3: 3A 62 80    ld   a,($BONUS_MULT)
-29B6: 21 78 16    ld   hl,$1678
-29B9: 85          add  a,l
-29BA: 6F          ld   l,a
-29BB: 7E          ld   a,(hl)
-29BC: 32 8B 93    ld   ($938B),a
-29BF: C9          ret
-    ;; 6 Bonuses got!
-29C0: 3A 62 80    ld   a,($BONUS_MULT)
-29C3: 21 7C 16    ld   hl,$167C
-29C6: 85          add  a,l
-29C7: 6F          ld   l,a
-29C8: 7E          ld   a,(hl)
-29C9: 32 8C 93    ld   ($938C),a
-29CC: CD D0 3F    call $DO_BONUS_FLASHING
-29CF: 0E 0A       ld   c,$0A    ; 10x
-29D1: 3A 62 80    ld   a,($BONUS_MULT)
-29D4: 47          ld   b,a
-29D5: 04          inc  b
-29D6: 3E A0       ld   a,$A0    ; 1000 in bdc
-29D8: 32 1D 80    ld   ($SCORE_TO_ADD),a
-29DB: C5          push bc
-29DC: CD 00 17    call $ADD_SCORE
-29DF: C1          pop  bc
-29E0: CD EC 24    call $DELAY_8_PLAY_SOUND
-29E3: 10 F1       djnz $29D6
-29E5: 0D          dec  c
-29E6: 20 E9       jr   nz,$29D1
-29E8: 3A 62 80    ld   a,($BONUS_MULT)
-29EB: 3C          inc  a
-29EC: FE 04       cp   $04      ; Cap bonus to 4x
-29EE: 20 02       jr   nz,$29F2
-29F0: 3E 03       ld   a,$03
-29F2: 32 62 80    ld   ($BONUS_MULT),a
-29F5: AF          xor  a
-29F6: 32 60 80    ld   ($BONUSES),a
-29F9: CD D0 16    call $DRAW_BONUS
-29FC: CD 9C 19    call $BONUS_SKIP_SCREEN
-29FF: C9          ret
+got_a_bonus:
+    ld   a,(bonuses)
+    inc  a
+    ld   (bonuses),a
+    cp   $01
+    jr   nz,_2991
+    ld   a,$F2
+    ld   (_934B),a ; uncovering bonus red squares
+    ret
+_2991:
+    cp   $02
+    jr   nz,_299B
+    ld   a,$F3
+    ld   (_934C),a
+    ret
+_299B:
+    cp   $03
+    jr   nz,_29A5
+    ld   a,$EA
+    ld   (_936B),a
+    ret
+_29A5:
+    cp   $04
+    jr   nz,_29AF
+    ld   a,$EB
+    ld   (_936C),a
+    ret
+_29AF:
+    cp   $05
+    jr   nz,_29C0
+    ld   a,(bonus_mult)
+    ld   hl,bonus_multplier_data
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (_938B),a
+    ret
+;; 6 Bonuses got!
+_29C0:
+    ld   a,(bonus_mult)
+    ld   hl,bonus_multplier_data + 4
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (_938C),a
+    call do_bonus_flashing
+    ld   c,$0A ; 10x
+_29D1:
+    ld   a,(bonus_mult)
+    ld   b,a
+    inc  b
+_29D6:
+    ld   a,$A0 ; 1000 in bdc
+    ld   (score_to_add),a
+    push bc
+    call add_score
+    pop  bc
+    call delay_8_play_sound
+    djnz _29D6
+    dec  c
+    jr   nz,_29D1
+    ld   a,(bonus_mult)
+    inc  a
+    cp   $04 ; Cap bonus to 4x
+    jr   nz,_29F2
+    ld   a,$03
+_29F2:
+    ld   (bonus_mult),a
+    xor  a
+    ld   (bonuses),a
+    call draw_bonus
+    call bonus_skip_screen
+    ret
 
-    ;; Nodes for dino to follow
-    ;; four bytes per node: [ x, y, fr, _ ]
-DINO_PATH_7
-2A00: 18 E0 00 00 20 E0 01 00
-2A08: 28 E0 02 00 30 E0 03 00
-2A10: 38 D0 04 00 40 C0 05 00
-2A18: 48 B8 06 00 48 B8 04 00
-2A20: 50 B8 05 00 58 B8 06 00
-2A28: 60 B8 04 00 68 B0 00 00
-2A30: 70 B0 01 00 78 B0 02 00
-2A38: 80 B0 03 00 88 B8 02 00
-2A40: 98 B8 03 00 A8 B8 02 00
-2A48: B0 B0 03 00 B8 B0 02 00
-2A50: C0 B0 03 00 C8 A0 04 00
-2A58: D0 90 05 00 D8 88 06 00
-2A60: E0 88 08 00 D0 88 09 00
-2A68: D8 80 0A 00 C0 70 08 00
-2A70: B8 70 09 00 B0 70 0A 00
-2A78: 90 70 08 00 80 70 09 00
-2A80: 78 70 0A 00 70 70 08 00
-2A88: 68 70 09 00 60 60 0A 00
-2A90: 58 58 08 00 50 58 04 00
-2A98: 58 58 05 00 60 48 06 00
-2AA0: 68 40 04 00 70 40 05 00
-2AA8: 78 40 06 00 80 40 04 00
-2AB0: 90 40 05 00 B0 40 06 00
-2AB8: B8 40 04 00 C0 40 05 00
-2AC0: C8 40 06 00 D0 38 04 00
-2AC8: D8 30 05 00 E0 28 06 00
+;; Nodes for dino to follow
+;; four bytes per node: [ x, y, fr, _ ]
+dino_path_7:
+    db   $18,$E0,$00,$00,$20,$E0,$01,$00
+    db   $28,$E0,$02,$00,$30,$E0,$03,$00
+    db   $38,$D0,$04,$00,$40,$C0,$05,$00
+    db   $48,$B8,$06,$00,$48,$B8,$04,$00
+    db   $50,$B8,$05,$00,$58,$B8,$06,$00
+    db   $60,$B8,$04,$00,$68,$B0,$00,$00
+    db   $70,$B0,$01,$00,$78,$B0,$02,$00
+    db   $80,$B0,$03,$00,$88,$B8,$02,$00
+    db   $98,$B8,$03,$00,$A8,$B8,$02,$00
+    db   $B0,$B0,$03,$00,$B8,$B0,$02,$00
+    db   $C0,$B0,$03,$00,$C8,$A0,$04,$00
+    db   $D0,$90,$05,$00,$D8,$88,$06,$00
+    db   $E0,$88,$08,$00,$D0,$88,$09,$00
+    db   $D8,$80,$0A,$00,$C0,$70,$08,$00
+    db   $B8,$70,$09,$00,$B0,$70,$0A,$00
+    db   $90,$70,$08,$00,$80,$70,$09,$00
+    db   $78,$70,$0A,$00,$70,$70,$08,$00
+    db   $68,$70,$09,$00,$60,$60,$0A,$00
+    db   $58,$58,$08,$00,$50,$58,$04,$00
+    db   $58,$58,$05,$00,$60,$48,$06,$00
+    db   $68,$40,$04,$00,$70,$40,$05,$00
+    db   $78,$40,$06,$00,$80,$40,$04,$00
+    db   $90,$40,$05,$00,$B0,$40,$06,$00
+    db   $B8,$40,$04,$00,$C0,$40,$05,$00
+    db   $C8,$40,$06,$00,$D0,$38,$04,$00
+    db   $D8,$30,$05,$00,$E0,$28,$06,$00
 
-DRAW_BONUS_STATE
-2AD0: CD D0 16    call $DRAW_BONUS
-2AD3: 3A 60 80    ld   a,($BONUSES)
-2AD6: 5F          ld   e,a
-2AD7: AF          xor  a
-2AD8: 32 60 80    ld   ($BONUSES),a
-2ADB: 7B          ld   a,e
-2ADC: A7          and  a
-2ADD: C8          ret  z
-2ADE: CD 80 29    call $GOT_A_BONUS ; clear out "got" bonuses
-2AE1: 1D          dec  e
-2AE2: 20 FA       jr   nz,$2ADE
-2AE4: C9          ret
+draw_bonus_state:
+    call draw_bonus
+    ld   a,(bonuses)
+    ld   e,a
+    xor  a
+    ld   (bonuses),a
+    ld   a,e
+    and  a
+    ret  z
+_2ADE:
+    call got_a_bonus ; clear out "got" bonuses
+    dec  e
+    jr   nz,_2ADE
+    ret
 
-2AE5: FF ...
+    dc   27, $FF
 
-    ;; who calls? (free bytes)
-2B00: 3A 93 80    ld   a,($8093)
-2B03: 47          ld   b,a
-2B04: AF          xor  a
-2B05: 32 93 80    ld   ($8093),a
-2B08: 78          ld   a,b
-2B09: A7          and  a
-2B0A: 20 08       jr   nz,$_DONE
-2B0C: 3A 94 80    ld   a,($8094)
-2B0F: 47          ld   b,a
-2B10: AF          xor  a
-2B11: 32 94 80    ld   ($8094),a
-_DONE
-2B14: C9          ret
+;; who calls? (free bytes)
+    ld   a,(_8093)
+    ld   b,a
+    xor  a
+    ld   (_8093),a
+    ld   a,b
+    and  a
+    jr   nz,_done_2B14
+    ld   a,(_8094)
+    ld   b,a
+    xor  a
+    ld   (_8094),a
+_done_2B14:
+    ret
 
-2B15: FF ...
+    dc   11, $FF
 
-    ;; who calls? (free bytes?)
-2B20: 47          ld   b,a
-2B21: E6 F0       and  $F0
-2B23: 20 03       jr   nz,$2B28
-2B25: AF          xor  a
-2B26: 18 12       jr   $2B3A
-2B28: FE 10       cp   $10
-2B2A: 20 04       jr   nz,$2B30
-2B2C: 3E 0A       ld   a,$0A
-2B2E: 18 0A       jr   $2B3A
-2B30: FE 20       cp   $20
-2B32: 20 04       jr   nz,$2B38
-2B34: 3E 14       ld   a,$14
-2B36: 18 02       jr   $2B3A
-2B38: 3E 1E       ld   a,$1E
-2B3A: 4F          ld   c,a
-2B3B: 78          ld   a,b
-2B3C: E6 0F       and  $0F
-2B3E: 81          add  a,c
-2B3F: C9          ret
-2B40: FF ...
+;; who calls? (free bytes?)
+    ld   b,a
+    and  $F0
+    jr   nz,_2B28
+    xor  a
+    jr   _2B3A
+_2B28:
+    cp   $10
+    jr   nz,$2B30
+    ld   a,$0A
+    jr   _2B3A
+    cp   $20
+    jr   nz,$2B38
+    ld   a,$14
+    jr   _2B3A
+    ld   a,$1E
+_2B3A:
+    ld   c,a
+    ld   a,b
+    and  $0F
+    add  a,c
+    ret
 
-    ;; Run enemy update subs, based on current screen
-UPDATE_ENEMIES
-2B50: 3A 04 80    ld   a,($PLAYER_NUM)
-2B53: A7          and  a
-2B54: 20 05       jr   nz,$2B5B
-2B56: 3A 29 80    ld   a,($SCREEN_NUM)
-2B59: 18 03       jr   $2B5E
-2B5B: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-2B5E: 3D          dec  a        ; scr#-1
-2B5F: CB 27       sla  a        ; * 2
-2B61: CB 27       sla  a        ; * 2
-2B63: CD 90 13    call $JUMP_REL_A
-2B66: 00          nop           ; scr 1
-2B67: 00          nop
-2B68: 00          nop
-2B69: C9          ret
-2B6A: CD 48 2C    call $ENEMY_PATTERN_SCR_2
-2B6D: C9          ret
-2B6E: 00          nop           ;scr 3
-2B6F: 00          nop
-2B70: 00          nop
-2B71: C9          ret
-2B72: CD 58 2C    call $ENEMY_PATTERN_SCR_4
-2B75: C9          ret
-2B76: 00          nop           ; scr 5
-2B77: 00          nop
-2B78: 00          nop
-2B79: C9          ret
-2B7A: 00          nop           ; scr 6
-2B7B: 00          nop
-2B7C: 00          nop
-2B7D: C9          ret
-2B7E: 00          nop           ; scr 7
-2B7F: 00          nop
-2B80: 00          nop
-2B81: C9          ret
-2B82: CD 98 2C    call $ENEMY_PATTERN_SCR_8
-2B85: C9          ret
-2B86: CD 68 31    call $ENEMY_PATTERN_SCR_9
-2B89: C9          ret
-2B8A: CD F0 2B    call $ENEMY_PATTERN_SCR_10
-2B8D: C9          ret
-2B8E: CD 98 33    call $3398    ; scr 11
-2B91: C9          ret
-2B92: CD 70 34    call $3470    ; scr 12
-2B95: C9          ret
-2B96: CD 38 35    call $3538    ; scr 13
-2B99: C9          ret
-2B9A: CD B8 35    call $35B8    ; scr 14
-2B9D: C9          ret
-2B9E: CD 58 36    call $3658    ; scr 15
-2BA1: C9          ret
-2BA2: 00          nop           ; scr 16
-2BA3: 00          nop
-2BA4: 00          nop
-2BA5: C9          ret
-2BA6: CD 70 36    call $3670    ; scr 17
-2BA9: C9          ret
-2BAA: CD D0 36    call $36D0    ; scr 18
-2BAD: C9          ret
-2BAE: CD 60 37    call $3760    ; scr 19
-2BB1: C9          ret
-2BB2: CD E8 37    call $37E8    ; scr 20
-2BB5: C9          ret
-2BB6: 00          nop           ; scr 21
-2BB7: 00          nop
-2BB8: 00          nop
-2BB9: C9          ret
-2BBA: CD 08 38    call $3808    ; scr 22
-2BBD: C9          ret
-2BBE: CD 68 38    call $3868    ; scr 23
-2BC1: C9          ret
-2BC2: CD 68 3B    call $3B68    ; scr 24
-2BC5: C9          ret
-2BC6: CD 88 38    call $3888    ; scr 25
-2BC9: C9          ret
-2BCA: CD 18 39    call $ENEMY_PATTERN_SCR_26
-2BCD: C9          ret
-2BCE: CD 88 38    call $3888    ; scr 27
-2BD1: C9          ret
-2BD2: 00          nop           ; scr ?
-2BD3: 00          nop
-2BD4: 00          nop
-2BD5: C9          ret
-2BD6: 00          nop           ; scr ?
-2BD7: 00          nop
-2BD8: 00          nop
-2BD9: C9          ret
-2BDA: 00          nop           ; scr ?
-2BDB: 00          nop
-2BDC: 00          nop
-2BDD: C9          ret
-2BDE: 00          nop           ; scr ?
-2BDF: 00          nop
-2BE0: 00          nop
-2BE1: C9          ret
-2BE2: 00          nop           ; scr ? (32)
-2BE3: 00          nop
-2BE4: 00          nop
-2BE5: C9          ret
+    dc   16, $FF
 
-2BE6: FF ...
+;; Run enemy update subs, based on current screen
+update_enemies:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$2B5B
+    ld   a,(screen_num)
+    jr   _2B5E
+    ld   a,(screen_num_p2)
+_2B5E:
+    dec  a ; scr#-1
+    sla  a ; * 2
+    sla  a ; * 2
+    call jump_rel_a
+    nop ; scr 1
+    nop
+    nop
+    ret
+    call enemy_pattern_scr_2
+    ret
+    nop ; scr 3
+    nop
+    nop
+    ret
+    call enemy_pattern_scr_4
+    ret
+    nop ; scr 5
+    nop
+    nop
+    ret
+    nop ; scr 6
+    nop
+    nop
+    ret
+    nop ; scr 7
+    nop
+    nop
+    ret
+    call enemy_pattern_scr_8
+    ret
+    call enemy_pattern_scr_9
+    ret
+    call enemy_pattern_scr_10
+    ret
+    call _3398 ; scr 11
+    ret
+    call _3470 ; scr 12
+    ret
+    call _3538 ; scr 13
+    ret
+    call _35B8 ; scr 14
+    ret
+    call _3658 ; scr 15
+    ret
+    nop ; scr 16
+    nop
+    nop
+    ret
+    call _3670 ; scr 17
+    ret
+    call _36D0 ; scr 18
+    ret
+    call _3760 ; scr 19
+    ret
+    call _37E8 ; scr 20
+    ret
+    nop ; scr 21
+    nop
+    nop
+    ret
+    call _3808 ; scr 22
+    ret
+    call _3868 ; scr 23
+    ret
+    call _3B68 ; scr 24
+    ret
+    call _3888 ; scr 25
+    ret
+    call enemy_pattern_scr_26
+    ret
+    call _3888 ; scr 27
+    ret
+    nop ; scr ?
+    nop
+    nop
+    ret
+    nop ; scr ?
+    nop
+    nop
+    ret
+    nop ; scr ?
+    nop
+    nop
+    ret
+    nop ; scr ?
+    nop
+    nop
+    ret
+    nop ; scr ? (32)
+    nop
+    nop
+    ret
 
-ENEMY_PATTERN_SCR_10
-2BF0: CD D0 32    call $32D0
-2BF3: CD F0 32    call $32F0
-2BF6: C9          ret
+    dc   10, $FF
 
-2BF7: FF ...
+enemy_pattern_scr_10:
+    call update_stair_up_blue_timer
+    call _32F0
+    ret
 
-SET_ROCK_1_B0_40
-2C00: 3E B0       ld   a,$B0
-2C02: 32 54 81    ld   ($ENEMY_1_X),a
-2C05: 3E 40       ld   a,$40
-2C07: 32 57 81    ld   ($ENEMY_1_Y),a
-2C0A: 3E 1D       ld   a,$FR_ROCK
-2C0C: 32 55 81    ld   ($ENEMY_1_FRAME),a
-2C0F: 3E 15       ld   a,$15
-2C11: 32 56 81    ld   ($ENEMY_1_COL),a
-2C14: 3E 01       ld   a,$01
-2C16: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-2C19: C9          ret
+    dc   9, $FF
 
-2C1A: FF ...
+set_rock_1_b0_40:
+    ld   a,$B0
+    ld   (enemy_1_x),a
+    ld   a,$40
+    ld   (enemy_1_y),a
+    ld   a,$1D
+    ld   (enemy_1_frame),a
+    ld   a,$15
+    ld   (enemy_1_col),a
+    ld   a,$01
+    ld   (enemy_1_active),a
+    ret
 
-ROCK_FALL_1
-2C28: 3A 16 83    ld   a,($TICK_MOD_SLOW)
-2C2B: E6 07       and  $07
-2C2D: C0          ret  nz
-2C2E: 3A 36 80    ld   a,($ROCK_FALL_TIMER)
-2C31: 3C          inc  a
-2C32: FE 0E       cp   $0E      ; has rock finished falling?
-2C34: 20 01       jr   nz,$2C37
-2C36: AF          xor  a        ; reset
-2C37: 32 36 80    ld   ($ROCK_FALL_TIMER),a
-2C3A: A7          and  a
-2C3B: C0          ret  nz
-2C3C: CD 00 2C    call $SET_ROCK_1_B0_40
-2C3F: C9          ret
+    dc   14, $FF
 
-2C40: FF ...
+rock_fall_1:
+    ld   a,(tick_mod_slow)
+    and  $07
+    ret  nz
+    ld   a,(rock_fall_timer)
+    inc  a
+    cp   $0E ; has rock finished falling?
+    jr   nz,$2C37
+    xor  a ; reset
+    ld   (rock_fall_timer),a
+    and  a
+    ret  nz
+    call set_rock_1_b0_40
+    ret
 
-ENEMY_PATTERN_SCR_2
-2C48: CD 28 2C    call $ROCK_FALL_1
-2C4B: CD 40 31    call $UPDATE_ENEMY_1
-2C4E: C9          ret
+    dc   8, $FF
 
-2C4F: FF ...
+enemy_pattern_scr_2:
+    call rock_fall_1
+    call update_enemy_1
+    ret
 
-ENEMY_PATTERN_SCR_4
-2C58: CD 28 2C    call $ROCK_FALL_1
-2C5B: CD 40 31    call $UPDATE_ENEMY_1
-2C5E: CD 38 32    call $3238
-2C61: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-2C64: C9          ret
+    dc   9, $FF
 
-2C65: FF ...
+enemy_pattern_scr_4:
+    call rock_fall_1
+    call update_enemy_1
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    ret
 
-    ;;
-HISCORE_CHECK_BUTTONS
-2C70: 3A F1 83    ld   a,($INPUT_BUTTONS)
-2C73: 47          ld   b,a
-2C74: 3A 84 91    ld   a,($9184)
-2C77: FE 01       cp   $01
-2C79: 28 04       jr   z,$2C7F
-2C7B: CB 78       bit  7,b
-2C7D: 20 09       jr   nz,$2C88
-2C7F: 3A 00 A0    ld   a,($PORT_IN0)
-2C82: CB 6F       bit  5,a      ; jump?
-2C84: C4 D8 2E    call nz,$HISCORE_SELECT_LETTER
-2C87: C9          ret
-2C88: CB 68       bit  5,b      ; jump?
-2C8A: C4 D8 2E    call nz,$HISCORE_SELECT_LETTER
-2C8D: C9          ret
+    dc   11, $FF
 
-2C8E: FF ...
+;;
+hiscore_check_buttons:
+    ld   a,(input_buttons)
+    ld   b,a
+    ld   a,(_9184)
+    cp   $01
+    jr   z,$2C7F
+    bit  7,b
+    jr   nz,$2C88
+    ld   a,(port_in0)
+    bit  5,a ; jump?
+    call nz,hiscore_select_letter
+    ret
+    bit  5,b ; jump?
+    call nz,hiscore_select_letter
+    ret
 
-ENEMY_PATTERN_SCR_8
-2C98: CD 28 2C    call $ROCK_FALL_1
-2C9B: CD 40 31    call $UPDATE_ENEMY_1
-2C9E: CD 38 32    call $3238
-2CA1: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-2CA4: CD 70 35    call $UPDATE_ROCK_LEFT_TIMER
-2CA7: CD 90 35    call $3590
-2CAA: C9          ret
+    dc   10, $FF
 
-2CAB: FF ...
+enemy_pattern_scr_8:
+    call rock_fall_1
+    call update_enemy_1
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    call update_rock_left_timer
+    call set_rock_3_fr_and_y
+    ret
 
-    ;; wonder what this was for? No paths call anything
-    ;; maybe a debug tool?
-    ;; -- i've stolen this area for OGNOB mode.
-NOPPED_OUT_DISPATCH
-2CB0: 3A 04 80    ld   a,($PLAYER_NUM)
-2CB3: A7          and  a
-2CB4: 20 05       jr   nz,$2CBB
-2CB6: 3A 29 80    ld   a,($SCREEN_NUM)
-2CB9: 18 03       jr   $2CBE
-2CBB: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-2CBE: 3D          dec  a        ; scr - 1
-2CBF: E6 07       and  $07      ; & 0000 0111
-2CC1: CB 27       sla  a        ; * 4
-2CC3: CB 27       sla  a
-2CC5: CD 90 13    call $JUMP_REL_A
-    ;; all nops, no calls...
-2CC8: 00          nop
-2CC9: 00          nop
-2CCA: 00          nop
-2CCB: C9          ret
-2CCC: 00          nop
-2CCD: 00          nop
-2CCE: 00          nop
-2CCF: C9          ret
-2CD0: 00          nop
-2CD1: 00          nop
-2CD2: 00          nop
-2CD3: C9          ret
-2CD4: 00          nop
-2CD5: 00          nop
-2CD6: 00          nop
-2CD7: C9          ret
-2CD8: 00          nop
-2CD9: 00          nop
-2CDA: 00          nop
-2CDB: C9          ret
-2CDC: 00          nop
-2CDD: 00          nop
-2CDE: 00          nop
-2CDF: C9          ret
-2CE0: 00          nop
-2CE1: 00          nop
-2CE2: 00          nop
-2CE3: C9          ret
-2CE4: 00          nop
-2CE5: 00          nop
-2CE6: 00          nop
-2CE7: C9          ret
-2CE8: 00          nop
-2CE9: 00          nop
-2CEA: 00          nop
-2CEB: C9          ret
-2CEC: 00          nop
-2CED: 00          nop
-2CEE: 00          nop
-2CEF: C9          ret
+    dc   5, $FF
 
-2CF0: FF ...
+;; wonder what this was for? No paths call anything
+;; maybe a debug tool?
+;; -- i've stolen this area for OGNOB mode.
+nopped_out_dispatch:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$2CBB
+    ld   a,(screen_num)
+    jr   _2CBE
+    ld   a,(screen_num_p2)
+_2CBE:
+    dec  a ; scr - 1
+    and  $07 ; & 0000 0111
+    sla  a ; * 4
+    sla  a
+    call jump_rel_a
+;; all nops, no calls...
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
 
-    ;; HiScore somthing
-SET_HISCORE_AND_RESET_GAME
-2D00: 21 00 83    ld   hl,$HISCORE
-2D03: 3A 14 80    ld   a,($P1_SCORE)
-2D06: BE          cp   (hl)
-2D07: 20 14       jr   nz,$2D1D
-2D09: 23          inc  hl
-2D0A: 3A 15 80    ld   a,($P1_SCORE+1)
-2D0D: BE          cp   (hl)
-2D0E: 20 0D       jr   nz,$2D1D
-2D10: 23          inc  hl
-2D11: 3A 16 80    ld   a,($P1_SCORE+2)
-2D14: BE          cp   (hl)
-2D15: 20 06       jr   nz,$2D1D
-2D17: CD 48 2D    call $P1_GOT_HISCORE
-2D1A: C3 E8 03    jp   $CLEAR_AFTER_GAME_OVER
-2D1D: 21 00 83    ld   hl,$HISCORE
-2D20: 3A 17 80    ld   a,($P2_SCORE)
-2D23: BE          cp   (hl)
-2D24: 20 F4       jr   nz,$2D1A
-2D26: 23          inc  hl
-2D27: 3A 18 80    ld   a,($P2_SCORE+1)
-2D2A: BE          cp   (hl)
-2D2B: 20 ED       jr   nz,$2D1A
-2D2D: 23          inc  hl
-2D2E: 3A 19 80    ld   a,($P2_SCORE+2)
-2D31: BE          cp   (hl)
-2D32: 20 E6       jr   nz,$2D1A
-2D34: CD 58 2D    call $P2_GOT_HISCORE
-2D37: C3 E8 03    jp   $CLEAR_AFTER_GAME_OVER
+    dc   16, $FF
 
-2D3A: FF ...
+;; HiScore somthing
+set_hiscore_and_reset_game:
+    ld   hl,hiscore
+    ld   a,(p1_score)
+    cp   (hl)
+    jr   nz,$2D1D
+    inc  hl
+    ld   a,(p1_score_1)
+    cp   (hl)
+    jr   nz,$2D1D
+    inc  hl
+    ld   a,(p1_score_2)
+    cp   (hl)
+    jr   nz,$2D1D
+    call p1_got_hiscore
+    jp   clear_after_game_over
+    ld   hl,hiscore
+    ld   a,(p2_score)
+    cp   (hl)
+    jr   nz,$2D1A
+    inc  hl
+    ld   a,(p2_score_1)
+    cp   (hl)
+    jr   nz,$2D1A
+    inc  hl
+    ld   a,(p2_score_2)
+    cp   (hl)
+    jr   nz,$2D1A
+    call p2_got_hiscore
+    jp   clear_after_game_over
 
-P1_GOT_HISCORE
-2D48: AF          xor  a
-2D49: 32 06 B0    ld   ($B006),a
-2D4C: 32 07 B0    ld   ($B007),a
-2D4F: 3E 01       ld   a,$01
-2D51: CD 88 2D    call $ENTER_HISCORE_SCREEN
-2D54: C9          ret
-2D55: FF ...
+    dc   14, $FF
 
-P2_GOT_HISCORE
-2D58: 3A F1 83    ld   a,($INPUT_BUTTONS)
-2D5B: CB 7F       bit  7,a      ; hmm what is bit 7 button?
-2D5D: 28 0A       jr   z,$2D69
-2D5F: 3E 01       ld   a,$01
-2D61: 32 06 B0    ld   ($B006),a
-2D64: 32 07 B0    ld   ($B007),a
-2D67: 18 07       jr   $2D70
-2D69: AF          xor  a
-2D6A: 32 06 B0    ld   ($B006),a
-2D6D: 32 07 B0    ld   ($B007),a
-2D70: 3E 02       ld   a,$02
-2D72: CD 88 2D    call $ENTER_HISCORE_SCREEN
-2D75: C9          ret
+p1_got_hiscore:
+    xor  a
+    ld   (_B006),a
+    ld   (_B007),a
+    ld   a,$01
+    call enter_hiscore_screen
+    ret
 
-2D76: FF ...
+    dc   3, $FF
 
-ENTER_HISCORE_SCREEN
-2D88: F5          push af
-2D89: 21 E8 16    ld   hl,$16E8 ; 56e8 = $SFX_RESET_A_BUNCH
-2D8C: CD E3 01    call $JMP_HL_PLUS_4K
-2D8F: 3E 09       ld   a,$09    ; extra life /hiscore sfx
-2D91: 32 42 80    ld   ($CH1_SFX),a
-2D94: 00          nop
-2D95: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-2D98: CD B8 37    call $37B8
-2D9B: 21 E0 0F    ld   hl,$0FE0
-2D9E: CD 40 08    call $DRAW_SCREEN ; draws the hiscore screen..
-2DA1: 00 00                         ; params to DRAW_SCREEN
-2DA3: CD 10 03    call $DRAW_TILES_H
-2DA6: 04 0A
-2DA8: 20 1C 11 29 15 22 FF      ; PLAYER
-2DAF: CD 10 03    call $DRAW_TILES_H
-2DB2: 07 03
-2DB4: 29 1F 25 10 12 15 11 24 10 24 18 15 10 18 19 17
-2DC4: 18 15 23 24 FF            ; YOU BEAT THE HIGHEST
-2DC9: CD 10 03    call $DRAW_TILES_H
-2DCC: 09 03                     ; SCORE OF THE DAY
-2DCE: 23 13 1F 22 15 10 1F 16 10 24 18 15 10 14 11 29 FF
-2DDF: CD 10 03    call $DRAW_TILES_H
-2DE2: 0B 03
-2DE4: 20 1C 15 11 23 15 10 15 1E 24 15 22 10 29 1F 25
-2DF4: 22 10 1E 11 1D 15 FF
-2DFB: CD 10 03    call $DRAW_TILES_H
-2DFE: 0D 03
-    ;; drawing the alphabet A-L
-2E00: 11 10 12 10 13 10 14 10 15 10 16 10 17 10 18 10 19
-2E11: 10 1A 10 1B 10 1C FF
-2E18: CD 10 03    call $DRAW_TILES_H
-2E1B: 0F 03
-    ;; drawing the alphabet M-X
-2E1D: 1D 10 1E 10 1F 10 20 10 21 10 22 10 23 10 24 10 25
-2E2E: 10 26 10 27 10 28 FF
-2E35: CD 10 03    call $DRAW_TILES_H
-2E38: 11 03
-    ;; Y,Z... characters
-2E3A: 29 10 2A 10 10 10 10 10 10 10 51 10 52 10 53 10 10
-2E4B: 10 10 10 58 59 5A 5B FF
-2E53: CD 10 03    call $DRAW_TILES_H
-2E56: 17 0A
-2E58: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
-2E63: CD 50 24    call $DRAW_SCORE
-2E66: 3E 09       ld   a,$09    ; 90 seconds timer
-2E68: 32 82 93    ld   ($9382),a ; num 1 to screen
-2E6B: AF          xor  a
-2E6C: 32 62 93    ld   ($9362),a ; num 2 to screen
-2E6F: 32 75 80    ld   ($HISCORE_TIMER),a
-2E72: F1          pop  af
-2E73: FD 21 77 92 ld   iy,$9277
-2E77: 32 84 91    ld   ($9184),a ; something else on screen...
-2E7A: CD 88 2F    call $HISCORE_CLEAR_NAME
-2E7D: 21 4E 93    ld   hl,$934E
-SET_CURSOR
-2E80: 36 89       ld   (hl),$TILE_CURSOR
-2E82: DD 21 F1 83 ld   ix,$INPUT_BUTTONS
-2E86: 3A 84 91    ld   a,($9184) ; read from screen set above?
-2E89: FE 01       cp   $01      ; p1 (maybe)?
-2E8B: 28 06       jr   z,$2E93
-2E8D: DD CB 00 7E bit  7,(ix+$00)
-2E91: 20 04       jr   nz,$2E97
-2E93: DD 21 00 A0 ld   ix,$PORT_IN0
-2E97: DD CB 00 5E bit  3,(ix+$00) ; right?
-2E9B: 28 03       jr   z,$2EA0
-2E9D: CD A8 2F    call $HISCORE_FWD_CURSOR
-2EA0: DD CB 00 56 bit  2,(ix+$00) ; left?
-2EA4: 28 03       jr   z,$2EA9
-2EA6: CD 50 2F    call $HISCORE_BACK_CURSOR
-2EA9: CD 70 2C    call $HISCORE_CHECK_BUTTONS
-2EAC: 00          nop
-2EAD: 00          nop
-2EAE: 00          nop
-2EAF: 00          nop
-2EB0: 00          nop
-2EB1: 00          nop
-_CHECK_IF_LETTERS_FULL
-2EB2: E5          push hl
-2EB3: FD E5       push iy
-2EB5: E1          pop  hl
-2EB6: 3E 37       ld   a,$37
-2EB8: BD          cp   l
-2EB9: 20 05       jr   nz,$2EC0
-2EBB: 3E 91       ld   a,$91    ; 9137 = last letter pos
-2EBD: BC          cp   h
-2EBE: 28 08       jr   z,$_DONE
-2EC0: E1          pop  hl
-2EC1: 36 89       ld   (hl),$TILE_CURSOR ; useless? Done in SET_CURSOR
-2EC3: CD 08 31    call $HISCORE_ENTER_TIMER
-2EC6: 18 B8       jr   $SET_CURSOR
-_DONE
-2EC8: E1          pop  hl
-2EC9: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
-2ECC: C9          ret
-2ECD: FF ...
+p2_got_hiscore:
+    ld   a,(input_buttons)
+    bit  7,a ; hmm what is bit 7 button?
+    jr   z,$2D69
+    ld   a,$01
+    ld   (_B006),a
+    ld   (_B007),a
+    jr   _2D70
+    xor  a
+    ld   (_B006),a
+    ld   (_B007),a
+_2D70:
+    ld   a,$02
+    call enter_hiscore_screen
+    ret
 
-    ;; called when entered a letter on name
-HISCORE_SELECT_LETTER
-2ED8: 3E 10       ld   a,$10
-2EDA: 32 93 80    ld   ($8093),a
-2EDD: 3E 90       ld   a,$90    ; did we press "end"?
-2EDF: BC          cp   h
-2EE0: 20 12       jr   nz,$_ENTER_LETTER
-2EE2: 3E 92       ld   a,$92
-2EE4: BD          cp   l
-2EE5: 20 04       jr   nz,$2EEB ; no!
-2EE7: CD 10 2F    call $THINGS_THEN_COPY_HISCORE_NAME
-2EEA: C9          ret
-2EEB: 3E D2       ld   a,$D2    ; how about "rub"?
-2EED: BD          cp   l
-2EEE: 20 04       jr   nz,$_ENTER_LETTER ; nope...
-2EF0: CD 20 2F    call $HISCORE_RUB_LETTER
-2EF3: C9          ret
-_ENTER_LETTER
-2EF4: 2B          dec  hl
-2EF5: 7E          ld   a,(hl)
-2EF6: 23          inc  hl
-2EF7: FD 77 00    ld   (iy+$00),a ; draws letter on screen
-2EFA: 11 E0 FF    ld   de,$SCR_LINE_PREV
-2EFD: FD 19       add  iy,de
-2EFF: C9          ret
+    dc   18, $FF
 
-2F00: FF ...
+enter_hiscore_screen:
+    push af
+    ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
+    call jmp_hl_plus_4k
+    ld   a,$09 ; extra life /hiscore sfx
+    ld   (ch1_sfx),a
+    nop
+    call reset_xoff_sprites_and_clear_screen
+    call _37B8
+    ld   hl,header_text_data
+    call draw_screen ; draws the hiscore screen..
+    db   $00, $00 ; params to DRAW_SCREEN
+    call draw_tiles_h
+    db   $04,$0A
+    db   $20,$1C,$11,$29,$15,$22,$FF ;  PLAYER
+    call draw_tiles_h
+    db   $07,$03
+    db   $29,$1F,$25,$10,$12,$15,$11,$24,$10,$24,$18,$15,$10,$18,$19,$17
+    db   $18,$15,$23,$24,$FF ;  YOU BEAT THE HIGHEST
+    call draw_tiles_h
+    db   $09,$03 ;  SCORE OF THE DAY
+    db   $23,$13,$1F,$22,$15,$10,$1F,$16,$10,$24,$18,$15,$10,$14,$11,$29,$FF
+    call draw_tiles_h
+    db   $0B,$03
+    db   $20,$1C,$15,$11,$23,$15,$10,$15,$1E,$24,$15,$22,$10,$29,$1F,$25
+    db   $22,$10,$1E,$11,$1D,$15,$FF
+    call draw_tiles_h
+    db   $0D,$03
+;; drawing the alphabet A-L
+    db   $11,$10,$12,$10,$13,$10,$14,$10,$15,$10,$16,$10,$17,$10,$18,$10,$19
+    db   $10,$1A,$10,$1B,$10,$1C,$FF
+    call draw_tiles_h
+    db   $0F,$03
+;; drawing the alphabet M-X
+    db   $1D,$10,$1E,$10,$1F,$10,$20,$10,$21,$10,$22,$10,$23,$10,$24,$10,$25
+    db   $10,$26,$10,$27,$10,$28,$FF
+    call draw_tiles_h
+    db   $11,$03
+;; Y,Z... characters
+    db   $29,$10,$2A,$10,$10,$10,$10,$10,$10,$10,$51,$10,$52,$10,$53,$10,$10
+    db   $10,$10,$10,$58,$59,$5A,$5B,$FF
+    call draw_tiles_h
+    db   $17,$0A
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    call draw_score
+    ld   a,$09 ; 90 seconds timer
+    ld   (_9382),a ; num 1 to screen
+    xor  a
+    ld   (_9362),a ; num 2 to screen
+    ld   (hiscore_timer),a
+    pop  af
+    ld   iy,_9277
+    ld   (_9184),a ; something else on screen...
+    call hiscore_clear_name
+    ld   hl,_934E
+set_cursor:
+    ld   (hl),tile_cursor
+    ld   ix,input_buttons
+    ld   a,(_9184) ; read from screen set above?
+    cp   $01 ; p1 (maybe)?
+    jr   z,$2E93
+    bit  7,(ix+$00)
+    jr   nz,$2E97
+    ld   ix,port_in0
+    bit  3,(ix+$00) ; right?
+    jr   z,$2EA0
+    call hiscore_fwd_cursor
+    bit  2,(ix+$00) ; left?
+    jr   z,$2EA9
+    call hiscore_back_cursor
+    call hiscore_check_buttons
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+_check_if_letters_full:
+    push hl
+    push iy
+    pop  hl
+    ld   a,$37
+    cp   l
+    jr   nz,$2EC0
+    ld   a,$91 ; 9137 = last letter pos
+    cp   h
+    jr   z,_done_2EC8
+    pop  hl
+    ld   (hl),tile_cursor ; useless? Done in SET_CURSOR
+    call hiscore_enter_timer
+    jr   set_cursor
+_done_2EC8:
+    pop  hl
+    call pop_hls_then_copy_hiscore_name
+    ret
 
-POP_HLS_THEN_COPY_HISCORE_NAME
-2F10: AF          xor  a
-2F11: 32 86 80    ld   ($8086),a
-2F14: E1          pop  hl
-2F15: E1          pop  hl
-2F16: CD E0 2F    call $COPY_HISCORE_NAME_TO_SCREEN
-2F19: C9          ret
+    dc   11, $FF
 
-2F1A: FF ...
+;; called when entered a letter on name
+hiscore_select_letter:
+    ld   a,$10
+    ld   (_8093),a
+    ld   a,$90 ; did we press "end"?
+    cp   h
+    jr   nz,_enter_letter
+    ld   a,$92
+    cp   l
+    jr   nz,$2EEB ; no!
+    call pop_hls_then_copy_hiscore_name
+    ret
+    ld   a,$D2 ; how about "rub"?
+    cp   l
+    jr   nz,_enter_letter ; nope...
+    call hiscore_rub_letter
+    ret
+_enter_letter:
+    dec  hl
+    ld   a,(hl)
+    inc  hl
+    ld   (iy+$00),a ; draws letter on screen
+    ld   de,scr_line_prev
+    add  iy,de
+    ret
 
-HISCORE_RUB_LETTER
-2F20: 11 20 00    ld   de,$0020
-2F23: FD 19       add  iy,de
-2F25: FD 36 00 2B ld   (iy+$00),$2B
-2F29: 3E 10       ld   a,$10
-2F2B: 32 97 92    ld   ($9297),a
-2F2E: E5          push hl
-2F2F: FD E5       push iy
-2F31: E1          pop  hl
-2F32: 3E 92       ld   a,$92    ; 9297 = first letter pos
-2F34: BC          cp   h
-2F35: 20 05       jr   nz,$2F3C
-2F37: 3E 97       ld   a,$97
-2F39: BD          cp   l
-2F3A: 28 02       jr   z,$2F3E
-2F3C: E1          pop  hl
-2F3D: C9          ret
-2F3E: 11 E0 FF    ld   de,$SCR_LINE_PREV
-2F41: FD 19       add  iy,de
-2F43: E1          pop  hl
-2F44: C9          ret
+    dc   16, $FF
 
-2F45: FF ...
+pop_hls_then_copy_hiscore_name:
+    xor  a
+    ld   (_8086),a
+    pop  hl
+    pop  hl
+    call copy_hiscore_name_to_screen
+    ret
 
-HISCORE_BACK_CURSOR
-2F50: 36 10       ld   (hl),$10
-2F52: 11 40 00    ld   de,$0040
-2F55: 19          add  hl,de
-2F56: 3E 93       ld   a,$93
-2F58: BC          cp   h
-2F59: C0          ret  nz
-2F5A: 3E 92       ld   a,$92
-2F5C: BD          cp   l
-2F5D: 20 04       jr   nz,$2F63
-2F5F: 21 90 90    ld   hl,$9090 ; screen somewhere
-2F62: C9          ret
-2F63: 3E 90       ld   a,$90
-2F65: BD          cp   l
-2F66: 20 04       jr   nz,$2F6C
-2F68: 21 8E 90    ld   hl,$908E
-2F6B: C9          ret
-2F6C: 3E 8E       ld   a,$8E
-2F6E: BD          cp   l
-2F6F: C0          ret  nz
-2F70: 21 92 90    ld   hl,$9092
-2F73: C9          ret
+    dc   6, $FF
 
-2F74: FF ...
+hiscore_rub_letter:
+    ld   de,_0020
+    add  iy,de
+    ld   (iy+$00),$2B
+    ld   a,$10
+    ld   (_9297),a
+    push hl
+    push iy
+    pop  hl
+    ld   a,$92 ; 9297 = first letter pos
+    cp   h
+    jr   nz,$2F3C
+    ld   a,$97
+    cp   l
+    jr   z,$2F3E
+    pop  hl
+    ret
+    ld   de,scr_line_prev
+    add  iy,de
+    pop  hl
+    ret
 
-HISCORE_CLEAR_NAME
-2F88: E5          push hl
-2F89: 21 07 83    ld   hl,$HISCORE_NAME ; default is "HI-SCORE", clearing...
-2F8C: 36 10       ld   (hl),$TILE_BLANK
-2F8E: 23          inc  hl
-2F8F: 7D          ld   a,l
-2F90: FE 11       cp   $11
-2F92: 20 F8       jr   nz,$2F8C
-2F94: E1          pop  hl
-2F95: C9          ret
+    dc   11, $FF
 
-2F96: FF          rst  $38
-2F97: FF          rst  $38
-2F98: FF          rst  $38
-2F99: 1F          rra           ; weird 0x1F. Dump error?
-2F9A: FF ...
+hiscore_back_cursor:
+    ld   (hl),$10
+    ld   de,$0040
+    add  hl,de
+    ld   a,$93
+    cp   h
+    ret  nz
+    ld   a,$92
+    cp   l
+    jr   nz,$2F63
+    ld   hl,_9090 ; screen somewhere
+    ret
+    ld   a,$90
+    cp   l
+    jr   nz,$2F6C
+    ld   hl,_908E
+    ret
+    ld   a,$8E
+    cp   l
+    ret  nz
+    ld   hl,_9092
+    ret
 
-    ;;
-HISCORE_FWD_CURSOR
-2FA8: 3E 10       ld   a,$10
-2FAA: 32 93 80    ld   ($8093),a
-2FAD: 36 10       ld   (hl),$10
-2FAF: 11 40 00    ld   de,$0040
-2FB2: ED 52       sbc  hl,de
-2FB4: 3E 90       ld   a,$90
-2FB6: BC          cp   h
-2FB7: C0          ret  nz
-2FB8: 3E 4E       ld   a,$4E
-2FBA: BD          cp   l
-2FBB: 20 04       jr   nz,$2FC1
-2FBD: 21 50 93    ld   hl,$9350 ; wrap line 1
-2FC0: C9          ret
-2FC1: 3E 50       ld   a,$50
-2FC3: BD          cp   l
-2FC4: 20 04       jr   nz,$2FCA
-2FC6: 21 52 93    ld   hl,$9352 ; wrap line 2
-2FC9: C9          ret
-2FCA: 3E 52       ld   a,$52
-2FCC: BD          cp   l
-2FCD: C0          ret  nz
-2FCE: 21 4E 93    ld   hl,$934E ; wrap line 3
-2FD1: C9          ret
-2FD2: FF ...
+    dc   20, $FF
 
-2FD5: CD 38 30    call $COPY_HISCORE_NAME_TO_SCREEN_2
-2FD8: CD E0 24    call $DELAY_60_VBLANKS
-2FDB: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-2FDE: C9          ret
+hiscore_clear_name:
+    push hl
+    ld   hl,hiscore_name ; default is "HI-SCORE", clearing...
+    ld   (hl),tile_blank
+    inc  hl
+    ld   a,l
+    cp   $11
+    jr   nz,$2F8C
+    pop  hl
+    ret
 
-2FDF: FF          rst  $38
+    dc   3, $FF
+    rra ; weird 0x1F. Dump error?
+    dc   14, $FF
 
-COPY_HISCORE_NAME_TO_SCREEN
-2FE0: 21 07 83    ld   hl,$HISCORE_NAME
-2FE3: 3A 77 92    ld   a,($9277)
-2FE6: 77          ld   (hl),a
-2FE7: 3A 57 92    ld   a,($9257)
-2FEA: 23          inc  hl
-2FEB: 77          ld   (hl),a
-2FEC: 3A 37 92    ld   a,($9237)
-2FEF: 23          inc  hl
-2FF0: 77          ld   (hl),a
-2FF1: 3A 17 92    ld   a,($9217)
-2FF4: 23          inc  hl
-2FF5: 77          ld   (hl),a
-2FF6: 3A F7 91    ld   a,($91F7)
-2FF9: 23          inc  hl
-2FFA: 77          ld   (hl),a
-2FFB: 3A D7 91    ld   a,($91D7)
-2FFE: 23          inc  hl
-2FFF: 77          ld   (hl),a
+;;
+hiscore_fwd_cursor:
+    ld   a,$10
+    ld   (_8093),a
+    ld   (hl),$10
+    ld   de,$0040
+    sbc  hl,de
+    ld   a,$90
+    cp   h
+    ret  nz
+    ld   a,$4E
+    cp   l
+    jr   nz,$2FC1
+    ld   hl,_9350 ; wrap line 1
+    ret
+    ld   a,$50
+    cp   l
+    jr   nz,$2FCA
+    ld   hl,_9352 ; wrap line 2
+    ret
+    ld   a,$52
+    cp   l
+    ret  nz
+    ld   hl,_934E ; wrap line 3
+    ret
+
+    dc   3, $FF
+
+_2FD5:
+    call copy_hiscore_name_to_screen_2
+    call delay_60_vblanks
+    call reset_xoff_sprites_and_clear_screen
+    ret
+
+    db   $FF
+
+copy_hiscore_name_to_screen:
+    ld   hl,hiscore_name
+    ld   a,(_9277)
+    ld   (hl),a
+    ld   a,(_9257)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_9237)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_9217)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_91F7)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_91D7)
+    inc  hl
+    ld   (hl),a
 ;;; === END OF BG3.BIN, START OF BG4.BIN ======
-3000: 3A B7 91    ld   a,($91B7)
-3003: 23          inc  hl
-3004: 77          ld   (hl),a
-3005: 3A 97 91    ld   a,($9197)
-3008: 23          inc  hl
-3009: 77          ld   (hl),a
-300A: 3A 77 91    ld   a,($9177)
-300D: 23          inc  hl
-300E: 77          ld   (hl),a
-300F: 3A 57 91    ld   a,($9157)
-3012: 23          inc  hl
-3013: 77          ld   (hl),a
-3014: CD C0 30    call $30C0
-3017: CD D5 2F    call $2FD5
-301A: C3 E8 03    jp   $03E8
-301D: FF          rst  $38
-301E: FF          rst  $38
-301F: FF          rst  $38
-3020: 0E 05       ld   c,$05
-3022: CD A0 13    call $WAIT_VBLANK
-3025: 0D          dec  c
-3026: 20 FA       jr   nz,$3022
-3028: C9          ret
+    ld   a,(_91B7)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_9197)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_9177)
+    inc  hl
+    ld   (hl),a
+    ld   a,(_9157)
+    inc  hl
+    ld   (hl),a
+    call _30C0
+    call _2FD5
+    jp   clear_after_game_over
 
-3029: FF ...
+    dc   3, $FF
 
-    ;; writes some chars to screen
-    ;; actually - different screen loc than copy_msg 1!
-COPY_HISCORE_NAME_TO_SCREEN_2
-3038: 3A 07 83    ld   a,($HISCORE_NAME)
-303B: 32 80 92    ld   ($9280),a
-303E: 3A 08 83    ld   a,($HISCORE_NAME+1)
-3041: 32 60 92    ld   ($9260),a
-3044: 3A 09 83    ld   a,($HISCORE_NAME+2)
-3047: 32 40 92    ld   ($9240),a
-304A: 3A 0A 83    ld   a,($HISCORE_NAME+3)
-304D: 32 20 92    ld   ($9220),a
-3050: 3A 0B 83    ld   a,($HISCORE_NAME+4)
-3053: 32 00 92    ld   ($9200),a
-3056: 3A 0C 83    ld   a,($HISCORE_NAME+5)
-3059: 32 E0 91    ld   ($91E0),a
-305C: 3A 0D 83    ld   a,($HISCORE_NAME+6)
-305F: 32 C0 91    ld   ($91C0),a
-3062: 3A 0E 83    ld   a,($HISCORE_NAME+7)
-3065: 32 A0 91    ld   ($91A0),a
-3068: 3A 0F 83    ld   a,($HISCORE_NAME+8)
-306B: 32 80 91    ld   ($9180),a
-306E: 3A 10 83    ld   a,($HISCORE_NAME+9)
-3071: 32 60 91    ld   ($9160),a
-3074: C9          ret
+    ld   c,$05
+    call wait_vblank
+    dec  c
+    jr   nz,$3022
+    ret
 
-3075: FF ...
+    dc   15, $FF
 
-    ;; Writes HIGH-SCORE to bytes (later to screen)
-SET_HISCORE_TEXT
-3080: 21 07 83    ld   hl,$HISCORE_NAME
-3083: 36 18       ld   (hl),$18 ; h
-3085: 23          inc  hl
-3086: 36 19       ld   (hl),$19 ; i
-3088: 23          inc  hl
-3089: 36 17       ld   (hl),$17 ; g
-308B: 23          inc  hl
-308C: 36 18       ld   (hl),$18 ; h
-308E: 23          inc  hl
-308F: 36 2B       ld   (hl),$TILE_HYPHEN
-3091: 23          inc  hl
-3092: 36 23       ld   (hl),$23 ; s
-3094: 23          inc  hl
-3095: 36 13       ld   (hl),$13 ; c
-3097: 23          inc  hl
-3098: 36 1F       ld   (hl),$1F ; o
-309A: 23          inc  hl
-309B: 36 22       ld   (hl),$22 ; r
-309D: 23          inc  hl
-309E: 36 15       ld   (hl),$15 ; e
-    ;; set default hiscore
-30A0: 21 00 83    ld   hl,$HISCORE
-30A3: 36 00       ld   (hl),$TILE_0
-30A5: 23          inc  hl
-30A6: 36 05       ld   (hl),$05
-30A8: 23          inc  hl
-30A9: 36 00       ld   (hl),$TILE_0
-30AB: 23          inc  hl
-30AC: C9          ret
+;; writes some chars to screen
+;; actually - different screen loc than copy_msg 1!
+copy_hiscore_name_to_screen_2:
+    ld   a,(hiscore_name)
+    ld   (_9280),a
+    ld   a,(_8308)
+    ld   (_9260),a
+    ld   a,(_8309)
+    ld   (_9240),a
+    ld   a,(_830A)
+    ld   (_9220),a
+    ld   a,(_830B)
+    ld   (_9200),a
+    ld   a,(_830C)
+    ld   (_91E0),a
+    ld   a,(_830D)
+    ld   (_91C0),a
+    ld   a,(_830E)
+    ld   (_91A0),a
+    ld   a,(_830F)
+    ld   (_9180),a
+    ld   a,(_8310)
+    ld   (_9160),a
+    ret
 
-30AD: FF ...
+    dc   11, $FF
 
-30C0: 0E 00       ld   c,$00
-30C2: 21 10 83    ld   hl,$8310
-30C5: 7E          ld   a,(hl)
-30C6: FE 2B       cp   $2B
-30C8: 20 0E       jr   nz,$30D8
-30CA: 36 10       ld   (hl),$10
-30CC: 2B          dec  hl
-30CD: 7E          ld   a,(hl)
-30CE: FE 2B       cp   $2B
-30D0: 20 06       jr   nz,$30D8
-30D2: 36 10       ld   (hl),$10
-30D4: 2B          dec  hl
-30D5: 0C          inc  c
-30D6: 18 ED       jr   $30C5
-30D8: 79          ld   a,c
-30D9: A7          and  a
-30DA: C8          ret  z
-30DB: 0D          dec  c
-30DC: CD E8 30    call $30E8
-30DF: 18 F7       jr   $30D8
+;; Writes HIGH-SCORE to bytes (later to screen)
+set_hiscore_text:
+    ld   hl,hiscore_name
+    ld   (hl),$18 ; h
+    inc  hl
+    ld   (hl),$19 ; i
+    inc  hl
+    ld   (hl),$17 ; g
+    inc  hl
+    ld   (hl),$18 ; h
+    inc  hl
+    ld   (hl),tile_hyphen
+    inc  hl
+    ld   (hl),$23 ; s
+    inc  hl
+    ld   (hl),$13 ; c
+    inc  hl
+    ld   (hl),$1F ; o
+    inc  hl
+    ld   (hl),$22 ; r
+    inc  hl
+    ld   (hl),$15 ; e
+;; set default hiscore
+    ld   hl,hiscore
+    ld   (hl),$00
+    inc  hl
+    ld   (hl),$05
+    inc  hl
+    ld   (hl),$00
+    inc  hl
+    ret
 
-30E1: FF ...
+    dc   19, $FF
 
-30E8: 16 0A       ld   d,$0A
-30EA: DD 21 0F 83 ld   ix,$830F
-30EE: DD 7E 00    ld   a,(ix+$00)
-30F1: DD 77 01    ld   (ix+$01),a
-30F4: 15          dec  d
-30F5: DD 2B       dec  ix
-30F7: 20 F5       jr   nz,$30EE
-30F9: 3E 10       ld   a,$TILE_BLANK
-30FB: 32 07 83    ld   ($HISCORE_NAME),a
-30FE: C9          ret
+_30C0:
+    ld   c,$00
+    ld   hl,_8310
+_30C5:
+    ld   a,(hl)
+    cp   $2B
+    jr   nz,_30D8
+    ld   (hl),$10
+    dec  hl
+    ld   a,(hl)
+    cp   $2B
+    jr   nz,_30D8
+    ld   (hl),$10
+    dec  hl
+    inc  c
+    jr   _30C5
+_30D8:
+    ld   a,c
+    and  a
+    ret  z
+    dec  c
+    call _30E8
+    jr   _30D8
 
-30FF: FF ...
+    dc   7, $FF
 
-    ;;
-HISCORE_ENTER_TIMER
-3108: E5          push hl
-3109: C5          push bc
-310A: FD E5       push iy
-310C: DD E5       push ix
-310E: 0E 14       ld   c,$14
-3110: CD A0 13    call $WAIT_VBLANK
-3113: 0D          dec  c
-3114: 20 FA       jr   nz,$3110
-3116: 3A 76 80    ld   a,($HISCORE_TIMER2)
-3119: 3C          inc  a
-311A: 32 76 80    ld   ($HISCORE_TIMER2),a
-311D: E6 01       and  $01
-    ;; Bug! Jumps to middle of instruction! 0x93 = `sub e, rld (hl)`
-    ;; I think maybe should be $3138? (28 17 instead of 28 14)
-    ;; (hl) points to the cursor pos. `rld (hl)` makes the cursor into a "0" (tile 0x90),
-    ;; but you don't see a visual glitch: because the cursor is re-drawn just
-    ;; immediately after this sub returns ($2E80)
-311F: 28 14       jr   z,$3135
-3121: 21 75 80    ld   hl,$HISCORE_TIMER
-3124: 7E          ld   a,(hl)
-3125: 3D          dec  a
-3126: 27          daa
-3127: CC 10 2F    call z,$POP_HLS_THEN_COPY_HISCORE_NAME
-312A: 77          ld   (hl),a   ; load a into $HISCORE_TIMER
-312B: AF          xor  a
-312C: ED 6F       rld  (hl)
-312E: 32 82 93    ld   ($9382),a ; Timer countdown char 1
-3131: ED 6F       rld  (hl)
-3133: 32 62 93    ld   ($9362),a ; Timer countdown char 2
-3136: ED 6F       rld  (hl)
-3138: DD E1       pop  ix
-313A: FD E1       pop  iy
-313C: C1          pop  bc
-313D: E1          pop  hl
-313E: C9          ret
-313F: FF
+_30E8:
+    ld   d,$0A
+    ld   ix,_830F
+    ld   a,(ix+$00)
+    ld   (ix+$01),a
+    dec  d
+    dec  ix
+    jr   nz,$30EE
+    ld   a,tile_blank
+    ld   (hiscore_name),a
+    ret
 
-    ;; load rock pos (reset rock pos?)
-UPDATE_ENEMY_1
-3140: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
-3143: A7          and  a
-3144: C8          ret  z        ; enemy not alive, return
-    ;;  Move rock according to lookup table
-3145: 3C          inc  a
-3146: FE 3C       cp   $3C
-3148: 20 01       jr   nz,$314B
-314A: AF          xor  a
-314B: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-314E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP ; list of [frame,y pos]
-3151: CB 27       sla  a
-3153: 85          add  a,l
-3154: 6F          ld   l,a
-3155: 7E          ld   a,(hl)
-3156: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3159: 23          inc  hl
-315A: 7E          ld   a,(hl)
-315B: 32 57 81    ld   ($ENEMY_1_Y),a
-315E: C9          ret
+    dc   9, $FF
 
-315F: FF ...
+;;
+hiscore_enter_timer:
+    push hl
+    push bc
+    push iy
+    push ix
+    ld   c,$14
+    call wait_vblank
+    dec  c
+    jr   nz,$3110
+    ld   a,(hiscore_timer2)
+    inc  a
+    ld   (hiscore_timer2),a
+    and  $01
+;; Bug! Jumps to middle of instruction! 0x93 = `sub e, rld (hl)`
+;; I think maybe should be $3138? (28 17 instead of 28 14)
+;; (hl) points to the cursor pos. `rld (hl)` makes the cursor into a "0" (tile 0x90),
+;; but you don't see a visual glitch: because the cursor is re-drawn just
+;; immediately after this sub returns ($2E80)
+    jr   z,$3135
+    ld   hl,hiscore_timer
+    ld   a,(hl)
+    dec  a
+    daa
+    call z,pop_hls_then_copy_hiscore_name
+    ld   (hl),a ; load a into $HISCORE_TIMER
+    xor  a
+    rld
+    ld   (_9382),a ; Timer countdown char 1
+    rld
+    ld   (_9362),a ; Timer countdown char 2
+    rld
+    pop  ix
+    pop  iy
+    pop  bc
+    pop  hl
+    ret
 
-    ;; looks the same as 1?
-ENEMY_PATTERN_SCR_9
-3168: CD 28 2C    call $ROCK_FALL_1
-316B: CD 40 31    call $UPDATE_ENEMY_1
-316E: C9          ret
+    db   $FF
 
-316F: FF ...
+;; load rock pos (reset rock pos?)
+update_enemy_1:
+    ld   a,(enemy_1_active)
+    and  a
+    ret  z ; enemy not alive, return
+;;  Move rock according to lookup table
+    inc  a
+    cp   $3C
+    jr   nz,$314B
+    xor  a
+    ld   (enemy_1_active),a
+    ld   hl,rock_fall_lookup ; list of [frame,y pos]
+    sla  a
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (enemy_1_frame),a
+    inc  hl
+    ld   a,(hl)
+    ld   (enemy_1_y),a
+    ret
 
-    ;; ha, every frame is a lookup (like the jump table)
-    ;; Format is: [frame, y pos]
-ROCK_FALL_LOOKUP
-3180: 00 00
-3182: 1D 52 1D 54 1D 56 1D 58
-318A: 1D 5A 1D 5C 1D 5E 1D 60
-3192: 1D 62 1D 64 1D 66 1D 68
-319A: 1D 6A 1D 6C 1D 6E 1D 71
-31A2: 1D 73 1D 75 1D 78 1D 7A
-31AA: 1D 7C 1D 7F 1D 81 1D 83
-31B2: 1D 86 1D 88 1D 8A 1D 8D
-31BA: 1D 8F 1D 91 1D 94 1D 96
-31C2: 1D 98 1D 9B 1D 9D 1D 9F
-31CA: 1D A2 1D A4 1D A6 1D AB
-31D2: 1D AD 1D AF 1D B2 1D B4
-31DA: 1D B6 1D B9 1D BB 1D BD
-31E2: 1D C0 1D C2 1D C4 1D C6
-31EA: 1D C8 1D CA 1D CC 1D CE
-31F2: 1E CE 1F CE 20 CE 21 CE
-31FA: 21 CE 21 CE
+    dc   9, $FF
 
-31FE: FF ...
+;; looks the same as 1?
+enemy_pattern_scr_9:
+    call rock_fall_1
+    call update_enemy_1
+    ret
 
-SET_BIRD_LEFT_Y_C4
-3210: 3E F0       ld   a,$F0
-3212: 32 58 81    ld   ($ENEMY_2_X),a
-3215: 3E C4       ld   a,$C4
-3217: 32 5B 81    ld   ($ENEMY_2_Y),a
-321A: 3E 23       ld   a,$FR_BIRD_1
-321C: 32 59 81    ld   ($ENEMY_2_FRAME),a
-321F: 3E 16       ld   a,$16
-3221: 32 5A 81    ld   ($ENEMY_2_COL),a
-3224: 3E 01       ld   a,$01
-3226: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3229: C9          ret
-322A: FF ...
+    dc   17, $FF
+
+;; ha, every frame is a lookup (like the jump table)
+;; Format is: [frame, y pos]
+rock_fall_lookup:
+    db   $00,$00
+    db   $1D,$52,$1D,$54,$1D,$56,$1D,$58
+    db   $1D,$5A,$1D,$5C,$1D,$5E,$1D,$60
+    db   $1D,$62,$1D,$64,$1D,$66,$1D,$68
+    db   $1D,$6A,$1D,$6C,$1D,$6E,$1D,$71
+    db   $1D,$73,$1D,$75,$1D,$78,$1D,$7A
+    db   $1D,$7C,$1D,$7F,$1D,$81,$1D,$83
+    db   $1D,$86,$1D,$88,$1D,$8A,$1D,$8D
+    db   $1D,$8F,$1D,$91,$1D,$94,$1D,$96
+    db   $1D,$98,$1D,$9B,$1D,$9D,$1D,$9F
+    db   $1D,$A2,$1D,$A4,$1D,$A6,$1D,$AB
+    db   $1D,$AD,$1D,$AF,$1D,$B2,$1D,$B4
+    db   $1D,$B6,$1D,$B9,$1D,$BB,$1D,$BD
+    db   $1D,$C0,$1D,$C2,$1D,$C4,$1D,$C6
+    db   $1D,$C8,$1D,$CA,$1D,$CC,$1D,$CE
+    db   $1E,$CE,$1F,$CE,$20,$CE,$21,$CE
+    db   $21,$CE,$21,$CE
+
+    dc   18, $FF
+
+set_bird_left_y_c4:
+    ld   a,$F0
+    ld   (enemy_2_x),a
+    ld   a,$C4
+    ld   (enemy_2_y),a
+    ld   a,fr_bird_1
+    ld   (enemy_2_frame),a
+    ld   a,$16
+    ld   (enemy_2_col),a
+    ld   a,$01
+    ld   (enemy_2_active),a
+    ret
+
+    dc   14, $FF
+
+wrap_bird_left_y_c4:
+    ld   a,(enemy_2_x)
+    and  a
+    jr   z,$324D
+    cp   $01
+    jr   z,$324D
+    cp   $02
+    jr   z,$324D
+    cp   $03
+    jr   z,$324D
+    cp   $04
+    ret  nz
+    call set_bird_left_y_c4
+    ret
+
+    dc   15, $FF
+
+move_animate_bird_left:
+    ld   a,(tick_mod_fast)
+    and  $01
+    ret  z
+    ld   a,(enemy_2_active)
+    and  a
+    ret  z
+    ld   a,(enemy_2_x) ; move left
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_2_x),a
+    ld   a,(tick_mod_fast)
+    and  $02
+    ret  nz
+_animate_bird:
+    ld   a,(enemy_2_frame)
+    cp   fr_bird_1
+    jr   nz,$3287
+    ld   a,fr_bird_2
+    ld   (enemy_2_frame),a
+    ret
+    ld   a,fr_bird_1
+    ld   (enemy_2_frame),a
+    ret
+
+    dc   35, $FF
+
+set_blue_meanie_a0_d0:
+    ld   a,$A0
+    ld   (enemy_1_x),a
+    ld   a,$D0
+    ld   (enemy_1_y),a
+    ld   a,$17
+    ld   (enemy_1_col),a
+    ld   a,fr_blue_1
+    ld   (enemy_1_frame),a
+    ld   a,$01
+    ld   (enemy_3_active),a ; why enemy_3?
+    ret
+
+    dc   6, $FF
+
+update_stair_up_blue_timer:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_2_timer)
+    inc  a
+    cp   $20
+    jr   nz,$32DF
+    xor  a
+    ld   (enemy_2_timer),a
+    and  a
+    ret  nz
+    call set_blue_meanie_a0_d0
+    ret
+
+    dc   8, $FF
+
+_32F0:
+    ld   a,(enemy_3_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $81
+    jr   nz,$32FB
+    xor  a
+    ld   (enemy_3_active),a
+    ld   b,a
+    scf
+    ccf
+    sub  $40
+    jr   nc,$3309
+    call _3318
+    ret
+    call _3340
+    ret
+
+    dc   11, $FF
+
+;; blue-meanie up?
+_3318:
+    ld   a,(enemy_1_y) ; move up?
+    dec  a
+    dec  a
+    ld   (enemy_1_y),a
+    and  $03
+    ret  nz
+    ld   a,(enemy_1_frame)
+    cp   fr_blue_1
+    jr   z,$3330
+    ld   a,fr_blue_1
+    ld   (enemy_1_frame),a
+    ret
+    ld   a,fr_blue_2
+    ld   (enemy_1_frame),a
+    ret
+
+    dc   10, $FF
+
+;; blue-meanie down?
+_3340:
+    ld   a,(enemy_1_y) ; move down?
+    inc  a
+    inc  a
+    ld   (enemy_1_y),a
+    ld   a,fr_blue_1
+    ld   (enemy_1_frame),a
+    ret
+
+    dc   10, $FF
+
+set_bird_left_y_40:
+    ld   a,$F0
+    ld   (enemy_2_x),a
+    ld   a,$40
+    ld   (enemy_2_y),a
+    ld   a,fr_bird_1
+    ld   (enemy_2_frame),a
+    ld   a,$16
+    ld   (enemy_2_col),a
+    ld   a,$01
+    ld   (enemy_2_active),a
+    ret
+
+    dc   6, $FF
+
+;; if x pos < 4 then wrap the bird
+wrap_bird_left_y_40:
+    ld   a,(enemy_2_x)
+    and  a
+    jr   z,_wrap_bird_1
+    cp   $01
+    jr   z,_wrap_bird_1
+    cp   $02
+    jr   z,_wrap_bird_1
+    cp   $03
+    jr   z,_wrap_bird_1
+    cp   $04
+    ret  nz
+_wrap_bird_1:
+    call set_bird_left_y_40
+    ret
+
+    dc   7, $FF
+
+_3398:
+    call wrap_bird_left_y_40
+    call move_animate_bird_left
+    ret
+
+    dc   9, $FF
+
+    call update_stair_up_blue_timer
+    call _32F0
+    ret
+
+    dc   9, $FF
+
+_33B8:
+    ld   a,(enemy_3_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $81
+    jr   nz,$33C3
+    xor  a
+    ld   (enemy_3_active),a
+    ld   b,a
+    scf
+    ccf
+    sub  $40
+    jr   nc,$33D1
+    call _33D8
+    ret
+    call _3400
+    ret
+
+    dc   3, $FF
+
+_33D8:
+    ld   a,(enemy_1_y)
+    dec  a
+    dec  a
+    ld   (enemy_1_y),a
+    and  $03
+    ret  nz
+    ld   a,(enemy_1_frame)
+    cp   fr_blue_1
+    jr   nz,$33F0
+    ld   a,fr_blue_2
+    ld   (enemy_1_frame),a
+    ret
+    ld   a,fr_blue_1
+    ld   (enemy_1_frame),a
+    ret
+
+    dc   10, $FF
+
+_3400:
+    ld   a,(enemy_1_y)
+    inc  a
+    inc  a
+    ld   (enemy_1_y),a
+    ret
+
+    dc   15, $FF
 
 
-WRAP_BIRD_LEFT_Y_C4
-3238: 3A 58 81    ld   a,($ENEMY_2_X)
-323B: A7          and  a
-323C: 28 0F       jr   z,$324D
-323E: FE 01       cp   $01
-3240: 28 0B       jr   z,$324D
-3242: FE 02       cp   $02
-3244: 28 07       jr   z,$324D
-3246: FE 03       cp   $03
-3248: 28 03       jr   z,$324D
-324A: FE 04       cp   $04
-324C: C0          ret  nz
-324D: CD 10 32    call $SET_BIRD_LEFT_Y_C4
-3250: C9          ret
-3251: FF ...
+_3418:
+    ld   a,(enemy_4_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $61
+    jr   nz,$3423
+    xor  a
+    ld   (enemy_4_active),a
+    ld   b,a
+    scf
+    ccf
+    sub  $30
+    jr   nc,$3431
+    call _3438
+    ret
+    call _3458
+    ret
 
-MOVE_ANIMATE_BIRD_LEFT
-3260: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3263: E6 01       and  $01
-3265: C8          ret  z
-3266: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
-3269: A7          and  a
-326A: C8          ret  z
-326B: 3A 58 81    ld   a,($ENEMY_2_X) ; move left
-326E: 3D          dec  a
-326F: 3D          dec  a
-3270: 3D          dec  a
-3271: 32 58 81    ld   ($ENEMY_2_X),a
-3274: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3277: E6 02       and  $02
-3279: C0          ret  nz
-_ANIMATE_BIRD
-327A: 3A 59 81    ld   a,($ENEMY_2_FRAME)
-327D: FE 23       cp   $FR_BIRD_1
-327F: 20 06       jr   nz,$3287
-3281: 3E 24       ld   a,$FR_BIRD_2
-3283: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3286: C9          ret
-3287: 3E 23       ld   a,$FR_BIRD_1
-3289: 32 59 81    ld   ($ENEMY_2_FRAME),a
-328C: C9          ret
+    dc   3, $FF
 
-328D: FF ...
+_3438:
+    ld   a,(enemy_2_y)
+    dec  a
+    dec  a
+    ld   (enemy_2_y),a
+    and  $03
+    ret  nz
+    ld   a,(enemy_2_frame)
+    cp   fr_blue_1
+    jr   nz,$3450
+    ld   a,fr_blue_2
+    ld   (enemy_2_frame),a
+    ret
+    ld   a,fr_blue_1
+    ld   (enemy_2_frame),a
+    ret
 
-SET_BLUE_MEANIE_A0_D0
-32B0: 3E A0       ld   a,$A0
-32B2: 32 54 81    ld   ($ENEMY_1_X),a
-32B5: 3E D0       ld   a,$D0
-32B7: 32 57 81    ld   ($ENEMY_1_Y),a
-32BA: 3E 17       ld   a,$17
-32BC: 32 56 81    ld   ($ENEMY_1_COL),a
-32BF: 3E 34       ld   a,$FR_BLUE_1
-32C1: 32 55 81    ld   ($ENEMY_1_FRAME),a
-32C4: 3E 01       ld   a,$01
-32C6: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a ; why enemy_3?
-32C9: C9          ret
+    dc   2, $FF
 
-32CA: FF ...
+_3458:
+    ld   a,(enemy_2_y)
+    inc  a
+    inc  a
+    ld   (enemy_2_y),a
+    ret
 
-UPDATE_STAIR_UP_BLUE_TIMER
-32D0: 3A 12 83    ld   a,($TICK_NUM)
-32D3: E6 03       and  $03
-32D5: C0          ret  nz
-32D6: 3A 3A 80    ld   a,($ENEMY_2_TIMER)
-32D9: 3C          inc  a
-32DA: FE 20       cp   $20
-32DC: 20 01       jr   nz,$32DF
-32DE: AF          xor  a
-32DF: 32 3A 80    ld   ($ENEMY_2_TIMER),a
-32E2: A7          and  a
-32E3: C0          ret  nz
-32E4: CD B0 32    call $SET_BLUE_MEANIE_A0_D0
-32E7: C9          ret
-32E8: FF ...
+    dc   15, $FF
 
-32F0: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
-32F3: A7          and  a
-32F4: C8          ret  z
-32F5: 3C          inc  a
-32F6: FE 81       cp   $81
-32F8: 20 01       jr   nz,$32FB
-32FA: AF          xor  a
-32FB: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-32FE: 47          ld   b,a
-32FF: 37          scf
-3300: 3F          ccf
-3301: D6 40       sub  $40
-3303: 30 04       jr   nc,$3309
-3305: CD 18 33    call $3318
-3308: C9          ret
-3309: CD 40 33    call $3340
-330C: C9          ret
-330D: FF ...
+;; wats this?
+_3470:
+    call _33B8
+    call _3418
+    call update_stairdown_blue_right_timer
+    call update_stairdown_blue_left_timer
+    ret
 
-    ;; blue-meanie up?
-3318: 3A 57 81    ld   a,($ENEMY_1_Y) ; move up?
-331B: 3D          dec  a
-331C: 3D          dec  a
-331D: 32 57 81    ld   ($ENEMY_1_Y),a
-3320: E6 03       and  $03
-3322: C0          ret  nz
-3323: 3A 55 81    ld   a,($ENEMY_1_FRAME)
-3326: FE 34       cp   $FR_BLUE_1
-3328: 28 06       jr   z,$3330
-332A: 3E 34       ld   a,$FR_BLUE_1
-332C: 32 55 81    ld   ($ENEMY_1_FRAME),a
-332F: C9          ret
-3330: 3E 35       ld   a,$FR_BLUE_2
-3332: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3335: C9          ret
-3336: FF ...
+    dc   11, $FF
 
-    ;; blue-meanie down?
-3340: 3A 57 81    ld   a,($ENEMY_1_Y) ; move down?
-3343: 3C          inc  a
-3344: 3C          inc  a
-3345: 32 57 81    ld   ($ENEMY_1_Y),a
-3348: 3E 34       ld   a,$FR_BLUE_1
-334A: 32 55 81    ld   ($ENEMY_1_FRAME),a
-334D: C9          ret
-334E: FF ...
+update_stairdown_blue_right_timer:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_2_timer)
+    inc  a
+    cp   $20
+    jr   nz,$3497
+    xor  a
+    ld   (enemy_2_timer),a
+    and  a
+    ret  nz
+    call _34A8
+    ret
 
-SET_BIRD_LEFT_Y_40
-3358: 3E F0       ld   a,$F0
-335A: 32 58 81    ld   ($ENEMY_2_X),a
-335D: 3E 40       ld   a,$40
-335F: 32 5B 81    ld   ($ENEMY_2_Y),a
-3362: 3E 23       ld   a,$FR_BIRD_1
-3364: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3367: 3E 16       ld   a,$16
-3369: 32 5A 81    ld   ($ENEMY_2_COL),a
-336C: 3E 01       ld   a,$01
-336E: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3371: C9          ret
-3372: FF ...
+    dc   8, $FF
 
-    ;; if x pos < 4 then wrap the bird
-WRAP_BIRD_LEFT_Y_40
-3378: 3A 58 81    ld   a,($ENEMY_2_X)
-337B: A7          and  a
-337C: 28 0F       jr   z,$_WRAP
-337E: FE 01       cp   $01
-3380: 28 0B       jr   z,$_WRAP
-3382: FE 02       cp   $02
-3384: 28 07       jr   z,$_WRAP
-3386: FE 03       cp   $03
-3388: 28 03       jr   z,$_WRAP
-338A: FE 04       cp   $04
-338C: C0          ret  nz
-_WRAP
-338D: CD 58 33    call $SET_BIRD_LEFT_Y_40
-3390: C9          ret
-3391: FF ...
+_34A8:
+    ld   a,fr_blue_1
+    ld   (enemy_1_frame),a
+    ld   a,$A4
+    ld   (enemy_1_x),a
+    ld   a,$AC
+    ld   (enemy_1_y),a
+    ld   a,$17
+    ld   (enemy_1_col),a
+    ld   a,$01
+    ld   (enemy_3_active),a ; Why set enemy_3?
+    ret
 
-3398: CD 78 33    call $WRAP_BIRD_LEFT_Y_40
-339B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-339E: C9          ret
-339F: FF ...
+    dc   6, $FF
 
-33A8: CD D0 32    call $32D0
-33AB: CD F0 32    call $32F0
-33AE: C9          ret
-33AF: FF ...
+_34C8:
+    ld   a,$80
+    ld   (enemy_2_x),a
+    ld   a,$7C
+    ld   (enemy_2_y),a
+    ld   a,fr_blue_1
+    ld   (enemy_2_frame),a
+    ld   a,$17
+    ld   (enemy_2_col),a
+    ld   a,$01
+    ld   (enemy_4_active),a
+    ret
 
-33B8: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
-33BB: A7          and  a
-33BC: C8          ret  z
-33BD: 3C          inc  a
-33BE: FE 81       cp   $81
-33C0: 20 01       jr   nz,$33C3
-33C2: AF          xor  a
-33C3: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-33C6: 47          ld   b,a
-33C7: 37          scf
-33C8: 3F          ccf
-33C9: D6 40       sub  $40
-33CB: 30 04       jr   nc,$33D1
-33CD: CD D8 33    call $33D8
-33D0: C9          ret
-33D1: CD 00 34    call $3400
-33D4: C9          ret
-33D5: FF ...
+    dc   6, $FF
 
-33D8: 3A 57 81    ld   a,($ENEMY_1_Y)
-33DB: 3D          dec  a
-33DC: 3D          dec  a
-33DD: 32 57 81    ld   ($ENEMY_1_Y),a
-33E0: E6 03       and  $03
-33E2: C0          ret  nz
-33E3: 3A 55 81    ld   a,($ENEMY_1_FRAME)
-33E6: FE 34       cp   $34
-33E8: 20 06       jr   nz,$33F0
-33EA: 3E 35       ld   a,$35
-33EC: 32 55 81    ld   ($ENEMY_1_FRAME),a
-33EF: C9          ret
-33F0: 3E 34       ld   a,$34
-33F2: 32 55 81    ld   ($ENEMY_1_FRAME),a
-33F5: C9          ret
-33F6: FF ...
+update_stairdown_blue_left_timer:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_3_timer)
+    inc  a
+    cp   $28
+    jr   nz,$34F7
+    xor  a
+    ld   (enemy_3_timer),a
+    and  a
+    ret  nz
+    call _34C8
+    ret
 
-3400: 3A 57 81    ld   a,($ENEMY_1_Y)
-3403: 3C          inc  a
-3404: 3C          inc  a
-3405: 32 57 81    ld   ($ENEMY_1_Y),a
-3408: C9          ret
-3409: FF ...
+    dc   16, $FF
 
-
-3418: 3A 3D 80    ld   a,($ENEMY_4_ACTIVE)
-341B: A7          and  a
-341C: C8          ret  z
-341D: 3C          inc  a
-341E: FE 61       cp   $61
-3420: 20 01       jr   nz,$3423
-3422: AF          xor  a
-3423: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
-3426: 47          ld   b,a
-3427: 37          scf
-3428: 3F          ccf
-3429: D6 30       sub  $30
-342B: 30 04       jr   nc,$3431
-342D: CD 38 34    call $3438
-3430: C9          ret
-3431: CD 58 34    call $3458
-3434: C9          ret
-3435: FF ...
-
-3438: 3A 5B 81    ld   a,($ENEMY_2_Y)
-343B: 3D          dec  a
-343C: 3D          dec  a
-343D: 32 5B 81    ld   ($ENEMY_2_Y),a
-3440: E6 03       and  $03
-3442: C0          ret  nz
-3443: 3A 59 81    ld   a,($ENEMY_2_FRAME)
-3446: FE 34       cp   $34
-3448: 20 06       jr   nz,$3450
-344A: 3E 35       ld   a,$35
-344C: 32 59 81    ld   ($ENEMY_2_FRAME),a
-344F: C9          ret
-3450: 3E 34       ld   a,$34
-3452: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3455: C9          ret
-
-3456: FF FF
-
-3458: 3A 5B 81    ld   a,($ENEMY_2_Y)
-345B: 3C          inc  a
-345C: 3C          inc  a
-345D: 32 5B 81    ld   ($ENEMY_2_Y),a
-3460: C9          ret
-3461: FF ...
-
-    ;; wats this?
-3470: CD B8 33    call $33B8
-3473: CD 18 34    call $3418
-3476: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
-3479: CD E8 34    call $UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
-347C: C9          ret
-347D: FF ...
-
-UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
-3488: 3A 12 83    ld   a,($TICK_NUM)
-348B: E6 03       and  $03
-348D: C0          ret  nz
-348E: 3A 3A 80    ld   a,($ENEMY_2_TIMER)
-3491: 3C          inc  a
-3492: FE 20       cp   $20
-3494: 20 01       jr   nz,$3497
-3496: AF          xor  a
-3497: 32 3A 80    ld   ($ENEMY_2_TIMER),a
-349A: A7          and  a
-349B: C0          ret  nz
-349C: CD A8 34    call $34A8
-349F: C9          ret
-34A0: FF ...
-
-34A8: 3E 34       ld   a,$34
-34AA: 32 55 81    ld   ($ENEMY_1_FRAME),a
-34AD: 3E A4       ld   a,$A4
-34AF: 32 54 81    ld   ($ENEMY_1_X),a
-34B2: 3E AC       ld   a,$AC
-34B4: 32 57 81    ld   ($ENEMY_1_Y),a
-34B7: 3E 17       ld   a,$17
-34B9: 32 56 81    ld   ($ENEMY_1_COL),a
-34BC: 3E 01       ld   a,$01
-34BE: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a ; Why set enemy_3?
-34C1: C9          ret
-34C2: FF ...
-
-34C8: 3E 80       ld   a,$80
-34CA: 32 58 81    ld   ($ENEMY_2_X),a
-34CD: 3E 7C       ld   a,$7C
-34CF: 32 5B 81    ld   ($ENEMY_2_Y),a
-34D2: 3E 34       ld   a,$34
-34D4: 32 59 81    ld   ($ENEMY_2_FRAME),a
-34D7: 3E 17       ld   a,$17
-34D9: 32 5A 81    ld   ($ENEMY_2_COL),a
-34DC: 3E 01       ld   a,$01
-34DE: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
-34E1: C9          ret
-34E2: FF ...
-
-UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
-34E8: 3A 12 83    ld   a,($TICK_NUM)
-34EB: E6 03       and  $03
-34ED: C0          ret  nz
-34EE: 3A 3C 80    ld   a,($ENEMY_3_TIMER)
-34F1: 3C          inc  a
-34F2: FE 28       cp   $28
-34F4: 20 01       jr   nz,$34F7
-34F6: AF          xor  a
-34F7: 32 3C 80    ld   ($ENEMY_3_TIMER),a
-34FA: A7          and  a
-34FB: C0          ret  nz
-34FC: CD C8 34    call $34C8
-34FF: C9          ret
-3500: FF ...
-
-    ;;  reset a bunch of thing to 255
-RESET_ENEMIES
-3510: 3E FF       ld   a,$FF
-3512: 32 36 80    ld   ($ROCK_FALL_TIMER),a
-3515: 32 38 80    ld   ($ENEMY_1_TIMER),a
-3518: 32 3A 80    ld   ($ENEMY_2_TIMER),a
-351B: 32 3C 80    ld   ($ENEMY_3_TIMER),a
-351E: 32 3E 80    ld   ($ROCK_LEFT_TIMER),a
-3521: 32 40 80    ld   ($8040),a
-3524: AF          xor  a
+;;  reset a bunch of thing to 255
+reset_enemies:
+    ld   a,$FF
+    ld   (rock_fall_timer),a
+    ld   (enemy_1_timer),a
+    ld   (enemy_2_timer),a
+    ld   (enemy_3_timer),a
+    ld   (rock_left_timer),a
+    ld   (_8040),a
+    xor  a
 ;;;  reset a bunch of things to 0
-3525: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3528: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-352B: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-352E: 32 3D 80    ld   ($ENEMY_4_ACTIVE),a
-3531: 32 3F 80    ld   ($803F),a
-3534: 32 41 80    ld   ($8041),a
-3537: C9          ret
+    ld   (enemy_1_active),a
+    ld   (enemy_2_active),a
+    ld   (enemy_3_active),a
+    ld   (enemy_4_active),a
+    ld   (_803f),a
+    ld   (enemy_6_active),a
+    ret
 
-    ;;
-3538: CD 38 32    call $WRAP_BIRD_LEFT_Y_C4
-353B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-353E: CD 28 2C    call $2C28
-3541: CD 40 31    call $UPDATE_ENEMY_1
-3547: CD 90 35    call $SET_ENEMY_FR_AND_Y
-354A: C9          ret
-354B: FF ...
+;;
+_3538:
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    call rock_fall_1
+    call update_enemy_1
+    call update_rock_left_timer
+    call set_rock_3_fr_and_y
+    ret
 
-SET_ROCK_X_60
-3550: 3E 60       ld   a,$60
-3552: 32 5C 81    ld   ($ENEMY_3_X),a
-3555: 3E 1D       ld   a,$FR_ROCK
-3557: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-355A: 3E 15       ld   a,$15
-355C: 32 5E 81    ld   ($ENEMY_3_COL),a
-355F: 3E 40       ld   a,$40
-3561: 32 5F 81    ld   ($ENEMY_3_Y),a
-3564: 3E 01       ld   a,$01
-3566: 32 3F 80    ld   ($ROCK_LEFT_TIMER),a
-3569: C9          ret
-356A: FF ..
+    dc   5, $FF
 
-UPDATE_ROCK_LEFT_TIMER
-3570: 3A 16 83    ld   a,($TICK_MOD_SLOW)
-3573: E6 07       and  $07
-3575: C0          ret  nz
-3576: 3A 3E 80    ld   a,($ROCK_LEFT_TIMER)
-3579: 3C          inc  a
-357A: FE 14       cp   $14
-357C: 20 01       jr   nz,$357F
-357E: AF          xor  a
-357F: 32 3E 80    ld   ($ROCK_LEFT_TIMER),a
-3582: A7          and  a
-3583: C0          ret  nz
-3584: CD 50 35    call $SET_ROCK_X_60
-3587: C9          ret
+set_rock_x_60:
+    ld   a,$60
+    ld   (enemy_3_x),a
+    ld   a,$1D
+    ld   (enemy_3_frame),a
+    ld   a,$15
+    ld   (enemy_3_col),a
+    ld   a,$40
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (_803f),a
+    ret
 
-3588: FF ...
+    dc   6, $FF
 
-SET_ROCK_3_FR_AND_Y
-3590: 3A 3F 80    ld   a,($803F)
-3593: A7          and  a
-3594: C8          ret  z
-    ;;  Move rock according to lookup table
-3595: 3C          inc  a
-3596: FE 40       cp   $40
-3598: 20 01       jr   nz,$359B
-359A: AF          xor  a
-359B: 32 3F 80    ld   ($803F),a
-359E: 21 80 31    ld   hl,$ROCK_FALL_LOOKUP
-35A1: CB 27       sla  a
-35A3: 85          add  a,l
-35A4: 6F          ld   l,a
-35A5: 7E          ld   a,(hl)
-35A6: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-35A9: 23          inc  hl
-35AA: 7E          ld   a,(hl)
-35AB: 32 5F 81    ld   ($ENEMY_3_Y),a
-35AE: C9          ret
-35AF: FF ...
+update_rock_left_timer:
+    ld   a,(tick_mod_slow)
+    and  $07
+    ret  nz
+    ld   a,(rock_left_timer)
+    inc  a
+    cp   $14
+    jr   nz,$357F
+    xor  a
+    ld   (rock_left_timer),a
+    and  a
+    ret  nz
+    call set_rock_x_60
+    ret
 
-35B8: CD 70 35    call $UPDATE_ROCK_LEFT_TIMER
-35BB: CD 90 35    call $SET_ROCK_3_FR_AND_Y
-35BE: CD 28 2C    call $2C28
-35C1: CD 40 31    call $UPDATE_ENEMY_1
-35C4: C9          ret
-35C5: FF ...
+    dc   8, $FF
 
-    ;; in screen 14
-SET_BIRD_RIGHT_Y_BC
-35D0: 3E 10       ld   a,$10
-35D2: 32 5C 81    ld   ($ENEMY_3_X),a
-35D5: 3E A3       ld   a,$A3
-35D7: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-35DA: 3E 16       ld   a,$16
-35DC: 32 5E 81    ld   ($ENEMY_3_COL),a
-35DF: 3E BC       ld   a,$BC
-35E1: 32 5F 81    ld   ($ENEMY_3_Y),a
-35E4: 3E 01       ld   a,$01
-35E6: 32 41 80    ld   ($8041),a
-35E9: C9          ret
-35EA: FF ...
+set_rock_3_fr_and_y:
+    ld   a,(_803f)
+    and  a
+    ret  z
+;;  Move rock according to lookup table
+    inc  a
+    cp   $40
+    jr   nz,$359B
+    xor  a
+    ld   (_803f),a
+    ld   hl,rock_fall_lookup
+    sla  a
+    add  a,l
+    ld   l,a
+    ld   a,(hl)
+    ld   (enemy_3_frame),a
+    inc  hl
+    ld   a,(hl)
+    ld   (enemy_3_y),a
+    ret
 
-    ;; any time x < 5?
-WRAP_BIRD_RIGHT_Y_BC
-35F0: 3A 5C 81    ld   a,($ENEMY_3_X)
-35F3: A7          and  a
-35F4: 28 0F       jr   z,$3605
-35F6: FE 01       cp   $01
-35F8: 28 0B       jr   z,$3605
-35FA: FE 02       cp   $02
-35FC: 28 07       jr   z,$3605
-35FE: FE 03       cp   $03
-3600: 28 03       jr   z,$3605
-3602: FE 04       cp   $04
-3604: C0          ret  nz
-3605: CD D0 35    call $SET_BIRD_RIGHT_Y_BC
-3608: C9          ret
-3609: FF ...
+    dc   9, $FF
 
-MOVE_ANIMATE_BIRD_RIGHT
-3610: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3613: E6 01       and  $01
-3615: C8          ret  z
-3616: 3A 41 80    ld   a,($8041)
-3619: A7          and  a
-361A: C8          ret  z
-361B: 3A 5C 81    ld   a,($ENEMY_3_X) ; move right
-361E: 3C          inc  a
-361F: 3C          inc  a
-3620: 3C          inc  a
-3621: 32 5C 81    ld   ($ENEMY_3_X),a
-3624: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3627: E6 02       and  $02
-3629: C0          ret  nz
-362A: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
-362D: FE A3       cp   $A3
-362F: 20 06       jr   nz,$3637
-3631: 3E A4       ld   a,$A4
-3633: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-3636: C9          ret
-3637: 3E A3       ld   a,$A3
-3639: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-363C: C9          ret
-363D: FF ...
+_35B8:
+    call update_rock_left_timer
+    call set_rock_3_fr_and_y
+    call rock_fall_1
+    call update_enemy_1
+    ret
 
-CHECK_BUTTONS_FOR_SOMETHING
-3640: C5          push bc
-3641: 3A F1 83    ld   a,($INPUT_BUTTONS)
-3644: E6 3F       and  $3F      ; 0011 1111
-3646: 4F          ld   c,a
-3647: 3E 0E       ld   a,$0E
-3649: D3 00       out  ($00),a
-364B: DB 02       in   a,($02)
-364D: 32 F2 83    ld   ($INPUT_BUTTONS_2),a
-3650: E6 C0       and  $C0
-3652: 81          add  a,c
-3653: 32 F1 83    ld   ($INPUT_BUTTONS),a
-3656: C1          pop  bc
-3657: C9          ret
+    dc   11, $FF
 
-3658: CD F0 35    call $WRAP_BIRD_RIGHT_Y_BC
-365B: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-365E: CD 38 32    call $3238
-3661: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-3664: C9          ret
-3665: FF ...
+;; in screen 14
+set_bird_right_y_bc:
+    ld   a,$10
+    ld   (enemy_3_x),a
+    ld   a,$A3
+    ld   (enemy_3_frame),a
+    ld   a,$16
+    ld   (enemy_3_col),a
+    ld   a,$BC
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (enemy_6_active),a
+    ret
 
-3670: CD B8 33    call $33B8
-3673: CD 18 34    call $3418
-3676: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
-3679: CD E8 34    call $UPDATE_STAIRDOWN_BLUE_LEFT_TIMER
-367C: CD A8 36    call $36A8
-367F: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-3682: C9          ret
-3683: FF ...
+    dc   6, $FF
 
-3688: 3E 10       ld   a,$10
-368A: 32 5C 81    ld   ($ENEMY_3_X),a
-368D: 3E A3       ld   a,$A3
-368F: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-3692: 3E 16       ld   a,$16
-3694: 32 5E 81    ld   ($ENEMY_3_COL),a
-3697: 3E 98       ld   a,$98
-3699: 32 5F 81    ld   ($ENEMY_3_Y),a
-369C: 3E 01       ld   a,$01
-369E: 32 41 80    ld   ($8041),a
-36A1: C9          ret
-36A2: FF ...
+;; any time x < 5?
+wrap_bird_right_y_bc:
+    ld   a,(enemy_3_x)
+    and  a
+    jr   z,$3605
+    cp   $01
+    jr   z,$3605
+    cp   $02
+    jr   z,$3605
+    cp   $03
+    jr   z,$3605
+_3602:
+    cp   $04
+    ret  nz
+    call set_bird_right_y_bc
+    ret
 
-36A8: 3A 5C 81    ld   a,($ENEMY_3_X)
-36AB: A7          and  a
-36AC: 28 0F       jr   z,$36BD
-36AE: FE 01       cp   $01
-36B0: 28 0B       jr   z,$36BD
-36B2: FE 02       cp   $02
-36B4: 28 07       jr   z,$36BD
-36B6: FE 03       cp   $03
-36B8: 28 03       jr   z,$36BD
-36BA: FE 04       cp   $04
-36BC: C0          ret  nz
-36BD: CD 88 36    call $3688
-36C0: C9          ret
-36C1: FF ...
+    dc   7, $FF
 
-36D0: CD F0 35    call $WRAP_BIRD_RIGHT_Y_BC
-36D3: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-36D6: CD 38 32    call $3238
-36D9: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-36DC: CD 28 2C    call $2C28
-36DF: CD 40 31    call $UPDATE_ENEMY_1
-36E2: C9          ret
-36E3: FF ...
+move_animate_bird_right:
+    ld   a,(tick_mod_fast)
+    and  $01
+    ret  z
+    ld   a,(enemy_6_active)
+    and  a
+    ret  z
+    ld   a,(enemy_3_x) ; move right
+    inc  a
+    inc  a
+    inc  a
+    ld   (enemy_3_x),a
+    ld   a,(tick_mod_fast)
+    and  $02
+    ret  nz
+    ld   a,(enemy_3_frame)
+    cp   $A3
+    jr   nz,$3637
+    ld   a,$A4
+    ld   (enemy_3_frame),a
+    ret
+    ld   a,$A3
+    ld   (enemy_3_frame),a
+    ret
 
-SET_SPEAR_LEFT_Y_94
-36E8: 3E F0       ld   a,$F0
-36EA: 32 5C 81    ld   ($ENEMY_3_X),a
-36ED: 3E 22       ld   a,$22
-36EF: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-36F2: 3E 17       ld   a,$17
-36F4: 32 5E 81    ld   ($ENEMY_3_COL),a
-36F7: 3E 94       ld   a,$94
-36F9: 32 5F 81    ld   ($ENEMY_3_Y),a
-36FC: 3E 01       ld   a,$01
-36FE: 32 41 80    ld   ($8041),a
-3701: C9          ret
-3702: FF ...
+    dc   3, $FF
+
+check_buttons_for_something:
+    push bc
+    ld   a,(input_buttons)
+    and  $3F ; 0011 1111
+    ld   c,a
+    ld   a,$0E
+    out  ($00),a
+    in   a,($02)
+    ld   (input_buttons_2),a
+    and  $C0
+    add  a,c
+    ld   (input_buttons),a
+    pop  bc
+    ret
+
+_3658:
+    call wrap_bird_right_y_bc
+    call move_animate_bird_right
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    ret
+
+    dc   11, $FF
+
+_3670:
+    call _33B8
+    call _3418
+    call update_stairdown_blue_right_timer
+    call update_stairdown_blue_left_timer
+    call _36A8
+    call move_animate_bird_right
+    ret
+
+    dc   5, $FF
+
+_3688:
+    ld   a,$10
+    ld   (enemy_3_x),a
+    ld   a,$A3
+    ld   (enemy_3_frame),a
+    ld   a,$16
+    ld   (enemy_3_col),a
+    ld   a,$98
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (enemy_6_active),a
+    ret
+
+    dc   6, $FF
+
+_36A8:
+    ld   a,(enemy_3_x)
+    and  a
+    jr   z,$36BD
+    cp   $01
+    jr   z,$36BD
+    cp   $02
+    jr   z,$36BD
+    cp   $03
+    jr   z,$36BD
+    cp   $04
+    ret  nz
+    call _3688
+    ret
+
+    dc   15, $FF
+
+_36D0:
+    call wrap_bird_right_y_bc
+    call move_animate_bird_right
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    call rock_fall_1
+    call update_enemy_1
+    ret
+
+    dc   5, $FF
+
+set_spear_left_y_94:
+    ld   a,$F0
+    ld   (enemy_3_x),a
+    ld   a,fr_spear
+    ld   (enemy_3_frame),a
+    ld   a,$17
+    ld   (enemy_3_col),a
+    ld   a,$94
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (enemy_6_active),a
+    ret
+
+    dc   14, $FF
 
 
-WRAP_SPEAR_LEFT_Y_94
-3710: 3A 5C 81    ld   a,($ENEMY_3_X)
-3713: A7          and  a
-3714: 28 0F       jr   z,$3725
-3716: FE 01       cp   $01
-3718: 28 0B       jr   z,$3725
-371A: FE 02       cp   $02
-371C: 28 07       jr   z,$3725
-371E: FE 03       cp   $03
-3720: 28 03       jr   z,$3725
-3722: FE 04       cp   $04
-3724: C0          ret  nz
-3725: CD E8 36    call $SET_SPEAR_LEFT_Y_94
-3728: C9          ret
-3729: FF ...
+wrap_spear_left_y_94:
+    ld   a,(enemy_3_x)
+    and  a
+    jr   z,$3725
+    cp   $01
+    jr   z,$3725
+    cp   $02
+    jr   z,$3725
+    cp   $03
+    jr   z,$3725
+    cp   $04
+    ret  nz
+    call set_spear_left_y_94
+    ret
 
-3730: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3733: E6 01       and  $01
-3735: C8          ret  z
-3736: 3A 41 80    ld   a,($8041)
-3739: A7          and  a
-373A: C8          ret  z
-373B: 3A 5C 81    ld   a,($ENEMY_3_X)
-373E: 3D          dec  a
-373F: 3D          dec  a
-3740: 3D          dec  a
-3741: 32 5C 81    ld   ($ENEMY_3_X),a
-3744: C9          ret
-3745: FF ...
+    dc   7, $FF
 
-3760: CD 10 37    call $WRAP_SPEAR_LEFT_Y_94
-3763: CD 30 37    call $3730
-3766: CD 98 37    call $3798
-3769: CD B8 37    call $37B8
-376C: C9          ret
-376D: FF ...
+_3730:
+    ld   a,(tick_mod_fast)
+    and  $01
+    ret  z
+    ld   a,(enemy_6_active)
+    and  a
+    ret  z
+    ld   a,(enemy_3_x)
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_3_x),a
+    ret
 
-3778: 3E F0       ld   a,$F0
-377A: 32 58 81    ld   ($ENEMY_2_X),a
-377D: 3E 22       ld   a,$22
-377F: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3782: 3E 17       ld   a,$17
-3784: 32 5A 81    ld   ($ENEMY_2_COL),a
-3787: 3E 50       ld   a,$50
-3789: 32 5B 81    ld   ($ENEMY_2_Y),a
-378C: 3E 01       ld   a,$01
-378E: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3791: C9          ret
-3792: FF ...
+    dc   27, $FF
 
-3798: 3A 58 81    ld   a,($ENEMY_2_X)
-379B: A7          and  a
-379C: 28 0F       jr   z,$37AD
-379E: FE 01       cp   $01
-37A0: 28 0B       jr   z,$37AD
-37A2: FE 02       cp   $02
-37A4: 28 07       jr   z,$37AD
-37A6: FE 03       cp   $03
-37A8: 28 03       jr   z,$37AD
-37AA: FE 04       cp   $04
-37AC: C0          ret  nz
-37AD: CD 78 37    call $3778
-37B0: C9          ret
-37B1: FF ...
+_3760:
+    call wrap_spear_left_y_94
+    call _3730
+    call _3798
+    call _37B8
+    ret
 
-37B8: 3A 15 83    ld   a,($TICK_MOD_FAST)
-37BB: E6 01       and  $01
-37BD: C8          ret  z
-37BE: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
-37C1: A7          and  a
-37C2: C8          ret  z
-37C3: 3A 58 81    ld   a,($ENEMY_2_X)
-37C6: 3D          dec  a
-37C7: 3D          dec  a
-37C8: 3D          dec  a
-37C9: 3D          dec  a
-37CA: 32 58 81    ld   ($ENEMY_2_X),a
-37CD: C9          ret
+    dc   11, $FF
 
-37CE: FF ...
+_3778:
+    ld   a,$F0
+    ld   (enemy_2_x),a
+    ld   a,fr_spear
+    ld   (enemy_2_frame),a
+    ld   a,$17
+    ld   (enemy_2_col),a
+    ld   a,$50
+    ld   (enemy_2_y),a
+    ld   a,$01
+    ld   (enemy_2_active),a
+    ret
 
-37E8: CD 10 37    call $WRAP_SPEAR_LEFT_Y_94
-37EB: CD 30 37    call $3730
-37EE: CD 98 37    call $3798
-37F1: CD B8 37    call $37B8
-37F4: CD B8 33    call $33B8
-37F7: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
-37FA: C9          ret
+    dc   6, $FF
 
-37FB: FF ...
+_3798:
+    ld   a,(enemy_2_x)
+    and  a
+    jr   z,$37AD
+    cp   $01
+    jr   z,$37AD
+    cp   $02
+    jr   z,$37AD
+    cp   $03
+    jr   z,$37AD
+    cp   $04
+    ret  nz
+    call _3778
+    ret
 
-3808: CD 78 33    call $WRAP_BIRD_LEFT_Y_40
-380B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-380E: CD 40 38    call $WRAP_BIRD_RIGHT_Y_60
-3811: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-3814: C9          ret
+    dc   7, $FF
 
-3815: FF ...
+_37B8:
+    ld   a,(tick_mod_fast)
+    and  $01
+    ret  z
+    ld   a,(enemy_2_active)
+    and  a
+    ret  z
+    ld   a,(enemy_2_x)
+    dec  a
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_2_x),a
+    ret
 
-    ;; no! frame 23 is bird left.
-SET_BIRD_RIGHT_Y_60
-3820: 3E 10       ld   a,$10
-3822: 32 5C 81    ld   ($ENEMY_3_X),a
-3825: 3E 23       ld   a,$FR_BIRD_1
-3827: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-382A: 3E 16       ld   a,$16
-382C: 32 5E 81    ld   ($ENEMY_3_COL),a
-382F: 3E 60       ld   a,$60
-3831: 32 5F 81    ld   ($ENEMY_3_Y),a
-3834: 3E 01       ld   a,$01
-3836: 32 41 80    ld   ($8041),a
-3839: C9          ret
+    dc   26, $FF
 
-383A: FF ...
+_37E8:
+    call wrap_spear_left_y_94
+    call _3730
+    call _3798
+    call _37B8
+    call _33B8
+    call update_stairdown_blue_right_timer
+    ret
 
-    ;; if bird < 4, wrap
-    ;; i think this is bird left not right?
-WRAP_BIRD_RIGHT_Y_60
-3840: 3A 5C 81    ld   a,($ENEMY_3_X)
-3843: A7          and  a
-3844: 28 0F       jr   z,$_WRAP
-3846: FE 01       cp   $01
-3848: 28 0B       jr   z,$_WRAP
-384A: FE 02       cp   $02
-384C: 28 07       jr   z,$_WRAP
-384E: FE 03       cp   $03
-3850: 28 03       jr   z,$_WRAP
-3852: FE 04       cp   $04
-3854: C0          ret  nz
-_WRAP
-3855: CD 20 38    call $SET_BIRD_RIGHT_Y_60
-3858: C9          ret
-3859: FF ...
+    dc   13, $FF
 
-3868: CD 88 34    call $UPDATE_STAIRDOWN_BLUE_RIGHT_TIMER
-386B: CD B8 33    call $33B8
-386E: CD A8 36    call $36A8
-3871: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-3874: CD 38 32    call $3238
-3877: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-387A: C9          ret
+_3808:
+    call wrap_bird_left_y_40
+    call move_animate_bird_left
+    call wrap_bird_right_y_60
+    call move_animate_bird_right
+    ret
 
-387B: FF ...
+    dc   11, $FF
 
-3888: CD 78 33    call WRAP_BIRD_LEFT_Y_40
-388B: CD 60 32    call $MOVE_ANIMATE_BIRD_LEFT
-388E: CD 40 38    call $3840
-3891: CD 10 36    call $MOVE_ANIMATE_BIRD_RIGHT
-3894: CD C0 38    call $38C0
-3897: CD D0 38    call $38D0
-389A: C9          ret
+;; no! frame 23 is bird left.
+set_bird_right_y_60:
+    ld   a,$10
+    ld   (enemy_3_x),a
+    ld   a,fr_bird_1
+    ld   (enemy_3_frame),a
+    ld   a,$16
+    ld   (enemy_3_col),a
+    ld   a,$60
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (enemy_6_active),a
+    ret
 
-389B: FF ...
+    dc   6, $FF
 
-38A0: 3E 60       ld   a,$60
-38A2: 32 57 81    ld   ($ENEMY_1_Y),a
-38A5: 3E A3       ld   a,$A3
-38A7: 32 55 81    ld   ($ENEMY_1_FRAME),a
-38AA: 3E 16       ld   a,$16
-38AC: 32 56 81    ld   ($ENEMY_1_COL),a
-38AF: 3E 01       ld   a,$01
-38B1: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-38B4: C9          ret
-38B5: FF ...
+;; if bird < 4, wrap
+;; i think this is bird left not right?
+wrap_bird_right_y_60:
+    ld   a,(enemy_3_x)
+    and  a
+    jr   z,_wrap_bird_2
+    cp   $01
+    jr   z,_wrap_bird_2
+    cp   $02
+    jr   z,_wrap_bird_2
+    cp   $03
+    jr   z,_wrap_bird_2
+    cp   $04
+    ret  nz
+_wrap_bird_2:
+    call set_bird_right_y_60
+    ret
 
-38C0: CD A0 38    call $38A0
-38C3: C9          ret
-38C4: FF ...
+    dc   15, $FF
 
-38D0: 3A 5C 81    ld   a,($ENEMY_3_X)
-38D3: D6 50       sub  $50
-38D5: 32 54 81    ld   ($ENEMY_1_X),a
-38D8: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
-38DB: 32 55 81    ld   ($ENEMY_1_FRAME),a
-38DE: C9          ret
+_3868:
+    call update_stairdown_blue_right_timer
+    call _33B8
+    call _36A8
+    call move_animate_bird_right
+    call wrap_bird_left_y_c4
+    call move_animate_bird_left
+    ret
 
-38DF: FF          rst  $38
+    dc   13, $FF
 
-DRAW_BONUS_BOX_B
-38E0: CD 10 03    call $DRAW_TILES_H
-38E3: 0A 00
-38E5: E0 DC DD DE DF FF
-38EB: CD 10 03    call $DRAW_TILES_H
-38EE: 0B 00
-38F0: E1 FF
-38F2: CD 10 03    call $DRAW_TILES_H
-38F5: 0B 04
-38F7: E6 FF
-38F9: CD 10 03    call $DRAW_TILES_H
-38FC: 0C 00
-38FE: E1 FF
-3900: CD 10 03    call $DRAW_TILES_H
-3903: 0C 04
-3905: E6 FF
-3907: CD 10 03    call $DRAW_TILES_H
-390A: 0D 00
-390C: E2 E3 E3 E3 E4 FF
-3912: C9          ret
+_3888:
+    call wrap_bird_left_y_40
+    call move_animate_bird_left
+    call wrap_bird_right_y_60
+    call move_animate_bird_right
+    call _38C0
+    call _38D0
+    ret
 
-3913: FF ...
+    dc   5, $FF
 
-ENEMY_PATTERN_SCR_26
-3918: CD B8 39    call $WRAP_SPEAR_LEFT_BOTTOM
-391B: CD E8 39    call $UPDATE_3_SPEARS_LEFT
-391E: C9          ret
+_38A0:
+    ld   a,$60
+    ld   (enemy_1_y),a
+    ld   a,$A3
+    ld   (enemy_1_frame),a
+    ld   a,$16
+    ld   (enemy_1_col),a
+    ld   a,$01
+    ld   (enemy_3_active),a
+    ret
 
-391F: FF ...
+    dc   11, $FF
 
-SET_SPEAR_LEFT_BOTTOM
-3938: 3A 54 81    ld   a,($ENEMY_1_X)
-393B: A7          and  a
-393C: C0          ret  nz
-393D: 3E F0       ld   a,$SCREEN_WIDTH+$10
-393F: 32 54 81    ld   ($ENEMY_1_X),a
-3942: 3E 22       ld   a,$FR_SPEAR
-3944: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3947: 3E 17       ld   a,$17
-3949: 32 56 81    ld   ($ENEMY_1_COL),a
-394C: 3E C8       ld   a,$C8
-394E: 32 57 81    ld   ($ENEMY_1_Y),a
-3951: 3E 01       ld   a,$01
-3953: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3956: C9          ret
+_38C0:
+    call _38A0
+    ret
 
-3957: FF ...
+    dc   12, $FF
 
-SET_SPEAR_LEFT_MIDDLE
-3960: 3A 58 81    ld   a,($ENEMY_2_X)
-3963: A7          and  a
-3964: C0          ret  nz
-3965: 3E F0       ld   a,$SCREEN_WIDTH+$10
-3967: 32 58 81    ld   ($ENEMY_2_X),a
-396A: 3E 22       ld   a,$FR_SPEAR
-396C: 32 59 81    ld   ($ENEMY_2_FRAME),a
-396F: 3E 17       ld   a,$17
-3971: 32 5A 81    ld   ($ENEMY_2_COL),a
-3974: 3E 98       ld   a,$98
-3976: 32 5B 81    ld   ($ENEMY_2_Y),a
-3979: 3E 01       ld   a,$01
-397B: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-397E: C9          ret
-397F: FF ...
+_38D0:
+    ld   a,(enemy_3_x)
+    sub  $50
+    ld   (enemy_1_x),a
+    ld   a,(enemy_3_frame)
+    ld   (enemy_1_frame),a
+    ret
 
-SET_SPEAR_LEFT_TOP
-3988: 3A 5C 81    ld   a,($ENEMY_3_X)
-398B: A7          and  a
-398C: C0          ret  nz
-398D: 3E F0       ld   a,$SCREEN_WIDTH+$10
-398F: 32 5C 81    ld   ($ENEMY_3_X),a
-3992: 3E 22       ld   a,$FR_SPEAR
-3994: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-3997: 3E 17       ld   a,$17
-3999: 32 5E 81    ld   ($ENEMY_3_COL),a
-399C: 3E 68       ld   a,$68
-399E: 32 5F 81    ld   ($ENEMY_3_Y),a
-39A1: 3E 01       ld   a,$01
-39A3: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-39A6: C9          ret
+    db   $FF
 
-39A7: FF ...
+draw_bonus_box_b:
+    call draw_tiles_h
+    db   $0A,$00
+    db   $E0,$DC,$DD,$DE,$DF,$FF
+    call draw_tiles_h
+    db   $0B,$00
+    db   $E1,$FF
+    call draw_tiles_h
+    db   $0B,$04
+    db   $E6,$FF
+    call draw_tiles_h
+    db   $0C,$00
+    db   $E1,$FF
+    call draw_tiles_h
+    db   $0C,$04
+    db   $E6,$FF
+    call draw_tiles_h
+    db   $0D,$00
+    db   $E2,$E3,$E3,$E3,$E4,$FF
+    ret
+
+    dc   5, $FF
+
+enemy_pattern_scr_26:
+    call wrap_spear_left_bottom
+    call update_3_spears_left
+    ret
+
+    dc   25, $FF
+
+set_spear_left_bottom:
+    ld   a,(enemy_1_x)
+    and  a
+    ret  nz
+    ld   a,screen_width+$10
+    ld   (enemy_1_x),a
+    ld   a,fr_spear
+    ld   (enemy_1_frame),a
+    ld   a,$17
+    ld   (enemy_1_col),a
+    ld   a,$C8
+    ld   (enemy_1_y),a
+    ld   a,$01
+    ld   (enemy_1_active),a
+    ret
+
+    dc   9, $FF
+
+set_spear_left_middle:
+    ld   a,(enemy_2_x)
+    and  a
+    ret  nz
+    ld   a,screen_width+$10
+    ld   (enemy_2_x),a
+    ld   a,fr_spear
+    ld   (enemy_2_frame),a
+    ld   a,$17
+    ld   (enemy_2_col),a
+    ld   a,$98
+    ld   (enemy_2_y),a
+    ld   a,$01
+    ld   (enemy_2_active),a
+    ret
+
+    dc   9, $FF
+
+set_spear_left_top:
+    ld   a,(enemy_3_x)
+    and  a
+    ret  nz
+    ld   a,screen_width+$10
+    ld   (enemy_3_x),a
+    ld   a,fr_spear
+    ld   (enemy_3_frame),a
+    ld   a,$17
+    ld   (enemy_3_col),a
+    ld   a,$68
+    ld   (enemy_3_y),a
+    ld   a,$01
+    ld   (enemy_3_active),a
+    ret
+
+    dc   9, $FF
 
 ;;; who calls? debug?
-39B0: 3A 07 80    ld   a,($P1_TIME) ; woah! P1 timer is used maybe?
-39B3: 32 36 80    ld   ($ROCK_FALL_TIMER),a
-39B6: C9          ret
+    ld   a,(p1_time) ; woah! P1 timer is used maybe?
+    ld   (rock_fall_timer),a
+    ret
 
-39B7: FF
+    db   $FF
 
-    ;;
-WRAP_SPEAR_LEFT_BOTTOM
-39B8: 3A 54 81    ld   a,($ENEMY_1_X)
-39BB: FE 80       cp   $80
-39BD: 28 14       jr   z,$39D3
-39BF: FE 81       cp   $81
-39C1: 28 10       jr   z,$39D3
-39C3: FE 82       cp   $82
-39C5: 28 0C       jr   z,$39D3
-39C7: FE 83       cp   $83
-39C9: 28 08       jr   z,$39D3
-39CB: FE 84       cp   $84
-39CD: 28 04       jr   z,$39D3
-39CF: FE 00       cp   $00
-39D1: 20 03       jr   nz,$39D6
-39D3: CD 38 39    call $SET_SPEAR_LEFT_BOTTOM
-39D6: C3 C0 11    jp   $WRAP_OTHER_SPEARS_LEFT
-39D9: FF ...
+;;
+wrap_spear_left_bottom:
+    ld   a,(enemy_1_x)
+    cp   $80
+    jr   z,$39D3
+    cp   $81
+    jr   z,$39D3
+    cp   $82
+    jr   z,$39D3
+    cp   $83
+    jr   z,$39D3
+    cp   $84
+    jr   z,$39D3
+    cp   $00
+    jr   nz,$39D6
+    call set_spear_left_bottom
+    jp   wrap_other_spears_left
 
-UPDATE_3_SPEARS_LEFT            ; screen 26
-39E8: 3A 15 83    ld   a,($TICK_MOD_FAST)
-39EB: E6 07       and  $07
-39ED: C0          ret  nz
-39EE: 3A 37 80    ld   a,($ENEMY_1_ACTIVE) ; bottom spear
-39F1: A7          and  a
-39F2: 28 19       jr   z,$_MIDDLE_SPEAR
-39F4: 3C          inc  a
-39F5: FE 40       cp   $40
-39F7: 20 09       jr   nz,$3A02
-39F9: AF          xor  a
-39FA: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-39FD: 32 54 81    ld   ($ENEMY_1_X),a
-3A00: 18 0B       jr   $_MIDDLE_SPEAR
-3A02: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3A05: 3A 54 81    ld   a,($ENEMY_1_X)
-3A08: D6 02       sub  $02
-3A0A: 32 54 81    ld   ($ENEMY_1_X),a
-    ;;
-_MIDDLE_SPEAR
-3A0D: 3A 39 80    ld   a,($ENEMY_2_ACTIVE) ; middle spear
-3A10: A7          and  a
-3A11: 28 19       jr   z,$_TOP_SPEAR
-3A13: 3C          inc  a
-3A14: FE 40       cp   $40
-3A16: 20 09       jr   nz,$3A21
-3A18: AF          xor  a
-3A19: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3A1C: 32 58 81    ld   ($ENEMY_2_X),a
-3A1F: 18 0B       jr   $_TOP_SPEAR
-3A21: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3A24: 3A 58 81    ld   a,($ENEMY_2_X)
-3A27: D6 03       sub  $03
-3A29: 32 58 81    ld   ($ENEMY_2_X),a
-    ;;
-_TOP_SPEAR
-3A2C: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE) ; top spear
-3A2F: A7          and  a
-3A30: C8          ret  z
-3A31: 3C          inc  a
-3A32: FE 40       cp   $40
-3A34: 20 08       jr   nz,$3A3E
-3A36: AF          xor  a
-3A37: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-3A3A: 32 5C 81    ld   ($ENEMY_3_X),a
-3A3D: C9          ret
-3A3E: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-3A41: 3A 5C 81    ld   a,($ENEMY_3_X)
-3A44: D6 04       sub  $04
-3A46: 32 5C 81    ld   ($ENEMY_3_X),a
-3A49: C9          ret
+    dc   15, $FF
 
-3A4A: FF ...
+update_3_spears_left:           ; screen 26
+    ld   a,(tick_mod_fast)
+    and  $07
+    ret  nz
+    ld   a,(enemy_1_active) ; bottom spear
+    and  a
+    jr   z,_middle_spear
+    inc  a
+    cp   $40
+    jr   nz,$3A02
+    xor  a
+    ld   (enemy_1_active),a
+    ld   (enemy_1_x),a
+    jr   _middle_spear
+    ld   (enemy_1_active),a
+    ld   a,(enemy_1_x)
+    sub  $02
+    ld   (enemy_1_x),a
+;;
+_middle_spear:
+    ld   a,(enemy_2_active) ; middle spear
+    and  a
+    jr   z,_top_spear
+    inc  a
+    cp   $40
+    jr   nz,$3A21
+    xor  a
+    ld   (enemy_2_active),a
+    ld   (enemy_2_x),a
+    jr   _top_spear
+    ld   (enemy_2_active),a
+    ld   a,(enemy_2_x)
+    sub  $03
+    ld   (enemy_2_x),a
+;;
+_top_spear:
+    ld   a,(enemy_3_active) ; top spear
+    and  a
+    ret  z
+    inc  a
+    cp   $40
+    jr   nz,$3A3E
+    xor  a
+    ld   (enemy_3_active),a
+    ld   (enemy_3_x),a
+    ret
+    ld   (enemy_3_active),a
+    ld   a,(enemy_3_x)
+    sub  $04
+    ld   (enemy_3_x),a
+    ret
 
-    ;;
-ENEMY_1_RESET
-3A50: 3A 37 80    ld   a,($ENEMY_1_ACTIVE)
-3A53: A7          and  a
-3A54: C8          ret  z
-3A55: 3C          inc  a
-3A56: FE 3A       cp   $3A
-3A58: 20 08       jr   nz,$3A62
-3A5A: AF          xor  a
-3A5B: 32 54 81    ld   ($ENEMY_1_X),a
-3A5E: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3A61: C9          ret
-3A62: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3A65: 3A 57 81    ld   a,($ENEMY_1_Y)
-3A68: 3D          dec  a
-3A69: 3D          dec  a
-3A6A: 3D          dec  a
-3A6B: 32 57 81    ld   ($ENEMY_1_Y),a
-3A6E: 3A 12 83    ld   a,($TICK_NUM)
-3A71: E6 03       and  $03
-3A73: C0          ret  nz
-3A74: 3A 55 81    ld   a,($ENEMY_1_FRAME)
-3A77: FE 36       cp   $36
-3A79: 20 06       jr   nz,$3A81
-3A7B: 3E 37       ld   a,$37
-3A7D: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3A80: C9          ret
-3A81: 3E 36       ld   a,$36
-3A83: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3A86: C9          ret
-3A87: FF
+    dc   6, $FF
 
-    ;;
-ENEMY_2_RESET
-3A88: 3A 39 80    ld   a,($ENEMY_2_ACTIVE)
-3A8B: A7          and  a
-3A8C: C8          ret  z
-3A8D: 3C          inc  a
-3A8E: FE 3A       cp   $3A
-3A90: 20 08       jr   nz,$3A9A
-3A92: AF          xor  a
-3A93: 32 58 81    ld   ($ENEMY_2_X),a
-3A96: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3A99: C9          ret
-3A9A: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3A9D: 3A 5B 81    ld   a,($ENEMY_2_Y)
-3AA0: 3D          dec  a
-3AA1: 3D          dec  a
-3AA2: 3D          dec  a
-3AA3: 32 5B 81    ld   ($ENEMY_2_Y),a
-3AA6: 3A 12 83    ld   a,($TICK_NUM)
-3AA9: E6 03       and  $03
-3AAB: C0          ret  nz
-3AAC: 3A 59 81    ld   a,($ENEMY_2_FRAME)
-3AAF: FE 36       cp   $36
-3AB1: 20 06       jr   nz,$3AB9
-3AB3: 3E 37       ld   a,$37
-3AB5: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3AB8: C9          ret
-3AB9: 3E 36       ld   a,$36
-3ABB: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3ABE: C9          ret
-3ABF: FF          rst  $38
+;;
+enemy_1_reset:
+    ld   a,(enemy_1_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $3A
+    jr   nz,$3A62
+    xor  a
+    ld   (enemy_1_x),a
+    ld   (enemy_1_active),a
+    ret
+    ld   (enemy_1_active),a
+    ld   a,(enemy_1_y)
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_1_y),a
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_1_frame)
+    cp   $36
+    jr   nz,$3A81
+    ld   a,$37
+    ld   (enemy_1_frame),a
+    ret
+    ld   a,$36
+    ld   (enemy_1_frame),a
+    ret
 
-    ;; enemy 3
-ENEMY_3_RESET
-3AC0: 3A 3B 80    ld   a,($ENEMY_3_ACTIVE)
-3AC3: A7          and  a
-3AC4: C8          ret  z
-3AC5: 3C          inc  a
-3AC6: FE 3A       cp   $3A
-3AC8: 20 08       jr   nz,$3AD2
-3ACA: AF          xor  a
-3ACB: 32 5C 81    ld   ($ENEMY_3_X),a
-3ACE: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-3AD1: C9          ret
-3AD2: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-3AD5: 3A 5F 81    ld   a,($ENEMY_3_Y)
-3AD8: 3D          dec  a
-3AD9: 3D          dec  a
-3ADA: 3D          dec  a
-3ADB: 32 5F 81    ld   ($ENEMY_3_Y),a
-3ADE: 3A 12 83    ld   a,($TICK_NUM)
-3AE1: E6 03       and  $03
-3AE3: C0          ret  nz
-3AE4: 3A 5D 81    ld   a,($ENEMY_3_FRAME)
-3AE7: FE 36       cp   $36
-3AE9: 20 06       jr   nz,$3AF1
-3AEB: 3E 37       ld   a,$37
-3AED: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-3AF0: C9          ret
-3AF1: 3E 36       ld   a,$36
-3AF3: 32 5D 81    ld   ($ENEMY_3_FRAME),a
-3AF6: C9          ret
-3AF7: FF          rst  $38
+    db   $FF
 
-    ;; enemy 1
-SET_ENEMY_1_98_C0
-3AF8: 21 54 81    ld   hl,$ENEMY_1_X
-3AFB: 36 98       ld   (hl),$98 ; x
-3AFD: 23          inc  hl
-3AFE: 36 36       ld   (hl),$36 ; frame
-3B00: 23          inc  hl
-3B01: 36 17       ld   (hl),$17 ; color
-3B03: 23          inc  hl
-3B04: 36 C0       ld   (hl),$C0 ; y
-3B06: 23          inc  hl
-3B07: 3E 01       ld   a,$01
-3B09: 32 37 80    ld   ($ENEMY_1_ACTIVE),a
-3B0C: C9          ret
-3B0D: FF FF FF
+;;
+enemy_2_reset:
+    ld   a,(enemy_2_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $3A
+    jr   nz,$3A9A
+    xor  a
+    ld   (enemy_2_x),a
+    ld   (enemy_2_active),a
+    ret
+    ld   (enemy_2_active),a
+    ld   a,(enemy_2_y)
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_2_y),a
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_2_frame)
+    cp   $36
+    jr   nz,$3AB9
+    ld   a,$37
+    ld   (enemy_2_frame),a
+    ret
+    ld   a,$36
+    ld   (enemy_2_frame),a
+    ret
 
-        ;; enemy 2
-SET_ENEMY_2_90_C0
-3B10: 21 58 81    ld   hl,$ENEMY_2_X
-3B13: 36 90       ld   (hl),$90 ; x
-3B15: 23          inc  hl
-3B16: 36 36       ld   (hl),$36 ; frame
-3B18: 23          inc  hl
-3B19: 36 17       ld   (hl),$17 ; color
-3B1B: 23          inc  hl
-3B1C: 36 C0       ld   (hl),$C0 ; y
-3B1E: 23          inc  hl
-3B1F: 3E 01       ld   a,$01
-3B21: 32 39 80    ld   ($ENEMY_2_ACTIVE),a
-3B24: C9          ret
-3B25: FF ...
+    dc   1, $FF
 
-        ;; enemy 3
-SET_ENEMY_3_90_C0
-3B28: 21 5C 81    ld   hl,$ENEMY_3_X
-3B2B: 36 90       ld   (hl),$90 ; x
-3B2D: 23          inc  hl
-3B2E: 36 36       ld   (hl),$36 ; frame
-3B30: 23          inc  hl
-3B31: 36 17       ld   (hl),$17 ; color
-3B33: 23          inc  hl
-3B34: 36 C0       ld   (hl),$C0 ; y
-3B36: 23          inc  hl
-3B37: 3E 01       ld   a,$01
-3B39: 32 3B 80    ld   ($ENEMY_3_ACTIVE),a
-3B3C: C9          ret
-3B3D: FF FF FF
+;; enemy 3
+enemy_3_reset:
+    ld   a,(enemy_3_active)
+    and  a
+    ret  z
+    inc  a
+    cp   $3A
+    jr   nz,$3AD2
+    xor  a
+    ld   (enemy_3_x),a
+    ld   (enemy_3_active),a
+    ret
+    ld   (enemy_3_active),a
+    ld   a,(enemy_3_y)
+    dec  a
+    dec  a
+    dec  a
+    ld   (enemy_3_y),a
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   a,(enemy_3_frame)
+    cp   $36
+    jr   nz,$3AF1
+    ld   a,$37
+    ld   (enemy_3_frame),a
+    ret
+    ld   a,$36
+    ld   (enemy_3_frame),a
+    ret
 
-3B40: CD 78 3B    call $3B78
-3B43: 3A 36 80    ld   a,($ROCK_FALL_TIMER)
-3B46: 3C          inc  a
-3B47: FE 60       cp   $60
-3B49: 20 01       jr   nz,$3B4C
-3B4B: AF          xor  a
-3B4C: 32 36 80    ld   ($ROCK_FALL_TIMER),a
-3B4F: FE 08       cp   $08
-3B51: 20 04       jr   nz,$3B57
-3B53: CD F8 3A    call $SET_ENEMY_1_98_C0
-3B56: C9          ret
-3B57: FE 30       cp   $30
-3B59: 20 04       jr   nz,$3B5F
-3B5B: CD 10 3B    call $SET_ENEMY_2_90_C0
-3B5E: C9          ret
-3B5F: FE 40       cp   $40
-3B61: C0          ret  nz
-3B62: CD 28 3B    call $SET_ENEMY_3_90_C0
-3B65: C9          ret
-3B66: FF FF
+    dc   1, $FF
 
-3B68: CD 40 3B    call $3B40
-3B6B: CD E0 14    call $RESET_ENEMIES_2
-3B6E: 00          nop
-3B6F: 00          nop
-3B70: 00          nop
-3B71: 00          nop
-3B72: 00          nop
-3B73: 00          nop
-3B74: C9          ret
-3B75: FF          rst  $38
-3B76: FF          rst  $38
-3B77: FF          rst  $38
+;; enemy 1
+set_enemy_1_98_c0:
+    ld   hl,enemy_1_x
+    ld   (hl),$98 ; x
+    inc  hl
+    ld   (hl),$36 ; frame
+    inc  hl
+    ld   (hl),$17 ; color
+    inc  hl
+    ld   (hl),$C0 ; y
+    inc  hl
+    ld   a,$01
+    ld   (enemy_1_active),a
+    ret
 
-    ;;
-3B78: 3A 15 83    ld   a,($TICK_MOD_FAST)
-3B7B: E6 03       and  $03
-3B7D: C8          ret  z
-3B7E: E1          pop  hl
-3B7F: C9          ret
+    dc   3, $FF
 
-    ;; interesting algorithm for collision detection!
-PLAYER_ENEMY_COLLISION
-    ;; Check X
-3B80: FD 7E 00    ld   a,(iy+$00) ; points to enemy X
-3B83: DD 96 00    sub  (ix+$00)   ; minus player_x
-3B86: 37          scf
-3B87: 3F          ccf           ; (clear carry)
-3B88: D6 0C       sub  $0C      ; is enemy to the right and X diff <= sprite width?
-3B8A: 38 03       jr   c,_CHECK_Y  ;   ... yes, check Y
-3B8C: C6 18       add  a,$18    ; no, but enemy might be to the left: try "+ width * 2"
-3B8E: D0          ret  nc       ;   no collision on X, leave.
-_CHECK_Y
-3B8F: DD 7E 03    ld   a,(ix+$03) ; player Y pos (player_x addr + 3)
-3B92: FD 96 03    sub  (iy+$03)   ; minus enemy Y pos (enemy Y addr + 3)
-3B95: 37          scf
-3B96: 3F          ccf           ; (clear carry)
-3B97: D6 0A       sub  $0A      ; is Y diff <= 10?
-3B99: 38 03       jr   c,$_HIT  ;   ... yes - we collided.
-3B9B: C6 21       add  a,$21    ; no, but is player above? Check legs.
-3B9D: D0          ret  nc       ;   no - no collsions on Y, leave
-_HIT
-3B9E: CD 33 0A    call $KILL_PLAYER
-3BA1: C9          ret
-3BA2: FF ...
+;; enemy 2
+set_enemy_2_90_c0:
+    ld   hl,enemy_2_x
+    ld   (hl),$90 ; x
+    inc  hl
+    ld   (hl),$36 ; frame
+    inc  hl
+    ld   (hl),$17 ; color
+    inc  hl
+    ld   (hl),$C0 ; y
+    inc  hl
+    ld   a,$01
+    ld   (enemy_2_active),a
+    ret
 
-    ;; Always checks all 3 enemies. "Offscreen" enemies
-    ;; have x = 0, so the "check x" test fails.
-PLAYER_ENEMIES_COLLISION
-3BA8: FD 21 54 81 ld   iy,$ENEMY_1_X
-3BAC: DD 21 40 81n ld   ix,$PLAYER_X
-3BB0: CD 80 3B    call $PLAYER_ENEMY_COLLISION
-3BB3: FD 21 58 81 ld   iy,$ENEMY_2_X
-3BB7: CD 80 3B    call $PLAYER_ENEMY_COLLISION
-3BBA: FD 21 5C 81 ld   iy,$ENEMY_3_X
-3BBE: CD 80 3B    call $PLAYER_ENEMY_COLLISION
-3BC1: C9          ret
-3BC2: FF ...
+    dc   3, $FF
 
-COPY_XOFFS
-3BC8: 21 08 81    ld   hl,$SCREEN_XOFF_COL+8
-3BCB: 3A 06 81    ld   a,($SCREEN_XOFF_COL+6)
-3BCE: 77          ld   (hl),a
-3BCF: 23          inc  hl
-3BD0: 23          inc  hl
-3BD1: 7D          ld   a,l
-3BD2: FE 40       cp   $40
-3BD4: 20 F5       jr   nz,$3BCB
-3BD6: C9          ret
+;; enemy 3
+set_enemy_3_90_c0:
+    ld   hl,enemy_3_x
+    ld   (hl),$90 ; x
+    inc  hl
+    ld   (hl),$36 ; frame
+    inc  hl
+    ld   (hl),$17 ; color
+    inc  hl
+    ld   (hl),$C0 ; y
+    inc  hl
+    ld   a,$01
+    ld   (enemy_3_active),a
+    ret
 
-3BD7: FF
+    dc   3, $FF
 
-    ;; bytes after the call are:
-    ;; start_x, start_y, tile 1, ...tile id, 0xFF
-DRAW_TILES_V_COPY
-3BD8: DD E1       pop  ix
-3BDA: 26 00       ld   h,$00
-3BDC: DD 6E 00    ld   l,(ix+$00) ; param 1
-3BDF: 29          add  hl,hl
-3BE0: 29          add  hl,hl
-3BE1: 29          add  hl,hl
-3BE2: 29          add  hl,hl
-3BE3: 29          add  hl,hl
-3BE4: DD 23       inc  ix
-3BE6: DD 7E 00    ld   a,(ix+$00) ; param 2
-3BE9: 85          add  a,l
-3BEA: 6F          ld   l,a
-3BEB: 01 40 90    ld   bc,$START_OF_TILES
-3BEE: 09          add  hl,bc
-3BEF: DD 23       inc  ix
-3BF1: DD 7E 00    ld   a,(ix+$00) ; read until 0xff
-3BF4: FE FF       cp   $FF
-3BF6: 28 04       jr   z,$3BFC
-3BF8: 77          ld   (hl),a
-3BF9: 23          inc  hl
-3BFA: 18 F3       jr   $3BEF
-3BFC: DD 23       inc  ix
-3BFE: DD E5       push ix
-3C00: C9          ret
+_3B40:
+    call _3B78
+    ld   a,(rock_fall_timer)
+    inc  a
+    cp   $60
+    jr   nz,$3B4C
+    xor  a
+    ld   (rock_fall_timer),a
+    cp   $08
+    jr   nz,$3B57
+    call set_enemy_1_98_c0
+    ret
+    cp   $30
+    jr   nz,$3B5F
+    call set_enemy_2_90_c0
+    ret
+    cp   $40
+    ret  nz
+    call set_enemy_3_90_c0
+    ret
 
-3C01: FF
+    dc   2, $FF
 
-SCREEN_TILE_ANIMATIONS
-3C02: 3A 04 80    ld   a,($PLAYER_NUM)
-3C05: A7          and  a
-3C06: 20 05       jr   nz,$3C0D
-3C08: 3A 29 80    ld   a,($SCREEN_NUM)
-3C0B: 18 03       jr   $3C10
-3C0D: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-3C10: FE 01       cp   $01
-3C12: 28 21       jr   z,$BUBBLE_LAVA
-3C14: FE 02       cp   $02
-3C16: 28 1D       jr   z,$BUBBLE_LAVA
-3C18: FE 04       cp   $04
-3C1A: 28 19       jr   z,$BUBBLE_LAVA
-3C1C: FE 08       cp   $08
-3C1E: 28 15       jr   z,$BUBBLE_LAVA
-3C20: FE 0D       cp   $0D
-3C22: 28 11       jr   z,$BUBBLE_LAVA
-3C24: FE 0F       cp   $0F
-3C26: 28 0D       jr   z,$BUBBLE_LAVA
-3C28: FE 12       cp   $12
-3C2A: 28 09       jr   z,$BUBBLE_LAVA
-3C2C: FE 15       cp   $15
-3C2E: 28 48       jr   z,$BUBBLE_LAVA_VAR
-3C30: FE 18       cp   $18
-3C32: 28 44       jr   z,$BUBBLE_LAVA_VAR
-3C34: C9          ret
+_3B68:
+    call _3B40
+    call reset_enemies_2
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    ret
 
-BUBBLE_LAVA
-3C35: 3A 4B 80    ld   a,($804B)
-3C38: 3C          inc  a
-3C39: FE 04       cp   $04
-3C3B: 20 01       jr   nz,$3C3E
-3C3D: AF          xor  a
-3C3E: 32 4B 80    ld   ($804B),a
-3C41: A7          and  a
-3C42: 20 0B       jr   nz,$BUBBLE_LAVA_1
-3C44: CD 10 03    call $DRAW_TILES_H
-3C47: 1D 0E
-3C49: 80 80 80 80 FF            ; red dash line
-3C4E: C9          ret
+    dc   3, $FF
 
-BUBBLE_LAVA_1
-3C4F: FE 01       cp   $01
-3C51: 20 0B       jr   nz,$BUBBLE_LAVA_2
-3C53: CD 10 03    call $DRAW_TILES_H
-3C56: 1D 0E
-3C58: 85 81 87 81 FF
-3C5D: C9          ret
+;;
+_3B78:
+    ld   a,(tick_mod_fast)
+    and  $03
+    ret  z
+    pop  hl
+    ret
 
-BUBBLE_LAVA_2
-3C5E: FE 02       cp   $02
-3C60: 20 0B       jr   nz,$BUBBLE_LAVA_3
-3C62: CD 10 03    call $DRAW_TILES_H
-3C65: 1D 0E
-3C67: 86 82 88 80 FF
-3C6C: C9          ret
+;; interesting algorithm for collision detection!
+player_enemy_collision:
+;; Check X
+    ld   a,(iy+$00) ; points to enemy X
+    sub  (ix+$00) ; minus player_x
+    scf
+    ccf ; (clear carry)
+    sub  $0C ; is enemy to the right and X diff <= sprite width?
+    jr   c,_check_y ; ... yes, check Y
+    add  a,$18 ; no, but enemy might be to the left: try "+ width * 2"
+    ret  nc ; no collision on X, leave.
+_check_y:
+    ld   a,(ix+$03) ; player Y pos (player_x addr + 3)
+    sub  (iy+$03) ; minus enemy Y pos (enemy Y addr + 3)
+    scf
+    ccf ; (clear carry)
+    sub  $0A ; is Y diff <= 10?
+    jr   c,_hit ; ... yes - we collided.
+    add  a,$21 ; no, but is player above? Check legs.
+    ret  nc ; no - no collsions on Y, leave
+_hit:
+    call kill_player
+    ret
 
-BUBBLE_LAVA_3
-3C6D: CD 10 03    call $DRAW_TILES_H
-3C70: 1D 0E
-3C72: 85 83 87 82 FF
-3C77: C9          ret
+    dc   6, $FF
 
-BUBBLE_LAVA_VAR
-3C78: 3A 4B 80    ld   a,($804B)
-3C7B: 3C          inc  a
-3C7C: FE 04       cp   $04
-3C7E: 20 01       jr   nz,$3C81
-3C80: AF          xor  a
-3C81: 32 4B 80    ld   ($804B),a
-3C84: A7          and  a
-3C85: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_1
-3C87: CD 10 03    call $DRAW_TILES_H
-3C8A: 19 0F
-3C8D: 80 80 80 80 FF            ; Flat
-3C92: C9          ret
+;; Always checks all 3 enemies. "Offscreen" enemies
+;; have x = 0, so the "check x" test fails.
+player_enemies_collision:
+    ld   iy,enemy_1_x
+    ld   ix,player_x
+    call player_enemy_collision
+    ld   iy,enemy_2_x
+    call player_enemy_collision
+    ld   iy,enemy_3_x
+    call player_enemy_collision
+    ret
 
-BUBBLE_LAVA_VAR_1
-3C93: FE 01       cp   $01
-3C95: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_2
-3C97: CD 10 03    call $DRAW_TILES_H
-3C9A: 19 0F
-3C9C: 85 81 84 81 87 FF
-3CA2: C9          ret
+    dc   6, $FF
 
-BUBBLE_LAVA_VAR_2
-3CA3: FE 02       cp   $02
-3CA5: 20 0C       jr   nz,$BUBBLE_LAVA_VAR_3
-3CA7: CD 10 03    call $DRAW_TILES_H
-3CAA: 19 0F
-3CAC: 86 82 88 86 82 FF
-3CB2: C9          ret
+copy_xoffs:
+    ld   hl,_8108
+    ld   a,(_8106)
+    ld   (hl),a
+    inc  hl
+    inc  hl
+    ld   a,l
+    cp   $40
+    jr   nz,$3BCB
+    ret
 
-BUBBLE_LAVA_VAR_3
-3CB3: CD 10 03    call $DRAW_TILES_H
-3CB6: 19 0F
-3CB9: 83 80 83 87 FF
-3CBE: C9          ret
+    dc   1, $FF
 
-3CBF: FF
+;; bytes after the call are:
+;; start_x, start_y, tile 1, ...tile id, 0xFF
+draw_tiles_v_copy:
+    pop  ix
+    ld   h,$00
+    ld   l,(ix+$00) ; param 1
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    inc  ix
+    ld   a,(ix+$00) ; param 2
+    add  a,l
+    ld   l,a
+    ld   bc,start_of_tiles
+    add  hl,bc
+_3BEF:
+    inc  ix
+    ld   a,(ix+$00) ; read until 0xff
+    cp   $FF
+    jr   z,$3BFC
+    ld   (hl),a
+    inc  hl
+    jr   _3BEF
+    inc  ix
+    push ix
+    ret
 
-    ;; x, frame, color, y
-CUTSCENE_DATA
-3CC0: 80 3A 11 70               ; player
-3CC4: 80 3B 11 80               ; player legs
-3CC8: 94 05 12 80               ; bongo
-3CCC: 00 00 12 80               ; dino (offscreen)
-3CD0: 00 00 12 80               ; dino legs
-3CD4: 6C 00 12 80               ; bambongo 1
-3CD8: A8 00 12 80               ; bambongo 2
-3CDC: 00 00 12 80               ; unused?
+    dc   1, $FF
 
-    ;; CUTSCENE something
-WAIT_VBLANK_8
-3CE0: 1E 08       ld   e,$08
-_LP
-3CE2: E5          push hl
-3CE3: D5          push de
-3CE4: CD A0 13    call $WAIT_VBLANK
-3CE7: D1          pop  de
-3CE8: E1          pop  hl
-3CE9: 1D          dec  e
-3CEA: 20 F6       jr   nz,$_LP
-3CEC: C9          ret
+screen_tile_animations:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$3C0D
+    ld   a,(screen_num)
+    jr   _3C10
+    ld   a,(screen_num_p2)
+_3C10:
+    cp   $01
+    jr   z,bubble_lava
+    cp   $02
+    jr   z,bubble_lava
+    cp   $04
+    jr   z,bubble_lava
+    cp   $08
+    jr   z,bubble_lava
+    cp   $0D
+    jr   z,bubble_lava
+    cp   $0F
+    jr   z,bubble_lava
+    cp   $12
+    jr   z,bubble_lava
+    cp   $15
+    jr   z,bubble_lava_var
+    cp   $18
+    jr   z,bubble_lava_var
+    ret
 
-3CED: FF ...
+bubble_lava:
+    ld   a,(lava_tile_offset)
+    inc  a
+    cp   $04
+    jr   nz,$3C3E
+    xor  a
+    ld   (lava_tile_offset),a
+    and  a
+    jr   nz,bubble_lava_1
+    call draw_tiles_h
+    db   $1D,$0E
+    db   $80,$80,$80,$80,$FF ;  red dash line
+    ret
 
-    ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
-DANCE_FRAME_DATA
-3D00: 3C 3D 06 01
-3D04: 3A 3B 05 00
-3D08: 3C 3D 06 01
-3D0C: 3A 3B 07 02
-3D10: 3E 3F 08 03
-3D14: 3A 3B 07 02
-3D18: 3E 3F 08 03
-3D1C: 3A 3B 05 00
+bubble_lava_1:
+    cp   $01
+    jr   nz,bubble_lava_2
+    call draw_tiles_h
+    db   $1D,$0E
+    db   $85,$81,$87,$81,$FF
+    ret
 
-UPDATE_DANCE_FRAMES
-3D20: 7E          ld   a,(hl)
-3D21: 32 41 81    ld   ($PLAYER_FRAME),a
-3D24: 23          inc  hl
-3D25: 7E          ld   a,(hl)
-3D26: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-3D29: 23          inc  hl
-3D2A: 7E          ld   a,(hl)
-3D2B: 32 49 81    ld   ($BONGO_FRAME),a
-3D2E: 23          inc  hl
-3D2F: 7E          ld   a,(hl)
-3D30: 32 51 81    ld   ($DINO_FRAME_LEGS),a ; how is dino the same?!
-3D33: 32 55 81    ld   ($ENEMY_1_FRAME),a
-3D36: 32 59 81    ld   ($ENEMY_2_FRAME),a
-3D39: 23          inc  hl
-3D3A: 7D          ld   a,l
-3D3B: E6 1F       and  $1F      ; wrap dance at 32 bytes
-3D3D: 6F          ld   l,a
-3D3E: C9          ret
-3D3F: FF ...
+bubble_lava_2:
+    cp   $02
+    jr   nz,bubble_lava_3
+    call draw_tiles_h
+    db   $1D,$0E
+    db   $86,$82,$88,$80,$FF
+    ret
+
+bubble_lava_3:
+    call draw_tiles_h
+    db   $1D,$0E
+    db   $85,$83,$87,$82,$FF
+    ret
+
+bubble_lava_var:
+    ld   a,(lava_tile_offset)
+    inc  a
+    cp   $04
+    jr   nz,$3C81
+    xor  a
+    ld   (lava_tile_offset),a
+    and  a
+    jr   nz,bubble_lava_var_1
+    call draw_tiles_h
+    db   $19,$0F
+    db   $80,$80,$80,$80,$80,$FF ;  Flat
+    ret
+
+bubble_lava_var_1:
+    cp   $01
+    jr   nz,bubble_lava_var_2
+    call draw_tiles_h
+    db   $19,$0F
+    db   $85,$81,$84,$81,$87,$FF
+    ret
+
+bubble_lava_var_2:
+    cp   $02
+    jr   nz,bubble_lava_var_3
+    call draw_tiles_h
+    db   $19,$0F
+    db   $86,$82,$88,$86,$82,$FF
+    ret
+
+bubble_lava_var_3:
+    call draw_tiles_h
+    db   $19,$0F
+    db   $85,$83,$80,$83,$87,$FF
+    ret
+
+    db   $FF
+
+;; x, frame, color, y
+cutscene_data:
+    db   $80,$3A,$11,$70 ;  player
+    db   $80,$3B,$11,$80 ;  player legs
+    db   $94,$05,$12,$80 ;  bongo
+    db   $00,$00,$12,$80 ;  dino (offscreen)
+    db   $00,$00,$12,$80 ;  dino legs
+    db   $6C,$00,$12,$80 ;  bambongo 1
+    db   $A8,$00,$12,$80 ;  bambongo 2
+    db   $00,$00,$12,$80 ;  unused?
+
+;; CUTSCENE something
+wait_vblank_8:
+    ld   e,$08
+_lp_3CE2:
+    push hl
+    push de
+    call wait_vblank
+    pop  de
+    pop  hl
+    dec  e
+    jr   nz,_lp_3CE2
+    ret
+
+    dc   19, $FF
+
+;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
+dance_frame_data:
+    db   $3C,$3D,$06,$01
+    db   $3A,$3B,$05,$00
+    db   $3C,$3D,$06,$01
+    db   $3A,$3B,$07,$02
+    db   $3E,$3F,$08,$03
+    db   $3A,$3B,$07,$02
+    db   $3E,$3F,$08,$03
+    db   $3A,$3B,$05,$00
+
+update_dance_frames:
+    ld   a,(hl)
+    ld   (player_frame),a
+    inc  hl
+    ld   a,(hl)
+    ld   (player_frame_legs),a
+    inc  hl
+    ld   a,(hl)
+    ld   (bongo_frame),a
+    inc  hl
+    ld   a,(hl)
+    ld   (dino_frame_legs),a ; how is dino the same?!
+    ld   (enemy_1_frame),a
+    ld   (enemy_2_frame),a
+    inc  hl
+    ld   a,l
+    and  $1F ; wrap dance at 32 bytes
+    ld   l,a
+    ret
+
+    dc   9, $FF
 
 ;;; Cut sceen
-DO_CUTSCENE
-3D48: 3E 06       ld   a,$06
-3D4A: 32 42 80    ld   ($CH1_SFX),a
-3D4D: 32 65 80    ld   ($SFX_PREV),a
-3D50: CD 70 14    call $RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-3D53: 21 E0 0F    ld   hl,$0FE0
-3D56: CD 40 08    call $DRAW_SCREEN
-3D59: 00 00                     ; params to DRAW_SCREEN
-3D5B: CD A0 03    call $DRAW_LIVES
-3D5E: CD 50 24    call $DRAW_SCORE
-3D61: 21 40 81    ld   hl,$PLAYER_X       ; destination
-3D64: 01 C0 3C    ld   bc,$CUTSCENE_DATA  ; src location
-3D67: 16 20       ld   d,$20      ; 32 times do
-3D69: 0A          ld   a,(bc)     ;       <-
-3D6A: 77          ld   (hl),a     ;         |  (sets all sprites)
-3D6B: 23          inc  hl         ;         |
-3D6C: 03          inc  bc         ;         |
-3D6D: 15          dec  d          ;         |
-3D6E: 20 F9       jr   nz,$3D69   ;        _|
-3D70: CD A0 3D    call $DRAW_CAGE_AND_SCENE
-3D73: 16 80       ld   d,$80      ; 128 x animate cutscene
-3D75: AF          xor  a          ;
-3D76: 32 2D 80    ld   ($DINO_COUNTER),a
-3D79: 21 00 3D    ld   hl,$DANCE_FRAME_DATA
-_LP
-3D7C: CD E0 3C    call $WAIT_VBLANK_8   ; draws gang <-
-3D7F: CD 20 3D    call $UPDATE_DANCE_FRAMES ;         |
-3D82: 15          dec  d          ;                   |
-3D83: 20 F7       jr   nz,$_LP    ;               ____|
-3D85: CD B0 3E    call $END_CUTSCENE    ; end of round cutscene
-_CUTSCENE_DONE
-3D88: 3A 04 80    ld   a,($PLAYER_NUM) ; a = $8004 - which screen to use?
-3D8B: A7          and  a         ; if a != 0
-3D8C: 20 08       jr   nz,$3D96  ;   goto screen-set 2
-3D8E: 3E 01       ld   a,$01     ; reset to screen 1
-3D90: 32 29 80    ld   ($SCREEN_NUM),a ; set screen
-3D93: C3 00 10    jp   $BIG_RESET
-3D96: 3E 01       ld   a,$01
-3D98: 32 2A 80    ld   ($SCREEN_NUM_P2),a ; player 2 screen
-3D9B: C3 00 10    jp   $BIG_RESET
-3D9E: C9          ret
-3D9F: FF
+do_cutscene:
+    ld   a,$06
+    ld   (ch1_sfx),a
+    ld   (sfx_prev),a
+    call reset_xoff_sprites_and_clear_screen
+    ld   hl,header_text_data
+    call draw_screen
+    nop ; params to DRAW_SCREEN
+    nop
+    call draw_lives
+    call draw_score
+    ld   hl,player_x ; destination
+    ld   bc,cutscene_data ; src location
+    ld   d,$20 ; 32 times do
+    ld   a,(bc) ;      <-
+    ld   (hl),a ;       |  (sets all sprites)
+    inc  hl     ;       |
+    inc  bc     ;       |
+    dec  d      ;       |
+    jr   nz,$3D69 ;    _|
+    call draw_cage_and_scene
+    ld   d,$80 ; 128 x animate cutscene
+    xor  a
+    ld   (dino_counter),a
+    ld   hl,dance_frame_data
+_lp_3D7C:
+    call wait_vblank_8    ; draws gang <-
+    call update_dance_frames    ;             |
+    dec  d        ;             |
+    jr   nz,_lp_3D7C ;         ____|
+    call end_cutscene ; end of round cutscene
+_cutscene_done:
+    ld   a,(player_num) ; a = $8004 - which screen to use?
+    and  a ; if a != 0
+    jr   nz,$3D96 ; goto screen-set 2
+    ld   a,$01 ; reset to screen 1
+    ld   (screen_num),a ; set screen
+    jp   big_reset
+    ld   a,$01
+    ld   (screen_num_p2),a ; player 2 screen
+    jp   big_reset
+    ret
+    dc   1, $FF
 
-DRAW_CAGE_AND_SCENE             ; for cutscene
-3DA0: 21 18 92    ld   hl,$9218
-3DA3: 36 66       ld   (hl),$66
-3DA5: 23          inc  hl
-3DA6: 36 67       ld   (hl),$67
-3DA8: 23          inc  hl
-3DA9: 36 6A       ld   (hl),$6A
-3DAB: 23          inc  hl
-3DAC: 36 6B       ld   (hl),$6B
-3DAE: 21 F8 91    ld   hl,$91F8
-3DB1: 36 64       ld   (hl),$64
-3DB3: 23          inc  hl
-3DB4: 36 65       ld   (hl),$65
-3DB6: 23          inc  hl
-3DB7: 36 68       ld   (hl),$68
-3DB9: 23          inc  hl
-3DBA: 36 69       ld   (hl),$69
-3DBC: 21 D8 91    ld   hl,$91D8
-3DBF: 36 6E       ld   (hl),$6E
-3DC1: 23          inc  hl
-3DC2: 36 6F       ld   (hl),$6F
-3DC4: 23          inc  hl
-3DC5: 36 6C       ld   (hl),$6C
-3DC7: 23          inc  hl
-3DC8: 36 6D       ld   (hl),$6D
-3DCA: 3E 02       ld   a,$02    ; red
-3DCC: 32 31 81    ld   ($SCREEN_XOFF_COL+31),a
-3DCF: 32 33 81    ld   ($SCREEN_XOFF_COL+33),a
-3DD2: 32 35 81    ld   ($SCREEN_XOFF_COL+35),a
-3DD5: 32 37 81    ld   ($SCREEN_XOFF_COL+37),a
-3DD8: CD 10 03    call $DRAW_TILES_H
-3DDB: 1C 00                     ; Row of upward spikes
-3DDD: 38 39 3A 39 38 39 3C 3D 39 3A 38 38 3C 3C 3D 3C
-3DED: 39 3A 38 39 38 39 3D 3C 39 38 3A 3D 3C 39 39 38 FF
-3DFE: CD 10 03    call $DRAW_TILES_H
-3E01: 12 00                     ; real long platform
-3E03: FE FD FD FD FD FD FD FD FD FD FD FD FD FD FD FD
-3E13: FD FD FD FD FD FD FD FD FD FD FD FC FF
-3E20: C9          ret
-3E21: FF
+draw_cage_and_scene:            ; for cutscene
+    ld   hl,_9218
+    ld   (hl),$66
+    inc  hl
+    ld   (hl),$67
+    inc  hl
+    ld   (hl),$6A
+    inc  hl
+    ld   (hl),$6B
+    ld   hl,_91F8
+    ld   (hl),$64
+    inc  hl
+    ld   (hl),$65
+    inc  hl
+    ld   (hl),$68
+    inc  hl
+    ld   (hl),$69
+    ld   hl,_91D8
+    ld   (hl),$6E
+    inc  hl
+    ld   (hl),$6F
+    inc  hl
+    ld   (hl),$6C
+    inc  hl
+    ld   (hl),$6D
+    ld   a,$02 ; red
+    ld   (_8131),a
+    ld   (_8133),a
+    ld   (_8135),a
+    ld   (_8137),a
+    call draw_tiles_h
+    db   $1C,$00 ;  Row of upward spikes
+    db   $38,$39,$3A,$39,$38,$39,$3C,$3D,$39,$3A,$38,$38,$3C,$3C,$3D,$3C
+    db   $39,$3A,$38,$39,$38,$39,$3D,$3C,$39,$38,$3A,$3D,$3C,$39,$39,$38,$FF
+    call draw_tiles_h
+    db   $12,$00 ;  real long platform
+    db   $FE,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD
+    db   $FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FD,$FC,$FF
+    ret
 
-CUTSCENE_RUN_OFFSCREEN
-3E22: 3E 0C       ld   a,$0C
-3E24: 32 41 81    ld   ($PLAYER_FRAME),a
-3E27: 3E 0D       ld   a,$0D
-3E29: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-3E2C: 3E 29       ld   a,$29
-3E2E: 32 29 81    ld   ($SCREEN_XOFF_COL+29),a
-3E31: 1E 70       ld   e,$70
-_LP
-3E33: D5          push de
-3E34: CD F0 3E    call $ANIMATE_PLAYER_RIGHT
-3E37: CD E8 08    call $MOVE_BONGO_RIGHT
-3E3A: CD E8 08    call $MOVE_BONGO_RIGHT
-3E3D: CD A0 13    call $WAIT_VBLANK
-3E40: D1          pop  de
-3E41: 1D          dec  e
-3E42: 20 EF       jr   nz,$_LP
-3E44: C9          ret
+    db   $FF
 
-3E45: FF ...
+cutscene_run_offscreen:
+    ld   a,$0C
+    ld   (player_frame),a
+    ld   a,$0D
+    ld   (player_frame_legs),a
+    ld   a,$29
+    ld   (_8129),a
+    ld   e,$70
+_lp_3E33:
+    push de
+    call animate_player_right
+    call move_bongo_right
+    call move_bongo_right
+    call wait_vblank
+    pop  de
+    dec  e
+    jr   nz,_lp_3E33
+    ret
 
-DELAY_2_B
-3E50: 1E 01       ld   e,$01
-_LP
-3E52: D5          push de
-3E53: DD E5       push ix
-3E55: CD A0 13    call $WAIT_VBLANK
-3E58: DD E1       pop  ix
-3E5A: D1          pop  de
-3E5B: 1D          dec  e
-3E5C: 20 F4       jr   nz,$_LP
-3E5E: C9          ret
+    dc   11, $FF
 
-3E5F: FF
+delay_2_b:
+    ld   e,$01
+_lp_3E52:
+    push de
+    push ix
+    call wait_vblank
+    pop  ix
+    pop  de
+    dec  e
+    jr   nz,_lp_3E52
+    ret
 
-CUTSCENE_JUMP_UP_AND_DOWN
-3E60: DD 21 40 81 ld   ix,$PLAYER_X
-3E64: CD 50 3E    call $DELAY_2_B
-3E67: 16 08       ld   d,$08
-_LP_1
-3E69: DD 35 03    dec  (ix+$03)
-3E6C: DD 35 07    dec  (ix+$07)
-3E6F: DD 35 0B    dec  (ix+$0b)
-3E72: CD 50 3E    call $DELAY_2_B
-3E75: 15          dec  d
-3E76: 20 F1       jr   nz,$_LP_1
-3E78: 16 08       ld   d,$08
-_LP_2
-3E7A: DD 34 03    inc  (ix+$03)
-3E7D: DD 34 07    inc  (ix+$07)
-3E80: DD 34 0B    inc  (ix+$0b)
-3E83: CD 50 3E    call $DELAY_2_B
-3E86: 15          dec  d
-3E87: 20 F1       jr   nz,$_LP_2
-3E89: C9          ret
+    dc   1, $FF
 
-3E8A: FF ...
+cutscene_jump_up_and_down:
+    ld   ix,player_x
+    call delay_2_b
+    ld   d,$08
+_lp_3E69:
+    dec  (ix+$03)
+    dec  (ix+$07)
+    dec  (ix+$0b)
+    call delay_2_b
+    dec  d
+    jr   nz,_lp_3E69
+    ld   d,$08
+_lp_3E7A:
+    inc  (ix+$03)
+    inc  (ix+$07)
+    inc  (ix+$0b)
+    call delay_2_b
+    dec  d
+    jr   nz,_lp_3E7A
+    ret
 
-END_CUTSCENE
-3EB0: 3E 07       ld   a,$07    ; end of dance in cutscene
-3EB2: 32 42 80    ld   ($CH1_SFX),a
-3EB5: 21 50 81    ld   hl,$DINO_X_LEGS ; set a bunch of bytes at 8150
-3EB8: 36 18       ld   (hl),$18        ; x
-3EBA: 23          inc  hl
-3EBB: 36 2E       ld   (hl),$2E        ; frame
-3EBD: 23          inc  hl
-3EBE: 36 12       ld   (hl),$12       ; color
-3EC0: 23          inc  hl
-3EC1: 36 70       ld   (hl),$70       ; y
-3EC3: 21 5C 81    ld   hl,$ENEMY_3_X ; and 815c
-3EC6: 36 11       ld   (hl),$11      ; x
-3EC8: 23          inc  hl
-3EC9: 36 30       ld   (hl),$30      ; frame
-3ECB: 23          inc  hl
-3ECC: 36 12       ld   (hl),$12      ; color
-3ECE: 23          inc  hl
-3ECF: 36 80       ld   (hl),$80      ; y
-3ED1: CD E0 3C    call $WAIT_VBLANK_8
-3ED4: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
-3ED7: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
-3EDA: CD 60 3E    call $CUTSCENE_JUMP_UP_AND_DOWN
-3EDD: 80          add  a,b
-3EDE: CD 22 3E    call $CUTSCENE_RUN_OFFSCREEN
-3EE1: C9          ret
+    dc   38, $FF
 
-3EE2: FF ...
+end_cutscene:
+    ld   a,$07 ; end of dance in cutscene
+    ld   (ch1_sfx),a
+    ld   hl,dino_x_legs ; set a bunch of bytes at 8150
+    ld   (hl),$18 ; x
+    inc  hl
+    ld   (hl),$2E ; frame
+    inc  hl
+    ld   (hl),$12 ; color
+    inc  hl
+    ld   (hl),$70 ; y
+    ld   hl,enemy_3_x ; and 815c
+    ld   (hl),$11 ; x
+    inc  hl
+    ld   (hl),$30 ; frame
+    inc  hl
+    ld   (hl),$12 ; color
+    inc  hl
+    ld   (hl),$80 ; y
+    call wait_vblank_8
+    call cutscene_jump_up_and_down
+    call cutscene_jump_up_and_down
+    call cutscene_jump_up_and_down
+    add  a,b
+    call cutscene_run_offscreen
+    ret
 
-ANIMATE_PLAYER_RIGHT
-3EF0: 7B          ld   a,e
-3EF1: E6 03       and  $03
-3EF3: C0          ret  nz
-3EF4: CD 18 06    call $PLAYER_MOVE_RIGHT
-3EF7: C9          ret
+    dc   14, $FF
 
-3EF8: FF ...
+animate_player_right:
+    ld   a,e
+    and  $03
+    ret  nz
+    call player_move_right
+    ret
 
-DELAY_83_CALL_WEIRD_A
-3F00: CD 60 14    call $DELAY_83
-3F03: 21 90 0E    ld   hl,$0E90 ; 4e90 = LOAD_A_VAL_REALLY_WEIRD
-                                ; seems to do nothing
-3F06: CD E3 01    call $JMP_HL_PLUS_4K
-3F09: C9          ret
+    dc   8, $FF
 
-3F0A: FF ...
+delay_83_call_weird_a:
+    call delay_83
+    ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
+    call jmp_hl_plus_4k ; seems to do nothing in sub
+    ret
+
+    dc   6, $FF
 
 ;;; level tiles at the bottom of the screen
-DRAW_BOTTOM_ROW_NUMBERS
-3F10: CD 10 03    call $DRAW_TILES_H
-3F13: 1F 00                     ; bottom row
-3F15: C0 C1 C2 C3 C4 C5 C6 C7
-3F1D: C8 C9 CA CB CC CD CE CF
-3F25: D0 D1 D2 D3 D4 D5 D6 D7
-3F2D: D8 D9 DA FF
-    ;; falls through after drawing
-_ANIMATE_RED_LEVEL_INDICATOR
-3F31: 3A 04 80    ld   a,($PLAYER_NUM)
-3F34: A7          and  a
-3F35: 20 05       jr   nz,$3F3C
-3F37: 3A 29 80    ld   a,($SCREEN_NUM)
-3F3A: 18 03       jr   $3F3F
-3F3C: 3A 2A 80    ld   a,($SCREEN_NUM_P2) ; a = scr
-3F3F: 21 BF 93    ld   hl,$93BF
-_LP
-3F42: CD 55 3F    call $DELAY_2_VBLANK ; slow things down
-3F45: 3D          dec  a
-3F46: 28 08       jr   z,$_DONE
-3F48: 36 DB       ld   (hl),$DB
-3F4A: 01 E0 FF    ld   bc,$SCR_LINE_PREV
-3F4D: 09          add  hl,bc
-3F4E: 18 F2       jr   $_LP
-_DONE
-3F50: CD D0 2A    call $DRAW_BONUS_STATE
-3F53: C9          ret
+draw_bottom_row_numbers:
+    call draw_tiles_h
+    db   $1F,$00 ;  bottom row
+    db   $C0,$C1,$C2,$C3,$C4,$C5,$C6,$C7
+    db   $C8,$C9,$CA,$CB,$CC,$CD,$CE,$CF
+    db   $D0,$D1,$D2,$D3,$D4,$D5,$D6,$D7
+    db   $D8,$D9,$DA,$FF
 
-3F54: FF
+;; falls through after drawing
+_animate_red_level_indicator:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$3F3C
+    ld   a,(screen_num)
+    jr   _3F3F
+    ld   a,(screen_num_p2) ; a = scr
+_3F3F:
+    ld   hl,end_of_tiles
+_lp_3F42:
+    call delay_2_vblank ; slow things down
+    dec  a
+    jr   z,_done_3F50
+    ld   (hl),$DB
+    ld   bc,scr_line_prev
+    add  hl,bc
+    jr   _lp_3F42
+_done_3F50:
+    call draw_bonus_state
+    ret
 
-DELAY_2_VBLANK
-3F55: F5          push af
-3F56: E5          push hl
-3F57: 1E 01       ld   e,$01
-_LP
-3F59: D5          push de
-3F5A: CD A0 13    call $WAIT_VBLANK
-3F5D: D1          pop  de
-3F5E: 1D          dec  e
-3F5F: 20 F8       jr   nz,$_LP
-3F61: E1          pop  hl
-3F62: F1          pop  af
-3F63: C9          ret
+    dc   1, $FF
 
-3F64: FF FF
+delay_2_vblank:
+    push af
+    push hl
+    ld   e,$01
+_lp:
+    push de
+    call wait_vblank
+    pop  de
+    dec  e
+    jr   nz,_lp
+    pop  hl
+    pop  af
+    ret
 
-DRAW_JETSOFT
-3F66: CD 10 03    call $DRAW_TILES_H
-3F69: 0C 0A
-3F6B: 1A 15 24 23 1F 16 24 FF   ; JETSOFT
-3F73: C9          ret
+    dc   2, $FF
 
-DRAW_PROUDLY_PRESENTS
-3F74: CD 10 03    call $DRAW_TILES_H
-3F77: 14 07                     ; PROUDLY PRESENTS
-3F79: 20 22 1F 25 14 1C 29 10 20 22 15 23 15 1E 24 FF
-3F89: C9          ret
+draw_jetsoft:
+    call draw_tiles_h
+    db   $0C,$0A
+    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
+    ret
 
-3F8A: FF FF
+draw_proudly_presents:
+    call draw_tiles_h
+    db   $14,$07 ;  PROUDLY PRESENTS
+    db   $20,$22,$1F,$25,$14,$1C,$29,$10,$20,$22,$15,$23,$15,$1E,$24,$FF
+    ret
 
-DRAW_COPYRIGHT
-3F8C: CD 10 03    call $DRAW_TILES_H
-3F8F: 10 04
-3F91: 8B 01 09 08 03 FF         ; (c) 1983
-3F97: CD 10 03    call $DRAW_TILES_H
-3F9A: 12 04
-3F9C: 1A 15 24 23 1F 16 24 FF   ; JETSOFT
-3FA4: C9          ret
+    dc   2, $FF
 
-3FA5: FF ...
+draw_copyright:
+    call draw_tiles_h
+    db   $10,$04
+    db   $8B,$01,$09,$08,$03,$FF ;  (c) 1983
+    call draw_tiles_h
+    db   $12,$04
+    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
+    ret
 
-BLANK_OUT_BOTTOM_ROW
-3FA8: CD 10 03    call $DRAW_TILES_H
-3FAB: 1F 00      ; Whole bunch of spaces over the level numbers
-3FAD: 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
-3FBD: 10 10 10 10 10 10 10 10 10 10 10 10 FF
-3FCA: C9          ret
-3FCB: FF ...
+    dc   3, $FF
 
-DO_BONUS_FLASHING
-3FD0: 00          nop ; wonder what these did originally?
-3FD1: 00          nop ; 5 bytes?
-3FD2: 00          nop
-3FD3: 00          nop
-3FD4: 00          nop
-3FD5: CD D0 17    call $DRAW_BONUS_BOX
-3FD8: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FDB: CD E0 38    call $DRAW_BONUS_BOX_B
-3FDE: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FE1: CD D0 17    call $DRAW_BONUS_BOX
-3FE4: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FE7: CD E0 38    call $DRAW_BONUS_BOX_B
-3FEA: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FED: CD D0 17    call $DRAW_BONUS_BOX
-3FF0: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FF3: CD E0 38    call $DRAW_BONUS_BOX_B
-3FF6: CD EC 24    call $DELAY_8_PLAY_SOUND
-3FF9: C9          ret
+blank_out_bottom_row:
+    call draw_tiles_h
+    db   $1F,$00 ;  Whole bunch of spaces over the level numbers
+    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
+    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$FF
+    ret
 
-3FFA: FF ...
+    dc   5, $FF
+
+do_bonus_flashing:
+    nop ; wonder what these did originally?
+    nop ; 5 bytes?
+    nop
+    nop
+    nop
+    call draw_bonus_box
+    call delay_8_play_sound
+    call draw_bonus_box_b
+    call delay_8_play_sound
+    call draw_bonus_box
+    call delay_8_play_sound
+    call draw_bonus_box_b
+    call delay_8_play_sound
+    call draw_bonus_box
+    call delay_8_play_sound
+    call draw_bonus_box_b
+    call delay_8_play_sound
+    ret
+
+    dc   6, $FF
 
 ;;; === END OF BG4.BIN, START OF BG5.BIN ======
 
-INT_HANDLER
-4000: AF          xor  a
-4001: 32 01 B0    ld   ($INT_ENABLE),a
-4004: 3A 40 40    ld   a,($4040)
-4007: 00          nop
-4008: 00          nop
-4009: 00          nop
-400A: 3E FF       ld   a,$FF
-400C: 32 00 B8    ld   ($WATCHDOG),a
-400F: 31 F0 83    ld   sp,$STACK_LOCATION
-4012: 3A 40 40    ld   a,($4040)
-4015: 00          nop
-4016: 00          nop
-4017: 00          nop
-4018: CD 00 00    call $0000
+int_handler:
+    xor  a
+    ld   (int_enable),a
+    ld   a,(add_pickup_pat_8)
+    nop
+    nop
+    nop
+    ld   a,$FF
+    ld   (watchdog),a
+    ld   sp,stack_location
+    ld   a,(add_pickup_pat_8)
+    nop
+    nop
+    nop
+    call hard_reset
 
-401B: FF ...
+    dc   5, $FF
 
-    ;; Looks like more general updates
-UPDATE_EVERYTHING_MORE
-4020: CD 50 40    call $ADD_MOVE_SCORE
-4023: CD 58 42    call $PICKUP_TILE_COLLISION
-4026: CD E0 42    call $1UP_TIMER_COUNTDOWN
-4029: CD 74 4D    call $END_SCREEN_LOGIC
-402C: CD 20 50    call $ANIMATE_ALL_PICKUPS
-402F: C9          ret
+;; Looks like more general updates
+update_everything_more:
+    call add_move_score
+    call pickup_tile_collision
+    call 1up_timer_countdown
+    call end_screen_logic
+    call animate_all_pickups
+    ret
 
-4030: C9          ret
-4031: FF ...
+    ret         ;? extra ret
+    dc   7, $FF
 
-    ;; who calls?
-    ;; What the heck is $c000?
-    ;; RESET_VECTOR is 0x38, this is 4k higher... coincidence?
-4038: 21 00 C0    ld   hl,$C000
-403B: CD 81 5C    call $JMP_HL
-403E: C9          ret
+;; who calls?
+;; What the heck is $c000?
+;; RESET_VECTOR is 0x38, this is 4k higher... coincidence?
+    ld   hl,_C000
+    call jmp_hl
+    ret
 
-403F: FF
+    dc   1, $FF
 
 
-ADD_PICKUP_PAT_8
-4040: CD 68 45    call $ADD_PICKUP_PAT_3
-4043: 3E 8E       ld   a,$TILE_PIK_RINGA
-4045: 32 7A 92    ld   ($927A),a
-4048: C9          ret
+add_pickup_pat_8:
+    call add_pickup_pat_3
+    ld   a,$8E
+    ld   (_927A),a
+    ret
 
-4049: FF ...
+    dc   7, $FF
 
-    ;; Adds a bonus as you move right
-    ;; Keeps track of "max x" - when you go past it,
-    ;; it gets the diff (x - old max x) and adds it to bonus
-ADD_MOVE_SCORE
-4050: 3A 40 81    ld   a,($PLAYER_X)
-4053: 37          scf
-4054: 3F          ccf
-4055: 21 30 80    ld   hl,$PLAYER_MAX_X
-4058: 96          sub  (hl)
-4059: D8          ret  c        ; not furthest right, no bonus
-    ;; adds the move score
-405A: 47          ld   b,a      ; add position diff to score_to_add
-405B: 3A 1D 80    ld   a,($SCORE_TO_ADD)
-405E: 80          add  a,b
-405F: 32 1D 80    ld   ($SCORE_TO_ADD),a
-4062: 3A 40 81    ld   a,($PLAYER_X)  ; set new max X pos
-4065: 32 30 80    ld   ($PLAYER_MAX_X),a
-4068: C9          ret
+;; Adds a bonus as you move right
+;; Keeps track of "max x" - when you go past it,
+;; it gets the diff (x - old max x) and adds it to bonus
+add_move_score:
+    ld   a,(player_x)
+    scf
+    ccf
+    ld   hl,player_max_x
+    sub  (hl)
+    ret  c ; not furthest right, no bonus
+;; adds the move score
+    ld   b,a ; add position diff to score_to_add
+    ld   a,(score_to_add)
+    add  a,b
+    ld   (score_to_add),a
+    ld   a,(player_x) ; set new max X pos
+    ld   (player_max_x),a
+    ret
 
-4069: FF ...
+    dc   7, $FF
 
-ADD_PICKUP_PAT_5
-4070: 3E 8C       ld   a,$TILE_CROWN_PIKA
-4072: 32 8E 91    ld   ($918E),a
-4075: C9          ret
+add_pickup_pat_5:
+    ld   a,tile_crown_pika
+    ld   (_918E),a
+    ret
 
-4076: FF ...
+    dc   2, $FF
 
-ADD_PICKUP_PAT_6
-4078: 3E 8D       ld   a,$TILE_PIK_CROSSA
-407A: 32 D2 91    ld   ($91D2),a
-407D: C9          ret
+add_pickup_pat_6:
+    ld   a,$8D
+    ld   (_91D2),a
+    ret
 
-407E: FF ...
+    dc   2, $FF
 
-    ;;
-4080: DD 7E 05    ld   a,(ix+$05)
-4083: A7          and  a
-4084: 28 05       jr   z,$408B
-4086: 3D          dec  a
-4087: DD 77 05    ld   (ix+$05),a
-408A: C9          ret
-408B: DD 7E 03    ld   a,(ix+$03)
-408E: DD 77 05    ld   (ix+$05),a
-4091: DD 7E 02    ld   a,(ix+$02)
-4094: A7          and  a
-4095: C8          ret  z
-4096: 3D          dec  a
-4097: DD 77 02    ld   (ix+$02),a
-409A: C6 00       add  a,$00
-409C: 6F          ld   l,a
-409D: 3E 08       ld   a,$08
-409F: D3 00       out  ($00),a
-40A1: 7D          ld   a,l
-40A2: D3 01       out  ($01),a
-40A4: 00          nop
-40A5: C9          ret
+;;
+_4080:
+    ld   a,(ix+$05)
+    and  a
+    jr   z,$408B
+    dec  a
+    ld   (ix+$05),a
+    ret
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ld   a,(ix+$02)
+    and  a
+    ret  z
+    dec  a
+    ld   (ix+$02),a
+    add  a,$00
+    ld   l,a
+    ld   a,$08
+    out  ($00),a
+    ld   a,l
+    out  ($01),a
+    nop
+    ret
 
-40A6: FF
+    dc   1, $FF
 
-    ;; in: h = x, y = l
-    ;; out: hl = screen pos of tile at xy
-GET_TILE_SCR_POS
-40A7: 45          ld   b,l
-40A8: AF          xor  a
-40A9: 94          sub  h
-40AA: E6 F8       and  $F8
-40AC: 6F          ld   l,a
-40AD: 26 00       ld   h,$00
-40AF: 29          add  hl,hl
-40B0: 29          add  hl,hl
-40B1: 3E 90       ld   a,$90
-40B3: 84          add  a,h
-40B4: 67          ld   h,a
-40B5: 78          ld   a,b
-40B6: CB 3F       srl  a
-40B8: CB 3F       srl  a
-40BA: CB 3F       srl  a
-40BC: 85          add  a,l
-40BD: 6F          ld   l,a
-40BE: C9          ret
+;; in: h = x, y = l
+;; out: hl = screen pos of tile at xy
+get_tile_scr_pos:
+    ld   b,l
+    xor  a
+    sub  h
+    and  $F8
+    ld   l,a
+    ld   h,$00
+    add  hl,hl
+    add  hl,hl
+    ld   a,$90
+    add  a,h
+    ld   h,a
+    ld   a,b
+    srl  a
+    srl  a
+    srl  a
+    add  a,l
+    ld   l,a
+    ret
 
-40BF: FF
+    dc   1, $FF
 
-40C0: DD 7E 05    ld   a,(ix+$05)
-40C3: A7          and  a
-40C4: 28 05       jr   z,$40CB
-40C6: 3D          dec  a
-40C7: DD 77 05    ld   (ix+$05),a
-40CA: C9          ret
-40CB: DD 7E 03    ld   a,(ix+$03)
-40CE: DD 77 05    ld   (ix+$05),a
-40D1: DD 7E 02    ld   a,(ix+$02)
-40D4: A7          and  a
-40D5: C8          ret  z
-40D6: 3D          dec  a
-40D7: DD 77 02    ld   (ix+$02),a
-40DA: C6 00       add  a,$00
-40DC: 6F          ld   l,a
-40DD: 3E 09       ld   a,$09
-40DF: D3 00       out  ($00),a
-40E1: 7D          ld   a,l
-40E2: D3 01       out  ($01),a
-40E4: 00          nop
-40E5: C9          ret
-40E6: FF ...
+_40C0:
+    ld   a,(ix+$05)
+    and  a
+    jr   z,$40CB
+    dec  a
+    ld   (ix+$05),a
+    ret
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ld   a,(ix+$02)
+    and  a
+    ret  z
+    dec  a
+    ld   (ix+$02),a
+    add  a,$00
+    ld   l,a
+    ld   a,$09
+    out  ($00),a
+    ld   a,l
+    out  ($01),a
+    nop
+    ret
 
-ADD_PICKUP_PAT_9
-40E8: 3E 8F       ld   a,$TILE_PIK_VASEA
-40EA: 32 EE 92    ld   ($92EE),a
-40ED: 3E 8E       ld   a,$TILE_PIK_RINGA
-40EF: 32 17 92    ld   ($9217),a
-40F2: C9          ret
-40F3: FF
+    dc   2, $FF
+
+add_pickup_pat_9:
+    ld   a,$8F
+    ld   (_92EE),a
+    ld   a,$8E
+    ld   (_9217),a
+    ret
+
+    dc   1, $FF
 
 ;;; ; hit bonus
-HIT_BONUS
-40F4: 3E 03       ld   a,$03
-40F6: 32 44 80    ld   ($SFX_ID),a
-40F9: 21 80 29    ld   hl,$GOT_A_BONUS
-40FC: CD 81 5C    call $JMP_HL
-40FF: C9          ret
+hit_bonus:
+    ld   a,$03
+    ld   (sfx_id),a
+    ld   hl,got_a_bonus
+    call jmp_hl
+    ret
 
-    ;; Called directly by SFX_SUMFIN_2 and
-    ;; indirectly (maybe) by weird load at 0x41e3
-4100: DD 7E 05    ld   a,(ix+$05)
-4103: A7          and  a
-4104: 28 05       jr   z,$410B
-4106: 3D          dec  a
-4107: DD 77 05    ld   (ix+$05),a
-410A: C9          ret
-410B: DD 7E 03    ld   a,(ix+$03)
-410E: DD 77 05    ld   (ix+$05),a
-4111: DD 7E 02    ld   a,(ix+$02)
-4114: A7          and  a
-4115: C8          ret  z
-4116: 3D          dec  a
-4117: DD 77 02    ld   (ix+$02),a
-411A: C6 00       add  a,$00
-411C: 6F          ld   l,a
-411D: 3E 0A       ld   a,$0A
-411F: D3 00       out  ($00),a
-4121: 7D          ld   a,l
-4122: D3 01       out  ($01),a
-4124: 00          nop
-4125: C9          ret
+;; Called directly by SFX_SUMFIN_2 and
+;; indirectly (maybe) from weird_unsed_maybe_load
+_4100:
+    ld   a,(ix+$05)
+    and  a
+    jr   z,$410B
+    dec  a
+    ld   (ix+$05),a
+    ret
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ld   a,(ix+$02)
+    and  a
+    ret  z
+    dec  a
+    ld   (ix+$02),a
+    add  a,$00
+    ld   l,a
+    ld   a,$0A
+    out  ($00),a
+    ld   a,l
+    out  ($01),a
+    nop
+    ret
 
-4126: FF FF
+    dc   2, $FF
 
-ADD_PICKUP_PAT_10
-4128: 3E 8C       ld   a,$TILE_CROWN_PIKA
-412A: 32 17 92    ld   ($9217),a
-412D: 3E 8D       ld   a,$TILE_PIK_CROSSA
-412F: 32 31 92    ld   ($9231),a
-4132: 3E 8F       ld   a,$TILE_PIK_VASEA
-4134: 32 2B 92    ld   ($922B),a
-4137: C9          ret
+add_pickup_pat_10:
+    ld   a,tile_crown_pika
+    ld   (_9217),a
+    ld   a,$8D
+    ld   (_9231),a
+    ld   a,$8F
+    ld   (_922B),a
+    ret
 
-4138: FF ...
+    dc   8, $FF
 
-SET_SYNTH_SETTINGS
-4140: DD 7E 00    ld   a,(ix+$00)
-4143: A7          and  a
-4144: C8          ret  z
-4145: 32 66 80    ld   ($8066),a ; not synth!
-4148: CB 27       sla  a
-414A: 21 00 44    ld   hl,$SFX_SYNTH_SETTINGS
-414D: 85          add  a,l
-414E: 6F          ld   l,a
-414F: 3E 01       ld   a,$01
-4151: D3 00       out  ($00),a
-4153: 7E          ld   a,(hl)
-4154: D3 01       out  ($01),a
-4156: 23          inc  hl
-4157: 3E 00       ld   a,$00
-4159: D3 00       out  ($00),a
-415B: 7E          ld   a,(hl)
-415C: D3 01       out  ($01),a
-415E: 3E 08       ld   a,$08
-4160: D3 00       out  ($00),a
-4162: DD 7E 02    ld   a,(ix+$02)
-4165: C6 00       add  a,$00
-4167: D3 01       out  ($01),a
-4169: DD 7E 03    ld   a,(ix+$03)
-416C: DD 77 05    ld   (ix+$05),a
-416F: C9          ret
+set_synth_settings:
+    ld   a,(ix+$00)
+    and  a
+    ret  z
+    ld   (_8066),a ; not synth!
+    sla  a
+    ld   hl,sfx_synth_settings
+    add  a,l
+    ld   l,a
+    ld   a,$01
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    inc  hl
+    ld   a,$00
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    ld   a,$08
+    out  ($00),a
+    ld   a,(ix+$02)
+    add  a,$00
+    out  ($01),a
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ret
 
-4170: CD 77 45    call $4577
-4173: 3E 8E       ld   a,$TILE_PIK_RINGA
-4175: 32 AB 92    ld   ($92AB),a
-4178: C9          ret
+_4170:
+    call add_pickup_pat_7
+    ld   a,$8E
+    ld   (_92AB),a
+    ret
 
-4179: FF ...
+    dc   7, $FF
 
-RELATED_TO_MYSTERY_8066
-4180: DD 7E 00    ld   a,(ix+$00)
-4183: A7          and  a
-4184: C8          ret  z
-4185: 32 67 80    ld   ($8067),a ; 8067
-4188: CB 27       sla  a
-418A: 21 00 44    ld   hl,$4400
-418D: 85          add  a,l
-418E: 6F          ld   l,a
-418F: 3E 03       ld   a,$03
-4191: D3 00       out  ($00),a
-4193: 7E          ld   a,(hl)
-4194: D3 01       out  ($01),a
-4196: 23          inc  hl
-4197: 3E 02       ld   a,$02
-4199: D3 00       out  ($00),a
-419B: 7E          ld   a,(hl)
-419C: D3 01       out  ($01),a
-419E: 3E 09       ld   a,$09
-41A0: D3 00       out  ($00),a
-41A2: DD 7E 02    ld   a,(ix+$02)
-41A5: C6 00       add  a,$00
-41A7: D3 01       out  ($01),a
-41A9: DD 7E 03    ld   a,(ix+$03)
-41AC: DD 77 05    ld   (ix+$05),a
-41AF: C9          ret
+related_to_mystery_8066:
+    ld   a,(ix+$00)
+    and  a
+    ret  z
+    ld   (_8067),a ; 8067
+    sla  a
+    ld   hl,sfx_synth_settings
+    add  a,l
+    ld   l,a
+    ld   a,$03
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    inc  hl
+    ld   a,$02
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    ld   a,$09
+    out  ($00),a
+    ld   a,(ix+$02)
+    add  a,$00
+    out  ($01),a
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ret
 
-    ;; I reckon this is the tiles that say the points
-    ;; Changes the tiles, then calls $HIT_BONUS
-HIT_BONUS_DRAW_POINTS
-41B0: 47          ld   b,a      ; adds bonus score
-41B1: 3A 1D 80    ld   a,($SCORE_TO_ADD)
-41B4: 80          add  a,b
-41B5: 32 1D 80    ld   ($SCORE_TO_ADD),a
-41B8: 2B          dec  hl
-41B9: 2B          dec  hl
-41BA: 2B          dec  hl
-41BB: 2B          dec  hl
-41BC: 22 4C 80    ld   ($1UP_SCR_POS),hl
-41BF: 7E          ld   a,(hl)
-41C0: 32 4E 80    ld   ($1UP_SCR_POS_2),a
-41C3: 3E 90       ld   a,$90
-41C5: CB 38       srl  b
-41C7: CB 38       srl  b
-41C9: CB 38       srl  b
-41CB: CB 38       srl  b
-41CD: 80          add  a,b
-41CE: 77          ld   (hl),a
-41CF: 11 E0 FF    ld   de,$SCR_LINE_PREV
-41D2: 19          add  hl,de
-41D3: 7E          ld   a,(hl)
-41D4: 32 4F 80    ld   ($1UP_SCR_POS_3),a
-41D7: 36 9B       ld   (hl),$9B
-41D9: 3E 40       ld   a,$40    ; 64 countdown. Never read.
-41DB: 32 50 80    ld   ($1UP_TIMER),a
-41DE: C3 F4 40    jp   $HIT_BONUS
+;; I reckon this is the tiles that say the points
+;; Changes the tiles, then calls $HIT_BONUS
+hit_bonus_draw_points:
+    ld   b,a ; adds bonus score
+    ld   a,(score_to_add)
+    add  a,b
+    ld   (score_to_add),a
+    dec  hl
+    dec  hl
+    dec  hl
+    dec  hl
+    ld   (1up_scr_pos),hl
+    ld   a,(hl)
+    ld   (1up_scr_pos_2),a
+    ld   a,$90
+    srl  b
+    srl  b
+    srl  b
+    srl  b
+    add  a,b
+    ld   (hl),a
+    ld   de,scr_line_prev
+    add  hl,de
+    ld   a,(hl)
+    ld   (1up_scr_pos_3),a
+    ld   (hl),$9B
+    ld   a,$40 ; 64 countdown. Never read.
+    ld   (1up_timer),a
+    jp   hit_bonus
 
-41E1: FF FF
+    dc   2, $FF
 
-    ;; How do i get here?... what is this Weird load for?
-41E3: 3A 00 41    ld   a,($4100)
-41E6: 01 E3 01    ld   bc,$JMP_HL_PLUS_4K
-41E9: C5          push bc
-41EA: E5          push hl
-41EB: C9          ret
+;; How do i get here?... what is this Weird load for?
+weird_unsed_maybe_load:
+    ld   a,(_4100)
+    ld   bc,jmp_hl_plus_4k
+    push bc
+    push hl
+    ret
 
-    ;; DRAW_CROWN_PIK_BOT_RIGHT
-41EC: 3E 9C       ld   a,$TILE_CROWN_PIK
-41EE: 32 5A 91    ld   ($915A),a
-41F1: C9          ret
+;; DRAW_CROWN_PIK_BOT_RIGHT
+    ld   a,$9C
+    ld   (scr_pik_n_n),a
+    ret
 
-    ;; DRAW_CROSS_PIK_BOT_RIGHT
-41F2: 3E 9D       ld   a,$TILE_PIK_CROSS
-41F4: 32 5A 91    ld   ($915A),a
-41F7: C9          ret
+;; DRAW_CROSS_PIK_BOT_RIGHT
+    ld   a,$9D
+    ld   (scr_pik_n_n),a
+    ret
 
-    ;; draw pikup cross, bot, right-er
-41F8: 3E 9D       ld   a,$TILE_PIK_CROSS
-41FA: 32 1A 91    ld   ($911A),a
-41FD: C9          ret
+;; draw pikup cross, bot, right-er
+_41F8:
+    ld   a,$9D
+    ld   (_911A),a
+    ret
 
-41FE: FF FF
+    dc   2, $FF
 
-    ;;
-4200: DD 21 A0 82 ld   ix,$82A0 ;
-4204: DD 7E 04    ld   a,(ix+$04)
-4207: A7          and  a
-4208: 28 08       jr   z,$I
-420A: CD 40 41    call $SET_SYNTH_SETTINGS
-420D: DD 36 04 00 ld   (ix+$04),$00
-4211: C9          ret
-_I
-4212: CD 80 40    call $4080
-4215: C9          ret
+;;
+sfx_sumfin_0:
+    ld   ix,synth1
+    ld   a,(ix+$04)
+    and  a
+    jr   z,_i_2
+    call set_synth_settings
+    ld   (ix+$04),$00
+    ret
+_i_2:
+    call _4080
+    ret
 
-4216: 3E 9C       ld   a,$TILE_CROWN_PIK
-4218: 32 B1 91    ld   ($91B1),a
-421B: C9          ret
+    ld   a,$9C
+    ld   (_91B1),a
+    ret
 
-421C: FF ...
+    dc   4, $FF
 
-SFX_SUMFIN_1
-4220: DD 21 A8 82 ld   ix,$82A8
-4224: DD 7E 04    ld   a,(ix+$04)
-4227: A7          and  a
-4228: 28 08       jr   z,$I
-422A: CD 80 41    call $RELATED_TO_MYSTERY_8066
-422D: DD 36 04 00 ld   (ix+$04),$00
-4231: C9          ret
-_I
-4232: CD C0 40    call $40C0
-4235: C9          ret
+sfx_sumfin_1:
+    ld   ix,synth2
+    ld   a,(ix+$04)
+    and  a
+    jr   z,_i_3
+    call related_to_mystery_8066
+    ld   (ix+$04),$00
+    ret
+_i_3:
+    call _40C0
+    ret
 
-4236: 3E 9C       ld   a,$TILE_CROWN_PIK
-4238: 32 8E 91    ld   ($918E),a
-423B: C9          ret
+    ld   a,$9C
+    ld   (_918E),a
+    ret
 
-423C: FF ..
+    dc   4, $FF
 
-SFX_SUMFIN_2
-4240: DD 21 B0 82 ld   ix,$82B0
-4244: DD 7E 04    ld   a,(ix+$04)
-4247: A7          and  a
-4248: 28 08       jr   z,$_I
-424A: CD B0 42    call $RELATED_TO_MYSTERY_8066_2
-424D: DD 36 04 00 ld   (ix+$04),$00
-4251: C9          ret
-_I
-4252: CD 00 41    call $4100
-4255: C9          ret
+sfx_sumfin_2:
+    ld   ix,synth3
+    ld   a,(ix+$04)
+    and  a
+    jr   z,_i_4
+    call related_to_mystery_8066_2
+    ld   (ix+$04),$00
+    ret
+_i_4:
+    call _4100
+    ret
 
-4256: FF FF
+    dc   2, $FF
 
-PICKUP_TILE_COLLISION
-4258: 3A 40 81    ld   a,($PLAYER_X)
-425B: C6 04       add  a,$04    ; lol, 4 pixels to get pickup
-425D: 67          ld   h,a
-425E: 3A 43 81    ld   a,($PLAYER_Y)
-4261: C6 18       add  a,$18
-4263: 6F          ld   l,a
-4264: CD A7 40    call $GET_TILE_SCR_POS
-4267: 7E          ld   a,(hl)
-4268: FE 10       cp   $TILE_BLANK
-426A: C8          ret  z
-    ;;
-426B: FE 8C       cp   $TILE_CROWN_PIKA
-426D: 20 08       jr   nz,$_CROSSA
-426F: 3E 20       ld   a,$20    ; 200 bonus
-4271: 36 10       ld   (hl),$TILE_BLANK
-4273: CD B0 41    call $HIT_BONUS_DRAW_POINTS
-4276: C9          ret
-_CROSSA
-4277: FE 8D       cp   $TILE_PIK_CROSSA
-4279: 20 08       jr   nz,$_RINGA
-427B: 3E 40       ld   a,$40    ; 400 bonus
-427D: 36 10       ld   (hl),$TILE_BLANK
-427F: CD B0 41    call $HIT_BONUS_DRAW_POINTS
-4282: C9          ret
-_RINGA
-4283: FE 8E       cp   $TILE_PIK_RINGA
-4285: 20 08       jr   nz,$_VASEA
-4287: 3E 60       ld   a,$60    ; 600 bonus
-4289: 36 10       ld   (hl),$TILE_BLANK
-428B: CD B0 41    call $HIT_BONUS_DRAW_POINTS
-428E: C9          ret
-_VASEA
-428F: FE 8F       cp   $TILE_PIK_VASEA
-4291: C0          ret  nz
-4292: 3E A0       ld   a,$A0    ; 1000 bonus
-4294: 36 10       ld   (hl),$TILE_BLANK
-4296: CD B0 41    call $HIT_BONUS_DRAW_POINTS
-4299: C9          ret
+pickup_tile_collision:
+    ld   a,(player_x)
+    add  a,$04 ; lol, 4 pixels to get pickup
+    ld   h,a
+    ld   a,(player_y)
+    add  a,$18
+    ld   l,a
+    call get_tile_scr_pos
+    ld   a,(hl)
+    cp   tile_blank
+    ret  z
+;;
+    cp   tile_crown_pika
+    jr   nz,_crossa
+    ld   a,$20 ; 200 bonus
+    ld   (hl),tile_blank
+    call hit_bonus_draw_points
+    ret
+_crossa:
+    cp   $8D
+    jr   nz,_ringa
+    ld   a,$40 ; 400 bonus
+    ld   (hl),tile_blank
+    call hit_bonus_draw_points
+    ret
+_ringa:
+    cp   $8E
+    jr   nz,_vasea
+    ld   a,$60 ; 600 bonus
+    ld   (hl),tile_blank
+    call hit_bonus_draw_points
+    ret
+_vasea:
+    cp   $8F
+    ret  nz
+    ld   a,$A0 ; 1000 bonus
+    ld   (hl),tile_blank
+    call hit_bonus_draw_points
+    ret
 
 ;;; called? Draws a cross (same spot as "ADD_PICKUP_PAT_6", but A version)
-    ;; might be old dud code
-429A: 3E 9D       ld   a,$TILE_PIK_CROSS
-429C: 32 D2 91    ld   ($91D2),a
-429F: C9          ret
+;; might be old dud code
+    ld   a,$9D
+    ld   (_91D2),a
+    ret
 
-    ;; Weird bug in it - same code as ADD_PICKUP_PAT_7,
-    ;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
-FUNKY_LOOKING_SET_RING
-42A0: 3E 8E       ld   a,$TILE_PIK_RINGA
-42A2: 32 CB 90    ld   ($90CB),a
-42A5: CD 02 36    call $3602    ; <- that looks odd. Weird jump to middle of code
-42A8: C9          ret
+;; Weird bug in it - same code as ADD_PICKUP_PAT_7,
+;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
+funky_looking_set_ring:
+    ld   a,$8E
+    ld   (_90CB),a
+    call _3602 ; <- that looks odd. Weird jump to middle of code
+    ret
 
-42A9: FF ...
+    dc   7, $FF
 
-RELATED_TO_MYSTERY_8066_2
-42B0: DD 7E 00    ld   a,(ix+$00)
-42B3: A7          and  a
-42B4: C8          ret  z
-42B5: 32 68 80    ld   ($8068),a
-42B8: CB 27       sla  a
-42BA: 21 00 44    ld   hl,$4400
-42BD: 85          add  a,l
-42BE: 6F          ld   l,a
-42BF: 3E 05       ld   a,$05
-42C1: D3 00       out  ($00),a
-42C3: 7E          ld   a,(hl)
-42C4: D3 01       out  ($01),a
-42C6: 23          inc  hl
-42C7: 3E 04       ld   a,$04
-42C9: D3 00       out  ($00),a
-42CB: 7E          ld   a,(hl)
-42CC: D3 01       out  ($01),a
-42CE: 3E 0A       ld   a,$0A
-42D0: D3 00       out  ($00),a
-42D2: DD 7E 02    ld   a,(ix+$02)
-42D5: C6 00       add  a,$00
-42D7: D3 01       out  ($01),a
-42D9: DD 7E 03    ld   a,(ix+$03)
-42DC: DD 77 05    ld   (ix+$05),a
-42DF: C9          ret
+related_to_mystery_8066_2:
+    ld   a,(ix+$00)
+    and  a
+    ret  z
+    ld   (_8068),a
+    sla  a
+    ld   hl,sfx_synth_settings
+    add  a,l
+    ld   l,a
+    ld   a,$05
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    inc  hl
+    ld   a,$04
+    out  ($00),a
+    ld   a,(hl)
+    out  ($01),a
+    ld   a,$0A
+    out  ($00),a
+    ld   a,(ix+$02)
+    add  a,$00
+    out  ($01),a
+    ld   a,(ix+$03)
+    ld   (ix+$05),a
+    ret
 
-    ;; My theory: the bonus-points text that appears
-    ;; when you get a pickup, was supposed to disappear after 64 frames
-    ;; but they gave up. That's my theory.
-1UP_TIMER_COUNTDOWN
-42E0: 3A 50 80    ld   a,($1UP_TIMER)
-42E3: A7          and  a
-42E4: C8          ret  z
-42E5: 3D          dec  a
-42E6: 32 50 80    ld   ($1UP_TIMER),a
-42E9: A7          and  a
-42EA: C9          ret
+;; My theory: the bonus-points text that appears
+;; when you get a pickup, was supposed to disappear after 64 frames
+;; but they gave up. That's my theory.
+1up_timer_countdown:
+    ld   a,(1up_timer)
+    and  a
+    ret  z
+    dec  a
+    ld   (1up_timer),a
+    and  a
+    ret
 
-    ;; never called, cause my theory above...
-BLANK_OUT_1UP_TEXT
-42EB: 2A 4C 80    ld   hl,($1UP_SCR_POS)
-42EE: 3E 10       ld   a,$TILE_BLANK
-42F0: 00          nop
-42F1: 77          ld   (hl),a
-42F2: 11 E0 FF    ld   de,$SCR_LINE_PREV ; -32 (next line up screen)
-42F5: 19          add  hl,de
-42F6: 3E 10       ld   a,$TILE_BLANK
-42F8: 00          nop
-42F9: 77          ld   (hl),a
-42FA: C9          ret
-42FB: FF ...
+;; never called, cause my theory above...
+blank_out_1up_text:
+    ld   hl,(1up_scr_pos)
+    ld   a,tile_blank
+    nop
+    ld   (hl),a
+    ld   de,scr_line_prev ; -32 (next line up screen)
+    add  hl,de
+    ld   a,tile_blank
+    nop
+    ld   (hl),a
+    ret
 
-    ;; data?
-4300: F0          ret  p
-4301: 70          ld   (hl),b
-4302: B0          or   b
-4303: 30 D0       jr   nc,$42D5
-4305: 50          ld   d,b
-4306: 90          sub  b
-4307: 10 E0       djnz $42E9
-4309: 60          ld   h,b
-430A: A0          and  b
-430B: 20 C0       jr   nz,$42CD
-430D: 40          ld   b,b
-430E: 80          add  a,b
-430F: 00          nop
-4310: FF          rst  $38
-4311: FF          rst  $38
+    dc   5, $FF
 
-    ;;
-4312: CD F8 41    call $41F8
-4315: 3E 9E       ld   a,$9E
-4317: 32 7A 92    ld   ($927A),a
-431A: C9          ret
-431B: FF ...
+;; data?
+    db   $F0
+    db   $70
+    db   $B0
+    db   $30,$D0
+    db   $50
+    db   $90
+    db   $10,$E0
+    db   $60
+    db   $A0
+    db   $20,$C0
+    db   $40
+    db   $80
+    db   $00
+    db   $FF
+    db   $FF
 
-SFX_SOMETHING_CH_1
-4320: DD 6E 07    ld   l,(ix+$07)
-4323: DD 66 08    ld   h,(ix+$08)
-4326: 7E          ld   a,(hl)
-4327: FE FF       cp   $FF
-4329: C8          ret  z
-432A: DD 86 11    add  a,(ix+$11)
-432D: FD 21 A0 82 ld   iy,$82A0
-4331: FD 77 00    ld   (iy+$00),a
-4334: 23          inc  hl
-4335: 46          ld   b,(hl)
-4336: DD 7E 0F    ld   a,(ix+$0f)
-4339: 4F          ld   c,a
-433A: 05          dec  b
-433B: 28 03       jr   z,$4340
-433D: 81          add  a,c
-433E: 18 FA       jr   $433A
-4340: 3D          dec  a
-4341: DD 77 12    ld   (ix+$12),a
-4344: CD 00 52    call $PLAY_SFX_CHUNK_CH_1
-4347: FD 77 02    ld   (iy+$02),a
-434A: DD 7E 0E    ld   a,(ix+$0e)
-434D: FD 77 03    ld   (iy+$03),a
-4350: 3E 01       ld   a,$01
-4352: FD 77 04    ld   (iy+$04),a
-4355: C9          ret
+;;
+    call _41F8
+    ld   a,$9E
+    ld   (_927A),a
+    ret
 
-4356: FF ...
+    dc   5, $FF
 
-SFX_SOMETHING_CH_2
-4360: DD 6E 09    ld   l,(ix+$09)
-4363: DD 66 0A    ld   h,(ix+$0a)
-4366: 7E          ld   a,(hl)
-4367: FE FF       cp   $FF
-4369: C8          ret  z
-436A: DD 86 11    add  a,(ix+$11)
-436D: FD 21 A8 82 ld   iy,$82A8
-4371: FD 77 00    ld   (iy+$00),a
-4374: 23          inc  hl
-4375: 46          ld   b,(hl)
-4376: DD 7E 0F    ld   a,(ix+$0f)
-4379: 4F          ld   c,a
-437A: 05          dec  b
-437B: 28 03       jr   z,$4380
-437D: 81          add  a,c
-437E: 18 FA       jr   $437A
-4380: 3D          dec  a
-4381: DD 77 13    ld   (ix+$13),a
-4384: CD 50 52    call $PLAY_SFX_CHUNK_CH_2
-4387: FD 77 02    ld   (iy+$02),a
-438A: DD 7E 0E    ld   a,(ix+$0e)
-438D: FD 77 03    ld   (iy+$03),a
-4390: 3E 01       ld   a,$01
-4392: FD 77 04    ld   (iy+$04),a
-4395: C9          ret
+sfx_something_ch_1:
+    ld   l,(ix+$07)
+    ld   h,(ix+$08)
+    ld   a,(hl)
+    cp   $FF
+    ret  z
+    add  a,(ix+$11)
+    ld   iy,synth1
+    ld   (iy+$00),a
+    inc  hl
+    ld   b,(hl)
+    ld   a,(ix+$0f)
+    ld   c,a
+_433A:
+    dec  b
+    jr   z,$4340
+    add  a,c
+    jr   _433A
+    dec  a
+    ld   (ix+$12),a
+    call play_sfx_chunk_ch_1
+    ld   (iy+$02),a
+    ld   a,(ix+$0e)
+    ld   (iy+$03),a
+    ld   a,$01
+    ld   (iy+$04),a
+    ret
 
-    ;; called?
-4396: CD A0 42    call $FUNKY_LOOKING_SET_RING
-4399: 3E 9E       ld   a,$TILE_PIK_RING
-439B: 32 AB 92    ld   ($92AB),a
-439E: C9          ret
+    dc   10, $FF
 
-439F: FF
+sfx_something_ch_2:
+    ld   l,(ix+$09)
+    ld   h,(ix+$0a)
+    ld   a,(hl)
+    cp   $FF
+    ret  z
+    add  a,(ix+$11)
+    ld   iy,synth2
+    ld   (iy+$00),a
+    inc  hl
+    ld   b,(hl)
+    ld   a,(ix+$0f)
+    ld   c,a
+_437A:
+    dec  b
+    jr   z,$4380
+    add  a,c
+    jr   _437A
+    dec  a
+    ld   (ix+$13),a
+    call play_sfx_chunk_ch_2
+    ld   (iy+$02),a
+    ld   a,(ix+$0e)
+    ld   (iy+$03),a
+    ld   a,$01
+    ld   (iy+$04),a
+    ret
 
-    ;;
-SFX_WHAT_1
-43A0: DD 6E 0B    ld   l,(ix+$0b)
-43A3: DD 66 0C    ld   h,(ix+$0c)
-43A6: 7E          ld   a,(hl)
-43A7: FE FF       cp   $FF
-43A9: C8          ret  z
-43AA: DD 86 11    add  a,(ix+$11)
-43AD: 23          inc  hl
-43AE: FD 21 B0 82 ld   iy,$82B0
-43B2: FD 77 00    ld   (iy+$00),a
-43B5: 46          ld   b,(hl)
-43B6: DD 7E 0F    ld   a,(ix+$0f)
-43B9: 4F          ld   c,a
-43BA: 05          dec  b
-43BB: 28 03       jr   z,$43C0
-43BD: 81          add  a,c
-43BE: 18 FA       jr   $43BA
-43C0: 3D          dec  a
-43C1: DD 77 14    ld   (ix+$14),a
-43C4: CD A0 52    call $SFX_SUB_WHAT_1
-43C7: FD 77 02    ld   (iy+$02),a
-43CA: DD 7E 0E    ld   a,(ix+$0e)
-43CD: FD 77 03    ld   (iy+$03),a
-43D0: 3E 01       ld   a,$01
-43D2: FD 77 04    ld   (iy+$04),a
-43D5: C9          ret
+;; called?
+    call funky_looking_set_ring
+    ld   a,$9E
+    ld   (_92AB),a
+    ret
 
-43D6: FF ...
+    dc   1, $FF
 
-43E0: 3E 9F       ld   a,$TILE_PIK_VASE
-43E2: 32 EE 92    ld   ($92EE),a
-43E5: 3E 9E       ld   a,$TILE_PIK_RING
-43E7: 32 17 92    ld   ($9217),a
-43EA: C9          ret
+;;
+sfx_what_1:
+    ld   l,(ix+$0b)
+    ld   h,(ix+$0c)
+    ld   a,(hl)
+    cp   $FF
+    ret  z
+    add  a,(ix+$11)
+    inc  hl
+    ld   iy,synth3
+    ld   (iy+$00),a
+    ld   b,(hl)
+    ld   a,(ix+$0f)
+    ld   c,a
+_43BA:
+    dec  b
+    jr   z,$43C0
+    add  a,c
+    jr   _43BA
+    dec  a
+    ld   (ix+$14),a
+    call sfx_sub_what_1
+    ld   (iy+$02),a
+    ld   a,(ix+$0e)
+    ld   (iy+$03),a
+    ld   a,$01
+    ld   (iy+$04),a
+    ret
 
-43EB: FF
+    dc   10, $FF
 
-43EC: 3E 9C       ld   a,$TILE_CROWN_PIK
-43EE: 32 17 92    ld   ($9217),a
-43F1: 3E 9D       ld   a,$TILE_PIK_CROSS
-43F3: 32 31 92    ld   ($9231),a
-43F6: 3E 9F       ld   a,$TILE_PIK_VASE
-43F8: 32 2B 92    ld   ($922B),a
-43FB: C9          ret
-43FC: FF ...
+    ld   a,$9F
+    ld   (_92EE),a
+    ld   a,$9E
+    ld   (_9217),a
+    ret
+
+    dc   1, $FF
+
+    ld   a,$9C
+    ld   (_9217),a
+    ld   a,$9D
+    ld   (_9231),a
+    ld   a,$9F
+    ld   (_922B),a
+    ret
+
+    dc   4, $FF
 
 ;;; SFX synth settings data
-SFX_SYNTH_SETTINGS
-4400: 03 24 03 F6 02 CC 02 A4
-4408: 02 7E 02 5A 02 38 02 18
-4410: 02 FA 01 DE 01 C3 01 AA
-4418: 01 92 01 7B 01 66 01 52
-4420: 01 3F 01 2D 01 1C 01 0C
-4428: 01 00 00 EF 00 E2 00 D5
-4430: 00 C9 00 BE 00 B3 00 A9
-4438: 00 A0 00 96 00 8E 00 86
-4440: 00 7F 00 78 00 71 00 6B
-4448: 00 64 00 5F 00 59 00 54
-4450: 00 50 00 4B 00 47 00 43
-4458: 00 3F 00 3C 00 38 00 35
-4460: 00 32 00 2F 00 2C 00 2A
-4468: 00 28 00 25 00 23 00 21
-4470: 00 1F 00 1E 00 00 01 04
-4478: 01 07 01
+sfx_synth_settings:
+    db   $03,$24,$03,$F6,$02,$CC,$02,$A4
+    db   $02,$7E,$02,$5A,$02,$38,$02,$18
+    db   $02,$FA,$01,$DE,$01,$C3,$01,$AA
+    db   $01,$92,$01,$7B,$01,$66,$01,$52
+    db   $01,$3F,$01,$2D,$01,$1C,$01,$0C
+    db   $01,$00,$00,$EF,$00,$E2,$00,$D5
+    db   $00,$C9,$00,$BE,$00,$B3,$00,$A9
+    db   $00,$A0,$00,$96,$00,$8E,$00,$86
+    db   $00,$7F,$00,$78,$00,$71,$00,$6B
+    db   $00,$64,$00,$5F,$00,$59,$00,$54
+    db   $00,$50,$00,$4B,$00,$47,$00,$43
+    db   $00,$3F,$00,$3C,$00,$38,$00,$35
+    db   $00,$32,$00,$2F,$00,$2C,$00,$2A
+    db   $00,$28,$00,$25,$00,$23,$00,$21
+    db   $00,$1F,$00,$1E,$00,$00,$01,$04
+    db   $01,$07,$01
 
-447B: FF ...
+    dc   9, $FF
 
-DRAW_CAGE_TOP
-4484: 3A 04 80    ld   a,($PLAYER_NUM)
-4487: A7          and  a
-4488: 20 05       jr   nz,$448F
-448A: 3A 29 80    ld   a,($SCREEN_NUM)
-448D: 18 03       jr   $4492
-448F: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-4492: FE 1B       cp   $NUM_SCREENS  ; are we on screen 27?
-4494: C0          ret  nz            ; Nope, leave.
-4495: 3E 74       ld   a,$TILE_CAGE
-4497: 32 A9 91    ld   ($91A9),a
-449A: 3C          inc  a
-449B: 32 AA 91    ld   ($91AA),a
-449E: 3C          inc  a
-449F: 32 C9 91    ld   ($91C9),a
-44A2: 3C          inc  a
-44A3: 32 CA 91    ld   ($91CA),a
-44A6: 3C          inc  a
-44A7: 32 AB 91    ld   ($91AB),a
-44AA: 3C          inc  a
-44AB: 32 AC 91    ld   ($91AC),a
-44AE: 3C          inc  a
-44AF: 32 CB 91    ld   ($91CB),a
-44B2: 3C          inc  a
-44B3: 32 CC 91    ld   ($91CC),a
-44B6: 3C          inc  a
-44B7: 32 8B 91    ld   ($918B),a
-44BA: 3C          inc  a
-44BB: 32 8C 91    ld   ($918C),a
-44BE: 18 24       jr   $_MORE_CAGE
-    ;; looks like data: 2byte coords
-44C0: 10 01 12 03
-44C4: 14 01 15 03
-44C8: 17 01 19 03
-44CC: 1B 01 1C 03
-44D0: FF FF
-44D2: 1C 01 00 03
-44D6: 1C 01 00 03
-44DA: 1C 01 00 03
-44DE: 1C 01 00 03
-44E2: FF FF
-_MORE_CAGE
-44E4: 3C          inc  a
-44E5: 32 89 91    ld   ($9189),a
-44E8: 3C          inc  a
-44E9: 32 8A 91    ld   ($918A),a
-44EC: C9          ret
+draw_cage_top:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$448F
+    ld   a,(screen_num)
+    jr   _4492
+    ld   a,(screen_num_p2)
+_4492:
+    cp   num_screens ; are we on screen 27?
+    ret  nz ; Nope, leave.
+    ld   a,tile_cage
+    ld   (_91A9),a
+    inc  a
+    ld   (_91AA),a
+    inc  a
+    ld   (_91C9),a
+    inc  a
+    ld   (_91CA),a
+    inc  a
+    ld   (_91AB),a
+    inc  a
+    ld   (_91AC),a
+    inc  a
+    ld   (_91CB),a
+    inc  a
+    ld   (_91CC),a
+    inc  a
+    ld   (_918B),a
+    inc  a
+    ld   (_918C),a
+    jr   _more_cage
+;; notes
+    db   $10,$01,$12,$03
+    db   $14,$01,$15,$03
+    db   $17,$01,$19,$03
+    db   $1B,$01,$1C,$03
+    db   $FF,$FF
+    db   $1C,$01,$00,$03
+    db   $1C,$01,$00,$03
+    db   $1C,$01,$00,$03
+    db   $1C,$01,$00,$03
+    db   $FF,$FF
 
-44ED: FF ...
+_more_cage:
+    inc  a
+    ld   (_9189),a
+    inc  a
+    ld   (_918A),a
+    ret
 
-    ;; sfx/tune player
-    ;; plays a few samples of sfx each tick
+    dc   19, $FF
 
-SFX_01 ; La Cucaracha
-4500: DD 7E 12    ld   a,(ix+$12)
-4503: A7          and  a
-4504: 28 05       jr   z,$SFX_02
-4506: 3D          dec  a
-4507: DD 77 12    ld   (ix+$12),a
-450A: C9          ret
+;; sfx/tune player
+;; plays a few samples of sfx each tick
 
-SFX_02 ; Minor-key death ditti
-450B: DD 6E 07    ld   l,(ix+$07)
-450E: DD 66 08    ld   h,(ix+$08)
-4511: 23          inc  hl
-4512: 23          inc  hl
-4513: 7E          ld   a,(hl)
-4514: FE FF       cp   $FF
-4516: 28 0A       jr   z,$SFX_03
-4518: DD 75 07    ld   (ix+$07),l
-451B: DD 74 08    ld   (ix+$08),h
-451E: CD 20 43    call $SFX_SOMETHING_CH_1
-4521: C9          ret
+sfx_01:; La Cucaracha
+    ld   a,(ix+$12)
+    and  a
+    jr   z,sfx_02
+    dec  a
+    ld   (ix+$12),a
+    ret
 
-SFX_03 ; Pickup bling
-4522: DD 6E 01    ld   l,(ix+$01)
-4525: DD 66 02    ld   h,(ix+$02)
-4528: 23          inc  hl
-4529: 23          inc  hl
-452A: 7E          ld   a,(hl)
-452B: FE EE       cp   $EE
-452D: 20 23       jr   nz,$SFX_04
-452F: 23          inc  hl
-4530: 7E          ld   a,(hl)
-4531: 4F          ld   c,a
-4532: 06 00       ld   b,$00
-4534: 37          scf
-4535: 3F          ccf
-4536: ED 42       sbc  hl,bc
-4538: DD 75 01    ld   (ix+$01),l
-453B: DD 74 02    ld   (ix+$02),h
-453E: 7E          ld   a,(hl)
-453F: DD 77 07    ld   (ix+$07),a
-4542: 23          inc  hl
-4543: 7E          ld   a,(hl)
-4544: DD 77 08    ld   (ix+$08),a
-4547: DD 6E 07    ld   l,(ix+$07)
-454A: DD 66 08    ld   h,(ix+$08)
-454D: 7E          ld   a,(hl)
-454E: CD 20 43    call $SFX_SOMETHING_CH_1
-4551: C9          ret
+sfx_02:; Minor-key death ditti
+    ld   l,(ix+$07)
+    ld   h,(ix+$08)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $FF
+    jr   z,sfx_03
+    ld   (ix+$07),l
+    ld   (ix+$08),h
+    call sfx_something_ch_1
+    ret
 
-4552: FE FF       cp   $FF
-4554: C8          ret  z
+sfx_03:; Pickup bling
+    ld   l,(ix+$01)
+    ld   h,(ix+$02)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $EE
+    jr   nz,$4552
+    inc  hl
+    ld   a,(hl)
+    ld   c,a
+    ld   b,$00
+    scf
+    ccf
+    sbc  hl,bc
+    ld   (ix+$01),l
+    ld   (ix+$02),h
+    ld   a,(hl)
+    ld   (ix+$07),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$08),a
+    ld   l,(ix+$07)
+    ld   h,(ix+$08)
+    ld   a,(hl)
+    call sfx_something_ch_1
+    ret
 
-    ;;  not sfx routine?
-4555: DD 75 01    ld   (ix+$01),l
-4558: DD 74 02    ld   (ix+$02),h
-455B: DD 77 07    ld   (ix+$07),a
-455E: 23          inc  hl
-455F: 7E          ld   a,(hl)
-4560: DD 77 08    ld   (ix+$08),a
-4563: CD 20 43    call $SFX_SOMETHING_CH_1
-4566: C9          ret
+    cp   $FF
+    ret  z
 
-4567: FF ...
+;;  not sfx routine?
+    ld   (ix+$01),l
+    ld   (ix+$02),h
+    ld   (ix+$07),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$08),a
+    call sfx_something_ch_1
+    ret
 
-ADD_PICKUP_PAT_3
-4568: 3E 8D       ld   a,$TILE_PIK_CROSSA
-456A: 32 1A 91    ld   ($911A),a
-456D: C9          ret
+    dc   1, $FF
 
-456E: FF ...
+add_pickup_pat_3:
+    ld   a,$8D
+    ld   (_911A),a
+    ret
 
-ADD_PICKUP_PAT_4
-4570: 3E 8C       ld   a,$TILE_CROWN_PIKA
-4572: 32 B1 91    ld   ($91B1),a
-4575: C9          ret
+    dc   2, $FF
 
-4576: FF
+add_pickup_pat_4:
+    ld   a,tile_crown_pika
+    ld   (_91B1),a
+    ret
 
-ADD_PICKUP_PAT_7
-4577: 3E 8E       ld   a,$TILE_PIK_RINGA
-4579: 32 CB 90    ld   ($90CB),a
-457C: CD 70 40    call $ADD_PICKUP_PAT_5
-457F: C9          ret
+    dc   1, $FF
 
-SFX_06 ; cutscene dance start (also intro tune?)
-4580: DD 7E 13    ld   a,(ix+$13)
-4583: A7          and  a
-4584: 28 05       jr   z,$458B
-4586: 3D          dec  a
-4587: DD 77 13    ld   (ix+$13),a
-458A: C9          ret
-    ;; sfxsomething #4
-458B: DD 6E 09    ld   l,(ix+$09)
-458E: DD 66 0A    ld   h,(ix+$0a)
-4591: 23          inc  hl
-4592: 23          inc  hl
-4593: 7E          ld   a,(hl)
-4594: FE FF       cp   $FF
-4596: 28 0A       jr   z,$45A2
-4598: DD 75 09    ld   (ix+$09),l
-459B: DD 74 0A    ld   (ix+$0a),h
-459E: CD 60 43    call $SFX_SOMETHING_CH_2
-45A1: C9          ret
+add_pickup_pat_7:
+    ld   a,$8E
+    ld   (_90CB),a
+    call add_pickup_pat_5
+    ret
 
-    ;; sfxsomething #5
-45A2: DD 6E 03    ld   l,(ix+$03)
-45A5: DD 66 04    ld   h,(ix+$04)
-45A8: 23          inc  hl
-45A9: 23          inc  hl
-45AA: 7E          ld   a,(hl)
-45AB: FE EE       cp   $EE
-45AD: 20 23       jr   nz,$45D2
-45AF: 23          inc  hl
-45B0: 7E          ld   a,(hl)
-45B1: 4F          ld   c,a
-45B2: 06 00       ld   b,$00
-45B4: 37          scf
-45B5: 3F          ccf
-45B6: ED 42       sbc  hl,bc
-45B8: DD 75 03    ld   (ix+$03),l
-45BB: DD 74 04    ld   (ix+$04),h
-45BE: 7E          ld   a,(hl)
-45BF: DD 77 09    ld   (ix+$09),a
-45C2: 23          inc  hl
-45C3: 7E          ld   a,(hl)
-45C4: DD 77 0A    ld   (ix+$0a),a
-45C7: DD 6E 09    ld   l,(ix+$09)
-45CA: DD 66 0A    ld   h,(ix+$0a)
-45CD: 7E          ld   a,(hl)
-45CE: CD 60 43    call $SFX_SOMETHING_CH_2
-45D1: C9          ret
+sfx_06:; cutscene dance start (also intro tune?)
+    ld   a,(ix+$13)
+    and  a
+    jr   z,$458B
+    dec  a
+    ld   (ix+$13),a
+    ret
+;; sfxsomething #4
+    ld   l,(ix+$09)
+    ld   h,(ix+$0a)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $FF
+    jr   z,$45A2
+    ld   (ix+$09),l
+    ld   (ix+$0a),h
+    call sfx_something_ch_2
+    ret
 
-    ;; sfxsomething #6
-45D2: FE FF       cp   $FF
-45D4: C8          ret  z
-45D5: DD 75 03    ld   (ix+$03),l
-45D8: DD 74 04    ld   (ix+$04),h
-45DB: DD 77 09    ld   (ix+$09),a
-45DE: 23          inc  hl
-45DF: 7E          ld   a,(hl)
-45E0: DD 77 0A    ld   (ix+$0a),a
-45E3: CD 60 43    call $SFX_SOMETHING_CH_2
-45E6: C9          ret
-45E7: FF          rst  $38
+;; sfxsomething #5
+    ld   l,(ix+$03)
+    ld   h,(ix+$04)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $EE
+    jr   nz,$45D2
+    inc  hl
+    ld   a,(hl)
+    ld   c,a
+    ld   b,$00
+    scf
+    ccf
+    sbc  hl,bc
+    ld   (ix+$03),l
+    ld   (ix+$04),h
+    ld   a,(hl)
+    ld   (ix+$09),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0a),a
+    ld   l,(ix+$09)
+    ld   h,(ix+$0a)
+    ld   a,(hl)
+    call sfx_something_ch_2
+    ret
 
-    ;;
-ADD_PICKUP_PAT_2
-45E8: 3E 8D       ld   a,$TILE_PIK_CROSSA
-45EA: 32 5A 91    ld   ($915A),a
-45ED: C9          ret
+;; sfxsomething #6
+    cp   $FF
+    ret  z
+    ld   (ix+$03),l
+    ld   (ix+$04),h
+    ld   (ix+$09),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0a),a
+    call sfx_something_ch_2
+    ret
 
-45EE: FF ...
+    dc   1, $FF
 
-    ;; sfxsomething #7
-4600: DD 7E 14    ld   a,(ix+$14)
-4603: A7          and  a
-4604: 28 05       jr   z,$460B
-4606: 3D          dec  a
-4607: DD 77 14    ld   (ix+$14),a
-460A: C9          ret
-460B: DD 6E 0B    ld   l,(ix+$0b)
-460E: DD 66 0C    ld   h,(ix+$0c)
-4611: 23          inc  hl
-4612: 23          inc  hl
-4613: 7E          ld   a,(hl)
-4614: FE FF       cp   $FF
-4616: 28 0A       jr   z,$4622
-4618: DD 75 0B    ld   (ix+$0b),l
-461B: DD 74 0C    ld   (ix+$0c),h
-461E: CD A0 43    call $SFX_WHAT_1
-4621: C9          ret
+;;
+add_pickup_pat_2:
+    ld   a,$8D
+    ld   (scr_pik_n_n),a
+    ret
 
-    ;; sfxsomething #8
-4622: DD 6E 05    ld   l,(ix+$05)
-4625: DD 66 06    ld   h,(ix+$06)
-4628: 23          inc  hl
-4629: 23          inc  hl
-462A: 7E          ld   a,(hl)
-462B: FE EE       cp   $EE
-462D: 20 23       jr   nz,$4652
-462F: 23          inc  hl
-4630: 7E          ld   a,(hl)
-4631: 4F          ld   c,a
-4632: 06 00       ld   b,$00
-4634: 37          scf
-4635: 3F          ccf
-4636: ED 42       sbc  hl,bc
-4638: DD 75 05    ld   (ix+$05),l
-463B: DD 74 06    ld   (ix+$06),h
-463E: 7E          ld   a,(hl)
-463F: DD 77 0B    ld   (ix+$0b),a
-4642: 23          inc  hl
-4643: 7E          ld   a,(hl)
-4644: DD 77 0C    ld   (ix+$0c),a
-4647: DD 6E 0B    ld   l,(ix+$0b)
-464A: DD 66 0C    ld   h,(ix+$0c)
-464D: 7E          ld   a,(hl)
-464E: CD A0 43    call $SFX_WHAT_1
-4651: C9          ret
+    dc   18, $FF
 
-    ;; sfxsomething #9
-4652: FE FF       cp   $FF
-4654: C8          ret  z
-4655: DD 75 05    ld   (ix+$05),l
-4658: DD 74 06    ld   (ix+$06),h
-465B: DD 77 0B    ld   (ix+$0b),a
-465E: 23          inc  hl
-465F: 7E          ld   a,(hl)
-4660: DD 77 0C    ld   (ix+$0c),a
-4663: CD A0 43    call $SFX_WHAT_1
-4666: C9          ret
-4667: FF ...
+;; sfxsomething #7
+_4600:
+    ld   a,(ix+$14)
+    and  a
+    jr   z,$460B
+    dec  a
+    ld   (ix+$14),a
+    ret
+    ld   l,(ix+$0b)
+    ld   h,(ix+$0c)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $FF
+    jr   z,$4622
+    ld   (ix+$0b),l
+    ld   (ix+$0c),h
+    call sfx_what_1
+    ret
+
+;; sfxsomething #8
+    ld   l,(ix+$05)
+    ld   h,(ix+$06)
+    inc  hl
+    inc  hl
+    ld   a,(hl)
+    cp   $EE
+    jr   nz,$4652
+    inc  hl
+    ld   a,(hl)
+    ld   c,a
+    ld   b,$00
+    scf
+    ccf
+    sbc  hl,bc
+    ld   (ix+$05),l
+    ld   (ix+$06),h
+    ld   a,(hl)
+    ld   (ix+$0b),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0c),a
+    ld   l,(ix+$0b)
+    ld   h,(ix+$0c)
+    ld   a,(hl)
+    call sfx_what_1
+    ret
+
+;; sfxsomething #9
+    cp   $FF
+    ret  z
+    ld   (ix+$05),l
+    ld   (ix+$06),h
+    ld   (ix+$0b),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0c),a
+    call sfx_what_1
+    ret
+
+    dc   25, $FF
 
 ;;; sfx something #10
-4680: DD 21 B8 82 ld   ix,$82B8
-4684: DD 7E 0D    ld   a,(ix+$0d)
-4687: A7          and  a
-4688: 28 17       jr   z,$46A1
-468A: CD 00 45    call $4500
-468D: DD 7E 0D    ld   a,(ix+$0d)
-4690: 3D          dec  a
-4691: 28 0E       jr   z,$46A1
-4693: CD 80 45    call $4580
-4696: DD 7E 0D    ld   a,(ix+$0d)
-4699: 3D          dec  a
-469A: 3D          dec  a
-469B: 28 04       jr   z,$46A1
-469D: CD 00 46    call $4600
-46A0: C9          ret
-46A1: C9          ret
+_4680:
+    ld   ix,_82B8
+    ld   a,(ix+$0d)
+    and  a
+    jr   z,$46A1
+    call sfx_01
+    ld   a,(ix+$0d)
+    dec  a
+    jr   z,$46A1
+    call sfx_06
+    ld   a,(ix+$0d)
+    dec  a
+    dec  a
+    jr   z,$46A1
+    call _4600
+    ret
+    ret
 
-46A2: FF ...
+    dc   14, $FF
+;;
+add_a_to_ret_addr:
+    pop  hl
+    ld   b,$00
+    ld   c,a
+    add  hl,bc
+    push hl
+    ret
 
-    ;;
-ADD_A_TO_RET_ADDR
-46B0: E1          pop  hl
-46B1: 06 00       ld   b,$00
-46B3: 4F          ld   c,a
-46B4: 09          add  hl,bc
-46B5: E5          push hl
-46B6: C9          ret
+    dc   9, $FF
 
-46B7: FF ...
+zero_out_some_sfx:
+    ld   hl,_82B8
+    ld   b,$18
+_46C5:
+    ld   (hl),$00
+    inc  hl
+    djnz _46C5
+    ret
 
-ZERO_OUT_SOME_SFX
-46C0: 21 B8 82    ld   hl,$82B8
-46C3: 06 18       ld   b,$18
-46C5: 36 00       ld   (hl),$00
-46C7: 23          inc  hl
-46C8: 10 FB       djnz $46C5
-46CA: C9          ret
+    dc   5, $FF
 
-46CB: FF ...
+;; gets here on death and re-spawn
+clear_sfx_1:
+    call zero_out_some_sfx
+    ld   a,(ch1_sfx)
+    call point_hl_to_sfx_data
+    ld   ix,_82B8
+    call do_something_with_sfx_data
+    xor  a
+    ld   (ch1_sfx),a
+    ret
 
-    ;; gets here on death and re-spawn
-CLEAR_SFX_1
-46D0: CD C0 46    call $ZERO_OUT_SOME_SFX
-46D3: 3A 42 80    ld   a,($CH1_SFX)
-46D6: CD 30 47    call $POINT_HL_TO_SFX_DATA
-46D9: DD 21 B8 82 ld   ix,$82B8
-46DD: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
-46E0: AF          xor  a
-46E1: 32 42 80    ld   ($CH1_SFX),a
-46E4: C9          ret
+    dc   3, $FF
 
-46E5: FF ...
+play_tune_for_cur_screen:
+    ld   a,(num_players)
+    and  a
+    ret  z
+    ld   a,(player_num)
+    and  a
+    jr   nz,$46F8
+    ld   a,(screen_num)
+    jr   _46FB
+    ld   a,(screen_num_p2)
+_46FB:
+    dec  a ; scr - 1
+    add  a,a ; ...
+    add  a,a ; * 3
+    call get_screen_tune_sfx_id
+    ld   b,a
+    ld   a,(sfx_prev)
+    cp   b
+    ret  z
+    ld   a,b
+    ld   (ch1_sfx),a ; wat sfx is this?
+    ld   (sfx_prev),a
+    ret
 
-PLAY_TUNE_FOR_CUR_SCREEN
-46E8: 3A 34 80    ld   a,($NUM_PLAYERS)
-46EB: A7          and  a
-46EC: C8          ret  z
-46ED: 3A 04 80    ld   a,($PLAYER_NUM)
-46F0: A7          and  a
-46F1: 20 05       jr   nz,$46F8
-46F3: 3A 29 80    ld   a,($SCREEN_NUM)
-46F6: 18 03       jr   $46FB
-46F8: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-46FB: 3D          dec  a        ; scr - 1
-46FC: 87          add  a,a      ; ...
-46FD: 87          add  a,a      ; * 3
-46FE: CD B0 49    call $GET_SCREEN_TUNE_SFX_ID
-4701: 47          ld   b,a
-4702: 3A 65 80    ld   a,($SFX_PREV)
-4705: B8          cp   b
-4706: C8          ret  z
-4707: 78          ld   a,b
-4708: 32 42 80    ld   ($CH1_SFX),a ; wat sfx is this?
-470B: 32 65 80    ld   ($SFX_PREV),a
-470E: C9          ret
-470F: FF ...
+    dc   17, $FF
 
-4720: 76          halt          ; only halt in file!
-4721: 0D          dec  c
-4722: FF ...
+    halt ; only halt in file!
+    dec  c
+    dc   14, $FF
 
-    ;;
-POINT_HL_TO_SFX_DATA
-4730: CB 27       sla  a ; sfx id * 4
-4732: CB 27       sla  a
-4734: CD B0 46    call $ADD_A_TO_RET_ADDR
-_SFX_DATA_LOOKUP
-4737: 00          nop ; sfx 0?
-4738: 00          nop
-4739: 00          nop
-473A: C9          ret
-473B: 21 00 5D    ld   hl,$SFX_1_DATA
-473E: C9          ret
-473F: 21 46 4C    ld   hl,$SFX_2_DATA
-4742: C9          ret
-4743: 21 53 50    ld   hl,$SFX_3_DATA
-4746: C9          ret
-4747: 21 BC 50    ld   hl,$SFX_4_DATA
-474A: C9          ret
-474B: 21 EC 50    ld   hl,$SFX_5_DATA
-474E: C9          ret
-474F: 21 9A 51    ld   hl,$SFX_6_DATA
-4752: C9          ret
-4753: 21 EA 51    ld   hl,$SFX_7_DATA
-4756: C9          ret
-4757: 21 14 55    ld   hl,$SFX_8_DATA
-475A: C9          ret
-475B: 21 70 57    ld   hl,$SFX_9_DATA
-475E: C9          ret
-475F: 21 60 55    ld   hl,$SFX_10_DATA
-4762: C9          ret
-4763: 21 EA 5D    ld   hl,$SFX_11_DATA
-4766: C9          ret
-4767: 21 88 5E    ld   hl,$SFX_12_DATA
-476A: C9          ret
-476B: 21 30 5F    ld   hl,$SFX_13_DATA
-476E: C9          ret
-476F: 21 78 5F    ld   hl,$SFX_14_DATA
-4772: C9          ret
-4773: 21 40 4B    ld   hl,$SFX_15_DATA
-4776: C9          ret
-4777: 21 00 00    ld   hl,$0000
-477A: C9          ret
-477B: 21 00 00    ld   hl,$0000
-477E: C9          ret
-477F: 21 00 00    ld   hl,$0000
-4782: C9          ret
-4783: 21 00 00    ld   hl,$0000
-4786: C9          ret
-4787: FF ...
+;;
+point_hl_to_sfx_data:
+    sla  a ; sfx id * 4
+    sla  a
+    call add_a_to_ret_addr
+_sfx_data_lookup:
+    nop ; sfx 0?
+    nop
+    nop
+    ret
+    ld   hl,sfx_1_data
+    ret
+    ld   hl,sfx_2_data
+    ret
+    ld   hl,sfx_3_data
+    ret
+    ld   hl,sfx_4_data
+    ret
+    ld   hl,sfx_5_data
+    ret
+    ld   hl,sfx_6_data
+    ret
+    ld   hl,sfx_7_data
+    ret
+    ld   hl,sfx_8_data
+    ret
+    ld   hl,sfx_9_data
+    ret
+    ld   hl,sfx_10_data
+    ret
+    ld   hl,sfx_11_data
+    ret
+    ld   hl,sfx_12_data
+    ret
+    ld   hl,sfx_13_data
+    ret
+    ld   hl,sfx_14_data
+    ret
+    ld   hl,sfx_15_data
+    ret
+    ld   hl,hard_reset
+    ret
+    ld   hl,hard_reset
+    ret
+    ld   hl,hard_reset
+    ret
+    ld   hl,hard_reset
+    ret
 
-    ;; hl = sfx data
-    ;; ix = ... 82d0, 82e8, or 82b8
-DO_SOMETHING_WITH_SFX_DATA
-4790: 00          nop
-4791: 00          nop
-4792: 00          nop
-4793: 00          nop
-4794: 7E          ld   a,(hl)   ; 1. points at sfx data
-4795: DD 77 0D    ld   (ix+$0d),a
-4798: 47          ld   b,a
-4799: 23          inc  hl
-479A: 7E          ld   a,(hl)   ; 2
-479B: DD 77 01    ld   (ix+$01),a
-479E: 23          inc  hl
-479F: 7E          ld   a,(hl)   ; 3
-47A0: DD 77 02    ld   (ix+$02),a
-47A3: 05          dec  b
-47A4: 28 17       jr   z,$_HERE ; branch...
-47A6: 23          inc  hl
-47A7: 7E          ld   a,(hl)   ; 4
-47A8: DD 77 03    ld   (ix+$03),a
-47AB: 23          inc  hl
-47AC: 7E          ld   a,(hl)   ; 5
-47AD: DD 77 04    ld   (ix+$04),a
-47B0: 05          dec  b
-47B1: 28 0A       jr   z,$_HERE
-47B3: 23          inc  hl
-47B4: 7E          ld   a,(hl)   ; 6
-47B5: DD 77 05    ld   (ix+$05),a
-47B8: 23          inc  hl
-47B9: 7E          ld   a,(hl)   ; 7
-47BA: DD 77 06    ld   (ix+$06),a
-_HERE
-47BD: DD 66 02    ld   h,(ix+$02)
-47C0: DD 6E 01    ld   l,(ix+$01)
-47C3: 7E          ld   a,(hl)
-47C4: DD 77 0E    ld   (ix+$0e),a
-47C7: 23          inc  hl
-47C8: 7E          ld   a,(hl)
-47C9: DD 77 0F    ld   (ix+$0f),a
-47CC: 23          inc  hl
-47CD: 7E          ld   a,(hl)
-47CE: DD 77 10    ld   (ix+$10),a
-47D1: 23          inc  hl
-47D2: 7E          ld   a,(hl)
-47D3: DD 77 11    ld   (ix+$11),a
-47D6: DD 36 12 00 ld   (ix+$12),$00
-47DA: DD 36 13 00 ld   (ix+$13),$00
-47DE: DD 36 14 00 ld   (ix+$14),$00
-47E2: 23          inc  hl
-47E3: DD 75 01    ld   (ix+$01),l
-47E6: DD 74 02    ld   (ix+$02),h
-47E9: 7E          ld   a,(hl)
-47EA: DD 77 07    ld   (ix+$07),a
-47ED: 23          inc  hl
-47EE: 7E          ld   a,(hl)
-47EF: DD 77 08    ld   (ix+$08),a
-47F2: DD 6E 03    ld   l,(ix+$03)
-47F5: DD 66 04    ld   h,(ix+$04)
-47F8: 7E          ld   a,(hl)
-47F9: DD 77 09    ld   (ix+$09),a
-47FC: 23          inc  hl
-47FD: 7E          ld   a,(hl)
-47FE: DD 77 0A    ld   (ix+$0a),a
-4801: DD 6E 05    ld   l,(ix+$05)
-4804: DD 66 04    ld   h,(ix+$04)
-4807: 7E          ld   a,(hl)
-4808: DD 77 0B    ld   (ix+$0b),a
-480B: 23          inc  hl
-480C: 7E          ld   a,(hl)
-480D: DD 77 0C    ld   (ix+$0c),a
-4810: CD 20 43    call $SFX_SOMETHING_CH_1
-4813: DD 7E 0D    ld   a,(ix+$0d)
-4816: 3D          dec  a
-4817: C8          ret  z
-4818: CD 60 43    call $SFX_SOMETHING_CH_2
-481B: DD 7E 0D    ld   a,(ix+$0d)
-481E: 3D          dec  a
-481F: 3D          dec  a
-4820: C8          ret  z
-4821: CD A0 43    call $SFX_WHAT_1
-4824: C9          ret
-4825: FF ...
+    dc   9, $FF
 
-SFX_QUEUER
-4840: 3A 42 80    ld   a,($CH1_SFX)
-4843: A7          and  a
-4844: 20 05       jr   nz,$484B
-4846: CD 80 46    call $4680    ; play in ch1
-4849: 18 03       jr   $484E
-484B: CD D0 46    call $CLEAR_SFX_1  ; ... kill ch1?
-484E: 3A 43 80    ld   a,($CH2_SFX)  ; and try ch2?
-4851: A7          and  a
-4852: 20 05       jr   nz,$4859
-4854: CD E0 48    call $48E0    ; play in ch2?
-4857: 18 03       jr   $485C
-4859: CD 20 49    call $CLEAR_SFX_2 ;
-485C: 3A 44 80    ld   a,($SFX_ID)
-485F: A7          and  a
-4860: 20 05       jr   nz,$4867
-4862: CD 7C 48    call $MORE_SFX_SOMETHING
-4865: 18 03       jr   $_DONE
-4867: CD 9C 48    call $PLAY_SFX
-_DONE
-486A: C9          ret
-486B: FF ...
+;; hl = sfx data
+;; ix = ... 82d0, 82e8, or 82b8
+do_something_with_sfx_data:
+    nop
+    nop
+    nop
+    nop
+    ld   a,(hl) ; 1. points at sfx data
+    ld   (ix+$0d),a
+    ld   b,a
+    inc  hl
+    ld   a,(hl) ; 2
+    ld   (ix+$01),a
+    inc  hl
+    ld   a,(hl) ; 3
+    ld   (ix+$02),a
+    dec  b
+    jr   z,_here ; branch...
+    inc  hl
+    ld   a,(hl) ; 4
+    ld   (ix+$03),a
+    inc  hl
+    ld   a,(hl) ; 5
+    ld   (ix+$04),a
+    dec  b
+    jr   z,_here
+    inc  hl
+    ld   a,(hl) ; 6
+    ld   (ix+$05),a
+    inc  hl
+    ld   a,(hl) ; 7
+    ld   (ix+$06),a
+_here:
+    ld   h,(ix+$02)
+    ld   l,(ix+$01)
+    ld   a,(hl)
+    ld   (ix+$0e),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0f),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$10),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$11),a
+    ld   (ix+$12),$00
+    ld   (ix+$13),$00
+    ld   (ix+$14),$00
+    inc  hl
+    ld   (ix+$01),l
+    ld   (ix+$02),h
+    ld   a,(hl)
+    ld   (ix+$07),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$08),a
+    ld   l,(ix+$03)
+    ld   h,(ix+$04)
+    ld   a,(hl)
+    ld   (ix+$09),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0a),a
+    ld   l,(ix+$05)
+    ld   h,(ix+$04)
+    ld   a,(hl)
+    ld   (ix+$0b),a
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$0c),a
+    call sfx_something_ch_1
+    ld   a,(ix+$0d)
+    dec  a
+    ret  z
+    call sfx_something_ch_2
+    ld   a,(ix+$0d)
+    dec  a
+    dec  a
+    ret  z
+    call sfx_what_1
+    ret
+
+    dc   27, $FF
+
+sfx_queuer:
+    ld   a,(ch1_sfx)
+    and  a
+    jr   nz,$484B
+    call _4680 ; play in ch1
+    jr   _484E
+    call clear_sfx_1 ; ... kill ch1?
+_484E:
+    ld   a,(ch2_sfx) ; and try ch2?
+    and  a
+    jr   nz,$4859
+    call _48E0 ; play in ch2?
+    jr   _485C
+    call clear_sfx_2
+_485C:
+    ld   a,(sfx_id)
+    and  a
+    jr   nz,$4867
+    call more_sfx_something
+    jr   _done_486A
+    call play_sfx
+_done_486A:
+    ret
+
+    dc   5, $FF
 
 ;;; called from PLAY_SFX...
-ZERO_OUT_SOME_SFX_2
-4870: 21 E8 82    ld   hl,$82E8
-4873: 06 18       ld   b,$18
-4875: 36 00       ld   (hl),$00
-4877: 23          inc  hl
-4878: 10 FB       djnz $4875
-487A: C9          ret
-487B: FF          rst  $38
+zero_out_some_sfx_2:
+    ld   hl,_82E8
+    ld   b,$18
+_4875:
+    ld   (hl),$00
+    inc  hl
+    djnz _4875
+    ret
+
+    dc   1, $FF
 
 ;;; more sfx something
-MORE_SFX_SOMETHING
-487C: DD 21 E8 82 ld   ix,$82E8
-4880: DD 7E 0D    ld   a,(ix+$0d)
-4883: A7          and  a
-4884: C8          ret  z
-4885: CD 00 46    call $4600
-4888: DD 7E 0D    ld   a,(ix+$0d)
-488B: 3D          dec  a
-488C: C8          ret  z
-488D: CD 00 45    call $4500
-4890: DD 7E 0D    ld   a,(ix+$0d)
-4893: 3D          dec  a
-4894: 3D          dec  a
-4895: C8          ret  z
-4896: CD 80 45    call $4580
-4899: C9          ret
+more_sfx_something:
+    ld   ix,_82E8
+    ld   a,(ix+$0d)
+    and  a
+    ret  z
+    call _4600
+    ld   a,(ix+$0d)
+    dec  a
+    ret  z
+    call sfx_01
+    ld   a,(ix+$0d)
+    dec  a
+    dec  a
+    ret  z
+    call sfx_06
+    ret
 
-489A: FF FF
+    dc   2, $FF
 
-PLAY_SFX
-489C: CD 70 48    call $ZERO_OUT_SOME_SFX_2
-489F: 3A 44 80    ld   a,($SFX_ID)
-48A2: CD 30 47    call $POINT_HL_TO_SFX_DATA
-48A5: DD 21 E8 82 ld   ix,$82E8
-48A9: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
-48AC: AF          xor  a
-48AD: 32 44 80    ld   ($SFX_ID),a
-48B0: C9          ret
-48B1: FF          rst  $38
+play_sfx:
+    call zero_out_some_sfx_2
+    ld   a,(sfx_id)
+    call point_hl_to_sfx_data
+    ld   ix,_82E8
+    call do_something_with_sfx_data
+    xor  a
+    ld   (sfx_id),a
+    ret
 
-ATTRACT_YOUR_BEING_CHASED_FLASH
-48B2: CD 50 4B    call $YOUR_BEING_CHASED_DINO_SPRITE
-48B5: CD A8 5A    call $FLASH_BORDER
-48B8: CD A8 5A    call $FLASH_BORDER
-48BB: CD A8 5A    call $FLASH_BORDER
-48BE: CD A8 5A    call $FLASH_BORDER
-48C1: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-48C4: CD 81 5C    call $JMP_HL
-48C7: CD A8 5A    call $FLASH_BORDER
-48CA: C9          ret
-48CB: FF ...
+    dc   1, $FF
+
+attract_your_being_chased_flash:
+    call your_being_chased_dino_sprite
+    call flash_border
+    call flash_border
+    call flash_border
+    call flash_border
+    ld   hl,reset_xoff_sprites_and_clear_screen
+    call jmp_hl
+    call flash_border
+    ret
+
+    dc   21, $FF
 
 ;;; Even more sfx something
-48E0: DD 21 D0 82 ld   ix,$82D0
-48E4: DD 7E 0D    ld   a,(ix+$0d)
-48E7: A7          and  a
-48E8: C8          ret  z
-48E9: CD 80 45    call $4580
-48EC: DD 7E 0D    ld   a,(ix+$0d)
-48EF: 3D          dec  a
-48F0: C8          ret  z
-48F1: CD 00 46    call $4600
-48F4: DD 7E 0D    ld   a,(ix+$0d)
-48F7: 3D          dec  a
-48F8: 3D          dec  a
-48F9: C8          ret  z
-48FA: CD 00 45    call $4500
-48FD: C9          ret
+_48E0:
+    ld   ix,_82D0
+    ld   a,(ix+$0d)
+    and  a
+    ret  z
+    call sfx_06
+    ld   a,(ix+$0d)
+    dec  a
+    ret  z
+    call _4600
+    ld   a,(ix+$0d)
+    dec  a
+    dec  a
+    ret  z
+    call sfx_01
+    ret
 
-48FE: FF ...
+    dc   2, $FF
 
-JUMP_REL_A_COPY   ; duplicate routine
-4900: D9          exx
-4901: E1          pop  hl
-4902: 06 00       ld   b,$00
-4904: 4F          ld   c,a
-4905: 09          add  hl,bc
-4906: E5          push hl
-4907: D9          exx
-4908: C9          ret
-4909: FF ...
+jump_rel_a_copy:  ; duplicate routine
+    exx
+    pop  hl
+    ld   b,$00
+    ld   c,a
+    add  hl,bc
+    push hl
+    exx
+    ret
 
-ZERO_OUT_SOME_SFX_3
-4910: 21 D0 82    ld   hl,$82D0
-4913: 06 18       ld   b,$18
-4915: 36 00       ld   (hl),$00
-4917: 23          inc  hl
-4918: 10 FB       djnz $4915
-491A: C9          ret
-491B: FF ...
+    dc   7, $FF
 
-CLEAR_SFX_2
-4920: CD 10 49    call $ZERO_OUT_SOME_SFX_3
-4923: 3A 43 80    ld   a,($CH2_SFX)
-4926: CD 30 47    call $POINT_HL_TO_SFX_DATA
-4929: DD 21 D0 82 ld   ix,$82D0
-492D: CD 90 47    call $DO_SOMETHING_WITH_SFX_DATA
-4930: AF          xor  a
-4931: 32 43 80    ld   ($CH2_SFX),a
-4934: C9          ret
-4935: FF ...
+zero_out_some_sfx_3:
+    ld   hl,_82D0
+    ld   b,$18
+_4915:
+    ld   (hl),$00
+    inc  hl
+    djnz _4915
+    ret
 
-4940: 00          nop
-4941: 00          nop
-4942: 0E 00       ld   c,$00
-4944: CB 47       bit  0,a
-4946: 28 02       jr   z,$494A
-4948: CB E8       set  5,b
-494A: CB 4F       bit  1,a
-494C: 28 02       jr   z,$4950
-494E: CB E0       set  4,b
-4950: CB 57       bit  2,a
-4952: 28 02       jr   z,$4956
-4954: CB F9       set  7,c
-4956: CB 5F       bit  3,a
-4958: 28 02       jr   z,$495C
-495A: CB F1       set  6,c
-495C: CB 67       bit  4,a
-495E: 28 02       jr   z,$4962
-4960: CB E9       set  5,c
-4962: CB 6F       bit  5,a
-4964: 28 02       jr   z,$4968
-4966: CB E1       set  4,c
-4968: CB 77       bit  6,a
-496A: 28 02       jr   z,$496E
-496C: CB D9       set  3,c
-496E: CB 7F       bit  7,a
-4970: 28 02       jr   z,$4974
-4972: CB D1       set  2,c
-4974: 78          ld   a,b
-4975: 00          nop
-4976: 00          nop
-4977: 00          nop
-4978: 79          ld   a,c
-4979: 00          nop
-497A: 00          nop
-497B: 00          nop
-497C: C9          ret
-497D: FF ...
+    dc   5, $FF
 
-4980: 00          nop
-4981: 00          nop
-4982: 0E F0       ld   c,$F0
-4984: CB 47       bit  0,a
-4986: 28 02       jr   z,$498A
-4988: CB B9       res  7,c
-498A: CB 4F       bit  1,a
-498C: 28 02       jr   z,$4990
-498E: CB B1       res  6,c
-4990: CB 57       bit  2,a
-4992: 28 02       jr   z,$4996
-4994: CB A9       res  5,c
-4996: CB 5F       bit  3,a
-4998: 28 02       jr   z,$499C
-499A: CB A1       res  4,c
-499C: 79          ld   a,c
-499D: 80          add  a,b
-499E: 00          nop
-499F: 00          nop
-49A0: 00          nop
-49A1: C9          ret
-49A2: FF ...
+clear_sfx_2:
+    call zero_out_some_sfx_3
+    ld   a,(ch2_sfx)
+    call point_hl_to_sfx_data
+    ld   ix,_82D0
+    call do_something_with_sfx_data
+    xor  a
+    ld   (ch2_sfx),a
+    ret
 
-    ;; set the sfx value for the new screen
-    ;; a contains offset of sfx to play for screen
-GET_SCREEN_TUNE_SFX_ID
-49B0: CD B0 46    call $ADD_A_TO_RET_ADDR
-49B3: 3E 0E       ld   a,$0E    ; scr 1
-49B5: C9          ret
-49B6: 00          nop
-49B7: 3E 0E       ld   a,$0E
-49B9: C9          ret
-49BA: 00          nop
-49BB: 3E 0E       ld   a,$0E
-49BD: C9          ret
-49BE: 00          nop
-49BF: 3E 0E       ld   a,$0E
-49C1: C9          ret
-49C2: 00          nop
-49C3: 3E 0E       ld   a,$0E
-49C5: C9          ret
-49C6: 00          nop
-49C7: 3E 0E       ld   a,$0E
-49C9: C9          ret
-49CA: 00          nop
-49CB: 3E 0D       ld   a,$0D
-49CD: C9          ret
-49CE: 00          nop
-49CF: 3E 01       ld   a,$01
-49D1: C9          ret
-49D2: 00          nop
-49D3: 3E 01       ld   a,$01
-49D5: C9          ret
-49D6: 00          nop
-49D7: 3E 01       ld   a,$01
-49D9: C9          ret
-49DA: 00          nop
-49DB: 3E 01       ld   a,$01
-49DD: C9          ret
-49DE: 00          nop
-49DF: 3E 01       ld   a,$01
-49E1: C9          ret
-49E2: 00          nop
-49E3: 3E 0B       ld   a,$0B
-49E5: C9          ret
-49E6: 00          nop
-49E7: 3E 0B       ld   a,$0B
-49E9: C9          ret
-49EA: 00          nop
-49EB: 3E 0B       ld   a,$0B
-49ED: C9          ret
-49EE: 00          nop
-49EF: 3E 0B       ld   a,$0B
-49F1: C9          ret
-49F2: 00          nop
-49F3: 3E 0B       ld   a,$0B
-49F5: C9          ret
-49F6: 00          nop
-49F7: 3E 0B       ld   a,$0B
-49F9: C9          ret
-49FA: 00          nop
-49FB: 3E 0B       ld   a,$0B
-49FD: C9          ret
-49FE: 00          nop
-49FF: 3E 0D       ld   a,$0D
-4A01: C9          ret
-4A02: 00          nop
-4A03: 3E 0C       ld   a,$0C    ; scr 21: best tune
-4A05: C9          ret
-4A06: 00          nop
-4A07: 3E 0C       ld   a,$0C
-4A09: C9          ret
-4A0A: 00          nop
-4A0B: 3E 0C       ld   a,$0C
-4A0D: C9          ret
-4A0E: 00          nop
-4A0F: 3E 0C       ld   a,$0C
-4A11: C9          ret
-4A12: 00          nop
-4A13: 3E 0C       ld   a,$0C
-4A15: C9          ret
-4A16: 00          nop
-4A17: 3E 0C       ld   a,$0C
-4A19: C9          ret
-4A1A: 00          nop
-4A1B: 3E 0E       ld   a,$0E
-4A1D: C9          ret
-4A1E: 00          nop
-4A1F: FF
+    dc   11, $FF
 
-4A20: 15          dec  d
-4A21: 01 17 01    ld   bc,$0117
-4A24: 19          add  hl,de
-4A25: 01 1A 02    ld   bc,$021A
-4A28: 1A          ld   a,(de)
-4A29: 02          ld   (bc),a
-4A2A: 18 02       jr   $4A2E
-4A2C: 18 02       jr   $4A30
-4A2E: 17          rla
-4A2F: 02          ld   (bc),a
-4A30: 17          rla
-4A31: 02          ld   (bc),a
-4A32: 16 02       ld   d,$02
-4A34: 16 02       ld   d,$02
-4A36: 15          dec  d
-4A37: 02          ld   (bc),a
-4A38: 15          dec  d
-4A39: 02          ld   (bc),a
-4A3A: 13          inc  de
-4A3B: 02          ld   (bc),a
-4A3C: 13          inc  de
-4A3D: 02          ld   (bc),a
-4A3E: 12          ld   (de),a
-4A3F: 01 0E 01    ld   bc,$010E
-4A42: 10 01       djnz $4A45
-4A44: 0E 02       ld   c,$02
-4A46: FF          rst  $38
-4A47: FF          rst  $38
-4A48: 15          dec  d
-4A49: 01 17 01    ld   bc,$0117
-4A4C: 19          add  hl,de
-4A4D: 01 21 01    ld   bc,$0121
-4A50: 26 02       ld   h,$02
-4A52: 21 01 26    ld   hl,$2601
-4A55: 02          ld   (bc),a
-4A56: 21 02 20    ld   hl,$2002
-4A59: 01 26 02    ld   bc,$0226
-4A5C: 20 01       jr   nz,$4A5F
-4A5E: 26 02       ld   h,$02
-4A60: 20 02       jr   nz,$4A64
-4A62: 1F          rra
-4A63: 01 26 02    ld   bc,$0226
-4A66: 1F          rra
-4A67: 01 26 02    ld   bc,$0226
-4A6A: 1F          rra
-4A6B: 02          ld   (bc),a
-4A6C: 1E 01       ld   e,$01
-4A6E: 1F          rra
-4A6F: 01 20 01    ld   bc,$0120
-4A72: 21 02 FF    ld   hl,$FF02
-4A75: FF          rst  $38
-4A76: FF          rst  $38
-4A77: FF          rst  $38
-4A78: FF          rst  $38
-4A79: FF          rst  $38
-4A7A: FF          rst  $38
-4A7B: FF          rst  $38
-4A7C: FF          rst  $38
-4A7D: FF          rst  $38
-4A7E: FF          rst  $38
-4A7F: FF          rst  $38
-4A80: 13          inc  de
-4A81: 04          inc  b
-4A82: 1A          ld   a,(de)
-4A83: 04          inc  b
-4A84: 1A          ld   a,(de)
-4A85: 04          inc  b
-4A86: 18 02       jr   $4A8A
-4A88: 17          rla
-4A89: 02          ld   (bc),a
-4A8A: 18 02       jr   $4A8E
-4A8C: 1A          ld   a,(de)
-4A8D: 02          ld   (bc),a
-4A8E: 1C          inc  e
-4A8F: 02          ld   (bc),a
-4A90: 1A          ld   a,(de)
-4A91: 0A          ld   a,(bc)
-4A92: FF          rst  $38
-4A93: FF          rst  $38
-4A94: 1F          rra
-4A95: 02          ld   (bc),a
-4A96: 1E 02       ld   e,$02
-4A98: 1C          inc  e
-4A99: 04          inc  b
-4A9A: 1A          ld   a,(de)
-4A9B: 02          ld   (bc),a
-4A9C: 18 02       jr   $4AA0
-4A9E: 17          rla
-4A9F: 04          inc  b
-4AA0: 15          dec  d
-4AA1: 02          ld   (bc),a
-4AA2: 13          inc  de
-4AA3: 02          ld   (bc),a
-4AA4: 15          dec  d
-4AA5: 02          ld   (bc),a
-4AA6: 17          rla
-4AA7: 0A          ld   a,(bc)
-4AA8: FF          rst  $38
-4AA9: FF          rst  $38
-4AAA: 23          inc  hl
-4AAB: 02          ld   (bc),a
-4AAC: 21 02 1F    ld   hl,$1F02
-4AAF: 02          ld   (bc),a
-4AB0: 1E 02       ld   e,$02
-4AB2: 1C          inc  e
-4AB3: 02          ld   (bc),a
-4AB4: 1A          ld   a,(de)
-4AB5: 02          ld   (bc),a
-4AB6: 18 02       jr   $4ABA
-4AB8: 17          rla
-4AB9: 02          ld   (bc),a
-4ABA: 15          dec  d
-4ABB: 02          ld   (bc),a
-4ABC: 13          inc  de
-4ABD: 02          ld   (bc),a
-4ABE: 12          ld   (de),a
-4ABF: 02          ld   (bc),a
-4AC0: 13          inc  de
-4AC1: 0A          ld   a,(bc)
-4AC2: FF          rst  $38
-4AC3: FF          rst  $38
-4AC4: 15          dec  d
-4AC5: 03          inc  bc
-4AC6: 1A          ld   a,(de)
-4AC7: 04          inc  b
-4AC8: 1A          ld   a,(de)
-4AC9: 04          inc  b
-4ACA: 1A          ld   a,(de)
-4ACB: 04          inc  b
-4ACC: 1A          ld   a,(de)
-4ACD: 04          inc  b
-4ACE: 17          rla
-4ACF: 04          inc  b
-4AD0: 17          rla
-4AD1: 04          inc  b
-4AD2: 1A          ld   a,(de)
-4AD3: 08          ex   af,af'
-4AD4: 1A          ld   a,(de)
-4AD5: 04          inc  b
-4AD6: 1A          ld   a,(de)
-4AD7: 04          inc  b
-4AD8: 1A          ld   a,(de)
-4AD9: 04          inc  b
-4ADA: 1A          ld   a,(de)
-4ADB: 04          inc  b
-4ADC: 19          add  hl,de
-4ADD: 04          inc  b
-4ADE: 19          add  hl,de
-4ADF: 04          inc  b
-4AE0: 1A          ld   a,(de)
-4AE1: 05          dec  b
-4AE2: FF          rst  $38
-4AE3: FF          rst  $38
-4AE4: 15          dec  d
-4AE5: 03          inc  bc
-4AE6: 15          dec  d
-4AE7: 02          ld   (bc),a
-4AE8: 15          dec  d
-4AE9: 02          ld   (bc),a
-4AEA: 15          dec  d
-4AEB: 02          ld   (bc),a
-4AEC: 15          dec  d
-4AED: 02          ld   (bc),a
-4AEE: 13          inc  de
-4AEF: 02          ld   (bc),a
-4AF0: 13          inc  de
-4AF1: 02          ld   (bc),a
-4AF2: 10 02       djnz $4AF6
-4AF4: 10 02       djnz $4AF8
-4AF6: 10 02       djnz $4AFA
-4AF8: 10 02       djnz $4AFC
-4AFA: 0E 02       ld   c,$02
-4AFC: 0E 02       ld   c,$02
-4AFE: 09          add  hl,bc
-4AFF: 02          ld   (bc),a
-4B00: 09          add  hl,bc
-4B01: 01 09 02    ld   bc,$0209
-4B04: FF          rst  $38
-4B05: FF          rst  $38
-4B06: 15          dec  d
-4B07: 20 FF       jr   nz,$4B08
-4B09: FF          rst  $38
-4B0A: FF          rst  $38
-4B0B: FF          rst  $38
-4B0C: 15          dec  d
-4B0D: 01 1A 02    ld   bc,$021A
-4B10: 15          dec  d
-4B11: 01 1A 02    ld   bc,$021A
-4B14: 15          dec  d
-4B15: 02          ld   (bc),a
-4B16: 14          inc  d
-4B17: 01 1A 02    ld   bc,$021A
-4B1A: 14          inc  d
-4B1B: 01 1A 02    ld   bc,$021A
-4B1E: 14          inc  d
-4B1F: 02          ld   (bc),a
-4B20: 13          inc  de
-4B21: 01 1A 02    ld   bc,$021A
-4B24: 13          inc  de
-4B25: 01 1A 02    ld   bc,$021A
-4B28: 13          inc  de
-4B29: 02          ld   (bc),a
-4B2A: 12          ld   (de),a
-4B2B: 02          ld   (bc),a
-4B2C: 09          add  hl,bc
-4B2D: 02          ld   (bc),a
-4B2E: 0E 02       ld   c,$02
-4B30: FF          rst  $38
-4B31: FF          rst  $38
-4B32: 01 05 0F    ld   bc,$0F05
-4B35: 00          nop
-4B36: 0C          inc  c
-4B37: 4B          ld   c,e
-4B38: FF          rst  $38
-4B39: FF          rst  $38
-4B3A: FF          rst  $38
-4B3B: FF          rst  $38
-4B3C: 48          ld   c,b
-4B3D: 4B          ld   c,e
-4B3E: FF          rst  $38
-4B3F: FF          rst  $38
+    nop
+    nop
+    ld   c,$00
+    bit  0,a
+    jr   z,$494A
+    set  5,b
+    bit  1,a
+    jr   z,$4950
+    set  4,b
+    bit  2,a
+    jr   z,$4956
+    set  7,c
+    bit  3,a
+    jr   z,$495C
+    set  6,c
+    bit  4,a
+    jr   z,$4962
+    set  5,c
+    bit  5,a
+    jr   z,$4968
+    set  4,c
+    bit  6,a
+    jr   z,$496E
+    set  3,c
+    bit  7,a
+    jr   z,$4974
+    set  2,c
+    ld   a,b
+    nop
+    nop
+    nop
+    ld   a,c
+    nop
+    nop
+    nop
+    ret
 
-SFX_15_DATA
-4B40: 03 32 4B 36 4B 36 4B FF
-4B48: 00 01 FF FF FF FF FF FF
+    dc   3, $FF
 
-    ;;
-YOUR_BEING_CHASED_DINO_SPRITE
-4B50: 21 40 81    ld   hl,$PLAYER_X
-4B53: 36 85       ld   (hl),$85 ; x
-4B55: 23          inc  hl
-4B56: 36 2C       ld   (hl),$2C ; frame
-4B58: 23          inc  hl
-4B59: 36 12       ld   (hl),$12 ; color
-4B5B: 23          inc  hl
-4B5C: 36 90       ld   (hl),$90 ; y
-4B5E: 23          inc  hl
-4B5F: 36 7E       ld   (hl),$7E ; x legs
-4B61: 23          inc  hl
-4B62: 36 30       ld   (hl),$30 ; frame legs
-4B64: 23          inc  hl
-4B65: 36 12       ld   (hl),$12 ; color legs
-4B67: 23          inc  hl
-4B68: 36 A0       ld   (hl),$A0 ; y legs
-4B6A: 23          inc  hl
-4B6B: C9          ret
+    nop
+    nop
+    ld   c,$F0
+    bit  0,a
+    jr   z,$498A
+    res  7,c
+    bit  1,a
+    jr   z,$4990
+    res  6,c
+    bit  2,a
+    jr   z,$4996
+    res  5,c
+    bit  3,a
+    jr   z,$499C
+    res  4,c
+    ld   a,c
+    add  a,b
+    nop
+    nop
+    nop
+    ret
 
-4B6C: FF ...
+    dc   14, $FF
 
-4BE0: 0E 04       ld   c,$04
-4BE2: 0E 02       ld   c,$02
-4BE4: 0C          inc  c
-4BE5: 02          ld   (bc),a
-4BE6: 0E 04       ld   c,$04
-4BE8: 11 02 10    ld   de,$1002
-4BEB: 02          ld   (bc),a
-4BEC: 0E 02       ld   c,$02
-4BEE: 0E 02       ld   c,$02
-4BF0: 0C          inc  c
-4BF1: 02          ld   (bc),a
-4BF2: 0E 10       ld   c,$10
-4BF4: FF          rst  $38
-4BF5: FF          rst  $38
-4BF6: 09          add  hl,bc
-4BF7: 04          inc  b
-4BF8: 07          rlca
-4BF9: 02          ld   (bc),a
-4BFA: 09          add  hl,bc
-4BFB: 04          inc  b
-4BFC: 1A          ld   a,(de)
-4BFD: 02          ld   (bc),a
-4BFE: 18 02       jr   $4C02
-4C00: 18 02       jr   $4C04
-4C02: 09          add  hl,bc
-4C03: 02          ld   (bc),a
-4C04: 09          add  hl,bc
-4C05: 02          ld   (bc),a
-4C06: 07          rlca
-4C07: 02          ld   (bc),a
-4C08: 09          add  hl,bc
-4C09: 04          inc  b
-4C0A: FF          rst  $38
-4C0B: FF          rst  $38
-4C0C: FF          rst  $38
-4C0D: FF          rst  $38
-4C0E: FF          rst  $38
-4C0F: FF          rst  $38
-4C10: FF          rst  $38
-4C11: FF          rst  $38
-4C12: FF          rst  $38
-4C13: FF          rst  $38
-4C14: FF          rst  $38
-4C15: FF          rst  $38
-4C16: FF          rst  $38
-4C17: FF          rst  $38
-4C18: FF          rst  $38
-4C19: FF          rst  $38
-4C1A: FF          rst  $38
-4C1B: FF          rst  $38
-4C1C: FF          rst  $38
-4C1D: FF          rst  $38
-4C1E: FF          rst  $38
-4C1F: FF          rst  $38
-4C20: FF          rst  $38
-4C21: FF          rst  $38
-4C22: FF          rst  $38
-4C23: FF          rst  $38
-4C24: FF          rst  $38
-4C25: FF          rst  $38
-4C26: FF          rst  $38
-4C27: FF          rst  $38
-4C28: FF          rst  $38
-4C29: FF          rst  $38
-4C2A: FF          rst  $38
-4C2B: FF          rst  $38
-4C2C: FF          rst  $38
-4C2D: FF          rst  $38
-4C2E: FF          rst  $38
-4C2F: FF          rst  $38
-4C30: 32 4C FF    ld   ($FF4C),a
-4C33: FF          rst  $38
-4C34: FF          rst  $38
-4C35: FF          rst  $38
-4C36: 01 04 0F    ld   bc,$0F04
-4C39: 00          nop
-4C3A: E0          ret  po
-4C3B: 4B          ld   c,e
-4C3C: FF          rst  $38
-4C3D: FF          rst  $38
-4C3E: F6 4B       or   $4B
-4C40: FF          rst  $38
-4C41: FF          rst  $38
-4C42: 0C          inc  c
-4C43: 0C          inc  c
-4C44: FF          rst  $38
-4C45: FF          rst  $38
+;; set the sfx value for the new screen
+;; a contains offset of sfx to play for screen
+get_screen_tune_sfx_id:
+    call add_a_to_ret_addr
+    ld   a,$0E ; scr 1
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    ld   a,$0D
+    ret
+    nop
+    ld   a,$01
+    ret
+    nop
+    ld   a,$01
+    ret
+    nop
+    ld   a,$01
+    ret
+    nop
+    ld   a,$01
+    ret
+    nop
+    ld   a,$01
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0B
+    ret
+    nop
+    ld   a,$0D
+    ret
+    nop
+    ld   a,$0C ; scr 21: best tune
+    ret
+    nop
+    ld   a,$0C
+    ret
+    nop
+    ld   a,$0C
+    ret
+    nop
+    ld   a,$0C
+    ret
+    nop
+    ld   a,$0C
+    ret
+    nop
+    ld   a,$0C
+    ret
+    nop
+    ld   a,$0E
+    ret
+    nop
+    rst  $38
 
-SFX_2_DATA
-4C46: 03
-4C47: 36 4C
-4C49: 3E 4C
-4C4B: 30 4C
+;; notes for haapy intro tune
+    db   $15,$01,$17,$01,$19,$01,$1A,$02
+    db   $1A,$02,$18,$02,$18,$02,$17,$02
+    db   $17,$02,$16,$02,$16,$02,$15,$02
+    db   $15,$02,$13,$02,$13,$02,$12,$01
+    db   $0E,$01,$10,$01,$0E,$02,$FF,$FF
+    db   $15,$01,$17,$01,$19,$01,$21,$01
+    db   $26,$02,$21,$01,$26,$02,$21,$02
+    db   $20,$01,$26,$02,$20,$01,$26,$02
+    db   $20,$02,$1F,$01,$26,$02,$1F,$01
+    db   $26,$02,$1F,$02,$1E,$01,$1F,$01
+    db   $20,$01,$21,$02
+    dc   12, $FF
+    db   $13,$04,$1A,$04,$1A,$04,$18,$02
+    db   $17,$02,$18,$02,$1A,$02,$1C,$02
+    db   $1A,$0A,$FF,$FF,$1F,$02,$1E,$02
+    db   $1C
+    db   $04
+    db   $1A
+    db   $02
+    db   $18,$02
+    db   $17
+    db   $04
+    db   $15
+    db   $02
+    db   $13
+    db   $02
+    db   $15
+    db   $02
+    db   $17
+    db   $0A
+    db   $FF
+    db   $FF
+    db   $23
+    db   $02
+    db   $21,$02,$1F
+    db   $02
+    db   $1E,$02
+    db   $1C
+    db   $02
+    db   $1A
+    db   $02
+    db   $18,$02
+    db   $17
+    db   $02
+    db   $15
+    db   $02
+    db   $13
+    db   $02
+    db   $12
+    db   $02
+    db   $13
+    db   $0A
+    db   $FF
+    db   $FF
+    db   $15
+    db   $03
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $17
+    db   $04
+    db   $17
+    db   $04
+    db   $1A
+    db   $08
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $19
+    db   $04
+    db   $19
+    db   $04
+    db   $1A
+    db   $05
+    db   $FF
+    db   $FF
+    db   $15
+    db   $03
+    db   $15
+    db   $02
+    db   $15
+    db   $02
+    db   $15
+    db   $02
+    db   $15
+    db   $02
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $10,$02
+    db   $10,$02
+    db   $10,$02
+    db   $10,$02
+    db   $0E,$02
+    db   $0E,$02
+    db   $09
+    db   $02
+    db   $09
+    db   $01,$09,$02
+    db   $FF
+    db   $FF
+    db   $15
+    db   $20
+    dc   4, $FF
 
-4C4D: FF          rst  $38
-4C4E: FF          rst  $38
-4C4F: FF          rst  $38
+;; sfx 15 notes/len
+_4B0C:
+    db   $15,$01,$1A,$02,$15,$01,$1A,$02
+    db   $15,$02,$14,$01,$1A,$02,$14,$01
+    db   $1A,$02,$14,$02,$13,$01,$1A,$02
+    db   $13,$01,$1A,$02,$13,$02,$12,$02
+    db   $09,$02,$0E
+    db   0x2
+    dc   2, $FF
+_4B32:
+    db   $01,$05,$0F,$00 ; len/vel/vol/trans
+_4B36:
+    dw   _4B0C  ; notes
+    dc   4, $FF
+    dw   _4B48
+    dc   2, $FF
 
-    ;;
-ADD_SCREEN_PICKUPS
-4C50: CD 84 44    call $DRAW_CAGE_TOP
-4C53: 3A 04 80    ld   a,($PLAYER_NUM)
-4C56: A7          and  a
-4C57: 28 05       jr   z,$4C5E
-4C59: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-4C5C: 18 03       jr   $4C61
-4C5E: 3A 29 80    ld   a,($SCREEN_NUM)
-4C61: 3D          dec  a        ; scr - 1
-4C62: 87          add  a,a      ;
-4C63: 87          add  a,a      ; * 3
-4C64: CD 00 49    call $JUMP_REL_A_COPY
-    ;; One per screen
-4C67: CD E3 4C    call $ADD_PICKUP_PAT_1
-4C6A: C9          ret
-4C6B: CD E8 45    call $ADD_PICKUP_PAT_2
-4C6E: C9          ret
-4C6F: CD 68 45    call $ADD_PICKUP_PAT_3
-4C72: C9          ret
-4C73: CD E3 4C    call $ADD_PICKUP_PAT_1
-4C76: C9          ret
-4C77: CD 70 45    call $ADD_PICKUP_PAT_4
-4C7A: C9          ret
-4C7B: CD 70 40    call $ADD_PICKUP_PAT_5
-4C7E: C9          ret
-4C7F: CD 78 40    call $ADD_PICKUP_PAT_6
-4C82: C9          ret
-4C83: CD E8 45    call $ADD_PICKUP_PAT_2
-4C86: C9          ret
-4C87: CD 68 45    call $ADD_PICKUP_PAT_3
-4C8A: C9          ret
-4C8B: CD 70 45    call $ADD_PICKUP_PAT_4
-4C8E: C9          ret
-4C8F: CD 77 45    call $ADD_PICKUP_PAT_7
-4C92: C9          ret
-4C93: CD 78 40    call $ADD_PICKUP_PAT_6
-4C96: C9          ret
-4C97: CD E3 4C    call $ADD_PICKUP_PAT_1
-4C9A: C9          ret
-4C9B: CD 40 40    call $ADD_PICKUP_PAT_8
-4C9E: C9          ret
-4C9F: CD E8 45    call $ADD_PICKUP_PAT_2
-4CA2: C9          ret
-4CA3: CD E8 40    call $ADD_PICKUP_PAT_9
-4CA6: C9          ret
-4CA7: CD 78 40    call $ADD_PICKUP_PAT_6
-4CAA: C9          ret
-4CAB: CD E8 45    call $ADD_PICKUP_PAT_2
-4CAE: C9          ret
-4CAF: CD E8 40    call $ADD_PICKUP_PAT_9
-4CB2: C9          ret
-4CB3: CD 78 40    call $ADD_PICKUP_PAT_6
-4CB6: C9          ret
-4CB7: CD 28 41    call $ADD_PICKUP_PAT_10
-4CBA: C9          ret
-4CBB: CD 77 45    call $ADD_PICKUP_PAT_7
-4CBE: C9          ret
-4CBF: CD 78 40    call $ADD_PICKUP_PAT_6
-4CC2: C9          ret
-4CC3: CD 28 41    call $ADD_PICKUP_PAT_10
-4CC6: C9          ret
-4CC7: CD 70 41    call $ADD_PICKUP_PAT_5
-4CCA: C9          ret
-4CCB: CD 78 40    call $ADD_PICKUP_PAT_6
-4CCE: C9          ret
-4CCF: 00          nop           ; screen 27
-4CD0: 00          nop           ; (no pickups)
-4CD1: 00          nop
-4CD2: C9          ret
-4CD3: 00          nop
-4CD4: 00          nop
-4CD5: 00          nop
-4CD6: C9          ret
-4CD7: FF ...
+sfx_15_data:
+    db   $03
+    dw   _4B32
+    dw   _4B36
+    dw   _4B36
+    db   $FF
+_4B48:
+    db   $00,$01
+    dc   6, $FF
 
-ADD_PICKUP_PAT_1
-4CE3: 3E 8C       ld   a,$TILE_CROWN_PIKA ;
-4CE5: 32 5A 91    ld   ($915A),a
-4CE8: C9          ret
-4CE9: FF
+;;
+your_being_chased_dino_sprite:
+    ld   hl,player_x
+    ld   (hl),$85 ; x
+    inc  hl
+    ld   (hl),$2C ; frame
+    inc  hl
+    ld   (hl),$12 ; color
+    inc  hl
+    ld   (hl),$90 ; y
+    inc  hl
+    ld   (hl),$7E ; x legs
+    inc  hl
+    ld   (hl),$30 ; frame legs
+    inc  hl
+    ld   (hl),$12 ; color legs
+    inc  hl
+    ld   (hl),$A0 ; y legs
+    inc  hl
+    ret
 
-    ;; Runs every frame as cage drops...
-    ;; hl contains screen location of cage
-    ;; so `l` is used as CAGE_Y
-CHECK_DINO_CAGE_COLLISION
-4CEA: 3A 4C 81    ld   a,($DINO_X)
-4CED: D6 84       sub  $84      ; is dino x >= 0x84 (132)?
-4CEF: 37          scf
-4CF0: 3F          ccf           ; ...
-4CF1: D6 18       sub  $18      ; and < 132 + 24 (156) ?
-4CF3: D0          ret  nc       ; no: return.
-4CF4: 3A 4F 81    ld   a,($DINO_Y) ; yes! check y
-4CF7: CB 3F       srl  a
-4CF9: CB 3F       srl  a
-4CFB: CB 3F       srl  a
-4CFD: 47          ld   b,a      ; b = y / 8
-4CFE: 7D          ld   a,l      ; cage_y
-4CFF: E6 1F       and  $1F      ; & 00011111 (?)
-4D01: 90          sub  b        ; - b
-4D02: 37          scf
-4D03: 3F          ccf           ; (... -2)
-4D04: C3 B4 4D    jp   $CHECK_DINO_CAGE_COLLISION_CONT
+    dc   116, $FF ; 116 free bytes!
 
-4D07: FF
+;; sfx 2? notes
+_4BE0:
+    db   $0E,$04,$0E,$02,$0C,$02,$0E,$04
+    db   $11,$02,$10,$02,$0E,$02,$0E,$02
+    db   $0C,$02,$0E,$10
+    dc   2, $FF
 
-DRAW_CAGE_TILES
-4D08: CD 60 4D    call $RESET_3_ROW_XOFFS
-4D0B: E5          push hl
-4D0C: 2B          dec  hl
-4D0D: 36 10       ld   (hl),$TILE_BLANK ; column 1
-4D0F: 23          inc  hl
-4D10: 36 76       ld   (hl),$76
-4D12: 23          inc  hl
-4D13: 36 77       ld   (hl),$77
-4D15: 23          inc  hl
-4D16: 36 7A       ld   (hl),$7A
-4D18: 23          inc  hl
-4D19: 36 7B       ld   (hl),$7B
-4D1B: 01 DC FF    ld   bc,$FFDC
-4D1E: 09          add  hl,bc
-4D1F: 36 10       ld   (hl),$TILE_BLANK ; column 2
-4D21: 23          inc  hl
-4D22: 36 74       ld   (hl),$TILE_CAGE
-4D24: 23          inc  hl
-4D25: 36 75       ld   (hl),$75
-4D27: 23          inc  hl
-4D28: 36 78       ld   (hl),$78
-4D2A: 23          inc  hl
-4D2B: 36 79       ld   (hl),$79
-4D2D: 09          add  hl,bc
-4D2E: 36 10       ld   (hl),$TILE_BLANK ; column 3
-4D30: 23          inc  hl
-4D31: 36 7E       ld   (hl),$7E
-4D33: 23          inc  hl
-4D34: 36 7F       ld   (hl),$7F
-4D36: 23          inc  hl
-4D37: 36 7C       ld   (hl),$7C
-4D39: 23          inc  hl
-4D3A: 36 7D       ld   (hl),$7D
-4D3C: E1          pop  hl
-4D3D: C9          ret
+    db   $09
+    db   $04
+    db   $07
+    db   $02
+    db   $09
+    db   $04
+    db   $1A
+    db   $02
+    db   $18,$02
+    db   $18,$02
+    db   $09
+    db   $02
+    db   $09
+    db   $02
+    db   $07
+    db   $02
+    db   $09
+    db   $04
+    dc   38, $FF
+_4C30:
+    db   $32,$4C,$FF
+    db   $FF
+    db   $FF
+    db   $FF
+_4C36:
+    db   $01,$04,$0F
+    db   $00
+    dw   _4BE0  ; point at notes
+    db   $FF
+    db   $FF
+_4C3E:
+    db   $F6,$4B
+    db   $FF
+    db   $FF
+    db   $0C
+    db   $0C
+    db   $FF
+    db   $FF
 
-4D3E: FF FF
+sfx_2_data:
+    db   $03
+    dw   _4C36
+    dw   _4C3E
+    dw   _4C30
 
-    ;; hl = cage screen addr, so l = "Y pos"
-    ;; starts at 0xC9 (201) and incs to 0xDC (220)
-TRIGGER_CAGE_FALL
-4D40: CD 75 4E    call $SETUP_CAGE_SFX_AND_SCREEN
-_UPDATE_CAGE_FALL
-4D43: CD 08 4D    call $DRAW_CAGE_TILES
-4D46: E5          push hl
-4D47: 21 A0 13    ld   hl,$WAIT_VBLANK ; blocks action as cage falls
-4D4A: CD 81 5C    call $JMP_HL
-4D4D: 3A 12 83    ld   a,($TICK_NUM)
-4D50: E6 03       and  $03
-4D52: 20 F3       jr   nz,$4D47
-4D54: E1          pop  hl
-4D55: 23          inc  hl       ; move cage down
-4D56: CD EA 4C    call $CHECK_DINO_CAGE_COLLISION
-4D59: 3E DC       ld   a,$DC    ; did cage hit ground?
-4D5B: BD          cp   l
-4D5C: C8          ret  z
-4D5D: 18 E4       jr   $_UPDATE_CAGE_FALL ; nope, loop
+    dc   3, $FF
 
-4D5F: FF
+;;
+add_screen_pickups:
+    call draw_cage_top
+    ld   a,(player_num)
+    and  a
+    jr   z,$4C5E
+    ld   a,(screen_num_p2)
+    jr   _4C61
+    ld   a,(screen_num)
+_4C61:
+    dec  a ; scr - 1
+    add  a,a
+    add  a,a ; * 3
+    call jump_rel_a_copy
+;; One per screen
+    call add_pickup_pat_1
+    ret
+    call add_pickup_pat_2
+    ret
+    call add_pickup_pat_3
+    ret
+    call add_pickup_pat_1
+    ret
+    call add_pickup_pat_4
+    ret
+    call add_pickup_pat_5
+    ret
+    call add_pickup_pat_6
+    ret
+    call add_pickup_pat_2
+    ret
+    call add_pickup_pat_3
+    ret
+    call add_pickup_pat_4
+    ret
+    call add_pickup_pat_7
+    ret
+    call add_pickup_pat_6
+    ret
+    call add_pickup_pat_1
+    ret
+    call add_pickup_pat_8
+    ret
+    call add_pickup_pat_2
+    ret
+    call add_pickup_pat_9
+    ret
+    call add_pickup_pat_6
+    ret
+    call add_pickup_pat_2
+    ret
+    call add_pickup_pat_9
+    ret
+    call add_pickup_pat_6
+    ret
+    call add_pickup_pat_10
+    ret
+    call add_pickup_pat_7
+    ret
+    call add_pickup_pat_6
+    ret
+    call add_pickup_pat_10
+    ret
+    call _4170
+    ret
+    call add_pickup_pat_6
+    ret
+    nop ; screen 27
+    nop ; (no pickups)
+    nop
+    ret
+    nop
+    nop
+    nop
+    ret
 
-RESET_3_ROW_XOFFS               ; which ones?
-4D60: AF          xor  a
-4D61: 32 26 81    ld   ($SCREEN_XOFF_COL+26),a
-4D64: 32 28 81    ld   ($SCREEN_XOFF_COL+28),a
-4D67: 32 2A 81    ld   ($SCREEN_XOFF_COL+2A),a
-4D6A: C9          ret
+    dc   12, $FF
 
-4D6B: FF ...
+add_pickup_pat_1:
+    ld   a,tile_crown_pika
+    ld   (scr_pik_n_n),a
+    ret
 
-END_SCREEN_LOGIC
-4D74: 3A 04 80    ld   a,($PLAYER_NUM) ; are we on end screen?
-4D77: A7          and  a
-4D78: 20 05       jr   nz,$4D7F
-4D7A: 3A 29 80    ld   a,($SCREEN_NUM)
-4D7D: 18 03       jr   $4D82
-4D7F: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-4D82: FE 1B       cp   $1B      ;// check is screen 27
-4D84: C0          ret  nz
-4D85: CD 90 4D    call $CHECK_PLAYER_CAGE_COLLISION
-4D88: C9          ret
+    dc   1, $FF
 
-4D89: FF ...
+;; Runs every frame as cage drops...
+;; hl contains screen location of cage
+;; so `l` is used as CAGE_Y
+check_dino_cage_collision:
+    ld   a,(dino_x)
+    sub  $84 ; is dino x >= 0x84 (132)?
+    scf
+    ccf ; ...
+    sub  $18 ; and < 132 + 24 (156) ?
+    ret  nc ; no: return.
+    ld   a,(dino_y) ; yes! check y
+    srl  a
+    srl  a
+    srl  a
+    ld   b,a ; b = y / 8
+    ld   a,l ; cage_y
+    and  $1F ; & 00011111 (?)
+    sub  b ; - b
+    scf
+    ccf ; (... -2)
+    jp   check_dino_cage_collision_cont
 
-CHECK_PLAYER_CAGE_COLLISION
-4D90: 3A 51 80    ld   a,($IS_HIT_CAGE)
-4D93: A7          and  a
-4D94: C0          ret  nz
-4D95: 3A 40 81    ld   a,($PLAYER_X)
-4D98: D6 70       sub  $70
-4D9A: 37          scf
-4D9B: 3F          ccf
-4D9C: D6 20       sub  $20
-4D9E: D0          ret  nc
-4D9F: 3A 43 81    ld   a,($PLAYER_Y)
-4DA2: D6 30       sub  $30
-4DA4: 37          scf
-4DA5: 3F          ccf
-4DA6: D6 1C       sub  $1C
-4DA8: D0          ret  nc
-4DA9: 3E 01       ld   a,$01    ; Yep, trigger cage
-4DAB: 32 51 80    ld   ($IS_HIT_CAGE),a
-4DAE: CD 40 4D    call $TRIGGER_CAGE_FALL
-4DB1: C9          ret
+    dc   1, $FF
 
-4DB2: FF FF
+draw_cage_tiles:
+    call reset_3_row_xoffs
+    push hl
+    dec  hl
+    ld   (hl),tile_blank ; column 1
+    inc  hl
+    ld   (hl),tile_cage + 2
+    inc  hl
+    ld   (hl),$77
+    inc  hl
+    ld   (hl),$7A
+    inc  hl
+    ld   (hl),$7B
+    ld   bc,MINUS_36
+    add  hl,bc
+    ld   (hl),tile_blank ; column 2
+    inc  hl
+    ld   (hl),tile_cage
+    inc  hl
+    ld   (hl),tile_cage + 1
+    inc  hl
+    ld   (hl),$78
+    inc  hl
+    ld   (hl),$79
+    add  hl,bc
+    ld   (hl),tile_blank ; column 3
+    inc  hl
+    ld   (hl),$7E
+    inc  hl
+    ld   (hl),$7F
+    inc  hl
+    ld   (hl),$7C
+    inc  hl
+    ld   (hl),$7D
+    pop  hl
+    ret
 
-CHECK_DINO_CAGE_COLLISION_CONT
-4DB4: D6 02       sub  $02      ; less than 2 diff?
-4DB6: D0          ret  nc       ; no, no Y collision
-4DB7: C3 D0 4D    jp   $DONE_CAGED_DINO ; yes, caged the dino
+    dc   2, $FF
 
-4DBA: FF ...
+;; hl = cage screen addr, so l = "Y pos"
+;; starts at 0xC9 (201) and incs to 0xDC (220)
+trigger_cage_fall:
+    call setup_cage_sfx_and_screen
+_update_cage_fall:
+    call draw_cage_tiles
+    push hl
+    ld   hl,wait_vblank ; blocks action as cage falls
+    call jmp_hl
+    ld   a,(tick_num)
+    and  $03
+    jr   nz,$4D47
+    pop  hl
+    inc  hl ; move cage down
+    call check_dino_cage_collision
+    ld   a,$DC ; did cage hit ground?
+    cp   l
+    ret  z
+    jr   _update_cage_fall ; nope, loop
 
-    ;;
-WAIT_VBLANK_40
-4DC0: 2E 40       ld   l,$40
-_LP
-4DC2: E5          push hl
-4DC3: 21 A0 13    ld   hl,$WAIT_VBLANK
-4DC6: CD 81 5C    call $JMP_HL
-4DC9: E1          pop  hl
-4DCA: 2D          dec  l
-4DCB: 20 F5       jr   nz,$_LP
-4DCD: C9          ret
+    dc   1, $FF
 
-4DCE: FF FF
+reset_3_row_xoffs:              ; which ones?
+    xor  a
+    ld   (_8126),a
+    ld   (_8128),a
+    ld   (_812A),a
+    ret
 
-DONE_CAGED_DINO
-4DD0: AF          xor  a
-4DD1: 32 4C 81    ld   ($DINO_X),a
-4DD4: 32 50 81    ld   ($DINO_X_LEGS),a
-4DD7: CD 08 4D    call $DRAW_CAGE_TILES
-4DDA: E5          push hl
-4DDB: 21 A0 13    ld   hl,$WAIT_VBLANK
-4DDE: CD 81 5C    call $JMP_HL
-4DE1: E1          pop  hl
-4DE2: 23          inc  hl
-4DE3: 3E DC       ld   a,$DC
-4DE5: BD          cp   l
-4DE6: 20 EF       jr   nz,$4DD7
-4DE8: 3E 91       ld   a,$91
-4DEA: 32 4C 81    ld   ($DINO_X),a
-4DED: 3E 38       ld   a,$38
-4DEF: 32 4D 81    ld   ($DINO_FRAME),a
-4DF2: 3E 12       ld   a,$12
-4DF4: 32 4E 81    ld   ($DINO_COL),a
-4DF7: 3E D7       ld   a,$D7
-4DF9: 32 4F 81    ld   ($DINO_Y),a
-4DFC: 3E 8A       ld   a,$8A
-4DFE: 32 50 81    ld   ($DINO_X_LEGS),a
-4E01: 3E 39       ld   a,$39
-4E03: 32 51 81    ld   ($DINO_FRAME_LEGS),a
-4E06: 3E 12       ld   a,$12
-4E08: 32 52 81    ld   ($DINO_COL_LEGS),a
-4E0B: 3E E7       ld   a,$E7
-4E0D: 32 53 81    ld   ($DINO_Y_LEGS),a
-4E10: CD C0 4D    call $WAIT_VBLANK_40
-4E13: CD E0 4E    call $SPEED_UP_FOR_NEXT_ROUND
-4E16: 21 48 3D    ld   hl,$DO_CUTSCENE
-4E19: CD 81 5C    call $JMP_HL
-4E1C: C9          ret
+    dc   9, $FF
 
-4E1D: FF ...
+end_screen_logic:
+    ld   a,(player_num) ; are we on end screen?
+    and  a
+    jr   nz,$4D7F
+    ld   a,(screen_num)
+    jr   _4D82
+    ld   a,(screen_num_p2)
+_4D82:
+    cp   $1B ; // check is screen 27
+    ret  nz
+    call check_player_cage_collision
+    ret
 
-ATTRACT_SPLASH_BONGO
-4E20: CD 80 4E    call $DRAW_BORDER_HL_EQ_JETSOFT
-4E23: CD 81 5C    call $JMP_HL  ; hl = $DRAW_JETSOFT
-4E26: CD A8 5A    call $FLASH_BORDER
-4E29: 21 74 3F    ld   hl,$DRAW_PROUDLY_PRESENTS
-4E2C: CD 81 5C    call $JMP_HL
-4E2F: CD A8 5A    call $FLASH_BORDER
-4E32: 21 4B 16    ld   hl,$CLEAR_AND_DRAW_SCREEN
-4E35: CD 81 5C    call $JMP_HL
-4E38: 3E 07       ld   a,$07
-4E3A: 32 29 80    ld   ($SCREEN_NUM),a
-4E3D: 32 2A 80    ld   ($SCREEN_NUM_P2),a
-4E40: 21 B8 12    ld   hl,$DRAW_BACKGROUND
-4E43: CD 81 5C    call $JMP_HL
-4E46: 21 A8 3F    ld   hl,$BLANK_OUT_BOTTOM_ROW
-4E49: CD 81 5C    call $JMP_HL
-4E4C: 21 48 92    ld   hl,$9248 ; draw the BONGO logo
-4E4F: 06 A0       ld   b,$A0
-4E51: 0E 05       ld   c,$05
-_LP
-4E53: 70          ld   (hl),b   ; top right
-4E54: 04          inc  b
-4E55: 23          inc  hl
-4E56: 70          ld   (hl),b   ; bottom right
-4E57: 04          inc  b
-4E58: 11 1F 00    ld   de,$001F
-4E5B: 19          add  hl,de
-4E5C: 70          ld   (hl),b   ; top left
-4E5D: 04          inc  b
-4E5E: 23          inc  hl
-4E5F: 70          ld   (hl),b   ; bottom left
-4E60: 11 A1 FF    ld   de,$FFA1
-4E63: 19          add  hl,de
-4E64: 04          inc  b
-4E65: CD D4 4E    call $WAIT_30_FOR_START_BUTTON
-4E68: 0D          dec  c
-4E69: 20 E8       jr   nz,$_LP
-4E6B: 21 8C 3F    ld   hl,$DRAW_COPYRIGHT
-4E6E: CD 81 5C    call $JMP_HL
-4E71: C3 E2 52    jp   $ATTRACT_ANIMATE_PLAYER_UP_STAIRS
+    dc   7, $FF
 
-4E74: FF
+check_player_cage_collision:
+    ld   a,(is_hit_cage)
+    and  a
+    ret  nz
+    ld   a,(player_x)
+    sub  $70
+    scf
+    ccf
+    sub  $20
+    ret  nc
+    ld   a,(player_y)
+    sub  $30
+    scf
+    ccf
+    sub  $1C
+    ret  nc
+    ld   a,$01 ; Yep, trigger cage
+    ld   (is_hit_cage),a
+    call trigger_cage_fall
+    ret
 
-    ;;
-SETUP_CAGE_SFX_AND_SCREEN
-4E75: F5          push af
-4E76: 3E 05       ld   a,$05
-4E78: 32 44 80    ld   ($SFX_ID),a
-4E7B: F1          pop  af
-4E7C: 21 C9 91    ld   hl,$91C9
-4E7F: C9          ret
+    dc   2, $FF
 
-DRAW_BORDER_AND_JETSOFT
-4E80: 21 88 0F    ld   hl,$DRAW_BORDER_1
-4E83: CD 81 5C    call $JMP_HL
-4E86: 21 66 3F    ld   hl,$DRAW_JETSOFT
-4E89: C9          ret
-4E8A: FF ...
+check_dino_cage_collision_cont:
+    sub  $02 ; less than 2 diff?
+    ret  nc ; no, no Y collision
+    jp   done_caged_dino ; yes, caged the dino
 
-    ;; This totally does nothing but waste some
-    ;; cycles right? A reg is not even used after
-    ;; Maybe it was nopped out? debug?
-LOAD_A_VAL_REALLY_WEIRD
-4E90: 3E F9       ld   a,$F9
-4E92: 00          nop
-4E93: 00          nop
-4E94: 00          nop
-4E95: 3E FD       ld   a,$FD
-4E97: 00          nop
-4E98: 00          nop
-4E99: 00          nop
-4E9A: 3E FB       ld   a,$FB
-4E9C: 00          nop
-4E9D: 00          nop
-4E9E: 00          nop
-4E9F: 3E FF       ld   a,$FF
-4EA1: 00          nop
-4EA2: 00          nop
-4EA3: 00          nop
-4EA4: C9          ret
+    dc   6, $FF
 
-4EA5: 78          ld   a,b
-4EA6: CD 00 49    call $JUMP_REL_A_2
-4EA9: FF          rst  $38
-4EAA: FF          rst  $38
-4EAB: FF          rst  $38
-4EAC: FF          rst  $38
-4EAD: FF          rst  $38
-4EAE: FF          rst  $38
-4EAF: FF          rst  $38
+;;
+wait_vblank_40:
+    ld   l,$40
+_lp_4DC2:
+    push hl
+    ld   hl,wait_vblank
+    call jmp_hl
+    pop  hl
+    dec  l
+    jr   nz,_lp_4DC2
+    ret
 
-    ;; on splash screen something... wait a bunch
-WAIT_60_FOR_START_BUTTON
-4EB0: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4EB3: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4EB6: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4EB9: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4EBC: C9          ret
-4EBD: FF ...
+    dc   2, $FF
 
-WAIT_15_FOR_START_BUTTON
-4EC2: 16 0E       ld   d,$0E
-4EC4: E5          push hl
-4EC5: C5          push bc
-4EC6: D5          push de
-4EC7: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-4ECA: CD 81 5C    call $JMP_HL
-4ECD: D1          pop  de
-4ECE: C1          pop  bc
-4ECF: E1          pop  hl
-4ED0: 15          dec  d
-4ED1: 20 F1       jr   nz,$4EC4
-4ED3: C9          ret
+done_caged_dino:
+    xor  a
+    ld   (dino_x),a
+    ld   (dino_x_legs),a
+    call draw_cage_tiles
+    push hl
+    ld   hl,wait_vblank
+    call jmp_hl
+    pop  hl
+    inc  hl
+    ld   a,$DC
+    cp   l
+    jr   nz,$4DD7
+    ld   a,$91
+    ld   (dino_x),a
+    ld   a,$38
+    ld   (dino_frame),a
+    ld   a,$12
+    ld   (dino_col),a
+    ld   a,$D7
+    ld   (dino_y),a
+    ld   a,$8A
+    ld   (dino_x_legs),a
+    ld   a,$39
+    ld   (dino_frame_legs),a
+    ld   a,$12
+    ld   (dino_col_legs),a
+    ld   a,$E7
+    ld   (dino_y_legs),a
+    call wait_vblank_40
+    call speed_up_for_next_round
+    ld   hl,do_cutscene
+    call jmp_hl
+    ret
 
-    ;; what 30 for start
-WAIT_30_FOR_START_BUTTON
-4ED4: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4ED7: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-4EDA: C9          ret
+    dc   3, $FF
 
-4EDB: FF ...
+attract_splash_bongo:
+    call draw_border_and_jetsoft
+    call jmp_hl ; hl = $DRAW_JETSOFT
+    call flash_border
+    ld   hl,draw_proudly_presents
+    call jmp_hl
+    call flash_border
+    ld   hl,clear_and_draw_screen
+    call jmp_hl
+    ld   a,$07
+    ld   (screen_num),a
+    ld   (screen_num_p2),a
+    ld   hl,draw_background
+    call jmp_hl
+    ld   hl,blank_out_bottom_row
+    call jmp_hl
+    ld   hl,_9248 ; draw the BONGO logo
+    ld   b,$A0
+    ld   c,$05
+_lp_4E53:
+    ld   (hl),b ; top right
+    inc  b
+    inc  hl
+    ld   (hl),b ; bottom right
+    inc  b
+    ld   de,$001F
+    add  hl,de
+    ld   (hl),b ; top left
+    inc  b
+    inc  hl
+    ld   (hl),b ; bottom left
+    ld   de,MINUS_95
+    add  hl,de
+    inc  b
+    call wait_30_for_start_button
+    dec  c
+    jr   nz,_lp_4E53
+    ld   hl,draw_copyright
+    call jmp_hl
+    jp   attract_animate_player_up_stairs
 
-SPEED_UP_FOR_NEXT_ROUND
-4EE0: 3A 04 80    ld   a,($PLAYER_NUM)
-4EE3: A7          and  a
-4EE4: 20 05       jr   nz,$4EEB
-4EE6: 21 5B 80    ld   hl,$SPEED_DELAY_P1
-4EE9: 18 03       jr   $4EEE
-4EEB: 21 5C 80    ld   hl,$SPEED_DELAY_P2
-4EEE: 7E          ld   a,(hl)
-4EEF: FE 1F       cp   $ROUND1_SPEED
-4EF1: 20 03       jr   nz,$4EF6
-4EF3: 36 10       ld   (hl),$ROUND2_SPEED ; round 2 = $10
-4EF5: C9          ret
-4EF6: FE 10       cp   $ROUND2_SPEED
-4EF8: 20 03       jr   nz,$4EFD
-4EFA: 36 0D       ld   (hl),$ROUND3_SPEED ; round 3 = $0d
-4EFC: C9          ret
-4EFD: C3 1C 50    jp   $EVEN_MORE_FASTER_DINO ; round 4+ = get 2 faster each time!
+    dc   1, $FF
 
-PICKUPS_LOOKUP
-4F00: 91 5A 8C 00 00 00 00 00 00 ; up to 3 pickups per screen
-4F09: 91 5A 8D 00 00 00 00 00 00 ; pos (hi), pos (lo), pickup symbol
-4F12: 91 1A 8D 00 00 00 00 00 00
-4F1B: 91 5A 8C 00 00 00 00 00 00
-4F24: 91 B1 8C 00 00 00 00 00 00
-4F2D: 91 8E 8C 00 00 00 00 00 00
-4F36: 91 D2 8D 00 00 00 00 00 00
-4F3F: 91 5A 8D 00 00 00 00 00 00
-4F48: 91 1A 8D 00 00 00 00 00 00
-4F51: 91 B1 8C 00 00 00 00 00 00
-4F5A: 90 CB 8E 91 8E 8C 00 00 00
-4F63: 91 D2 8D 00 00 00 00 00 00
-4F6C: 91 5A 8C 00 00 00 00 00 00
-4F75: 92 7A 8E 91 1A 8D 00 00 00
-4F7E: 91 5A 8D 00 00 00 00 00 00
-4F87: 92 EE 83 92 17 8E 00 00 00
-4F90: 91 D2 8D 00 00 00 00 00 00
-4F99: 91 5A 8D 00 00 00 00 00 00
-4FA2: 92 EE 83 92 17 8E 00 00 00
-4FAB: 91 D2 8D 00 00 00 00 00 00
-4FB4: 92 17 8C 92 31 8D 92 2B 8F
-4FBD: 90 CB 8E 91 8E 8C 00 00 00
-4FC6: 91 D2 8D 00 00 00 00 00 00
-4FCF: 92 17 8C 92 31 8D 92 2B 8F
-4FD8: 90 CB 8E 91 8E 8C 92 AB 8E
-4FE1: 91 D2 8D 00 00 00 00 00 00
-4FEA: 00 00 00 00 00 00 00 00 00 ; Screen 27 (cage - no pickups)
-4FF3: 00 00 00 00 00 00 00 00 00
-4FFC: 00 00
+;;
+setup_cage_sfx_and_screen:
+    push af
+    ld   a,$05
+    ld   (sfx_id),a
+    pop  af
+    ld   hl,_91C9
+    ret
 
-4FFE: FF FF
+draw_border_and_jetsoft:
+    ld   hl,draw_border_1
+    call jmp_hl
+    ld   hl,draw_jetsoft
+    ret
+
+    dc   6, $FF
+
+;; This totally does nothing but waste some
+;; cycles right? A reg is not even used after
+;; Maybe it was nopped out? debug?
+load_a_val_really_weird:
+    ld   a,$F9
+    nop
+    nop
+    nop
+    ld   a,$FD
+    nop
+    nop
+    nop
+    ld   a,$FB
+    nop
+    nop
+    nop
+    ld   a,$FF
+    nop
+    nop
+    nop
+    ret
+
+    ld   a,b
+    call jump_rel_a_copy
+    rst  $38
+    rst  $38
+    rst  $38
+    rst  $38
+    rst  $38
+    rst  $38
+    rst  $38
+
+;; on splash screen something... wait a bunch
+wait_60_for_start_button:
+    call wait_15_for_start_button
+    call wait_15_for_start_button
+    call wait_15_for_start_button
+    call wait_15_for_start_button
+    ret
+
+    dc   5, $FF
+
+wait_15_for_start_button:
+    ld   d,$0E
+    push hl
+    push bc
+    push de
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    pop  de
+    pop  bc
+    pop  hl
+    dec  d
+    jr   nz,$4EC4
+    ret
+
+;; what 30 for start
+wait_30_for_start_button:
+    call wait_15_for_start_button
+    call wait_15_for_start_button
+    ret
+
+    dc   5, $FF
+
+speed_up_for_next_round:
+    ld   a,(player_num)
+    and  a
+    jr   nz,$4EEB
+    ld   hl,speed_delay_p1
+    jr   _4EEE
+    ld   hl,speed_delay_p2
+_4EEE:
+    ld   a,(hl)
+    cp   round1_speed
+    jr   nz,$4EF6
+    ld   (hl),round2_speed ; round 2 = $10
+    ret
+    cp   round2_speed
+    jr   nz,$4EFD
+    ld   (hl),round3_speed ; round 3 = $0d
+    ret
+    jp   even_more_faster_dino ; round 4+ = get 2 faster each time!
+
+pickups_lookup:
+CPA = tile_crown_pika
+    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00 ;  up to 3 pickups per screen
+    db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00 ;  pos (hi), pos (lo), pickup symbol
+    db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00
+    db   $91,$B1,CPA,$00,$00,$00,$00,$00,$00
+    db   $91,$8E,CPA,$00,$00,$00,$00,$00,$00
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$B1,CPA,$00,$00,$00,$00,$00,$00
+    db   $90,$CB,$8E,$91,$8E,CPA,$00,$00,$00
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00
+    db   $92,$7A,$8E,$91,$1A,$8D,$00,$00,$00
+    db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+    db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
+    db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $92,$17,CPA,$92,$31,$8D,$92,$2B,$8F
+    db   $90,$CB,$8E,$91,$8E,CPA,$00,$00,$00
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $92,$17,CPA,$92,$31,$8D,$92,$2B,$8F
+    db   $90,$CB,$8E,$91,$8E,CPA,$92,$AB,$8E
+    db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
+    db   $00,$00,$00,$00,$00,$00,$00,$00,$00 ;  Screen 27 (cage - no pickups)
+    db   $00,$00,$00,$00,$00,$00,$00,$00,$00
+    db   $00,$00
+
+    dc   2, $FF
 
 ;;; === END OF BG5.BIN, START OF BG6.BIN ======
 
-ANIMATE_PICKUPS
-5000: 46          ld   b,(hl)
-5001: 23          inc  hl
-5002: 4E          ld   c,(hl)
-5003: 23          inc  hl
-5004: 0A          ld   a,(bc)
-5005: FE 10       cp   $10
-5007: 28 11       jr   z,$501A
-5009: 5F          ld   e,a
-500A: E6 F0       and  $F0
-500C: FE 80       cp   $80
-500E: 20 06       jr   nz,$5016
-5010: 7B          ld   a,e
-5011: C6 10       add  a,$10
-5013: 02          ld   (bc),a
-5014: 18 04       jr   $501A
-5016: 7B          ld   a,e
-5017: D6 10       sub  $10
-5019: 02          ld   (bc),a
-501A: 23          inc  hl
-501B: C9          ret
-
-    ;; Decrease the speed timer further each round
-EVEN_MORE_FASTER_DINO
-501C: 3D          dec  a
-501D: 3D          dec  a
-501E: 77          ld   (hl),a
-501F: C9          ret
-
-ANIMATE_ALL_PICKUPS
-5020: 3A 12 83    ld   a,($TICK_NUM)
-5023: E6 03       and  $03
-5025: C0          ret  nz
-5026: 21 00 4F    ld   hl,$PICKUPS_LOOKUP
-5029: 3A 04 80    ld   a,($PLAYER_NUM)
-502C: A7          and  a
-502D: 28 05       jr   z,$5034
-502F: 3A 2A 80    ld   a,($SCREEN_NUM_P2)
-5032: 18 03       jr   $5037
-5034: 3A 29 80    ld   a,($SCREEN_NUM) ;
-5037: 3D          dec  a               ; Get screen x 9
-5038: 47          ld   b,a             ;
-5039: 87          add  a,a             ;
-503A: 87          add  a,a             ;
-503B: 87          add  a,a             ;
-503C: 80          add  a,b             ;
-503D: 85          add  a,l             ; index into PICKUPS table
-503E: 6F          ld   l,a
-503F: 7E          ld   a,(hl)          ; Find pickup screen addr
-5040: A7          and  a
-5041: C8          ret  z
-5042: CD 00 50    call $ANIMATE_PICKUPS
-5045: 7E          ld   a,(hl)
-5046: A7          and  a
-5047: C8          ret  z
-5048: CD 00 50    call $ANIMATE_PICKUPS
-504B: 7E          ld   a,(hl)
-504C: A7          and  a
-504D: C8          ret  z
-504E: CD 00 50    call $ANIMATE_PICKUPS
-5051: C9          ret
-
-5052: FF
-
-SFX_3_DATA
-5053: 03
-5054: 84 50
-5056: 90 50
-5058: 8C 50
-505A: FF          rst  $38
-505B: FF          rst  $38
-505C: FF          rst  $38
-505D: FF          rst  $38
-505E: FF          rst  $38
-505F: FF          rst  $38
-5060: 0C          inc  c
-5061: 01 0E 01    ld   bc,$010E
-5064: 10 01       djnz $5067
-5066: 11 01 13    ld   de,$1301
-5069: 03          inc  bc
-506A: FF          rst  $38
-506B: FF          rst  $38
-506C: 13          inc  de
-506D: 01 15 01    ld   bc,$0115
-5070: 17          rla
-5071: 01 18 01    ld   bc,$0118
-5074: 1A          ld   a,(de)
-5075: 03          inc  bc
-5076: FF          rst  $38
-5077: FF          rst  $38
-5078: 18 01       jr   $507B
-507A: 1A          ld   a,(de)
-507B: 01 1C 01    ld   bc,$011C
-507E: 1D          dec  e
-507F: 01 1F 03    ld   bc,$031F
-5082: FF          rst  $38
-5083: FF          rst  $38
-5084: 02 02
-5086: 0F          rrca
-5087: 10 60       djnz $50E9
-5089: 50          ld   d,b
-508A: FF          rst  $38
-508B: FF          rst  $38
-508C: 6E          ld   l,(hl)
-508D: 50          ld   d,b
-508E: FF          rst  $38
-508F: FF          rst  $38
-5090: 6C          ld   l,h
-5091: 50          ld   d,b
-5092: FF          rst  $38
-5093: FF          rst  $38
-5094: 00          nop
-5095: 01 02 01    ld   bc,$0102
-5098: 04          inc  b
-5099: 01 06 01    ld   bc,$0106
-509C: 08          ex   af,af'
-509D: 01 0A 01    ld   bc,$010A
-50A0: 0C          inc  c
-50A1: 01 0E 01    ld   bc,$010E
-50A4: FF          rst  $38
-50A5: FF          rst  $38
-50A6: FF          rst  $38
-50A7: FF          rst  $38
-50A8: FF          rst  $38
-50A9: FF          rst  $38
-50AA: FF          rst  $38
-50AB: FF          rst  $38
-50AC: FF          rst  $38
-50AD: FF          rst  $38
-50AE: FF          rst  $38
-50AF: FF          rst  $38
-50B0: 01 01 0F    ld   bc,$0F01
-50B3: 00          nop
-50B4: 94          sub  h
-50B5: 50          ld   d,b
-50B6: FF          rst  $38
-50B7: FF          rst  $38
-50B8: 94          sub  h
-50B9: 10 FF       djnz $50BA
-50BB: FF          rst  $38
-
-SFX_4_DATA
-50BC: 03          inc  bc
-50BD: B0          or   b
-50BE: 50          ld   d,b
-50BF: C8          ret  z
-50C0: 50          ld   d,b
-50C1: C8          ret  z
-50C2: 50          ld   d,b
-50C3: FF          rst  $38
-50C4: FF          rst  $38
-50C5: FF          rst  $38
-50C6: FF          rst  $38
-50C7: FF          rst  $38
-50C8: AC          xor  h
-50C9: 50          ld   d,b
-50CA: FF          rst  $38
-50CB: FF          rst  $38
-50CC: 18 01       jr   $50CF
-50CE: 17          rla
-50CF: 01 15 01    ld   bc,$0115
-50D2: 13          inc  de
-50D3: 01 11 01    ld   bc,$0111
-50D6: 10 01       djnz $50D9
-50D8: 0E 01       ld   c,$01
-50DA: 0C          inc  c
-50DB: 01 0B 01    ld   bc,$010B
-50DE: 09          add  hl,bc
-50DF: 01 07 01    ld   bc,$0107
-50E2: 05          dec  b
-50E3: 01 04 01    ld   bc,$0104
-50E6: 02          ld   (bc),a
-50E7: 01 00 01    ld   bc,$0100
-50EA: FF          rst  $38
-50EB: FF          rst  $38
-
-SFX_5_DATA
-50EC: 03          inc  bc
-50ED: F4 50 F4    call p,$F450
-50F0: 51          ld   d,c
-50F1: F4 51 FF    call p,$FF51
-50F4: 03          inc  bc
-50F5: 03          inc  bc
-50F6: 0F          rrca
-50F7: 10 CC       djnz $50C5
-50F9: 50          ld   d,b
-50FA: FF          rst  $38
-50FB: FF          rst  $38
-50FC: 2B          dec  hl
-50FD: 02          ld   (bc),a
-50FE: 34          inc  (hl)
-50FF: 02          ld   (bc),a
-5100: 34          inc  (hl)
-5101: 02          ld   (bc),a
-5102: 34          inc  (hl)
-5103: 02          ld   (bc),a
-5104: 32 01 34    ld   ($3401),a
-5107: 01 32 01    ld   bc,$0132
-510A: 30 01       jr   nc,$510D
-510C: 2F          cpl
-510D: 01 2D 01    ld   bc,$012D
-5110: 2B          dec  hl
-5111: 02          ld   (bc),a
-5112: 2D          dec  l
-5113: 02          ld   (bc),a
-5114: 2D          dec  l
-5115: 02          ld   (bc),a
-5116: 32 01 34    ld   ($3401),a
-5119: 01 26 02    ld   bc,$0226
-511C: FF          rst  $38
-511D: FF          rst  $38
-511E: 37          scf
-511F: 02          ld   (bc),a
-5120: 2F          cpl
-5121: 02          ld   (bc),a
-5122: 32 04 FF    ld   ($FF04),a
-5125: FF          rst  $38
-5126: 2B          dec  hl
-5127: 01 26 01    ld   bc,$0126
-512A: 23          inc  hl
-512B: 01 26 01    ld   bc,$0126
-512E: 1F          rra
-512F: 04          inc  b
-5130: FF          rst  $38
-5131: FF          rst  $38
-5132: 0C          inc  c
-5133: 01 10 01    ld   bc,$0110
-5136: 13          inc  de
-5137: 01 10 01    ld   bc,$0110
-513A: 0C          inc  c
-513B: 01 0C 01    ld   bc,$010C
-513E: 0E 01       ld   c,$01
-5140: 10 01       djnz $5143
-5142: 0B          dec  bc
-5143: 01 0C 01    ld   bc,$010C
-5146: 0B          dec  bc
-5147: 01 09 01    ld   bc,$0109
-514A: 07          rlca
-514B: 01 07 01    ld   bc,$0107
-514E: 09          add  hl,bc
-514F: 01 0B 01    ld   bc,$010B
-5152: 09          add  hl,bc
-5153: 01 0B 01    ld   bc,$010B
-5156: 09          add  hl,bc
-5157: 01 07 01    ld   bc,$0107
-515A: 06 01       ld   b,$01
-515C: 06 01       ld   b,$01
-515E: 07          rlca
-515F: 01 09 01    ld   bc,$0109
-5162: FF          rst  $38
-5163: FF          rst  $38
-5164: 07          rlca
-5165: 01 07 01    ld   bc,$0107
-5168: 0B          dec  bc
-5169: 01 0C 01    ld   bc,$010C
-516C: 0E 01       ld   c,$01
-516E: 07          rlca
-516F: 01 0B 01    ld   bc,$010B
-5172: 0E 01       ld   c,$01
-5174: FF          rst  $38
-5175: FF          rst  $38
-5176: 07          rlca
-5177: 01 0C 01    ld   bc,$010C
-517A: 0B          dec  bc
-517B: 01 09 01    ld   bc,$0109
-517E: 07          rlca
-517F: 04          inc  b
-5180: FF          rst  $38
-5181: FF          rst  $38
-5182: 01 08 0F    ld   bc,$0F08
-5185: 00          nop
-5186: 32 51 1E    ld   ($1E51),a
-5189: 51          ld   d,c
-518A: FC 50 26    call m,$2650
-518D: 51          ld   d,c
-518E: FC 50 1E    call m,$1E50
-5191: 51          ld   d,c
-5192: FC 50 26    call m,$2650
-5195: 51          ld   d,c
-5196: FF          rst  $38
-5197: FF          rst  $38
-5198: FF          rst  $38
-5199: FF          rst  $38
-
-SFX_6_DATA
-519A: 02          ld   (bc),a
-519B: 82          add  a,d
-519C: 51          ld   d,c
-519D: A8          xor  b
-519E: 51          ld   d,c
-519F: A8          xor  b
-51A0: 51          ld   d,c
-51A1: FF          rst  $38
-51A2: FF          rst  $38
-51A3: 98          sbc  a,b
-51A4: 11 FF FF    ld   de,$FFFF
-51A7: FF          rst  $38
-51A8: FC 50 64    call m,$6450
-51AB: 51          ld   d,c
-51AC: 32 51 76    ld   ($7651),a
-51AF: 51          ld   d,c
-51B0: 32 51 64    ld   ($6451),a
-51B3: 51          ld   d,c
-51B4: 32 51 76    ld   ($7651),a
-51B7: 51          ld   d,c
-51B8: FF          rst  $38
-51B9: FF          rst  $38
-51BA: 0C          inc  c
-51BB: 02          ld   (bc),a
-51BC: 18 02       jr   $51C0
-51BE: 0C          inc  c
-51BF: 02          ld   (bc),a
-51C0: 18 02       jr   $51C4
-51C2: 0C          inc  c
-51C3: 02          ld   (bc),a
-51C4: 18 02       jr   $51C8
-51C6: 0C          inc  c
-51C7: 02          ld   (bc),a
-51C8: 18 02       jr   $51CC
-51CA: 0C          inc  c
-51CB: 02          ld   (bc),a
-51CC: 18 02       jr   $51D0
-51CE: 0C          inc  c
-51CF: 02          ld   (bc),a
-51D0: 18 02       jr   $51D4
-51D2: 0C          inc  c
-51D3: 02          ld   (bc),a
-51D4: 18 02       jr   $51D8
-51D6: FF          rst  $38
-51D7: FF          rst  $38
-51D8: FF          rst  $38
-51D9: FF          rst  $38
-51DA: 03          inc  bc
-51DB: 03          inc  bc
-51DC: 0F          rrca
-51DD: 10 BA       djnz $5199
-51DF: 51          ld   d,c
-51E0: FF          rst  $38
-51E1: FF          rst  $38
-51E2: CA 11 FF    jp   z,$FF11
-51E5: FF          rst  $38
-51E6: F8          ret  m
-51E7: 51          ld   d,c
-51E8: FF          rst  $38
-51E9: FF          rst  $38
-
-SFX_7_DATA
-51EA: 03 DA 51 E6 51 F4 51 FF
-51F2: FF          rst  $38
-51F3: FF          rst  $38
-51F4: F8          ret  m
-51F5: 51          ld   d,c
-51F6: FF          rst  $38
-51F7: FF          rst  $38
-51F8: FF          rst  $38
-51F9: FF          rst  $38
-51FA: FF          rst  $38
-51FB: FF          rst  $38
-51FC: FF          rst  $38
-51FD: FF          rst  $38
-51FE: FF          rst  $38
-51FF: FF          rst  $38
-
-    ;; ??
-PLAY_SFX_CHUNK_CH_1
-5200: DD E5       push ix
-5202: E1          pop  hl
-5203: 7D          ld   a,l
-5204: FE E8       cp   $E8
-5206: 20 07       jr   nz,$520F
-5208: 3E 02       ld   a,$02
-520A: 32 55 80    ld   ($8055),a
-520D: 18 16       jr   $5225
-520F: 3A 55 80    ld   a,($8055)
-5212: A7          and  a
-5213: 28 10       jr   z,$5225
-5215: 3D          dec  a
-5216: 32 55 80    ld   ($8055),a
-5219: 3A 52 80    ld   a,($8052)
-521C: A7          and  a
-521D: 28 04       jr   z,$5223
-521F: 3D          dec  a
-5220: 32 52 80    ld   ($8052),a
-5223: E1          pop  hl
-5224: C9          ret
-5225: 7D          ld   a,l
-5226: FE D0       cp   $D0
-5228: 20 07       jr   nz,$5231
-522A: 3E 02       ld   a,$02
-522C: 32 52 80    ld   ($8052),a
-522F: 18 0C       jr   $523D
-5231: 3A 52 80    ld   a,($8052)
-5234: A7          and  a
-5235: 28 06       jr   z,$523D
-5237: 3D          dec  a
-5238: 32 52 80    ld   ($8052),a
-523B: E1          pop  hl
-523C: C9          ret
-523D: DD 7E 10    ld   a,(ix+$10)
-5240: C9          ret
-
-5241: FF ...
-
-    ;; triggers every few frames.
-    ;; Maybe play current chunk of tune?
-    ;; looks the same as above funk (ch1?)
-PLAY_SFX_CHUNK_CH_2
-5250: DD E5       push ix
-5252: E1          pop  hl
-5253: 7D          ld   a,l
-5254: FE E8       cp   $E8
-5256: 20 07       jr   nz,$525F
-5258: 3E 02       ld   a,$02
-525A: 32 56 80    ld   ($8056),a
-525D: 18 16       jr   $5275
-525F: 3A 56 80    ld   a,($8056)
-5262: A7          and  a
-5263: 28 10       jr   z,$5275
-5265: 3D          dec  a
-5266: 32 56 80    ld   ($8056),a
-5269: 3A 53 80    ld   a,($8053)
-526C: A7          and  a
-526D: 28 04       jr   z,$5273
-526F: 3D          dec  a
-5270: 32 53 80    ld   ($8053),a
-5273: E1          pop  hl
-5274: C9          ret
-5275: 7D          ld   a,l
-5276: FE D0       cp   $D0
-5278: 20 07       jr   nz,$5281
-527A: 3E 02       ld   a,$02
-527C: 32 53 80    ld   ($8053),a
-527F: 18 0C       jr   $528D
-5281: 3A 53 80    ld   a,($8053)
-5284: A7          and  a
-5285: 28 06       jr   z,$528D
-5287: 3D          dec  a
-5288: 32 53 80    ld   ($8053),a
-528B: E1          pop  hl
-528C: C9          ret
-528D: DD 7E 10    ld   a,(ix+$10)
-5290: C9          ret
-5291: FF ...
-
-    ;;??
-SFX_SUB_WHAT_1
-52A0: DD E5       push ix
-52A2: E1          pop  hl
-52A3: 7D          ld   a,l
-52A4: FE E8       cp   $E8
-52A6: 20 07       jr   nz,$52AF
-52A8: 3E 02       ld   a,$02
-52AA: 32 57 80    ld   ($8057),a
-52AD: 18 16       jr   $52C5
-52AF: 3A 57 80    ld   a,($8057)
-52B2: A7          and  a
-52B3: 28 10       jr   z,$52C5
-52B5: 3D          dec  a
-52B6: 32 57 80    ld   ($8057),a
-52B9: 3A 54 80    ld   a,($8054)
-52BC: A7          and  a
-52BD: 28 04       jr   z,$52C3
-52BF: 3D          dec  a
-52C0: 32 54 80    ld   ($8054),a
-52C3: E1          pop  hl
-52C4: C9          ret
-52C5: 7D          ld   a,l
-52C6: FE D0       cp   $D0
-52C8: 20 07       jr   nz,$52D1
-52CA: 3E 02       ld   a,$02
-52CC: 32 54 80    ld   ($8054),a
-52CF: 18 0C       jr   $52DD
-52D1: 3A 54 80    ld   a,($8054)
-52D4: A7          and  a
-52D5: 28 06       jr   z,$52DD
-52D7: 3D          dec  a
-52D8: 32 54 80    ld   ($8054),a
-52DB: E1          pop  hl
-52DC: C9          ret
-52DD: DD 7E 10    ld   a,(ix+$10)
-52E0: C9          ret
-
-52E1: FF
-
-    ;;
-ATTRACT_ANIMATE_PLAYER_UP_STAIRS
-52E2: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-52E5: 21 40 81    ld   hl,$PLAYER_X
-52E8: 36 D8       ld   (hl),$D8 ; x (right of screen)
-52EA: 23          inc  hl
-52EB: 36 8D       ld   (hl),$8D ; frame
-52ED: 23          inc  hl
-52EE: 36 11       ld   (hl),$11 ; color
-52F0: 23          inc  hl
-52F1: 36 E0       ld   (hl),$E0 ; y (bottom of screen)
-52F3: 23          inc  hl
-52F4: 36 D8       ld   (hl),$D8 ; x legs
-52F6: 23          inc  hl
-52F7: 36 8D       ld   (hl),$8D ; frame legs
-52F9: 23          inc  hl
-52FA: 36 11       ld   (hl),$11 ; color legs
-52FC: 23          inc  hl
-52FD: 36 F0       ld   (hl),$F0 ; y legs
-52FF: 1E 06       ld   e,$06
-_JUMP_UP_STAIR
-5301: CD 28 53    call $ATTRACT_JUMP_UP_ONE_STAIR
-5304: 1D          dec  e
-5305: 20 FA       jr   nz,$_JUMP_UP_STAIR
-5307: 21 48 81    ld   hl,$BONGO_X ; using bongo - but it shows dino
-530A: 36 20       ld   (hl),$20 ; x (left of screen)
-530C: 23          inc  hl
-530D: 36 2D       ld   (hl),$2D ; frame
-530F: 23          inc  hl
-5310: 36 12       ld   (hl),$12 ; color
-5312: 23          inc  hl
-5313: 36 28       ld   (hl),$28 ; y (top of screen)
-5315: 23          inc  hl
-5316: 36 19       ld   (hl),$19 ; x legs
-5318: 23          inc  hl
-5319: 36 30       ld   (hl),$30 ; frame legs
-531B: 23          inc  hl
-531C: 36 12       ld   (hl),$12 ; color legs
-531E: 23          inc  hl
-531F: 36 38       ld   (hl),$38 ; y legs
-5321: CD AC 53    call $ATTRACT_JUMP_DOWN_STAIRS
-5324: C3 28 54    jp   $CALL_ATTRACT_BONUS_SCREEN
-5327: FF          rst  $38
-
-ATTRACT_JUMP_UP_ONE_STAIR
-5328: 16 00       ld   d,$00
-_LP
-532A: 21 80 53    ld   hl,$ATTRACT_PLAYER_UP_STAIR_DATA
-532D: 7A          ld   a,d
-532E: 87          add  a,a
-532F: 87          add  a,a
-5330: 85          add  a,l
-5331: 6F          ld   l,a
-5332: DD 21 40 81 ld   ix,$PLAYER_X
-5336: 7E          ld   a,(hl)
-5337: DD 77 01    ld   (ix+$01),a ; frame
-533A: 23          inc  hl
-533B: 7E          ld   a,(hl)
-533C: DD 77 05    ld   (ix+$05),a ; frame leg
-533F: 23          inc  hl
-5340: 7E          ld   a,(hl)
-5341: DD 86 00    add  a,(ix+$00) ; x-offset
-5344: DD 77 00    ld   (ix+$00),a ; x
-5347: DD 77 04    ld   (ix+$04),a ; x legs
-534A: 23          inc  hl
-534B: 7E          ld   a,(hl)
-534C: DD 86 03    add  a,(ix+$03) ; y-offset
-534F: DD 77 03    ld   (ix+$03),a ; y
-5352: D6 10       sub  $10
-5354: DD 77 07    ld   (ix+$07),a ; y legs
-5357: D5          push de
-5358: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-535B: CD 81 5C    call $JMP_HL
-535E: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-5361: CD 81 5C    call $JMP_HL
-5364: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-5367: CD 81 5C    call $JMP_HL
-536A: D1          pop  de
-536B: 14          inc  d
-536C: 7A          ld   a,d
-536D: FE 06       cp   $06
-536F: 20 B9       jr   nz,$_LP
-5371: CD D4 4E    call $WAIT_30_FOR_START_BUTTON
-5374: C9          ret
-5375: FF ...
-
-    ;; frame, frame leg, x-off, y-off
-ATTRACT_PLAYER_UP_STAIR_DATA
-5380: 8D 8C FC F4 ; jumping up stairs
-5384: 8F 8E FC F6
-5388: 91 90 FC F8
-538C: 96 92 FC F8
-5390: 94 93 FC 06 ; frames are swapped!  head on the bottom!
-5394: 8D 8C FC 08
-
-ATTRACT_ANIMATE_DINO_HEAD
-5398: 3A 49 81    ld   a,($BONGO_FRAME)
-539B: FE 2D       cp   $2D
-539D: 20 07       jr   nz,$53A6
-539F: 3E 2C       ld   a,$2C
-53A1: 32 49 81    ld   ($BONGO_FRAME),a
-53A4: 18 05       jr   $_DONE
-53A6: 3E 2D       ld   a,$2D
-53A8: 32 49 81    ld   ($BONGO_FRAME),a
-_DONE
-53AB: C9          ret
-
-ATTRACT_JUMP_DOWN_STAIRS
-53AC: 1E 06       ld   e,$06    ; 6 stairs down
-53AE: CD B8 53    call $ATTRACT_JUMP_DOWN_ONE_STAIR
-53B1: CD 98 53    call $ATTRACT_ANIMATE_DINO_HEAD
-53B4: 1D          dec  e
-53B5: 20 F7       jr   nz,$53AE
-53B7: C9          ret
-
-    ;; identical to jump up, but point at down data.
-ATTRACT_JUMP_DOWN_ONE_STAIR
-53B8: 16 00       ld   d,$00
-_LP
-53BA: 21 08 54    ld   hl,$ATTRACT_PLAYER_DOWN_STAIR_DATA
-53BD: 7A          ld   a,d
-53BE: 87          add  a,a
-53BF: 87          add  a,a
-53C0: 85          add  a,l
-53C1: 6F          ld   l,a
-53C2: DD 21 40 81 ld   ix,$PLAYER_X
-53C6: 7E          ld   a,(hl)
-53C7: DD 77 01    ld   (ix+$01),a ; frame
-53CA: 23          inc  hl
-53CB: 7E          ld   a,(hl)
-53CC: DD 77 05    ld   (ix+$05),a ; frame leg
-53CF: 23          inc  hl
-53D0: 7E          ld   a,(hl)
-53D1: DD 86 00    add  a,(ix+$00) ; x-offset
-53D4: DD 77 00    ld   (ix+$00),a ; x
-53D7: DD 77 04    ld   (ix+$04),a ; x legs
-53DA: 23          inc  hl
-53DB: 7E          ld   a,(hl)
-53DC: DD 86 03    add  a,(ix+$03) ; y-offset
-53DF: DD 77 03    ld   (ix+$03),a ; y
-53E2: D6 10       sub  $10
-53E4: DD 77 07    ld   (ix+$07),a ;  y legs
-53E7: D5          push de
-53E8: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-53EB: CD 81 5C    call $JMP_HL
-53EE: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-53F1: CD 81 5C    call $JMP_HL
-53F4: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-53F7: CD 81 5C    call $JMP_HL
-53FA: D1          pop  de
-53FB: 14          inc  d
-53FC: 7A          ld   a,d
-53FD: FE 06       cp   $06
-53FF: 20 B9       jr   nz,$LP
-5401: CD C2 4E    call $WAIT_15_FOR_START_BUTTON
-5404: C9          ret
-5405: FF ...
-
-    ;; frame, frame leg, x-off, y-off
-ATTRACT_PLAYER_DOWN_STAIR_DATA
-5408: 0D 0C 04 F8
-540C: 0F 0E 04 00
-5410: 11 10 04 08
-5414: 16 12 04 08
-5418: 14 13 04 08 ; WHAT?! Wrong on the way down too! Head and legs flipped.
-541C: 0D 0C 04 08
-
-5420: FF ...
-
-CALL_ATTRACT_BONUS_SCREEN
-5428: 21 D0 15    ld   hl,$ATTRACT_BONUS_SCREEN
-542B: CD 81 5C    call $JMP_HL
-542E: C9          ret
-
-542F: FF
-
-ATTRACT_CAGE_FALLS_ON_DINO
-5430: 21 24 92    ld   hl,$9224
-_LP
-5433: CD 08 4D    call $DRAW_CAGE_TILES
-5436: E5          push hl
-5437: CD C2 54    call $ATTRACT_ANIMATE_PICKUPS_AND_WAIT
-543A: 00          nop
-543B: 00          nop
-543C: 00          nop
-543D: E1          pop  hl
-543E: 23          inc  hl
-543F: 3E 39       ld   a,$39    ; check if cage hit ground
-5441: BD          cp   l
-5442: 20 EF       jr   nz,$_LP
-5444: 3E 38       ld   a,$38    ; caged dino sprite
-5446: 32 41 81    ld   ($PLAYER_FRAME),a
-5449: 3C          inc  a
-544A: 32 45 81    ld   ($PLAYER_FRAME_LEGS),a
-544D: C9          ret
-
-544E: FF ...
-
-ATTRACT_DINO_RUNS_ALONG_GROUND
-5450: DD 21 40 81 ld   ix,$PLAYER_X ; this is a dino on attract screen
-5454: 3E 79       ld   a,$79
-5456: DD BE 00    cp   (ix+$00)
-5459: C8          ret  z
-545A: DD 34 00    inc  (ix+$00) ; dino runs along ground
-545D: DD 34 04    inc  (ix+$04)
-5460: 3A 12 83    ld   a,($TICK_NUM)
-5463: E6 03       and  $03
-5465: 20 24       jr   nz,$548B
-5467: DD 7E 05    ld   a,(ix+$05)
-546A: 3C          inc  a
-546B: FE 33       cp   $33
-546D: 20 02       jr   nz,$5471
-546F: 3E 31       ld   a,$31
-5471: DD 77 05    ld   (ix+$05),a
-5474: 3A 12 83    ld   a,($TICK_NUM)
-5477: E6 0F       and  $0F
-5479: FE 05       cp   $05
-547B: 20 06       jr   nz,$5483
-547D: DD 36 01 2C ld   (ix+$01),$2C
-5481: 18 08       jr   $548B
-5483: FE 08       cp   $08
-5485: 20 04       jr   nz,$548B
-5487: DD 36 01 2D ld   (ix+$01),$2D
-548B: CD C2 54    call $54C2
-548E: 00          nop
-548F: 00          nop
-5490: 00          nop
-5491: 18 BD       jr   $5450
-5493: FF          rst  $38
-
-ATTRACT_CATCH_DINO
-5494: 21 40 81    ld   hl,$PLAYER_X ; oi! You made the player a dinosaur!
-5497: 36 07       ld   (hl),$07 ; x
-5499: 23          inc  hl
-549A: 36 2D       ld   (hl),$2D ; frame : 2d is dino?
-549C: 23          inc  hl
-549D: 36 12       ld   (hl),$12 ; colr
-549F: 23          inc  hl
-54A0: 36 BF       ld   (hl),$BF ; y
-54A2: 23          inc  hl
-54A3: 36 00       ld   (hl),$00 ; x legs
-54A5: 23          inc  hl
-54A6: 36 30       ld   (hl),$30 ; frame legs
-54A8: 23          inc  hl
-54A9: 36 12       ld   (hl),$12 ; col legs
-54AB: 23          inc  hl
-54AC: 36 CF       ld   (hl),$CF ; y legs
-54AE: 21 24 92    ld   hl,$9224
-54B1: CD 08 4D    call $DRAW_CAGE_TILES
-54B4: CD 50 54    call $ATTRACT_DINO_RUNS_ALONG_GROUND
-54B7: CD D8 54    call $54D8
-54BA: CD 30 54    call $ATTRACT_CAGE_FALLS_ON_DINO
-54BD: CD D8 54    call $ATTRACT_DINO_CAGE_INVERT
-54C0: C9          ret
-
-54C1: FF
-
-    ;;
-ATTRACT_ANIMATE_PICKUPS_AND_WAIT
-54C2: 3A 12 83    ld   a,($TICK_NUM)
-54C5: E6 03       and  $03
-54C7: 20 06       jr   nz,$54CF
-54C9: 21 64 15    ld   hl,$ANIMATE_SPLASH_PICKUP_NOPS
-54CC: CD 81 5C    call $JMP_HL
-54CF: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-54D2: CD 81 5C    call $JMP_HL
-54D5: C9          ret
-
-54D6: FF
-
-ATTRACT_DINO_CAGE_INVERT
-54D8: 1E 20       ld   e,$20
-54DA: D5          push de
-54DB: CD C2 54    call $54C2
-54DE: D1          pop  de
-54DF: 1D          dec  e
-54E0: 20 F8       jr   nz,$54DA
-54E2: C9          ret
-
-54E3: FF
-
-54E4: 2D          dec  l
-54E5: 02          ld   (bc),a
-54E6: 2D          dec  l
-54E7: 01 2D 01    ld   bc,$012D
-54EA: 2D          dec  l
-54EB: 02          ld   (bc),a
-54EC: 2A 02 2D    ld   hl,($2D02)
-54EF: 02          ld   (bc),a
-54F0: 32 04 FF    ld   ($FF04),a
-54F3: FF          rst  $38
-54F4: 21 02 21    ld   hl,$2102
-54F7: 01 21 01    ld   bc,$0121
-54FA: 21 02 1E    ld   hl,$1E02
-54FD: 02          ld   (bc),a
-54FE: 21 02 26    ld   hl,$2602
-5501: 04          inc  b
-5502: FF          rst  $38
-5503: FF          rst  $38
-5504: 01 03 0F    ld   bc,$0F03
-5507: 00          nop
-5508: E4 54 FF    call po,$FF54
-550B: FF          rst  $38
-550C: F4 54 FF    call p,$FF54
-550F: FF          rst  $38
-5510: 6C          ld   l,h
-5511: 55          ld   d,l
-5512: FF          rst  $38
-5513: FF          rst  $38
-
-SFX_8_DATA
-5514: 03 04 55 08 55 08 55 FF
-551C: FF FF FF FF
-
-    ;; mabye sfx?
-RESET_SFX_SOMETHING_1
-5520: AF          xor  a
-5521: 32 46 80    ld   ($8046),a
-5524: 3A A5 82    ld   a,($82A5)
-5527: A7          and  a
-5528: 20 05       jr   nz,$552F
-552A: 3E F9       ld   a,$F9
-552C: 00          nop
-552D: 00          nop
-552E: 00          nop
-552F: 3A AD 82    ld   a,($82AD)
-5532: A7          and  a
-5533: 20 05       jr   nz,$553A
-5535: 3E FD       ld   a,$FD
-5537: 00          nop
-5538: 00          nop
-5539: 00          nop
-553A: 3A B5 82    ld   a,($82B5)
-553D: A7          and  a
-553E: 20 05       jr   nz,$5545
-5540: 3E FB       ld   a,$FB
-5542: 00          nop
-5543: 00          nop
-5544: 00          nop
-5545: 3E FF       ld   a,$FF
-5547: 00          nop
-5548: 00          nop
-5549: 00          nop
-554A: C9          ret
-554B: FF ...
-
-5550: 10 01 0B 01 08 01 FF FF
-5558: 04 04 0F 10 50 55 FF FF
-
-SFX_10_DATA
-5560: 03 58 55 5C 55 5C 55 FF
-5568: 6A 55 FF FF FF FF FF FF
-
-    ;; bytes after the call are
-    ;; start_y, start_x, tile 1, ...tile x, 0xFF
-DRAW_TILES_H_COPY
-5570: 3A 00 B8    ld   a,($WATCHDOG) ; is this ack? "A" not used
-5573: 21 40 90    ld   hl,$START_OF_TILES
-5576: C1          pop  bc       ; stack return pointer into bc (ie, data)
-5577: 0A          ld   a,(bc)   ; start_y
-5578: 03          inc  bc
-5579: 85          add  a,l
-557A: 6F          ld   l,a
-557B: 0A          ld   a,(bc)   ; start_x
-557C: 5F          ld   e,a
-557D: 3E 1B       ld   a,$1B
-557F: 93          sub  e
-5580: 5F          ld   e,a
-5581: 16 00       ld   d,$00
-5583: CB 23       sla  e
-5585: CB 23       sla  e
-5587: CB 23       sla  e
-5589: 19          add  hl,de
-558A: 19          add  hl,de
-558B: 19          add  hl,de
-558C: 19          add  hl,de
-558D: 03          inc  bc
-_LP_1
-558E: 0A          ld   a,(bc)   ; each character until 0xff
-558F: 03          inc  bc
-5590: FE FF       cp   $FF
-5592: 20 02       jr   nz,$_DONE
-5594: C5          push bc
-_DONE
-5595: C9          ret
-5596: 77          ld   (hl),a   ; writes to screen loc
-5597: 16 FF       ld   d,$FF
-5599: 1E E0       ld   e,$E0
-559B: 19          add  hl,de
-559C: 18 F0       jr   _LP_1
-
-559E: FF ...
-
-CHASED_BY_A_DINO_SCREEN
-55A0: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-55A3: CD 81 5C    call $JMP_HL
-55A6: CD D0 56    call $DRAW_BUGGY_BORDER
-55A9: 00          nop
-55AA: 00          nop
-55AB: 00          nop
-55AC: CD A8 5A    call $FLASH_BORDER
-55AF: CD 70 55    call $DRAW_TILES_H_COPY
-55B2: 08 0B
-55B4: 12 15 27 11 22 15 FF      ; BEWARE
-55BB: CD A8 5A    call $FLASH_BORDER
-55BE: CD 70 55    call $DRAW_TILES_H_COPY
-55C1: 0C 05
-    ;; YOUR BEING CHASED
-55C3: 29 1F 25 22 10 12 15 19 1E 17 10 13 18 11 23 15 14 FF
-55D5: CD A8 5A    call $FLASH_BORDER
-55D8: CD 70 55    call $DRAW_TILES_H_COPY
-55DB: 10 07
-    ;; BY A DINOSAUR (classic!)
-55DD: 12 29 10 11 10 14 19 1E 1F 23 11 25 22 FF
-55EB: C3 B2 48    jp   $ATTRACT_YOUR_BEING_CHASED_FLASH
-
-55EE: FF ...
-
-55F0: A1          and  c
-55F1: 02          ld   (bc),a
-55F2: C3 02 A1    jp   $A102
-55F5: 02          ld   (bc),a
-55F6: C3 02 A1    jp   $A102
-55F9: 02          ld   (bc),a
-55FA: C3 02 A1    jp   $A102
-55FD: 02          ld   (bc),a
-55FE: C3 02 FF    jp   $FF02
-5601: FF FF FF FF
-5604: 00          nop
-5605: 02          ld   (bc),a
-5606: FF          rst  $38
-5607: FF          rst  $38
-5608: FF          rst  $38
-5609: FF          rst  $38
-560A: FF          rst  $38
-560B: FF          rst  $38
-560C: 0E 0E       ld   c,$0E
-560E: FF          rst  $38
-560F: FF          rst  $38
-5610: E0          ret  po
-5611: 15          dec  d
-5612: FF          rst  $38
-5613: FF          rst  $38
-5614: 44          ld   b,h
-5615: 15          dec  d
-5616: 48          ld   c,b
-5617: 15          dec  d
-5618: 48          ld   c,b
-5619: 15          dec  d
-561A: A0          and  b
-561B: 15          dec  d
-561C: A0          and  b
-561D: 15          dec  d
-561E: EE 09       xor  $09
-5620: FF          rst  $38
-5621: FF          rst  $38
-5622: 70          ld   (hl),b
-5623: 18 70       jr   $5695
-5625: 18 30       jr   $5657
-5627: 17          rla
-5628: B0          or   b
-5629: 18 EE       jr   $5619
-562B: 05          dec  b
-562C: FF          rst  $38
-562D: FF          rst  $38
-562E: FF          rst  $38
-562F: FF          rst  $38
-5630: 0E 02       ld   c,$02
-5632: 13          inc  de
-5633: 04          inc  b
-5634: 13          inc  de
-5635: 04          inc  b
-5636: 13          inc  de
-5637: 02          ld   (bc),a
-5638: 13          inc  de
-5639: 06 1A       ld   b,$1A
-563B: 04          inc  b
-563C: 1A          ld   a,(de)
-563D: 04          inc  b
-563E: 1A          ld   a,(de)
-563F: 02          ld   (bc),a
-5640: 1E 06       ld   e,$06
-5642: 1C          inc  e
-5643: 04          inc  b
-5644: 1E 02       ld   e,$02
-5646: 1C          inc  e
-5647: 02          ld   (bc),a
-5648: 1A          ld   a,(de)
-5649: 06 17       ld   b,$17
-564B: 04          inc  b
-564C: FF          rst  $38
-564D: FF          rst  $38
-564E: FF          rst  $38
-564F: FF          rst  $38
-5650: 13          inc  de
-5651: 02          ld   (bc),a
-5652: 17          rla
-5653: 02          ld   (bc),a
-5654: 18 02       jr   $5658
-5656: 1A          ld   a,(de)
-5657: 02          ld   (bc),a
-5658: 1A          ld   a,(de)
-5659: 04          inc  b
-565A: 1A          ld   a,(de)
-565B: 04          inc  b
-565C: 1A          ld   a,(de)
-565D: 06 1A       ld   b,$1A
-565F: 02          ld   (bc),a
-5660: 18 06       jr   $5668
-5662: 18 04       jr   $5668
-5664: 18 02       jr   $5668
-5666: 18 02       jr   $566A
-5668: 18 02       jr   $566C
-566A: 17          rla
-566B: 02          ld   (bc),a
-566C: 17          rla
-566D: 02          ld   (bc),a
-566E: 13          inc  de
-566F: 04          inc  b
-5670: 17          rla
-5671: 04          inc  b
-5672: 18 02       jr   $5676
-5674: 0E 02       ld   c,$02
-5676: FF          rst  $38
-5677: FF          rst  $38
-5678: 09          add  hl,bc
-5679: 02          ld   (bc),a
-567A: 0B          dec  bc
-567B: 04          inc  b
-567C: 0B          dec  bc
-567D: 04          inc  b
-567E: 0B          dec  bc
-567F: 02          ld   (bc),a
-5680: 0C          inc  c
-5681: 06 15       ld   b,$15
-5683: 04          inc  b
-5684: 15          dec  d
-5685: 04          inc  b
-5686: 15          dec  d
-5687: 02          ld   (bc),a
-5688: 1A          ld   a,(de)
-5689: 06 18       ld   b,$18
-568B: 04          inc  b
-568C: 1A          ld   a,(de)
-568D: 02          ld   (bc),a
-568E: 18 02       jr   $5692
-5690: 15          dec  d
-5691: 06 13       ld   b,$13
-5693: 04          inc  b
-5694: FF          rst  $38
-5695: FF          rst  $38
-5696: 0E 02       ld   c,$02
-5698: 13          inc  de
-5699: 02          ld   (bc),a
-569A: 13          inc  de
-569B: 02          ld   (bc),a
-569C: 15          dec  d
-569D: 02          ld   (bc),a
-569E: 15          dec  d
-569F: 04          inc  b
-56A0: 15          dec  d
-56A1: 04          inc  b
-56A2: 15          dec  d
-56A3: 06 15       ld   b,$15
-56A5: 02          ld   (bc),a
-56A6: 13          inc  de
-56A7: 06 13       ld   b,$13
-56A9: 04          inc  b
-56AA: 13          inc  de
-56AB: 02          ld   (bc),a
-56AC: 13          inc  de
-56AD: 02          ld   (bc),a
-56AE: 13          inc  de
-56AF: 02          ld   (bc),a
-56B0: 13          inc  de
-56B1: 02          ld   (bc),a
-56B2: 13          inc  de
-56B3: 02          ld   (bc),a
-56B4: 0E 04       ld   c,$04
-56B6: 13          inc  de
-56B7: 04          inc  b
-56B8: 13          inc  de
-56B9: 02          ld   (bc),a
-56BA: 15          dec  d
-56BB: 02          ld   (bc),a
-56BC: FF          rst  $38
-56BD: FF          rst  $38
-56BE: FF          rst  $38
-56BF: FF          rst  $38
-56C0: 05          dec  b
-56C1: 05          dec  b
-56C2: 0C          inc  c
-56C3: 00          nop
-56C4: 0C          inc  c
-56C5: 16 30       ld   d,$30
-56C7: 16 30       ld   d,$30
-56C9: 16 50       ld   d,$50
-56CB: 16 50       ld   d,$50
-56CD: 16 EE       ld   d,$EE
-56CF: 09          add  hl,bc
-
-DRAW_BUGGY_BORDER
-56D0: 3E 01       ld   a,$01
-56D2: CD D8 5A    call $SET_ROW_COLORS
-56D5: 21 88 0F    ld   hl,$DRAW_BORDER_1
-    ;; THIS IS A BUG! It's supposed to call draw_border
-    ;; to put the inner rounded border on the beautiful
-    ;; "YOUR BEING CHASED BY A DINO" screen, but the typo
-    ;; Jumps to middle of nowhere, that happens to be
-    ;; ... 0x40 (ld b,b), 0xC9 (ret). Phew, does nothing...
-    ;; It's supposed to be: call $5C81 (JMP_HL)
-    ;;
-    ;; (err, did they call everything by hand without labels?!)
-56D8: CD 81 4C    call $4C81    ; bad jump, no inner border for us :(
-56DB: C9          ret
-
-56DC: FF ...
-
-    ;; ???
-56E0: 03          inc  bc
-56E1: C0          ret  nz
-56E2: 16 A0       ld   d,$A0
-56E4: 18 22       jr   $5708
-56E6: 16 FF       ld   d,$FF
-
-    ;;
-SFX_RESET_A_BUNCH
-56E8: CD C0 46    call $ZERO_OUT_SOME_SFX
-56EB: CD 70 48    call $ZERO_OUT_SOME_SFX_2
-56EE: CD 10 49    call $ZERO_OUT_SOME_SFX_3
-56F1: CD 20 55    call $RESET_SFX_SOMETHING_1
-56F4: C9          ret
-56F5: FF ...
-
-    ;;
-56F8: 12 01 0E 01
-56FC: 12 01 0E 01
-5700: 10 01       djnz $5703
-5702: 0D          dec  c
-5703: 01 10 01    ld   bc,$0110
-5706: 0D          dec  c
-5707: 01 0E 01    ld   bc,$010E
-570A: 0B          dec  bc
-570B: 01 0E 01    ld   bc,$010E
-570E: 0B          dec  bc
-570F: 01 0D 01    ld   bc,$010D
-5712: 09          add  hl,bc
-5713: 01 0D 01    ld   bc,$010D
-5716: 09          add  hl,bc
-5717: 01 04 01    ld   bc,$0104
-571A: 06 01       ld   b,$01
-571C: 07          rlca
-571D: 01 09 01    ld   bc,$0109
-5720: 0B          dec  bc
-5721: 01 0D 01    ld   bc,$010D
-5724: 0E 01       ld   c,$01
-5726: 10 01       djnz $5729
-5728: 0E 02       ld   c,$02
-572A: 09          add  hl,bc
-572B: 02          ld   (bc),a
-572C: 0E 04       ld   c,$04
-572E: FF          rst  $38
-572F: FF          rst  $38
-5730: A1          and  c
-5731: 02          ld   (bc),a
-5732: C3 02 A1    jp   $A102
-5735: 02          ld   (bc),a
-5736: C3 02 A1    jp   $A102
-5739: 02          ld   (bc),a
-573A: C3 02 A1    jp   $A102
-573D: 02          ld   (bc),a
-573E: C3 02 A1    jp   $A102
-5741: 02          ld   (bc),a
-5742: C3 01 C3    jp   $C301
-5745: 01 A0 02    ld   bc,$02A0
-5748: A0          and  b
-5749: 02          ld   (bc),a
-574A: D3 01       out  ($01),a
-574C: D3 01       out  ($01),a
-574E: D3 01       out  ($01),a
-5750: D3 01       out  ($01),a
-5752: C0          ret  nz
-5753: 02          ld   (bc),a
-5754: C1          pop  bc
-5755: 02          ld   (bc),a
-5756: FF          rst  $38
-5757: FF          rst  $38
-5758: FF          rst  $38
-5759: FF          rst  $38
-575A: FF          rst  $38
-575B: FF          rst  $38
-575C: FF          rst  $38
-575D: FF          rst  $38
-575E: FF          rst  $38
-575F: FF          rst  $38
-5760: 01 08 0F    ld   bc,$0F08
-5763: 10 F8       djnz $575D
-5765: 56          ld   d,(hl)
-5766: FF          rst  $38
-5767: FF          rst  $38
-5768: 80          add  a,b
-5769: 57          ld   d,a
-576A: FF          rst  $38
-576B: FF          rst  $38
-576C: 6E          ld   l,(hl)
-576D: 57          ld   d,a
-576E: FF          rst  $38
-576F: FF          rst  $38
-
-SFX_9_DATA
-5770: 02          ld   (bc),a
-5771: 60          ld   h,b
-5772: 57          ld   d,a
-5773: 68          ld   l,b
-5774: 57          ld   d,a
-5775: 6C          ld   l,h
-5776: 57          ld   d,a
-5777: FF          rst  $38
-5778: FF          rst  $38
-5779: FF          rst  $38
-577A: FF          rst  $38
-577B: FF          rst  $38
-577C: FF          rst  $38
-577D: FF          rst  $38
-577E: FF          rst  $38
-577F: FF          rst  $38
-5780: 15          dec  d
-5781: 01 0E 01    ld   bc,$010E
-5784: 15          dec  d
-5785: 01 0E 01    ld   bc,$010E
-5788: 15          dec  d
-5789: 01 10 01    ld   bc,$0110
-578C: 15          dec  d
-578D: 01 10 01    ld   bc,$0110
-5790: 13          inc  de
-5791: 01 0E 01    ld   bc,$010E
-5794: 13          inc  de
-5795: 01 0E 01    ld   bc,$010E
-5798: 10 01       djnz $579B
-579A: 09          add  hl,bc
-579B: 01 10 01    ld   bc,$0110
-579E: 09          add  hl,bc
-579F: 01 09 01    ld   bc,$0109
-57A2: 0B          dec  bc
-57A3: 01 09 01    ld   bc,$0109
-57A6: 07          rlca
-57A7: 01 06 01    ld   bc,$0106
-57AA: 04          inc  b
-57AB: 01 02 01    ld   bc,$0102
-57AE: 04          inc  b
-57AF: 01 02 02    ld   bc,$0202
-57B2: 06 02       ld   b,$02
-57B4: 02          ld   (bc),a
-57B5: 04          inc  b
-57B6: FF ...
-
-CALL_DRAW_EXTRA_BONUS_SCREEN
-57C0: C3 F0 5A    jp   $DRAW_EXTRA_BONUS_SCREEN
-    ;;
-57C3: CD 81 5C    call $JMP_HL
-57C6: 21 88 0F    ld   hl,$DRAW_BORDER_1
-57C9: CD 81 5C    call $JMP_HL
-57CC: CD 70 55    call $DRAW_TILES_H_COPY
-57CF: 08 08
-57D1: 15 28 24 22 11 10 12 1F 1E 25 23 FF
-57DD: CD 70 55    call $DRAW_TILES_H_COPY
-57E0: 09 08
-57E2: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
-57EE: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-57F1: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-57F4: CD 70 55    call $DRAW_TILES_H_COPY
-57F7: 0C 07
-57F9: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
-5809: CD 70 55    call $DRAW_TILES_H_COPY
-580C: 10 07
-580E: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
-581E: CD 70 55    call $DRAW_TILES_H_COPY
-5821: 14 07
-5823: 1C 1F 23 19 1E 17 10 11 10 1C 19 16 15 FF
-5831: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-5834: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-5837: CD 70 55    call $DRAW_TILES_H_COPY
-583A: 17 0B
-583C: E0 DC DD DE DF FF
-5842: CD 70 55    call $DRAW_TILES_H_COPY
-5845: 18 0B
-5847: E1 E8 EA F2 E6 FF
-584D: CD 70 55    call $DRAW_TILES_H_COPY
-5850: 19 0B
-5852: E1 E9 EB F3 E6 FF
-5858: CD 70 55    call $DRAW_TILES_H_COPY
-585B: 1A 0B
-585D: E2 E3 E3 E3 E4 FF
-5863: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-5866: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-5869: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-586C: CD B0 4E    call $WAIT_60_FOR_START_BUTTON
-586F: C9          ret
-
-    ;; what's this data eh? Looks similar to $5c00
-5870: A2 01 A2 01 A2 01 A2 01
-5878: B2 01 B2 01 B2 01 B2 01
-5880: C2 01 C2 01 C2 01 C2 01
-5888: D2 01 D2 01 D2 01 D2 01
-5890: FF FF FF FF FF FF FF FF
-5898: FF FF FF FF FF FF FF FF
-58A0: 0C 16 78 16 78 16 96 16
-58A8: 96 16 EE 09 FF FF FF FF
-58B0: A1 02 C3 02 A1 02 C3 02
-58B8: A1 02 C3 02 A1 02 C3 02
-58C0: A0 02 D3 01 D3 01 D3 01
-58C8: D3 01 FF FF FF FF FF FF
-
-    ;; bytes after the call are:
-    ;; start_x, start_y, tile 1, ...tile id, 0xFF
-DRAW_TILES_V
-58D0: DD E1       pop  ix       ; pops next addr (eg, data) from stack
-58D2: 26 00       ld   h,$00
-58D4: DD 6E 00    ld   l,(ix+$00) ; start_x
-58D7: 29          add  hl,hl
-58D8: 29          add  hl,hl
-58D9: 29          add  hl,hl
-58DA: 29          add  hl,hl
-58DB: 29          add  hl,hl
-58DC: DD 23       inc  ix       ; start_y
-58DE: DD 7E 00    ld   a,(ix+$00)
-58E1: 85          add  a,l
-58E2: 6F          ld   l,a
-58E3: 01 40 90    ld   bc,$START_OF_TILES
-58E6: 09          add  hl,bc
-58E7: DD 23       inc  ix       ; read data until 0xff
-58E9: DD 7E 00    ld   a,(ix+$00)
-58EC: FE FF       cp   $FF
-58EE: 28 04       jr   z,$58F4
-58F0: 77          ld   (hl),a
-58F1: 23          inc  hl
-58F2: 18 F3       jr   $58E7
-58F4: DD 23       inc  ix
-58F6: DD E5       push ix
-58F8: C9          ret
-
-58F9: FF ...
-
-DRAW_SPLASH_CIRCLE_BORDER_1
-5900: CD 70 55    call $DRAW_TILES_H_COPY
-5903: 01 01                ; start pos
-    ;; splash screen circle border (26 = tiles)
-    ;; Top Row 1
-5905: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
-5915: 52 53 51 52 53 51 52 53 51 52 FF
-
-    ;; left side 1
-5920: CD D0 58    call $DRAW_TILES_V
-5923: 01 02                ; start pos
-5925: 53 52 51 53 52 51 53 52 51 53 52 51 53 52 51 53
-5935: 52 51 53 52 51 53 52 51 53 52 FF
-
-    ;; right side 1
-5940: CD D0 58    call $DRAW_TILES_V
-5943: SCR_TILE_W 02       ;start pos
-5945: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
-5955: 52 53 51 52 53 51 52 53 51 52 FF
-
-    ;; Bottom row 1
-5960: CD 70 55    call $DRAW_TILES_H_COPY
-5963: SCR_TILE_H 01      ; start pos
-5965: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
-5975: 51 52 53 51 52 53 51 52 53 51 FF
-5980: C9          ret
-
-5981: FF ...
-
-DRAW_SPLASH_CIRCLE_BORDER_2
-5988: CD 70 55    call $DRAW_TILES_H_COPY
-598B: 01 01
-598D: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
-599D: 53 51 52 53 51 52 53 51 52 53 FF
-    ;;
-59A8: CD D0 58    call $DRAW_TILES_V
-59AB: 01 02
-59AD: 52 51 53 52 51 53 52 51 53 52 51 53 52 51 53 52
-59BD: 51 53 52 51 53 52 51 53 52 51 FF
-    ;;
-59C8: CD D0 58    call $DRAW_TILES_V
-59CB: 1A 02
-59CD: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
-59DD: 51 52 53 51 52 53 51 52 53 51 FF
-    ;;
-59E8: CD 70 55    call $DRAW_TILES_H_COPY
-59EB: 1C 01
-59ED: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
-59FD: 53 51 52 53 51 52 53 51 52 53 FF
-    ;;
-5A08: C9          ret
-5A09: FF ...
-
-DRAW_SPLASH_CIRCLE_BORDER_3
-5A10: CD 70 55    call $DRAW_TILES_H_COPY
-5A13: 01 01
-5A15: 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53
-5A25: 51 52 53 51 52 53 51 52 53 51 FF
-    ;;
-5A30: CD D0 58    call $DRAW_TILES_V
-5A33: 01 02
-5A35: 51 53 52 51 53 52 51 53 52 51 53 52 51 53 52 51
-5A45: 53 52 51 53 52 51 53 52 51 53 FF
-    ;;
-5A50: CD D0 58    call $DRAW_TILES_V
-5A53: 1A 02
-5A55: 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51 52
-5A65: 53 51 52 53 51 52 53 51 52 53 FF
-    ;;
-5A70: CD 70 55    call $DRAW_TILES_H_COPY
-5A73: 1C 01
-5A75: 51 52 53 51 52 53 51 52 53 51 52 53 51 52 53 51
-5A85: 52 53 51 52 53 51 52 53 51 52 FF
-    ;;
-5A90: C9          ret
-5A91: FF ...
-
-    ;;
-5A98: E5          push hl
-5A99: C5          push bc
-5A9A: D5          push de
-5A9B: 21 28 21    ld   hl,$WAIT_FOR_START_BUTTON
-5A9E: CD 81 5C    call $JMP_HL
-5AA1: D1          pop  de
-5AA2: C1          pop  bc
-5AA3: E1          pop  hl
-5AA4: C9          ret
-5AA5: FF ...
-
-    ;; Splash screen animated circle border
-FLASH_BORDER
-5AA8: 1E 05       ld   e,$05
-5AAA: 16 05       ld   d,$05
-5AAC: D5          push de
-5AAD: CD 00 59    call $DRAW_SPLASH_CIRCLE_BORDER_1
-5AB0: CD 98 5A    call $5A98
-5AB3: D1          pop  de
-5AB4: 15          dec  d
-5AB5: 20 F5       jr   nz,$5AAC
-5AB7: 16 05       ld   d,$05
-5AB9: D5          push de
-5ABA: CD 88 59    call $DRAW_SPLASH_CIRCLE_BORDER_2
-5ABD: CD 98 5A    call $5A98
-5AC0: D1          pop  de
-5AC1: 15          dec  d
-5AC2: 20 F5       jr   nz,$5AB9
-5AC4: 16 05       ld   d,$05
-5AC6: D5          push de
-5AC7: CD 10 5A    call $DRAW_SPLASH_CIRCLE_BORDER_3
-5ACA: CD 98 5A    call $5A98
-5ACD: D1          pop  de
-5ACE: 15          dec  d
-5ACF: 20 F5       jr   nz,$5AC6
-5AD1: 1D          dec  e
-5AD2: 20 D6       jr   nz,$5AAA
-5AD4: C9          ret
-5AD5: FF ...
-
-SET_ROW_COLORS
-5AD8: 47          ld   b,a
-5AD9: 21 01 81    ld   hl,$SCREEN_XOFF_COL+1 ;col for row 1
-5ADC: 70          ld   (hl),b
-5ADD: 23          inc  hl
-5ADE: 23          inc  hl
-5ADF: 7D          ld   a,l
-5AE0: FE 41       cp   $41
-5AE2: 20 F8       jr   nz,$5ADC
-5AE4: C9          ret
-
-5AE5: FF
-
-SET_SCREEN_COLOR_TO_4
-5AE6: 3E 04       ld   a,$04
-5AE8: CD D8 5A    call $SET_ROW_COLORS
-5AEB: C9          ret
-5AEC: FF ...
-
-DRAW_EXTRA_BONUS_SCREEN
-5AF0: 21 70 14    ld   hl,$RESET_XOFF_SPRITES_AND_CLEAR_SCREEN
-5AF3: CD 81 5C    call $JMP_HL
-5AF6: 21 88 0F    ld   hl,$DRAW_BORDER_1
-5AF9: CD 81 5C    call $JMP_HL
-5AFC: CD E6 5A    call $SET_SCREEN_COLS_TO_4
-5AFF: CD 70 55    call $DRAW_TILES_H_COPY
-5B02: 08 08
-    ;; EXTRA BONUS
-5B04: 15 28 24 22 11 10 12 1F 1E 25 23 FF
-5B10: CD 70 55    call $DRAW_TILES_H_COPY
-5B13: 09 08
-5B15: 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B 2B FF
-5B21: CD A8 5A    call $FLASH_BORDER
-5B24: CD A8 5A    call $FLASH_BORDER
-5B27: CD 70 55    call $DRAW_TILES_H_COPY
-5B2A: 0C 07
-    ;; PICK UP 6 BONUS
-5B2C: 20 19 13 1B 10 25 20 10 06 10 12 1F 1E 25 23 FF
-5B3C: CD 70 55    call $DRAW_TILES_H_COPY
-5B3F: 10 07
-5B41: 1F 12 1A 15 13 24 23 10 27 19 24 18 1F 25 24 FF
-5B51: CD 70 55    call $DRAW_TILES_H_COPY
-5B54: 14 07
-5B56: 1C 1F 23 19 1E 17 10 11 10 1C 19 16 15 FF
-5B64: CD A8 5A    call $FLASH_BORDER
-5B67: CD 70 55    call $DRAW_TILES_H_COPY
-5B6A: 17 0B
-5B6C: E0 DC DD DE DF FF
-5B72: CD 70 55    call $DRAW_TILES_H_COPY
-5B75: 18 0B
-5B77: E1 E5 E5 E5 E6 FF
-5B7D: CD 70 55    call $DRAW_TILES_H_COPY
-5B80: 19 0B
-5B82: E1 E5 E5 E5 E6 FF
-5B88: CD 70 55    call $DRAW_TILES_H_COPY
-5B8B: 1A 0B
-5B8D: E2 E3 E3 E3 E4 FF CD A8 5A CD A8 5A CD C8 5B C9 FF
-5B9E: FF ...
-
-ANIMATE_CIRCLE_BORDER
-5BA8: 3A 64 80    ld   a,($SPLASH_ANIM_FR)
-5BAB: 3C          inc  a
-5BAC: FE 03       cp   $03
-5BAE: 20 01       jr   nz,$5BB1
-5BB0: AF          xor  a
-5BB1: 32 64 80    ld   ($SPLASH_ANIM_FR),a
-5BB4: A7          and  a
-5BB5: 20 04       jr   nz,$_BORDER_1_2
-5BB7: CD 10 5A    call $DRAW_SPLASH_CIRCLE_BORDER_3
-5BBA: C9          ret
-_BORDER_1_2
-5BBB: FE 01       cp   $01
-5BBD: 20 04       jr   nz,$5BC3
-5BBF: CD 88 59    call $DRAW_SPLASH_CIRCLE_BORDER_2
-5BC2: C9          ret
-5BC3: CD 00 59    call $DRAW_SPLASH_CIRCLE_BORDER_1
-5BC6: C9          ret
-
-5BC7: FF
-
-    ;;
-5BC8: 3E F2       ld   a,$F2
-5BCA: 32 F8 91    ld   ($91F8),a
-5BCD: CD A8 5A    call $FLASH_BORDER
-5BD0: 3E F3       ld   a,$F3
-5BD2: 32 F9 91    ld   ($91F9),a
-5BD5: CD A8 5A    call $FLASH_BORDER
-5BD8: 3E EA       ld   a,$EA
-5BDA: 32 18 92    ld   ($9218),a
-5BDD: CD A8 5A    call $FLASH_BORDER
-5BE0: 3E EB       ld   a,$EB
-5BE2: 32 19 92    ld   ($9219),a
-5BE5: CD A8 5A    call $FLASH_BORDER
-5BE8: 3E E8       ld   a,$E8
-5BEA: 32 38 92    ld   ($9238),a
-5BED: CD A8 5A    call $FLASH_BORDER
-5BF0: 3E E9       ld   a,$E9
-5BF2: 32 39 92    ld   ($9239),a
-5BF5: CD A8 5A    call $FLASH_BORDER
-5BF8: CD A8 5A    call $FLASH_BORDER
-5BFB: CD A8 5A    call $FLASH_BORDER
-5BFE: C9          ret
-5BFF: FF
-
-    ;; Looks similar format to 5870
-5C00: 15 01 15 01 15 01 1A 03
-5C08: 1E 02 15 01 15 01 15 01
-5C10: 01 1A 03 1E 02 15 01 15
-5C17: 01 15 01 1A 01 21 01 21
-5C1F: 01 21 01 21 03 23 01 1E
-5C27: 01 1C 04 15 01 15 01 15
-5C2F: 01 19 03 1C 02 15 01 15
-5C37: 01 15 01 19 03 1C 02 15
-5C3F: 01 15 01 15 01 15 01 21
-5C47: 01 21 01 21 01 21 02 23
-5C4F: 01 1E 02 1A 04 FF FF FF
-5C57: FF FF FF FF FF FF FF FF
-5C5F: FF          rst  $38
-5C60: 62          ld   h,d
-5C61: 5C          ld   e,h
-5C62: FF          rst  $38
-5C63: FF          rst  $38
-5C64: FF          rst  $38
-5C65: FF          rst  $38
-5C66: FF          rst  $38
-5C67: FF          rst  $38
-5C68: FF          rst  $38
-5C69: FF          rst  $38
-5C6A: FF          rst  $38
-5C6B: FF          rst  $38
-5C6C: FF          rst  $38
-5C6D: FF          rst  $38
-5C6E: FF          rst  $38
-5C6F: FF          rst  $38
-5C70: FF          rst  $38
-5C71: FF          rst  $38
-5C72: FF          rst  $38
-5C73: FF          rst  $38
-5C74: FF          rst  $38
-5C75: FF          rst  $38
-5C76: FF          rst  $38
-5C77: FF          rst  $38
-5C78: FF          rst  $38
-5C79: FF          rst  $38
-5C7A: FF          rst  $38
-5C7B: FF          rst  $38
-5C7C: FF          rst  $38
-5C7D: FF          rst  $38
-5C7E: FF          rst  $38
-5C7F: FF          rst  $38
-5C80: FF          rst  $38
-
-JMP_HL
-5C81: E9          jp   (hl)
-5C82: 40          ld   b,b
-5C83: 41          ld   b,c
-5C84: C9          ret
-5C85: FF
-
-5C86: 06 01       ld   b,$01
-5C88: 06 01       ld   b,$01
-5C8A: 06 01       ld   b,$01
-5C8C: 0E 01       ld   c,$01
-5C8E: 09          add  hl,bc
-5C8F: 01 12 01    ld   bc,$0112
-5C92: 10 01       djnz $5C95
-5C94: 0E 01       ld   c,$01
-5C96: 06 01       ld   b,$01
-5C98: 06 01       ld   b,$01
-5C9A: 06 01       ld   b,$01
-5C9C: 0E 01       ld   c,$01
-5C9E: 09          add  hl,bc
-5C9F: 01 12 01    ld   bc,$0112
-5CA2: 10 01       djnz $5CA5
-5CA4: 0E 01       ld   c,$01
-5CA6: 06 01       ld   b,$01
-5CA8: 06 01       ld   b,$01
-5CAA: 06 01       ld   b,$01
-5CAC: 0E 01       ld   c,$01
-5CAE: 09          add  hl,bc
-5CAF: 01 12 01    ld   bc,$0112
-5CB2: 10 01       djnz $5CB5
-5CB4: 0E 01       ld   c,$01
-5CB6: 12          ld   (de),a
-5CB7: 01 12 01    ld   bc,$0112
-5CBA: 12          ld   (de),a
-5CBB: 01 10 01    ld   bc,$0110
-5CBE: 10 01       djnz $5CC1
-5CC0: 0D          dec  c
-5CC1: 01 07 02    ld   bc,$0207
-5CC4: 07          rlca
-5CC5: 01 07 01    ld   bc,$0107
-5CC8: 07          rlca
-5CC9: 01 0D 01    ld   bc,$010D
-5CCC: 0D          dec  c
-5CCD: 01 10 01    ld   bc,$0110
-5CD0: 10 02       djnz $5CD4
-5CD2: 07          rlca
-5CD3: 01 07 01    ld   bc,$0107
-5CD6: 07          rlca
-5CD7: 01 0D 01    ld   bc,$010D
-5CDA: 0D          dec  c
-5CDB: 01 10 01    ld   bc,$0110
-5CDE: 10 02       djnz $5CE2
-5CE0: 07          rlca
-5CE1: 01 07 01    ld   bc,$0107
-5CE4: 07          rlca
-5CE5: 01 09 01    ld   bc,$0109
-5CE8: 10 01       djnz $5CEB
-5CEA: 10 01       djnz $5CED
-5CEC: 10 01       djnz $5CEF
-5CEE: 15          dec  d
-5CEF: 01 15 01    ld   bc,$0115
-5CF2: 13          inc  de
-5CF3: 02          ld   (bc),a
-5CF4: 12          ld   (de),a
-5CF5: 01 10 02    ld   bc,$0210
-5CF8: 0E 02       ld   c,$02
-5CFA: FF          rst  $38
-5CFB: FF          rst  $38
-5CFC: FF          rst  $38
-5CFD: FF          rst  $38
-5CFE: FF          rst  $38
-5CFF: FF          rst  $38
-
-SFX_1_DATA
-5D00: 02 08 5D 14 5D 14 5D FF
-5D08: 01 08 0E 00 86 5C EE 03
-
-5D10: FF          rst  $38
-5D11: FF          rst  $38
-5D12: FF          rst  $38
-5D13: FF          rst  $38
-5D14: 00          nop
-5D15: 5C          ld   e,h
-5D16: EE 03       xor  $03
-5D18: FF          rst  $38
-5D19: FF          rst  $38
-5D1A: 70          ld   (hl),b
-5D1B: 18 30       jr   $5D4D
-5D1D: 17          rla
-5D1E: 30 17       jr   nc,$5D37
-5D20: 30 17       jr   nc,$5D39
-5D22: 30 17       jr   nc,$5D3B
-5D24: 28 1D       jr   z,$5D43
-5D26: EE 03       xor  $03
-5D28: E3          ex   (sp),hl
-5D29: 06 D3       ld   b,$D3
-5D2B: 03          inc  bc
-5D2C: D3 03       out  ($03),a
-5D2E: FF          rst  $38
-5D2F: FF          rst  $38
-5D30: 19          add  hl,de
-5D31: 01 1A 01    ld   bc,$011A
-5D34: 1B          dec  de
-5D35: 01 1C 01    ld   bc,$011C
-5D38: 21 02 1C    ld   hl,$1C02
-5D3B: 01 21 02    ld   bc,$0221
-5D3E: 1C          inc  e
-5D3F: 02          ld   (bc),a
-5D40: 1B          dec  de
-5D41: 01 21 02    ld   bc,$0221
-5D44: 1B          dec  de
-5D45: 01 21 02    ld   bc,$0221
-5D48: 1B          dec  de
-5D49: 02          ld   (bc),a
-5D4A: 1A          ld   a,(de)
-5D4B: 01 21 02    ld   bc,$0221
-5D4E: 1A          ld   a,(de)
-5D4F: 01 21 02    ld   bc,$0221
-5D52: 1A          ld   a,(de)
-5D53: 02          ld   (bc),a
-5D54: 19          add  hl,de
-5D55: 01 1A 01    ld   bc,$011A
-5D58: 1B          dec  de
-5D59: 01 1C 02    ld   bc,$021C
-5D5C: FF          rst  $38
-5D5D: FF          rst  $38
-5D5E: FF          rst  $38
-5D5F: FF          rst  $38
-5D60: 19          add  hl,de
-5D61: 20 FF       jr   nz,$5D62
-5D63: FF          rst  $38
-5D64: 1A          ld   a,(de)
-5D65: 01 19 01    ld   bc,$0119
-5D68: 17          rla
-5D69: 01 15 03    ld   bc,$0315
-5D6C: 15          dec  d
-5D6D: 01 1C 03    ld   bc,$031C
-5D70: 1C          inc  e
-5D71: 01 1E 02    ld   bc,$021E
-5D74: 1A          ld   a,(de)
-5D75: 02          ld   (bc),a
-5D76: 15          dec  d
-5D77: 02          ld   (bc),a
-5D78: 1E 02       ld   e,$02
-5D7A: 1C          inc  e
-5D7B: 03          inc  bc
-5D7C: 19          add  hl,de
-5D7D: 01 19 01    ld   bc,$0119
-5D80: 17          rla
-5D81: 01 15 02    ld   bc,$0215
-5D84: 17          rla
-5D85: 06 19       ld   b,$19
-5D87: 01 17 01    ld   bc,$0117
-5D8A: 15          dec  d
-5D8B: 03          inc  bc
-5D8C: 15          dec  d
-5D8D: 01 1C 03    ld   bc,$031C
-5D90: 1C          inc  e
-5D91: 01 1E 01    ld   bc,$011E
-5D94: 1C          inc  e
-5D95: 01 1A 02    ld   bc,$021A
-5D98: 1E 02       ld   e,$02
-5D9A: 21 02 25    ld   hl,$2502
-5D9D: 02          ld   (bc),a
-5D9E: 25          dec  h
-5D9F: 02          ld   (bc),a
-5DA0: 26 01       ld   h,$01
-5DA2: 25          dec  h
-5DA3: 01 23 02    ld   bc,$0223
-5DA6: 21 05 FF    ld   hl,$FF05
-5DA9: FF          rst  $38
-5DAA: FF          rst  $38
-5DAB: FF          rst  $38
-5DAC: 10 03       djnz $5DB1
-5DAE: 10 04       djnz $5DB4
-5DB0: 10 04       djnz $5DB6
-5DB2: 12          ld   (de),a
-5DB3: 04          inc  b
-5DB4: 12          ld   (de),a
-5DB5: 04          inc  b
-5DB6: 10 04       djnz $5DBC
-5DB8: 10 04       djnz $5DBE
-5DBA: 0B          dec  bc
-5DBB: 04          inc  b
-5DBC: 0B          dec  bc
-5DBD: 04          inc  b
-5DBE: 10 04       djnz $5DC4
-5DC0: 10 04       djnz $5DC6
-5DC2: 12          ld   (de),a
-5DC3: 04          inc  b
-5DC4: 12          ld   (de),a
-5DC5: 04          inc  b
-5DC6: 10 04       djnz $5DCC
-5DC8: 09          add  hl,bc
-5DC9: 04          inc  b
-5DCA: 09          add  hl,bc
-5DCB: 05          dec  b
-5DCC: FF          rst  $38
-5DCD: FF          rst  $38
-5DCE: FF          rst  $38
-5DCF: FF          rst  $38
-5DD0: 01 05 0F    ld   bc,$0F05
-5DD3: 00          nop
-5DD4: 60          ld   h,b
-5DD5: 5D          ld   e,l
-5DD6: AC          xor  h
-5DD7: 5D          ld   e,l
-5DD8: AC          xor  h
-5DD9: 5D          ld   e,l
-5DDA: EE 07       xor  $07
-5DDC: CC 1D FF    call z,$FF1D
-5DDF: FF          rst  $38
-5DE0: 30 5D       jr   nc,$5E3F
-5DE2: 64          ld   h,h
-5DE3: 5D          ld   e,l
-5DE4: 64          ld   h,h
-5DE5: 5D          ld   e,l
-5DE6: EE 07       xor  $07
-5DE8: FF          rst  $38
-5DE9: FF          rst  $38
-
-SFX_11_DATA
-5DEA: 03          inc  bc
-5DEB: D0          ret  nc
-5DEC: 5D          ld   e,l
-5DED: E0          ret  po
-5DEE: 5D          ld   e,l
-5DEF: DC 5D FF    call c,$FF5D
-5DF2: FF          rst  $38
-5DF3: FF          rst  $38
-5DF4: 15          dec  d
-5DF5: 01 1A 02    ld   bc,$021A
-5DF8: 1D          dec  e
-5DF9: 01 1C 01    ld   bc,$011C
-5DFC: 1D          dec  e
-5DFD: 01 1C 01    ld   bc,$011C
-5E00: 1A          ld   a,(de)
-5E01: 02          ld   (bc),a
-5E02: 1D          dec  e
-5E03: 01 1C 02    ld   bc,$021C
-5E06: 1D          dec  e
-5E07: 01 1A 01    ld   bc,$011A
-5E0A: 1C          inc  e
-5E0B: 01 1D 01    ld   bc,$011D
-5E0E: 1C          inc  e
-5E0F: 02          ld   (bc),a
-5E10: 1D          dec  e
-5E11: 01 1A 01    ld   bc,$011A
-5E14: 15          dec  d
-5E15: 01 11 01    ld   bc,$0111
-5E18: 0E 03       ld   c,$03
-5E1A: FF          rst  $38
-5E1B: FF          rst  $38
-5E1C: 11 01 11    ld   de,$1101
-5E1F: 01 11 01    ld   bc,$0111
-5E22: 11 01 11    ld   de,$1101
-5E25: 01 11 01    ld   bc,$0111
-5E28: 11 01 11    ld   de,$1101
-5E2B: 01 10 01    ld   bc,$0110
-5E2E: 10 01       djnz $5E31
-5E30: 10 01       djnz $5E33
-5E32: 10 01       djnz $5E35
-5E34: 10 01       djnz $5E37
-5E36: 10 01       djnz $5E39
-5E38: 10 01       djnz $5E3B
-5E3A: 10 01       djnz $5E3D
-5E3C: 0E 02       ld   c,$02
-5E3E: 0E 01       ld   c,$01
-5E40: 10 01       djnz $5E43
-5E42: 11 02 0E    ld   de,$0E02
-5E45: 02          ld   (bc),a
-5E46: 14          inc  d
-5E47: 04          inc  b
-5E48: 15          dec  d
-5E49: 04          inc  b
-5E4A: FF          rst  $38
-5E4B: FF          rst  $38
-5E4C: 0E 02       ld   c,$02
-5E4E: 11 01 09    ld   de,$0901
-5E51: 01 0B 01    ld   bc,$010B
-5E54: 0C          inc  c
-5E55: 01 0E 02    ld   bc,$020E
-5E58: 11 01 09    ld   de,$0901
-5E5B: 01 0B 01    ld   bc,$010B
-5E5E: 0C          inc  c
-5E5F: 01 0E 02    ld   bc,$020E
-5E62: 11 01 09    ld   de,$0901
-5E65: 01 0B 01    ld   bc,$010B
-5E68: 0C          inc  c
-5E69: 01 0E 01    ld   bc,$010E
-5E6C: 09          add  hl,bc
-5E6D: 01 05 01    ld   bc,$0105
-5E70: 02          ld   (bc),a
-5E71: 03          inc  bc
-5E72: FF          rst  $38
-5E73: FF          rst  $38
-5E74: FF          rst  $38
-5E75: 01 06 0F    ld   bc,$0F06
-5E78: 00          nop
-5E79: 80          add  a,b
-5E7A: 5E          ld   e,(hl)
-5E7B: FF          rst  $38
-5E7C: FF          rst  $38
-5E7D: FF          rst  $38
-5E7E: FF          rst  $38
-5E7F: FF          rst  $38
-5E80: FF          rst  $38
-5E81: FF          rst  $38
-5E82: FF          rst  $38
-5E83: FF          rst  $38
-5E84: FF          rst  $38
-5E85: FF          rst  $38
-5E86: FF          rst  $38
-5E87: FF          rst  $38
-
-SFX_12_DATA
-5E88: 03 75 5E 90 5E 79 5E FF
-5E90: F4 5D 1C    call p,$1C5D
-5E93: 5E          ld   e,(hl)
-5E94: 4C          ld   c,h
-5E95: 5E          ld   e,(hl)
-5E96: 4C          ld   c,h
-5E97: 5E          ld   e,(hl)
-5E98: EE 09       xor  $09
-5E9A: FF          rst  $38
-5E9B: FF          rst  $38
-5E9C: FF          rst  $38
-5E9D: FF          rst  $38
-5E9E: FF          rst  $38
-5E9F: FF          rst  $38
-5EA0: 0E 01       ld   c,$01
-5EA2: 10 01       djnz $5EA5
-5EA4: 13          inc  de
-5EA5: 01 17 01    ld   bc,$0117
-5EA8: 16 01       ld   d,$01
-5EAA: 17          rla
-5EAB: 01 16 01    ld   bc,$0116
-5EAE: 17          rla
-5EAF: 01 16 01    ld   bc,$0116
-5EB2: 17          rla
-5EB3: 01 16 01    ld   bc,$0116
-5EB6: 18 01       jr   $5EB9
-5EB8: 17          rla
-5EB9: 01 15 01    ld   bc,$0115
-5EBC: 17          rla
-5EBD: 01 13 01    ld   bc,$0113
-5EC0: 0E 01       ld   c,$01
-5EC2: 13          inc  de
-5EC3: 01 17 01    ld   bc,$0117
-5EC6: 1A          ld   a,(de)
-5EC7: 01 19 01    ld   bc,$0119
-5ECA: 1A          ld   a,(de)
-5ECB: 01 19 01    ld   bc,$0119
-5ECE: 1A          ld   a,(de)
-5ECF: 01 19 01    ld   bc,$0119
-5ED2: 1A          ld   a,(de)
-5ED3: 01 19 01    ld   bc,$0119
-5ED6: 1C          inc  e
-5ED7: 01 1A 01    ld   bc,$011A
-5EDA: 19          add  hl,de
-5EDB: 01 1A 01    ld   bc,$011A
-5EDE: 17          rla
-5EDF: 01 0E 01    ld   bc,$010E
-5EE2: 10 01       djnz $5EE5
-5EE4: 13          inc  de
-5EE5: 01 17 01    ld   bc,$0117
-5EE8: 16 01       ld   d,$01
-5EEA: 17          rla
-5EEB: 01 16 01    ld   bc,$0116
-5EEE: 17          rla
-5EEF: 01 16 01    ld   bc,$0116
-5EF2: 17          rla
-5EF3: 01 16 01    ld   bc,$0116
-5EF6: 18 01       jr   $5EF9
-5EF8: 17          rla
-5EF9: 01 15 01    ld   bc,$0115
-5EFC: 17          rla
-5EFD: 01 13 01    ld   bc,$0113
-5F00: 0E 01       ld   c,$01
-5F02: 10 01       djnz $5F05
-5F04: 13          inc  de
-5F05: 01 17 01    ld   bc,$0117
-5F08: 15          dec  d
-5F09: 02          ld   (bc),a
-5F0A: 0E 01       ld   c,$01
-5F0C: 17          rla
-5F0D: 01 15 02    ld   bc,$0215
-5F10: 0E 01       ld   c,$01
-5F12: 13          inc  de
-5F13: 02          ld   (bc),a
-5F14: 0E 02       ld   c,$02
-5F16: 13          inc  de
-5F17: 01 FF FF    ld   bc,$FFFF
-5F1A: FF          rst  $38
-5F1B: FF          rst  $38
-5F1C: FF          rst  $38
-5F1D: FF          rst  $38
-5F1E: FF          rst  $38
-5F1F: FF          rst  $38
-5F20: A0          and  b
-5F21: 5E          ld   e,(hl)
-5F22: EE 03       xor  $03
-5F24: 03          inc  bc
-5F25: 06 0F       ld   b,$0F
-5F27: 10 1C       djnz $5F45
-5F29: 5F          ld   e,a
-5F2A: FF          rst  $38
-5F2B: FF          rst  $38
-5F2C: FF          rst  $38
-5F2D: FF          rst  $38
-5F2E: FF          rst  $38
-5F2F: FF          rst  $38
-
-SFX_13_DATA
-5F30: 03 24 5F 20 5F 28 5F FF
-5F38: 09          add  hl,bc
-5F39: 01 0E 01    ld   bc,$010E
-5F3C: 10 01       djnz $5F3F
-5F3E: 12          ld   (de),a
-5F3F: 03          inc  bc
-5F40: 13          inc  de
-5F41: 01 13 02    ld   bc,$0213
-5F44: 17          rla
-5F45: 02          ld   (bc),a
-5F46: 15          dec  d
-5F47: 04          inc  b
-5F48: 12          ld   (de),a
-5F49: 02          ld   (bc),a
-5F4A: 15          dec  d
-5F4B: 02          ld   (bc),a
-5F4C: 13          inc  de
-5F4D: 03          inc  bc
-5F4E: 12          ld   (de),a
-5F4F: 01 13 02    ld   bc,$0213
-5F52: 10 02       djnz $5F56
-5F54: 12          ld   (de),a
-5F55: 05          dec  b
-5F56: 09          add  hl,bc
-5F57: 01 0E 01    ld   bc,$010E
-5F5A: 10 01       djnz $5F5D
-5F5C: 12          ld   (de),a
-5F5D: 03          inc  bc
-5F5E: 13          inc  de
-5F5F: 01 13 02    ld   bc,$0213
-5F62: 17          rla
-5F63: 02          ld   (bc),a
-5F64: 15          dec  d
-5F65: 04          inc  b
-5F66: 12          ld   (de),a
-5F67: 02          ld   (bc),a
-5F68: 15          dec  d
-5F69: 02          ld   (bc),a
-5F6A: 13          inc  de
-5F6B: 03          inc  bc
-5F6C: 12          ld   (de),a
-5F6D: 01 13 02    ld   bc,$0213
-5F70: 10 02       djnz $5F74
-5F72: 0E 05       ld   c,$05
-5F74: FF          rst  $38
-5F75: FF          rst  $38
-5F76: FF          rst  $38
-5F77: FF          rst  $38
-
-SFX_14_DATA
-5F78: 03 90 5F 80 5F 98 5F FF
-5F80: 38 5F       jr   c,$5FE1
-5F82: 20 4A       jr   nz,$5FCE
-5F84: 20 4A       jr   nz,$5FD0
-5F86: 48          ld   c,b
-5F87: 4A          ld   c,d
-5F88: 48          ld   c,b
-5F89: 4A          ld   c,d
-5F8A: EE 0B       xor  $0B
-5F8C: FF          rst  $38
-5F8D: FF          rst  $38
-5F8E: FF          rst  $38
-5F8F: FF          rst  $38
-5F90: 01 05 0F    ld   bc,$0F05
-5F93: 00          nop
-5F94: 8C          adc  a,h
-5F95: 5F          ld   e,a
-5F96: FF          rst  $38
-5F97: FF          rst  $38
-5F98: C4 4A E4    call nz,$E44A
-5F9B: 4A          ld   c,d
-5F9C: E4 4A 06    call po,$064A
-5F9F: 4B          ld   c,e
-5FA0: 06 4B       ld   b,$4B
-5FA2: EE 0B       xor  $0B
-5FA4: FF ..                     ; to 0x5fff
+animate_pickups:
+    ld   b,(hl)
+    inc  hl
+    ld   c,(hl)
+    inc  hl
+    ld   a,(bc)
+    cp   $10
+    jr   z,_501A
+    ld   e,a
+    and  $F0
+    cp   $80
+    jr   nz,$5016
+    ld   a,e
+    add  a,$10
+    ld   (bc),a
+    jr   _501A
+    ld   a,e
+    sub  $10
+    ld   (bc),a
+_501A:
+    inc  hl
+    ret
+
+;; Decrease the speed timer further each round
+even_more_faster_dino:
+    dec  a
+    dec  a
+    ld   (hl),a
+    ret
+
+animate_all_pickups:
+    ld   a,(tick_num)
+    and  $03
+    ret  nz
+    ld   hl,pickups_lookup
+    ld   a,(player_num)
+    and  a
+    jr   z,$5034
+    ld   a,(screen_num_p2)
+    jr   _5037
+    ld   a,(screen_num)
+_5037:
+    dec  a ; Get screen x 9
+    ld   b,a
+    add  a,a
+    add  a,a
+    add  a,a
+    add  a,b
+    add  a,l ; index into PICKUPS table
+    ld   l,a
+    ld   a,(hl) ; Find pickup screen addr
+    and  a
+    ret  z
+    call animate_pickups
+    ld   a,(hl)
+    and  a
+    ret  z
+    call animate_pickups
+    ld   a,(hl)
+    and  a
+    ret  z
+    call animate_pickups
+    ret
+
+    dc   1, $FF
+
+sfx_3_data:
+    db   $03
+    dw   _5084
+    dw   _5090
+    dw   _508C
+    dc   6, $FF
+;; notes
+    db   $0C
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $11,$01,$13
+    db   $03
+    db   $FF
+    db   $FF
+    db   $13
+    db   $01,$15,$01
+    db   $17
+    db   $01,$18,$01
+    db   $1A
+    db   $03
+    db   $FF
+    db   $FF
+    db   $18,$01
+    db   $1A
+    db   $01,$1C,$01
+    db   $1D
+    db   $01,$1F,$03
+    db   $FF
+    db   $FF
+_5084:
+    db   $02
+    db   $02
+    db   $0F
+    db   $10,$60
+    db   $50
+    db   $FF
+    db   $FF
+_508C:
+    db   $6E
+    db   $50
+    db   $FF
+    db   $FF
+_5090:
+    db   $6C
+    db   $50
+    db   $FF
+    db   $FF
+;; sfx 4 notes
+_5094:
+    db   $00,$01,$02,$01,$04,$01,$06,$01
+    db   $08,$01,$0A,$01,$0C,$01,$0E,$01
+    dc   8, $FF
+_50AC:
+    dc   4, $FF
+_50B0:
+    db   $01,$01,$0F,$00 ; len/vel/vol/trans
+    dw   _5094
+    dc   2, $FF
+    db   $94
+    db   $10
+    db   $FF,$FF
+
+sfx_4_data:
+    db   $03
+    dw   _50B0
+    dw   _50C8
+    dw   _50C8
+    dc   5, $FF
+_50C8:
+    dw   _50AC  ; really? Middle of $ff's
+    dc   2, $FF
+;; notes
+    db   $18,$01
+    db   $17
+    db   $01,$15,$01
+    db   $13
+    db   $01,$11,$01
+    db   $10,$01
+    db   $0E,$01
+    db   $0C
+    db   $01,$0B,$01
+    db   $09
+    db   $01,$07,$01
+    db   $05
+    db   $01,$04,$01
+    db   $02
+    db   $01,$00,$01
+    db   $FF
+    db   $FF
+
+sfx_5_data:
+    db   $03
+    db   $F4,$50,$F4
+    db   $51
+    db   $F4,$51,$FF
+    db   $03
+    db   $03
+    db   $0F
+    db   $10,$CC
+    db   $50
+    db   $FF
+    db   $FF
+    db   $2B
+    db   $02
+    db   $34
+    db   $02
+    db   $34
+    db   $02
+    db   $34
+    db   $02
+    db   $32,$01,$34
+    db   $01,$32,$01
+    db   $30,$01
+    db   $2F
+    db   $01,$2D,$01
+    db   $2B
+    db   $02
+    db   $2D
+    db   $02
+    db   $2D
+    db   $02
+    db   $32,$01,$34
+    db   $01,$26,$02
+    db   $FF
+    db   $FF
+    db   $37
+    db   $02
+    db   $2F
+    db   $02
+    db   $32,$04,$FF
+    db   $FF
+    db   $2B
+    db   $01,$26,$01
+    db   $23
+    db   $01,$26,$01
+    db   $1F
+    db   $04
+    db   $FF
+    db   $FF
+    db   $0C
+    db   $01,$10,$01
+    db   $13
+    db   $01,$10,$01
+    db   $0C
+    db   $01,$0C,$01
+    db   $0E,$01
+    db   $10,$01
+    db   $0B
+    db   $01,$0C,$01
+    db   $0B
+    db   $01,$09,$01
+    db   $07
+    db   $01,$07,$01
+    db   $09
+    db   $01,$0B,$01
+    db   $09
+    db   $01,$0B,$01
+    db   $09
+    db   $01,$07,$01
+    db   $06,$01
+    db   $06,$01
+    db   $07
+    db   $01,$09,$01
+    db   $FF
+    db   $FF
+    db   $07
+    db   $01,$07,$01
+    db   $0B
+    db   $01,$0C,$01
+    db   $0E,$01
+    db   $07
+    db   $01,$0B,$01
+    db   $0E,$01
+    db   $FF
+    db   $FF
+    db   $07
+    db   $01,$0C,$01
+    db   $0B
+    db   $01,$09,$01
+    db   $07
+    db   $04
+    db   $FF
+    db   $FF
+_5182:
+    db   $01,$08,$0F
+    db   $00
+    db   $32,$51,$1E
+    db   $51
+    db   $FC,$50,$26
+    db   $51
+    db   $FC,$50,$1E
+    db   $51
+    db   $FC,$50,$26
+    db   $51
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+
+sfx_6_data:
+    db   $02
+    dw   _5182
+    dw   _51A8
+    dw   _51A8
+    dc   2, $FF
+    db   $98,$11
+    dc   2, $FF
+    db   $FF
+_51A8:
+    db   $FC,$50,$64
+    db   $51
+    db   $32,$51,$76
+    db   $51
+    db   $32,$51,$64
+    db   $51
+    db   $32,$51,$76
+    db   $51
+    db   $FF
+    db   $FF
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $0C
+    db   $02
+    db   $18,$02
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $03
+    db   $03
+    db   $0F
+    db   $10,$BA
+    db   $51
+    db   $FF
+    db   $FF
+    db   $CA,$11,$FF
+    db   $FF
+    db   $F8
+    db   $51
+    db   $FF
+    db   $FF
+
+sfx_7_data:
+    db   $03,$DA,$51,$E6,$51,$F4,$51,$FF
+    db   $FF
+    db   $FF
+    dw   _51F8
+    dc   2, $FF
+_51F8:
+    dc   8, $FF
+
+play_sfx_chunk_ch_1:
+    push ix
+    pop  hl
+    ld   a,l
+    cp   $E8
+    jr   nz,$520F
+    ld   a,$02
+    ld   (sfx_val_4),a
+    jr   _5225
+    ld   a,(sfx_val_4)
+    and  a
+    jr   z,_5225
+    dec  a
+    ld   (sfx_val_4),a
+    ld   a,(sfx_val_1)
+    and  a
+    jr   z,$5223
+    dec  a
+    ld   (sfx_val_1),a
+    pop  hl
+    ret
+_5225:
+    ld   a,l
+    cp   $D0
+    jr   nz,$5231
+    ld   a,$02
+    ld   (sfx_val_1),a
+    jr   _523D
+    ld   a,(sfx_val_1)
+    and  a
+    jr   z,_523D
+    dec  a
+    ld   (sfx_val_1),a
+    pop  hl
+    ret
+_523D:
+    ld   a,(ix+$10)
+    ret
+
+    dc   15, $FF
+
+;; triggers every few frames.
+;; Maybe play current chunk of tune?
+;; looks the same as above funk (ch1?)
+play_sfx_chunk_ch_2:
+    push ix
+    pop  hl
+    ld   a,l
+    cp   $E8
+    jr   nz,$525F
+    ld   a,$02
+    ld   (sfx_val_5),a
+    jr   _5275
+    ld   a,(sfx_val_5)
+    and  a
+    jr   z,_5275
+    dec  a
+    ld   (sfx_val_5),a
+    ld   a,(sfx_val_2)
+    and  a
+    jr   z,$5273
+    dec  a
+    ld   (sfx_val_2),a
+    pop  hl
+    ret
+_5275:
+    ld   a,l
+    cp   $D0
+    jr   nz,$5281
+    ld   a,$02
+    ld   (sfx_val_2),a
+    jr   _528D
+    ld   a,(sfx_val_2)
+    and  a
+    jr   z,_528D
+    dec  a
+    ld   (sfx_val_2),a
+    pop  hl
+    ret
+_528D:
+    ld   a,(ix+$10)
+    ret
+
+    dc   15, $FF
+
+;;??
+sfx_sub_what_1:
+    push ix
+    pop  hl
+    ld   a,l
+    cp   $E8
+    jr   nz,$52AF
+    ld   a,$02
+    ld   (sfx_val_6),a
+    jr   _52C5
+    ld   a,(sfx_val_6)
+    and  a
+    jr   z,_52C5
+    dec  a
+    ld   (sfx_val_6),a
+    ld   a,(sfx_val_3)
+    and  a
+    jr   z,$52C3
+    dec  a
+    ld   (sfx_val_3),a
+    pop  hl
+    ret
+_52C5:
+    ld   a,l
+    cp   $D0
+    jr   nz,$52D1
+    ld   a,$02
+    ld   (sfx_val_3),a
+    jr   _52DD
+    ld   a,(sfx_val_3)
+    and  a
+    jr   z,_52DD
+    dec  a
+    ld   (sfx_val_3),a
+    pop  hl
+    ret
+_52DD:
+    ld   a,(ix+$10)
+    ret
+
+    dc   1, $FF
+
+;;
+attract_animate_player_up_stairs:
+    call wait_60_for_start_button
+    ld   hl,player_x
+    ld   (hl),$D8 ; x (right of screen)
+    inc  hl
+    ld   (hl),$8D ; frame
+    inc  hl
+    ld   (hl),$11 ; color
+    inc  hl
+    ld   (hl),$E0 ; y (bottom of screen)
+    inc  hl
+    ld   (hl),$D8 ; x legs
+    inc  hl
+    ld   (hl),$8D ; frame legs
+    inc  hl
+    ld   (hl),$11 ; color legs
+    inc  hl
+    ld   (hl),$F0 ; y legs
+    ld   e,$06
+_jump_up_stair:
+    call attract_jump_up_one_stair
+    dec  e
+    jr   nz,_jump_up_stair
+    ld   hl,bongo_x ; using bongo - but it shows dino
+    ld   (hl),$20 ; x (left of screen)
+    inc  hl
+    ld   (hl),$2D ; frame
+    inc  hl
+    ld   (hl),$12 ; color
+    inc  hl
+    ld   (hl),$28 ; y (top of screen)
+    inc  hl
+    ld   (hl),$19 ; x legs
+    inc  hl
+    ld   (hl),$30 ; frame legs
+    inc  hl
+    ld   (hl),$12 ; color legs
+    inc  hl
+    ld   (hl),$38 ; y legs
+    call attract_jump_down_stairs
+    jp   call_attract_bonus_screen
+
+    dc   1, $FF
+
+attract_jump_up_one_stair:
+    ld   d,$00
+_lp_532A:
+    ld   hl,attract_player_up_stair_data
+    ld   a,d
+    add  a,a
+    add  a,a
+    add  a,l
+    ld   l,a
+    ld   ix,player_x
+    ld   a,(hl)
+    ld   (ix+$01),a ; frame
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$05),a ; frame leg
+    inc  hl
+    ld   a,(hl)
+    add  a,(ix+$00) ; x-offset
+    ld   (ix+$00),a ; x
+    ld   (ix+$04),a ; x legs
+    inc  hl
+    ld   a,(hl)
+    add  a,(ix+$03) ; y-offset
+    ld   (ix+$03),a ; y
+    sub  $10
+    ld   (ix+$07),a ; y legs
+    push de
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    pop  de
+    inc  d
+    ld   a,d
+    cp   $06
+    jr   nz,_lp_532A
+    call wait_30_for_start_button
+    ret
+
+    dc   11, $FF
+
+;; frame, frame leg, x-off, y-off
+attract_player_up_stair_data:
+    db   $8D,$8C,$FC,$F4 ;  jumping up stairs
+    db   $8F,$8E,$FC,$F6
+    db   $91,$90,$FC,$F8
+    db   $96,$92,$FC,$F8
+    db   $94,$93,$FC,$06 ;  frames are swapped!  head on the bottom!
+    db   $8D,$8C,$FC,$08
+
+attract_animate_dino_head:
+    ld   a,(bongo_frame)
+    cp   $2D
+    jr   nz,$53A6
+    ld   a,$2C
+    ld   (bongo_frame),a
+    jr   _done_54AB
+    ld   a,$2D
+    ld   (bongo_frame),a
+
+_done_54AB:
+    ret
+
+attract_jump_down_stairs:
+    ld   e,$06 ; 6 stairs down
+    call attract_jump_down_one_stair
+    call attract_animate_dino_head
+    dec  e
+    jr   nz,$53AE
+    ret
+
+;; identical to jump up, but point at down data.
+attract_jump_down_one_stair:
+    ld   d,$00
+_lp_53BA:
+    ld   hl,attract_player_down_stair_data
+    ld   a,d
+    add  a,a
+    add  a,a
+    add  a,l
+    ld   l,a
+    ld   ix,player_x
+    ld   a,(hl)
+    ld   (ix+$01),a ; frame
+    inc  hl
+    ld   a,(hl)
+    ld   (ix+$05),a ; frame leg
+    inc  hl
+    ld   a,(hl)
+    add  a,(ix+$00) ; x-offset
+    ld   (ix+$00),a ; x
+    ld   (ix+$04),a ; x legs
+    inc  hl
+    ld   a,(hl)
+    add  a,(ix+$03) ; y-offset
+    ld   (ix+$03),a ; y
+    sub  $10
+    ld   (ix+$07),a ; y legs
+    push de
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    pop  de
+    inc  d
+    ld   a,d
+    cp   $06
+    jr   nz,_lp_53BA
+    call wait_15_for_start_button
+    ret
+
+    dc   3, $FF
+
+;; frame, frame leg, x-off, y-off
+attract_player_down_stair_data:
+    db   $0D,$0C,$04,$F8
+    db   $0F,$0E,$04,$00
+    db   $11,$10,$04,$08
+    db   $16,$12,$04,$08
+    db   $14,$13,$04,$08 ;  WHAT?! Wrong on the way down too! Head and legs flipped.
+    db   $0D,$0C,$04,$08
+
+    dc   8, $FF
+
+call_attract_bonus_screen:
+    ld   hl,attract_bonus_screen
+    call jmp_hl
+    ret
+
+    dc   1, $FF
+
+attract_cage_falls_on_dino:
+    ld   hl,_9224
+_lp_5433:
+    call draw_cage_tiles
+    push hl
+    call attract_animate_pickups_and_wait
+    nop
+    nop
+    nop
+    pop  hl
+    inc  hl
+    ld   a,$39 ; check if cage hit ground
+    cp   l
+    jr   nz,_lp_5433
+    ld   a,$38 ; caged dino sprite
+    ld   (player_frame),a
+    inc  a
+    ld   (player_frame_legs),a
+    ret
+
+    dc   2, $FF
+
+attract_dino_runs_along_ground:
+    ld   ix,player_x ; this is a dino on attract screen
+    ld   a,$79
+    cp   (ix+$00)
+    ret  z
+    inc  (ix+$00) ; dino runs along ground
+    inc  (ix+$04)
+    ld   a,(tick_num)
+    and  $03
+    jr   nz,_548B
+    ld   a,(ix+$05)
+    inc  a
+    cp   $33
+    jr   nz,$5471
+    ld   a,$31
+    ld   (ix+$05),a
+    ld   a,(tick_num)
+    and  $0F
+    cp   $05
+    jr   nz,$5483
+    ld   (ix+$01),$2C
+    jr   _548B
+    cp   $08
+    jr   nz,_548B
+    ld   (ix+$01),$2D
+_548B:
+    call attract_animate_pickups_and_wait
+    nop
+    nop
+    nop
+    jr   attract_dino_runs_along_ground
+
+    dc   1, $FF
+
+attract_catch_dino:
+    ld   hl,player_x ; oi! You made the player a dinosaur!
+    ld   (hl),$07 ; x
+    inc  hl
+    ld   (hl),$2D ; frame : 2d is dino?
+    inc  hl
+    ld   (hl),$12 ; colr
+    inc  hl
+    ld   (hl),$BF ; y
+    inc  hl
+    ld   (hl),$00 ; x legs
+    inc  hl
+    ld   (hl),$30 ; frame legs
+    inc  hl
+    ld   (hl),$12 ; col legs
+    inc  hl
+    ld   (hl),$CF ; y legs
+    ld   hl,_9224
+    call draw_cage_tiles
+    call attract_dino_runs_along_ground
+    call attract_dino_cage_invert
+    call attract_cage_falls_on_dino
+    call attract_dino_cage_invert
+    ret
+
+    dc   1, $FF
+
+;;
+attract_animate_pickups_and_wait:
+    ld   a,(tick_num)
+    and  $03
+    jr   nz,$54CF
+    ld   hl,animate_splash_pickup_nops
+    call jmp_hl
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    ret
+
+    dc   2, $FF
+
+attract_dino_cage_invert:
+    ld   e,$20
+    push de
+    call attract_animate_pickups_and_wait
+    pop  de
+    dec  e
+    jr   nz,$54DA
+    ret
+
+    rst  $38
+
+;; notes
+    db   $2D
+    db   $02
+    db   $2D
+    db   $01,$2D,$01
+    db   $2D
+    db   $02
+    db   $2A,$02,$2D
+    db   $02
+    db   $32,$04,$FF
+    db   $FF
+    db   $21,$02,$21
+    db   $01,$21,$01
+    db   $21,$02,$1E
+    db   $02
+    db   $21,$02,$26
+    db   $04
+    db   $FF
+    db   $FF
+    db   $01,$03,$0F
+    db   $00
+    db   $E4,$54,$FF
+    db   $FF
+    db   $F4,$54,$FF
+    db   $FF
+    dw   _556C
+    db   $FF
+    db   $FF
+
+sfx_8_data:
+    db   $03,$04,$55,$08,$55,$08,$55,$FF
+    db   $FF,$FF,$FF,$FF
+
+;; mabye sfx?
+reset_sfx_something_1:
+    xor  a
+    ld   (_8046),a
+    ld   a,(_82A5)
+    and  a
+    jr   nz,$552F
+    ld   a,$F9
+    nop
+    nop
+    nop
+    ld   a,(_82AD)
+    and  a
+    jr   nz,$553A
+    ld   a,$FD
+    nop
+    nop
+    nop
+    ld   a,(_82B5)
+    and  a
+    jr   nz,$5545
+    ld   a,$FB
+    nop
+    nop
+    nop
+    ld   a,$FF
+    nop
+    nop
+    nop
+    ret
+
+    dc   5, $FF
+
+;; sfx notes + data
+    db   $10,$01,$0B,$01,$08,$01,$FF,$FF
+    db   $04,$04,$0F,$10,$50,$55,$FF,$FF
+
+sfx_10_data:
+    db   $03,$58,$55,$5C,$55,$5C,$55,$FF
+    db   $6A,$55,$FF,$FF
+_556C:
+    db   $FF,$FF,$FF,$FF
+
+;; bytes after the call are
+;; start_y, start_x, tile 1, ...tile x, 0xFF
+draw_tiles_h_copy:
+    ld   a,(watchdog) ; is this ack? "A" not used
+    ld   hl,start_of_tiles
+    pop  bc ; stack return pointer into bc (ie, data)
+    ld   a,(bc) ; start_y
+    inc  bc
+    add  a,l
+    ld   l,a
+    ld   a,(bc) ; start_x
+    ld   e,a
+    ld   a,$1B
+    sub  e
+    ld   e,a
+    ld   d,$00
+    sla  e
+    sla  e
+    sla  e
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    add  hl,de
+    inc  bc
+_lp_558E:
+    ld   a,(bc) ; each character until 0xff
+    inc  bc
+    cp   $FF
+    jr   nz,$5596
+    push bc
+_done_5595:
+    ret
+    ld   (hl),a ; writes to screen loc
+    ld   d,$FF
+    ld   e,$E0
+    add  hl,de
+    jr   _lp_558E
+
+    dc   2, $FF
+
+chased_by_a_dino_screen:
+    ld   hl,reset_xoff_sprites_and_clear_screen
+    call jmp_hl
+    call draw_buggy_border
+    nop
+    nop
+    nop
+    call flash_border
+    call draw_tiles_h_copy
+    db   $08,$0B
+;; BEWARE
+    db   $12,$15,$27,$11,$22,$15,$FF
+    call flash_border
+    call draw_tiles_h_copy
+    db   $0C,$05
+;; YOUR BEING CHASED
+    db   $29,$1F,$25,$22,$10,$12,$15,$19,$1E,$17,$10,$13,$18,$11,$23,$15,$14,$FF
+    call flash_border
+    call draw_tiles_h_copy
+    db   $10,$07
+;; BY A DINOSAUR (classic!)
+    db   $12,$29,$10,$11,$10,$14,$19,$1E,$1F,$23,$11,$25,$22,$FF
+    jp   attract_your_being_chased_flash
+
+    dc   2, $FF
+
+;;  notes
+    db   $A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $00
+    db   $02
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $0E,$0E
+    db   $FF
+    db   $FF
+    db   $E0
+    db   $15
+    db   $FF
+    db   $FF
+    db   $44
+    db   $15
+    db   $48
+    db   $15
+    db   $48
+    db   $15
+    db   $A0
+    db   $15
+    db   $A0
+    db   $15
+    db   $EE,$09
+    db   $FF
+    db   $FF
+    db   $70
+    db   $18,$70
+    db   $18,$30
+    db   $17
+    db   $B0
+    db   $18,$EE
+    db   $05
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $0E,$02
+    db   $13
+    db   $04
+    db   $13
+    db   $04
+    db   $13
+    db   $02
+    db   $13
+    db   $06,$1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $02
+    db   $1E,$06
+    db   $1C
+    db   $04
+    db   $1E,$02
+    db   $1C
+    db   $02
+    db   $1A
+    db   $06,$17
+    db   $04
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $13
+    db   $02
+    db   $17
+    db   $02
+    db   $18,$02
+    db   $1A
+    db   $02
+    db   $1A
+    db   $04
+    db   $1A
+    db   $04
+    db   $1A
+    db   $06,$1A
+    db   $02
+    db   $18,$06
+    db   $18,$04
+    db   $18,$02
+    db   $18,$02
+    db   $18,$02
+    db   $17
+    db   $02
+    db   $17
+    db   $02
+    db   $13
+    db   $04
+    db   $17
+    db   $04
+    db   $18,$02
+    db   $0E,$02
+    db   $FF
+    db   $FF
+    db   $09
+    db   $02
+    db   $0B
+    db   $04
+    db   $0B
+    db   $04
+    db   $0B
+    db   $02
+    db   $0C
+    db   $06,$15
+    db   $04
+    db   $15
+    db   $04
+    db   $15
+    db   $02
+    db   $1A
+    db   $06,$18
+    db   $04
+    db   $1A
+    db   $02
+    db   $18,$02
+    db   $15
+    db   $06,$13
+    db   $04
+    db   $FF
+    db   $FF
+    db   $0E,$02
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $15
+    db   $02
+    db   $15
+    db   $04
+    db   $15
+    db   $04
+    db   $15
+    db   $06,$15
+    db   $02
+    db   $13
+    db   $06,$13
+    db   $04
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $13
+    db   $02
+    db   $0E,$04
+    db   $13
+    db   $04
+    db   $13
+    db   $02
+    db   $15
+    db   $02
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $05
+    db   $05
+    db   $0C
+    db   $00
+    db   $0C
+    db   $16,$30
+    db   $16,$30
+    db   $16,$50
+    db   $16,$50
+    db   $16,$EE
+    db   $09
+
+draw_buggy_border:
+    ld   a,$01
+    call set_row_colors
+    ld   hl,draw_border_1
+;; THIS IS A BUG! It's supposed to call draw_border
+;; to put the inner rounded border on the beautiful
+;; "YOUR BEING CHASED BY A DINO" screen, but the typo
+;; jumps to middle of nowhere, that happens to be
+;; ... 0x40 (ld b,b), 0xC9 (ret). Phew, does nothing...
+;; It's supposed to be: call $5C81 (JMP_HL)
+;;
+;; (err, did they call everything by hand without labels?!)
+    call $4C81 ; bad jump, no inner border for us :(
+    ret
+
+    dc   4, $FF
+
+;; ??? who knows...
+    db   $03,$C0
+    db   $16,$A0
+    db   $18,$22
+    db   $16,$FF
+
+;;
+sfx_reset_a_bunch:
+    call zero_out_some_sfx
+    call zero_out_some_sfx_2
+    call zero_out_some_sfx_3
+    call reset_sfx_something_1
+    ret
+
+    dc   3, $FF
+
+;; notes
+    db   $12
+    db   $01,$0E,$01
+    db   $12
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $0D
+    db   $01,$10,$01
+    db   $0D
+    db   $01,$0E,$01
+    db   $0B
+    db   $01,$0E,$01
+    db   $0B
+    db   $01,$0D,$01
+    db   $09
+    db   $01,$0D,$01
+    db   $09
+    db   $01,$04,$01
+    db   $06,$01
+    db   $07
+    db   $01,$09,$01
+    db   $0B
+    db   $01,$0D,$01
+    db   $0E,$01
+    db   $10,$01
+    db   $0E,$02
+    db   $09
+    db   $02
+    db   $0E,$04
+    db   $FF
+    db   $FF
+    db   $A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$01,$C3
+    db   $01,$A0,$02
+    db   $A0
+    db   $02
+    db   $D3,$01
+    db   $D3,$01
+    db   $D3,$01
+    db   $D3,$01
+    db   $C0
+    db   $02
+    db   $C1
+    db   $02
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+_5760:
+    db   $01,$08,$0F
+    db   $10,$F8
+    db   $56
+    db   $FF
+    db   $FF
+_5768:
+    db   $80
+    db   $57
+    db   $FF
+    db   $FF
+_576C:
+    db   $6E
+    db   $57
+    db   $FF
+    db   $FF
+
+sfx_9_data:
+    db   $02
+    dw   _5760
+    dw   _5768
+    dw   _576C
+    dc   9, $FF
+    db   $15
+    db   $01,$0E,$01
+    db   $15
+    db   $01,$0E,$01
+    db   $15
+    db   $01,$10,$01
+    db   $15
+    db   $01,$10,$01
+    db   $13
+    db   $01,$0E,$01
+    db   $13
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $09
+    db   $01,$10,$01
+    db   $09
+    db   $01,$09,$01
+    db   $0B
+    db   $01,$09,$01
+    db   $07
+    db   $01,$06,$01
+    db   $04
+    db   $01,$02,$01
+    db   $04
+    db   $01,$02,$02
+    db   $06,$02
+    db   $02
+    db   $04
+    dc   10, $FF
+
+call_draw_extra_bonus_screen:
+    jp   draw_extra_bonus_screen
+;;
+    call jmp_hl
+    ld   hl,draw_border_1
+    call jmp_hl
+    call draw_tiles_h_copy
+    db   $08,$08
+    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
+    call draw_tiles_h_copy
+    db   $09,$08
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    call wait_60_for_start_button
+    call wait_60_for_start_button
+    call draw_tiles_h_copy
+    db   $0C,$07
+    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
+    call draw_tiles_h_copy
+    db   $10,$07
+    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
+    call draw_tiles_h_copy
+    db   $14,$07
+    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
+    call wait_60_for_start_button
+    call wait_60_for_start_button
+    call draw_tiles_h_copy
+    db   $17,$0B
+    db   $E0,$DC,$DD,$DE,$DF,$FF
+    call draw_tiles_h_copy
+    db   $18,$0B
+    db   $E1,$E8,$EA,$F2,$E6,$FF
+    call draw_tiles_h_copy
+    db   $19,$0B
+    db   $E1,$E9,$EB,$F3,$E6,$FF
+    call draw_tiles_h_copy
+    db   $1A,$0B
+    db   $E2,$E3,$E3,$E3,$E4,$FF
+    call wait_60_for_start_button
+    call wait_60_for_start_button
+    call wait_60_for_start_button
+    call wait_60_for_start_button
+    ret
+
+;; notes
+    db   $A2,$01,$A2,$01,$A2,$01,$A2,$01
+    db   $B2,$01,$B2,$01,$B2,$01,$B2,$01
+    db   $C2,$01,$C2,$01,$C2,$01,$C2,$01
+    db   $D2,$01,$D2,$01,$D2,$01,$D2,$01
+    db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+    db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+    db   $0C,$16,$78,$16,$78,$16,$96,$16
+    db   $96,$16,$EE,$09,$FF,$FF,$FF,$FF
+    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+    db   $A0,$02,$D3,$01,$D3,$01,$D3,$01
+    db   $D3,$01,$FF,$FF,$FF,$FF,$FF,$FF
+
+;; bytes after the call are:
+;; start_x, start_y, tile 1, ...tile id, 0xFF
+draw_tiles_v:
+    pop  ix ; pops next addr (eg, data) from stack
+    ld   h,$00
+    ld   l,(ix+$00) ; start_x
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    add  hl,hl
+    inc  ix ; start_y
+    ld   a,(ix+$00)
+    add  a,l
+    ld   l,a
+    ld   bc,start_of_tiles
+    add  hl,bc
+_58E7:
+    inc  ix ; read data until 0xff
+    ld   a,(ix+$00)
+    cp   $FF
+    jr   z,$58F4
+    ld   (hl),a
+    inc  hl
+    jr   _58E7
+    inc  ix
+    push ix
+    ret
+
+    dc   7, $FF
+
+draw_splash_circle_border_1:
+    call draw_tiles_h_copy
+    db   $01,$01 ;  start pos
+;; splash screen circle border (26 = tiles)
+;; Top Row 1
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
+
+;; left side 1
+    call draw_tiles_v
+    db   $01,$02 ;  start pos
+    db   $53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53
+    db   $52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$FF
+
+;; right side 1
+    call draw_tiles_v
+    db   $1A,$02 ; start pos (1a = scr_tile_w)
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
+
+;; Bottom row 1
+    call draw_tiles_h_copy
+    db   $1C,$01 ;  start pos (1C = scr_tile_h)
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
+    ret
+
+    dc   7, $FF
+
+draw_splash_circle_border_2:
+    call draw_tiles_h_copy
+    db   $01,$01
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
+;;
+    call draw_tiles_v
+    db   $01,$02
+    db   $52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52
+    db   $51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$FF
+;;
+    call draw_tiles_v
+    db   $1A,$02
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
+;;
+    call draw_tiles_h_copy
+    db   $1C,$01
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
+;;
+    ret
+
+    dc   7, $FF
+
+draw_splash_circle_border_3:
+    call draw_tiles_h_copy
+    db   $01,$01
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$FF
+;;
+    call draw_tiles_v
+    db   $01,$02
+    db   $51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$52,$51
+    db   $53,$52,$51,$53,$52,$51,$53,$52,$51,$53,$FF
+;;
+    call draw_tiles_v
+    db   $1A,$02
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52
+    db   $53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$FF
+;;
+    call draw_tiles_h_copy
+    db   $1C,$01
+    db   $51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$53,$51
+    db   $52,$53,$51,$52,$53,$51,$52,$53,$51,$52,$FF
+;;
+    ret
+
+    dc   7, $FF
+
+;; fancy wait for start button
+_5A98:
+    push hl
+    push bc
+    push de
+    ld   hl,wait_for_start_button
+    call jmp_hl
+    pop  de
+    pop  bc
+    pop  hl
+    ret
+
+    dc   3, $FF
+
+;; Splash screen animated circle border
+flash_border:
+    ld   e,$05
+    ld   d,$05
+    push de
+    call draw_splash_circle_border_1
+    call _5A98
+    pop  de
+    dec  d
+    jr   nz,$5AAC
+    ld   d,$05
+    push de
+    call draw_splash_circle_border_2
+    call _5A98
+    pop  de
+    dec  d
+    jr   nz,$5AB9
+    ld   d,$05
+    push de
+    call draw_splash_circle_border_3
+    call _5A98
+    pop  de
+    dec  d
+    jr   nz,$5AC6
+    dec  e
+    jr   nz,$5AAA
+    ret
+
+    dc   3, $FF
+
+set_row_colors:
+    ld   b,a
+    ld   hl,_8101 ; col for row 1
+    ld   (hl),b
+    inc  hl
+    inc  hl
+    ld   a,l
+    cp   $41
+    jr   nz,$5ADC
+    ret
+
+    dc   1, $FF
+
+set_screen_color_to_4:
+    ld   a,$04
+    call set_row_colors
+    ret
+
+    dc   4, $FF
+
+draw_extra_bonus_screen:
+    ld   hl,reset_xoff_sprites_and_clear_screen
+    call jmp_hl
+    ld   hl,draw_border_1
+    call jmp_hl
+    call set_screen_color_to_4
+    call draw_tiles_h_copy
+    db   $08,$08
+;; EXTRA BONUS
+    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
+    call draw_tiles_h_copy
+    db   $09,$08
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    call flash_border
+    call flash_border
+    call draw_tiles_h_copy
+    db   $0C,$07
+;; PICK UP 6 BONUS
+    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
+    call draw_tiles_h_copy
+    db   $10,$07
+    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
+    call draw_tiles_h_copy
+    db   $14,$07
+    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
+    call flash_border
+    call draw_tiles_h_copy
+    db   $17,$0B
+    db   $E0,$DC,$DD,$DE,$DF,$FF
+    call draw_tiles_h_copy
+    db   $18,$0B
+    db   $E1,$E5,$E5,$E5,$E6,$FF
+    call draw_tiles_h_copy
+    db   $19,$0B
+    db   $E1,$E5,$E5,$E5,$E6,$FF
+    call draw_tiles_h_copy
+    db   $1A,$0B
+    db   $E2,$E3,$E3,$E3,$E4,$FF
+    call flash_border
+    call flash_border
+    call _5BC8
+    ret
+
+    dc   11, $FF
+
+animate_circle_border:
+    ld   a,(splash_anim_fr)
+    inc  a
+    cp   $03
+    jr   nz,$5BB1
+    xor  a
+    ld   (splash_anim_fr),a
+    and  a
+    jr   nz,_border_1_2
+    call draw_splash_circle_border_3
+    ret
+_border_1_2:
+    cp   $01
+    jr   nz,$5BC3
+    call draw_splash_circle_border_2
+    ret
+    call draw_splash_circle_border_1
+    ret
+
+    dc   1, $FF
+
+;;
+_5BC8:
+    ld   a,$F2
+    ld   (_91F8),a
+    call flash_border
+    ld   a,$F3
+    ld   (_91F9),a
+    call flash_border
+    ld   a,$EA
+    ld   (_9218),a
+    call flash_border
+    ld   a,$EB
+    ld   (_9219),a
+    call flash_border
+    ld   a,$E8
+    ld   (_9238),a
+    call flash_border
+    ld   a,$E9
+    ld   (_9239),a
+    call flash_border
+    call flash_border
+    call flash_border
+    ret
+
+    dc   1, $FF
+
+;; notes
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$1A,$03
+    db   $1E,$02
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$1A,$03
+    db   $1E,$02
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$1A,$01
+    db   $21,$01,$21
+    db   $01,$21,$01
+    db   $21,$03,$23
+    db   $01,$1E,$01
+    db   $1C
+    db   $04
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$19,$03
+    db   $1C
+    db   $02
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$19,$03
+    db   $1C
+    db   $02
+    db   $15
+    db   $01,$15,$01
+    db   $15
+    db   $01,$15,$01
+    db   $21,$01,$21
+    db   $01,$21,$01
+    db   $21,$02,$23
+    db   $01,$1E,$02
+    db   $1A
+    db   $04
+    dc   12, $FF
+    dw   _5C62
+_5C62:
+    dc   31, $FF
+
+jmp_hl:
+    jp   (hl)
+    ld   b,b
+    ld   b,c
+    ret
+
+    dc   1, $FF
+
+;; Yet more note-looking data
+    db   $06,$01
+    db   $06,$01
+    db   $06,$01
+    db   $0E,$01
+    db   $09
+    db   $01,$12,$01
+    db   $10,$01
+    db   $0E,$01
+    db   $06,$01
+    db   $06,$01
+    db   $06,$01
+    db   $0E,$01
+    db   $09
+    db   $01,$12,$01
+    db   $10,$01
+    db   $0E,$01
+    db   $06,$01
+    db   $06,$01
+    db   $06,$01
+    db   $0E,$01
+    db   $09
+    db   $01,$12,$01
+    db   $10,$01
+    db   $0E,$01
+    db   $12
+    db   $01,$12,$01
+    db   $12
+    db   $01,$10,$01
+    db   $10,$01
+    db   $0D
+    db   $01,$07,$02
+    db   $07
+    db   $01,$07,$01
+    db   $07
+    db   $01,$0D,$01
+    db   $0D
+    db   $01,$10,$01
+    db   $10,$02
+    db   $07
+    db   $01,$07,$01
+    db   $07
+    db   $01,$0D,$01
+    db   $0D
+    db   $01,$10,$01
+    db   $10,$02
+    db   $07
+    db   $01,$07,$01
+    db   $07
+    db   $01,$09,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $15
+    db   $01,$15,$01
+    db   $13
+    db   $02
+    db   $12
+    db   $01,$10,$02
+    db   $0E,$02
+    dc   6, $FF
+
+sfx_1_data:
+    db   $02
+    dw   _5D08
+    dw   _5D14
+    dw   _5D14
+    db   $FF
+_5D08:
+    db   $01,$08,$0E,$00,$86,$5C,$EE,$03
+    dc   4, $FF
+_5D14:
+    db   $00,$5C
+    db   $EE,$03
+    db   $FF
+    db   $FF
+    db   $70
+    db   $18,$30
+    db   $17
+    db   $30,$17
+    db   $30,$17
+    db   $30,$17
+    db   $28,$1D
+    db   $EE,$03
+    db   $E3
+    db   $06,$D3
+    db   $03
+    db   $D3,$03
+    db   $FF
+    db   $FF
+    db   $19
+    db   $01,$1A,$01
+    db   $1B
+    db   $01,$1C,$01
+    db   $21,$02,$1C
+    db   $01,$21,$02
+    db   $1C
+    db   $02
+    db   $1B
+    db   $01,$21,$02
+    db   $1B
+    db   $01,$21,$02
+    db   $1B
+    db   $02
+    db   $1A
+    db   $01,$21,$02
+    db   $1A
+    db   $01,$21,$02
+    db   $1A
+    db   $02
+    db   $19
+    db   $01,$1A,$01
+    db   $1B
+    db   $01,$1C,$02
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $19
+    db   $20,$FF
+    db   $FF
+    db   $1A
+    db   $01,$19,$01
+    db   $17
+    db   $01,$15,$03
+    db   $15
+    db   $01,$1C,$03
+    db   $1C
+    db   $01,$1E,$02
+    db   $1A
+    db   $02
+    db   $15
+    db   $02
+    db   $1E,$02
+    db   $1C
+    db   $03
+    db   $19
+    db   $01,$19,$01
+    db   $17
+    db   $01,$15,$02
+    db   $17
+    db   $06,$19
+    db   $01,$17,$01
+    db   $15
+    db   $03
+    db   $15
+    db   $01,$1C,$03
+    db   $1C
+    db   $01,$1E,$01
+    db   $1C
+    db   $01,$1A,$02
+    db   $1E,$02
+    db   $21,$02,$25
+    db   $02
+    db   $25
+    db   $02
+    db   $26,$01
+    db   $25
+    db   $01,$23,$02
+    db   $21,$05,$FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $10,$03
+    db   $10,$04
+    db   $10,$04
+    db   $12
+    db   $04
+    db   $12
+    db   $04
+    db   $10,$04
+    db   $10,$04
+    db   $0B
+    db   $04
+    db   $0B
+    db   $04
+    db   $10,$04
+    db   $10,$04
+    db   $12
+    db   $04
+    db   $12
+    db   $04
+    db   $10,$04
+    db   $09
+    db   $04
+    db   $09
+    db   $05
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+_5DD0:
+    db   $01,$05,$0F
+    db   $00
+    db   $60
+    db   $5D
+    db   $AC
+    db   $5D
+    db   $AC
+    db   $5D
+    db   $EE,$07
+_5DDC:
+    db   $CC,$1D,$FF
+    db   $FF
+_5DE0:
+    db   $30,$5D
+    db   $64
+    db   $5D
+    db   $64
+    db   $5D
+    db   $EE,$07
+    db   $FF
+    db   $FF
+
+sfx_11_data:
+    db   $03
+    dw   _5DD0
+    dw   _5DE0
+    dw   _5DDC
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $15
+    db   $01,$1A,$02
+    db   $1D
+    db   $01,$1C,$01
+    db   $1D
+    db   $01,$1C,$01
+    db   $1A
+    db   $02
+    db   $1D
+    db   $01,$1C,$02
+    db   $1D
+    db   $01,$1A,$01
+    db   $1C
+    db   $01,$1D,$01
+    db   $1C
+    db   $02
+    db   $1D
+    db   $01,$1A,$01
+    db   $15
+    db   $01,$11,$01
+    db   $0E,$03
+    db   $FF
+    db   $FF
+    db   $11,$01,$11
+    db   $01,$11,$01
+    db   $11,$01,$11
+    db   $01,$11,$01
+    db   $11,$01,$11
+    db   $01,$10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $10,$01
+    db   $0E,$02
+    db   $0E,$01
+    db   $10,$01
+    db   $11,$02,$0E
+    db   $02
+    db   $14
+    db   $04
+    db   $15
+    db   $04
+    db   $FF
+    db   $FF
+    db   $0E,$02
+    db   $11,$01,$09
+    db   $01,$0B,$01
+    db   $0C
+    db   $01,$0E,$02
+    db   $11,$01,$09
+    db   $01,$0B,$01
+    db   $0C
+    db   $01,$0E,$02
+    db   $11,$01,$09
+    db   $01,$0B,$01
+    db   $0C
+    db   $01,$0E,$01
+    db   $09
+    db   $01,$05,$01
+    db   $02
+    db   $03
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $01,$06,$0F
+    db   $00
+    db   $80
+    db   $5E
+    dc   13, $FF
+
+sfx_12_data:
+    db   $03,$75,$5E,$90,$5E,$79,$5E,$FF
+    db   $F4,$5D,$1C
+    db   $5E
+    db   $4C
+    db   $5E
+    db   $4C
+    db   $5E
+    db   $EE,$09
+    dc   6, $FF
+    db   $0E,$01
+    db   $10,$01
+    db   $13
+    db   $01,$17,$01
+    db   $16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $18,$01
+    db   $17
+    db   $01,$15,$01
+    db   $17
+    db   $01,$13,$01
+    db   $0E,$01
+    db   $13
+    db   $01,$17,$01
+    db   $1A
+    db   $01,$19,$01
+    db   $1A
+    db   $01,$19,$01
+    db   $1A
+    db   $01,$19,$01
+    db   $1A
+    db   $01,$19,$01
+    db   $1C
+    db   $01,$1A,$01
+    db   $19
+    db   $01,$1A,$01
+    db   $17
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $13
+    db   $01,$17,$01
+    db   $16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $17
+    db   $01,$16,$01
+    db   $18,$01
+    db   $17
+    db   $01,$15,$01
+    db   $17
+    db   $01,$13,$01
+    db   $0E,$01
+    db   $10,$01
+    db   $13
+    db   $01,$17,$01
+    db   $15
+    db   $02
+    db   $0E,$01
+    db   $17
+    db   $01,$15,$02
+    db   $0E,$01
+    db   $13
+    db   $02
+    db   $0E,$02
+    db   $13
+    db   $01,$FF,$FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $A0
+    db   $5E
+    db   $EE,$03
+    db   $03
+    db   $06,$0F
+    db   $10,$1C
+    db   $5F
+    dc   6, $FF
+
+sfx_13_data:
+    db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
+    db   $09
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $12
+    db   $03
+    db   $13
+    db   $01,$13,$02
+    db   $17
+    db   $02
+    db   $15
+    db   $04
+    db   $12
+    db   $02
+    db   $15
+    db   $02
+    db   $13
+    db   $03
+    db   $12
+    db   $01,$13,$02
+    db   $10,$02
+    db   $12
+    db   $05
+    db   $09
+    db   $01,$0E,$01
+    db   $10,$01
+    db   $12
+    db   $03
+    db   $13
+    db   $01,$13,$02
+    db   $17
+    db   $02
+    db   $15
+    db   $04
+    db   $12
+    db   $02
+    db   $15
+    db   $02
+    db   $13
+    db   $03
+    db   $12
+    db   $01,$13,$02
+    db   $10,$02
+    db   $0E,$05
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+
+sfx_14_data:
+    db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
+    db   $38,$5F
+    db   $20,$4A
+    db   $20,$4A
+    db   $48
+    db   $4A
+    db   $48
+    db   $4A
+    db   $EE,$0B
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $FF
+    db   $01,$05,$0F
+    db   $00
+    db   $8C
+    db   $5F
+    db   $FF
+    db   $FF
+    db   $C4,$4A,$E4
+    db   $4A
+    db   $E4,$4A,$06
+    db   $4B
+    db   $06,$4B
+    db   $EE,$0B
+
+    dc   92, $FF ; to 0x5fff
 
 ;;; ======= END OF BG6.BIN ======
