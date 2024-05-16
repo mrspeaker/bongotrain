@@ -285,9 +285,9 @@
     start_of_tiles    = $9040 ; top right tile
 
     ;; TODO: a hundred-odd screen locations. Figure 'em out, and name them.
-    ;;
+    ;; (use some x/y system, or $start_of_tiles + x)
     _9010             = $9010  ; ?​​
-    _901F             = $901F  ; ?​​
+    _901F             = $901F  ; ?​only used in unused spiral draw sub
     _9061             = $9061  ; ?​​
     _9081             = $9081  ; ?​​
     _9082             = $9082  ; ?​​
@@ -1156,7 +1156,7 @@ hiscore_for_p2:
     dc   23, $FF
 
 ;; (free bytes?)
-_setup_2:;looks a lot like SETUP_THEN_START_GAME - no one calls it?
+_setup_2: ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
     call setup_more
 _setup_more_ret:                ; returns here after setup_more
     call set_hiscore_text
@@ -1378,9 +1378,9 @@ player_physics:
     ld   (ix+$03),a ; player y
     ret
 
-;; jump pressed, sets these... why?
-;; 804a and 8049 never read?
-;; wpset 804a,1,r never triggers?
+;;; jump pressed, sets these... why?
+;;; 804a and 8049 never read?
+;;; wpset 804a,1,r never triggers?
 set_unused_804a_49:
     push af
     ld   a,$A0
@@ -1962,7 +1962,7 @@ _0AEE:
     call reset_xoffs
     ret
 
-    dc   7, $FF
+    dc   7,$FF
 
 ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
 platform_scroll_data_addr:
@@ -1977,7 +1977,7 @@ platform_scroll_data_addr:
 ;; 70 zeros/nops. That's a lotta nops. (free bytes?)
     dc 70,$0
 
-    dc   4, $FF
+    dc 4,$FF
 
 move_moving_platform:
     ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
