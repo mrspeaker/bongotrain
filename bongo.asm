@@ -270,6 +270,34 @@
     tile_platform_c   = $FD
     tile_platform_l   = $FE
 
+    __                = $10
+    A_                = $11
+    B_                = $12
+    C_                = $13
+    D_                = $14
+    E_                = $15
+    F_                = $16
+    G_                = $17
+    H_                = $18
+    I_                = $19
+    J_                = $1A
+    K_                = $1B
+    L_                = $1C
+    M_                = $1D
+    N_                = $1E
+    O_                = $1F
+    P_                = $20
+    Q_                = $21
+    R_                = $22
+    S_                = $23
+    T_                = $24
+    U_                = $25
+    V_                = $26
+    W_                = $27
+    X_                = $28
+    Y_                = $29
+    Z_                = $2A
+
 ;;; hardware
 
     screen_ram        = $9000 ; - 0x93ff  videoram
@@ -7430,14 +7458,14 @@ _lp:
 
 draw_jetsoft:
     call draw_tiles_h
-    db   $0C,$0A
-    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
+    db   $0C,$0A ;  JETSOFT
+    db   J_,E_,T_,S_,O_,F_,T_,$FF
     ret
 
 draw_proudly_presents:
     call draw_tiles_h
     db   $14,$07 ;  PROUDLY PRESENTS
-    db   $20,$22,$1F,$25,$14,$1C,$29,$10,$20,$22,$15,$23,$15,$1E,$24,$FF
+    db   P_,R_,O_,U_,D_,L_,Y_,__,P_,R_,E_,S_,E_,N_,T_,$FF
     ret
 
     dc   2, $FF
@@ -7448,7 +7476,7 @@ draw_copyright:
     db   $8B,$01,$09,$08,$03,$FF ;  (c) 1983
     call draw_tiles_h
     db   $12,$04
-    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
+    db   J_,E_,T_,S_,O_,F_,T_,$FF ;  JETSOFT
     ret
 
     dc   3, $FF
@@ -7456,8 +7484,9 @@ draw_copyright:
 blank_out_bottom_row:
     call draw_tiles_h
     db   $1F,$00 ;  Whole bunch of spaces over the level numbers
-    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
-    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$FF
+    dc   28, tile_blank
+    db   $FF
+
     ret
 
     dc   5, $FF
@@ -10530,17 +10559,17 @@ chased_by_a_dino_screen:
     call draw_tiles_h_copy
     db   $08,$0B
 ;; BEWARE
-    db   $12,$15,$27,$11,$22,$15,$FF
+    db   B_,E_,W_,A_,R_,E_,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $0C,$05
 ;; YOUR BEING CHASED
-    db   $29,$1F,$25,$22,$10,$12,$15,$19,$1E,$17,$10,$13,$18,$11,$23,$15,$14,$FF
+    db   Y_,O_,U_,R_,__,B_,E_,I_,N_,G_,__,C_,H_,A_,S_,E_,D_,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $10,$07
 ;; BY A DINOSAUR (classic!)
-    db   $12,$29,$10,$11,$10,$14,$19,$1E,$1F,$23,$11,$25,$22,$FF
+    db   B_,Y_,__,A_,__,D_,I_,N_,O_,S_,A_,U_,R_,$FF
     jp   attract_your_being_chased_flash
 
     dc   2, $FF
