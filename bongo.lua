@@ -39,7 +39,7 @@
 
 --]]
 
-start_screen = 15 -- [1 - 27]. Screen to start the game. 27 is the dino screen.
+start_screen = 1 -- [1 - 27]. Screen to start the game. 27 is the dino screen.
 loop_screens = {}--{13,14,18,21,25,27} -- Loop if you want to practise levels, eg:
 -- {}: no looping, normal Bongo sequence
 -- {14}: repeat screen 14 over and over
@@ -49,7 +49,7 @@ round = 2 -- starting round (1: initial speed, 2+: faster)
 -- 2: faster movement for player and enemies, and dinosaur starts earlier
 -- 3+: each round after 2, the player and enemeies are the same speed,
 --     but the dinosaur starts earlier and earlier and earlier...
-infinite_lives = true
+infinite_lives = false
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
 disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)

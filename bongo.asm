@@ -233,6 +233,7 @@
     MINUS_95          = $FFA1
     MINUS_64          = $FFC0
     MINUS_36          = $FFDC
+    scr_line_prev     = $FFE0       ; -32 = previous screen line
 
 ;;;  constants
 
@@ -277,51 +278,34 @@
     tile_platform_c   = $FD
     tile_platform_l   = $FE
 
-    scr_line_prev     = $FFE0       ; -32 = previous screen line
-
 ;;; hardware
 
     screen_ram        = $9000 ; - 0x93ff  videoram
-    start_of_tiles    = $9040 ; top right tile
+    start_of_tiles    = $9040 ; top-right tile
 
     ;; TODO: a hundred-odd screen locations. Figure 'em out, and name them.
     ;; (use some x/y system, or $start_of_tiles + x)
-    _9010             = $9010  ; ?​​
-    _901F             = $901F  ; ?​only used in unused spiral draw sub
-    _9061             = $9061  ; ?​​
-    _9081             = $9081  ; ?​​
-    _9082             = $9082  ; ?​​
+    p2_score_digits  = $9061  ; score for player 2
+    p2_timer_digits  = $9082  ; timer for player 1
     _908E             = $908E  ; ?​​
-    _9090             = $9090  ; ?​​
+    _hi_under_X       = $9090  ; hiscore screen, under X (wrap point)
     _9092             = $9092  ; ?​​
-    _90A1             = $90A1  ; ?​​
-    _90A2             = $90A2  ; ?​​
-    _90C1             = $90C1  ; ?​​
-    _90CB             = $90CB  ; ?​​
-    _90E1             = $90E1  ; ?​​
-    _90E2             = $90E2  ; ?​​
-    _9101             = $9101  ; ?​​
-    _9102             = $9102  ; ?​​
-    _911A             = $911A  ; ?​​
-    _9122             = $9122  ; ?​​
-    _9142             = $9142  ; ?​​
-    _9157             = $9157  ; ?​​
+    scr_pik_r_W       = $90CB  ; highwire pickup, right
+    _90E2             = $90E2  ;
+    _911A             = $911A  ; ?
+    _9122             = $9122  ; ?
+    _9142             = $9142  ; ?
     scr_pik_n_n       = $915A  ; pickup right n_n levels
-    _9160             = $9160  ; ?​​
-    _9162             = $9162  ; ?​​
-    _9177             = $9177  ; ?​​
-    _9179             = $9179  ; ?​​
-    _9180             = $9180  ; ?​​
-    _9182             = $9182  ; ?​​
-    _9184             = $9184  ; ?​​
-    _9189             = $9189  ; ?​​
-    _918A             = $918A  ; ?​​
-    _918B             = $918B  ; ?​​
-    _918C             = $918C  ; ?​​
+    _9162             = $9162  ; ?
+    _9179             = $9179  ; ?
+    _9182             = $9182  ; ?
+    _9184             = $9184  ; ?
+    _9189             = $9189  ; ?
+    _918A             = $918A  ; ?
+    _918B             = $918B  ; ?
+    _918C             = $918C  ; ?
     _918E             = $918E  ; ?​​
-    _9197             = $9197  ; ?​​
     _9199             = $9199  ; ?​​
-    _91A0             = $91A0  ; ?​​
     _91A1             = $91A1  ; ?​​
     _91A2             = $91A2  ; ?​​
     _91A9             = $91A9  ; ?​​
@@ -329,61 +313,48 @@
     _91AB             = $91AB  ; ?​​
     _91AC             = $91AC  ; ?​​
     _91B1             = $91B1  ; ?​​
-    _91B7             = $91B7  ; ?​​
-    _91C0             = $91C0  ; ?​​
     _91C1             = $91C1  ; ?​​
     _91C9             = $91C9  ; ?​​
     _91CA             = $91CA  ; ?​​
     _91CB             = $91CB  ; ?​​
     _91CC             = $91CC  ; ?​​
     _91D2             = $91D2  ; ?​​
-    _91D7             = $91D7  ; ?​​
     _91D8             = $91D8  ; ?​​
-    _91E0             = $91E0  ; ?​​
     _91E1             = $91E1  ; ?​​
-    _91F7             = $91F7  ; ?​​
     _91F8             = $91F8  ; ?​​
     _91F9             = $91F9  ; ?​​
-    _9200             = $9200  ; ?​​
     _9201             = $9201  ; ?​​
-    _9217             = $9217  ; ?​​
+    _9217             = $9217  ; ?
     _9218             = $9218  ; ?​​
     _9219             = $9219  ; ?​​
-    _9220             = $9220  ; ?​​
     _9221             = $9221  ; ?​​
     _9224             = $9224  ; ?​​
     _922B             = $922B  ; ?​​
     _9231             = $9231  ; ?​​
-    _9237             = $9237  ; ?​​
     _9238             = $9238  ; ?​​
     _9239             = $9239  ; ?​​
-    _9240             = $9240  ; ?​​
     _9241             = $9241  ; ?​​
     _9242             = $9242  ; ?​​
     _9248             = $9248  ; ?​​
-    _9257             = $9257  ; ?​​
-    _9260             = $9260  ; ?​​
     _9262             = $9262  ; ?​​
-    _9277             = $9277  ; ?​​
+    hi_name_entry     = $9277  ; as you enter your name
     _927A             = $927A  ; ?​​
-    _9280             = $9280  ; ?​​
+    hi_name           = $9280  ; hiscore name
     _9282             = $9282  ; ?​​
     _9297             = $9297  ; ?​​
     _92A2             = $92A2  ; ?​​
     _92AB             = $92AB  ; ?​​
     _92C2             = $92C2  ; ?​​
     _92E0             = $92E0  ; ?​​
-    _92E1             = $92E1  ; ?​​
+    p1_score_digits   = $92E1  ; ?​​
     _92EE             = $92EE  ; ?​​
-    _9301             = $9301  ; ?​​
-    _9302             = $9302  ; ?​​
+    p1_timer_digits   = $9302  ; ?​​
     _9308             = $9308  ; ?​​
     _930C             = $930C  ; ?​​
     _9310             = $9310  ; ?​​
     _9314             = $9314  ; ?​​
     _9321             = $9321  ; ?​​
     _9322             = $9322  ; ?​​
-    _9341             = $9341  ; ?​​
     _934B             = $934B  ; ?​​
     _934C             = $934C  ; ?​​
     _934E             = $934E  ; ?
@@ -3046,7 +3017,7 @@ _13FC:
 ;; draws the player's time under score
 ;; ret's immediately: must have been removed! aww :(
 draw_time:
-    ret
+    ret                         ; nooo! Put the timer back plz!
     ld   a,(player_num)
     bit  0,a
     jr   nz,_1436
@@ -3054,31 +3025,31 @@ draw_time:
     xor  a
     ld   hl,p1_time
     rrd
-    ld   (_9302),a
+    ld   (p1_timer_digits+0*$20),a ; digit 1
     rrd
-    ld   (_9322),a
+    ld   (p1_timer_digits+1*$20),a ; digit 2
     rrd
     inc  hl
     rrd
-    ld   (_9362),a
+    ld   (p1_timer_digits+3*$20),a ; digit 3
     rrd
-    ld   (_9382),a
+    ld   (p1_timer_digits+4*$20),a ; digit 4
     rrd
     ret
-;;  p2 version
+;;  p1 version
 _1436:
     xor  a
     ld   hl,p2_time
     rrd
-    ld   (_9082),a
+    ld   (p2_timer_digits+0*$20),a ; digit 1
     rrd
-    ld   (_90A2),a
+    ld   (p2_timer_digits+1*$20),a ; digit 2
     rrd
     inc  hl
     rrd
-    ld   (_90E2),a
+    ld   (p2_timer_digits+3*$20),a ; digit 3
     rrd
-    ld   (_9102),a
+    ld   (p2_timer_digits+4*$20),a ; digit 4
     rrd
     ret
 
@@ -4370,42 +4341,42 @@ draw_score:
     xor  a
     ld   hl,p1_score
     rrd
-    ld   (_9301),a
+    ld   (p1_score_digits+1*$20),a ; digit 2
     rrd
-    ld   (_9321),a
-    rrd
-    inc  l
-    rrd
-    ld   (_9341),a
-    rrd
-    ld   (_9361),a
+    ld   (p1_score_digits+2*$20),a ; digit 3
     rrd
     inc  l
     rrd
-    ld   (_9381),a
+    ld   (p1_score_digits+3*$20),a ; digit 4
+    rrd
+    ld   (p1_score_digits+4*$20),a ; digit 4
+    rrd
+    inc  l
+    rrd
+    ld   (p1_score_digits+5*$20),a ; digit 5
     rrd
     rrd
     xor  a
-    ld   (_92E1),a
+    ld   (p1_score_digits+0*$20),a ; digit 0 - always 0.
     ld   hl,p2_score
     rrd
-    ld   (_9081),a
+    ld   (p2_score_digits+1*$20),a ; digit 1
     rrd
-    ld   (_90A1),a
-    rrd
-    inc  l
-    rrd
-    ld   (_90C1),a
-    rrd
-    ld   (_90E1),a
+    ld   (p2_score_digits+2*$20),a ; digit 2
     rrd
     inc  l
     rrd
-    ld   (_9101),a
+    ld   (p2_score_digits+3*$20),a ; digit 3
+    rrd
+    ld   (p2_score_digits+4*$20),a ; digit 4
+    rrd
+    inc  l
+    rrd
+    ld   (p2_score_digits+5*$20),a ; digit 5
     rrd
     rrd
     xor  a
-    ld   (_9061),a
+    ld   (p2_score_digits+0*$20),a ; digit 0 - always 0.
     ld   hl,hiscore
     rrd
     ld   (_91C1),a
@@ -4482,7 +4453,7 @@ test_then_dino_collision:
 unused_draw_d4_everywhere:
     ld   de,$0016 ; +22 each outer loop?
     ld   c,$20
-    ld   hl,_9010
+    ld   hl,screen_ram+$10
 _j_1:                             ; 32 loops
     ld   b,$0A
 _i_1:                             ; 10 loops
@@ -4512,10 +4483,10 @@ unused_spiral_cage_fill_transition:
     call _part_two
     ld   hl,screen_ram
     call _part_three
-    ld   hl,_901F
+    ld   hl,screen_ram+$1F
     call _part_three
     ld   d,$10
-    ld   hl,_9061
+    ld   hl,screen_ram+$61
 _lp_2575:
     call _part_four
     call _part_five
@@ -5323,7 +5294,7 @@ enter_hiscore_screen:
     ld   (_9362),a ; num 2 to screen
     ld   (hiscore_timer),a
     pop  af
-    ld   iy,_9277
+    ld   iy,hi_name_entry
     ld   (_9184),a ; something else on screen...
     call hiscore_clear_name
     ld   hl,_934E
@@ -5450,7 +5421,7 @@ hiscore_back_cursor:
     ld   a,$92
     cp   l
     jr   nz,_2F63
-    ld   hl,_9090 ; screen somewhere
+    ld   hl,_hi_under_X
     ret
 _2F63:
     ld   a,$90
@@ -5523,34 +5494,34 @@ _2FD5:
 
 copy_hiscore_name_to_screen:
     ld   hl,hiscore_name
-    ld   a,(_9277)
+    ld   a,(hi_name_entry-0*$20) ; char 1
     ld   (hl),a
-    ld   a,(_9257)
+    ld   a,(hi_name_entry-1*$20) ; char 2
     inc  hl
     ld   (hl),a
-    ld   a,(_9237)
+    ld   a,(hi_name_entry-2*$20) ; char 3
     inc  hl
     ld   (hl),a
-    ld   a,(_9217)
+    ld   a,(hi_name_entry-3*$20) ; char 4
     inc  hl
     ld   (hl),a
-    ld   a,(_91F7)
+    ld   a,(hi_name_entry-4*$20) ; char 5
     inc  hl
     ld   (hl),a
-    ld   a,(_91D7)
+    ld   a,(hi_name_entry-5*$20) ; char 6
     inc  hl
     ld   (hl),a
 ;;; === END OF BG3.BIN, START OF BG4.BIN ======
-    ld   a,(_91B7)
+    ld   a,(hi_name_entry-6*$20) ; char 7
     inc  hl
     ld   (hl),a
-    ld   a,(_9197)
+    ld   a,(hi_name_entry-7*$20) ; char 8
     inc  hl
     ld   (hl),a
-    ld   a,(_9177)
+    ld   a,(hi_name_entry-8*$20) ; char 9
     inc  hl
     ld   (hl),a
-    ld   a,(_9157)
+    ld   a,(hi_name_entry-9*$20) ; char 10
     inc  hl
     ld   (hl),a
     call _30C0
@@ -5572,25 +5543,25 @@ _3022:
 ;; actually - different screen loc than copy_msg 1!
 copy_hiscore_name_to_screen_2:
     ld   a,(hiscore_name)
-    ld   (_9280),a
+    ld   (hi_name-0*$20),a   ; char 1
     ld   a,(_8308)
-    ld   (_9260),a
+    ld   (hi_name-1*$20),a   ; char 2
     ld   a,(_8309)
-    ld   (_9240),a
+    ld   (hi_name-2*$20),a   ; char 3
     ld   a,(_830A)
-    ld   (_9220),a
+    ld   (hi_name-3*$20),a   ; char 4
     ld   a,(_830B)
-    ld   (_9200),a
+    ld   (hi_name-4*$20),a   ; char 5
     ld   a,(_830C)
-    ld   (_91E0),a
+    ld   (hi_name-5*$20),a   ; char 6
     ld   a,(_830D)
-    ld   (_91C0),a
+    ld   (hi_name-6*$20),a   ; char 7
     ld   a,(_830E)
-    ld   (_91A0),a
+    ld   (hi_name-7*$20),a   ; char 8
     ld   a,(_830F)
-    ld   (_9180),a
+    ld   (hi_name-8*$20),a   ; char 9
     ld   a,(_8310)
-    ld   (_9160),a
+    ld   (hi_name-9*$20),a   ; char 10
     ret
 
     dc   11, $FF
@@ -7963,7 +7934,7 @@ _vasea:
 ;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
 funky_looking_set_ring:
     ld   a,$8E
-    ld   (_90CB),a
+    ld   (scr_pik_r_W),a
     call _3602 ; <- that looks odd. Weird jump to middle of code
     ret
 
@@ -8324,7 +8295,7 @@ add_pickup_pat_4:
 
 add_pickup_pat_7:
     ld   a,$8E
-    ld   (_90CB),a
+    ld   (scr_pik_r_W),a
     call add_pickup_pat_5
     ret
 
