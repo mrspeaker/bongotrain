@@ -3260,7 +3260,7 @@
 
                 _15C4:
 15C4  D5            push de
-15C5  21A81B        ld   hl,$1BA8
+15C5  21A81B        ld   hl,animate_circle_border - JMP_HL_OFFSET
 15C8  CDE301        call jmp_hl_plus_4k
 15CB  D1            pop  de
 15CC  C9            ret
@@ -3302,7 +3302,7 @@
 163A  CD6016        call animate_splash_screen
 163D  CD6016        call animate_splash_screen
 1640  CD6016        call animate_splash_screen
-1643  219414        ld   hl,$1494 ; $ATTRACT_CATCH_DINO
+1643  219414        ld   hl,attract_catch_dino - JMP_HL_OFFSET
 1646  CDE301        call jmp_hl_plus_4k
 1649  C9            ret
 
@@ -3335,7 +3335,8 @@
 
 1676                dc   2, $FF
 
-                ;; ? data for something?
+                ;;
+                bonus_multplier_data:
 1678                db   $E8
 1679                db   $EC,$EE,$F0
 167C                db   $E9
@@ -3928,9 +3929,10 @@
 1C7D  CD330A        call kill_player
 1C80  C9            ret
 
+                _1C81:
 1C81  E9            jp   (hl)
 1C82  1040          djnz _1CC4
-1C84  01811C        ld   bc,$1C81
+1C84  01811C        ld   bc,_1C81
 1C87  C5            push bc
 1C88  E5            push hl
 1C89  C9            ret
@@ -4683,15 +4685,15 @@
 
                 ;;
                 _2901:
-2901  210002        ld   hl,$0200
-2904  CDE301        call jmp_hl_plus_4k ; $4200: sfx something
+2901  210002        ld   hl,sfx_sumfin_0 - JMP_HL_OFFSET
+2904  CDE301        call jmp_hl_plus_4k
 2907  CD1011        call mystery_8066_fn
-290A  212002        ld   hl,post_death_reset ; $4220 = SFX_SUMFIN_1
+290A  212002        ld   hl,sfx_sumfin_1 - JMP_HL_OFFSET
 290D  CDE301        call jmp_hl_plus_4k
-2910  214002        ld   hl,$0240 ; $4240 = SFX_SUMFIN_2
+2910  214002        ld   hl,sfx_sumfin_2 - JMP_HL_OFFSET
 2913  CDE301        call jmp_hl_plus_4k
 2916  CD1011        call mystery_8066_fn
-2919  214008        ld   hl,draw_screen
+2919  214008        ld   hl,sfx_queuer - JMP_HL_OFFSET
 291C  1822          jr   jmp_hl_pl_4k_and_mystery_8066_fn
 
 291E                dc   2, $FF
@@ -4757,7 +4759,7 @@
 29AF  FE05          cp   $05
 29B1  200D          jr   nz,$29C0
 29B3  3A6280        ld   a,(bonus_mult)
-29B6  217816        ld   hl,$1678
+29B6  217816        ld   hl,bonus_multplier_data
 29B9  85            add  a,l
 29BA  6F            ld   l,a
 29BB  7E            ld   a,(hl)
@@ -4765,7 +4767,7 @@
 29BF  C9            ret
                 ;; 6 Bonuses got!
 29C0  3A6280        ld   a,(bonus_mult)
-29C3  217C16        ld   hl,$167C
+29C3  217C16        ld   hl,bonus_multplier_data + 4
 29C6  85            add  a,l
 29C7  6F            ld   l,a
 29C8  7E            ld   a,(hl)
@@ -7276,8 +7278,7 @@
                 delay_83_call_weird_a:
 3F00  CD6014        call delay_83
 3F03  21900E        ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
-                ; seems to do nothing
-3F06  CDE301        call jmp_hl_plus_4k
+3F06  CDE301        call jmp_hl_plus_4k ; seems to do nothing in sub
 3F09  C9            ret
 
 3F0A                dc   6, $FF
@@ -7723,6 +7724,7 @@
 41FE                dc   2, $FF
 
                 ;;
+                sfx_sumfin_0:
 4200  DD21A082      ld   ix,synth1
 4204  DD7E04        ld   a,(ix+$04)
 4207  A7            and  a
