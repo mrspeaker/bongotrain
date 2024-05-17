@@ -443,8 +443,8 @@ init_screen:
     ret  z
     call reset_xoff_sprites_and_clear_screen
     call draw_tiles_h
-    db   $09, $00
-    db   $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF ; CREDIT FAULT
+    db   $09, $00 ; CREDIT FAULT
+    db   C_,R_,E_,D_,I_,T_,__,F_,A_,U_,L_,T_,$FF
     jr   init_screen
 
     db   $FF
@@ -531,16 +531,16 @@ attract_press_p1_screen:
     call draw_score
     call draw_tiles_h
     db   $09, $0B
-    db   $20,$22,$15,$23,$23,$FF ; PRESS
+    db   P_,R_,E_,S_,S_,$FF ; PRESS
     call draw_tiles_h
     db   $0C, $09
-    db   $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
+    db   O_,N_,E_,__,P_,L_,A_,Y_,E_,R_,$FF ; ONE PLAYER
     call draw_tiles_h
     db   $0F, $8B
-    db   $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
+    db   B_,U_,T_,T_,O_,N_,$FF ; BUTTON
     call draw_tiles_h
     db   $19, $09
-    db   $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
+    db   C_,R_,E_,D_,I_,T_,S_,$FF ; CREDITS
     ld   hl,credits
     xor  a
     rld
@@ -564,12 +564,13 @@ draw_one_or_two_player:
     nop
     call attract_press_p1_screen
     call draw_tiles_h
-    db   $0C, $06
-    db   $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
-    db   $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
-;; Does it fall through here?
-    dc   8,$FF
+    db   $0C, $06; ONE OR TWO PLAYER
+    db   O_,N_,E_,__,O_,R_,__,T_,W_,O_,__,P_,L_,A_,Y_,E_,R_,$FF
+    ret
 
+    dc   9,$FF
+
+err_um_call_0020:
     call _0020
     ret
 
@@ -2425,28 +2426,31 @@ draw_border_1:
 ;;  intro inside border top
     call draw_tiles_h
     db   $02, $02
-    db   $E0,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
-    db   $E7,$E7,$E7,$E7,$E7,$E7,$E7,$DF,$FF
+    db   $E0 ; corner
+    dc   22, $E7
+    db   $DF ; corner
+    db   $FF
 
 ;; intro inside border right
     call draw_tiles_v_copy
     db   $02, $03
-    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6
-    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$FF
+    dc   24, $E6
+    db   $FF
 
     jp   draw_border_1_b
 
 ;; couple of $0Fs in a sea of $FFs
     dc   10, $FF
-    rrca
+    db   $0F
     dc   11, $FF
-    rrca
+    db   $0F
     dc   2, $FF
 
 header_text_data:
-    db   $10,$10,$10,$10,$20,$1C,$01,$10,$10,$10,$10 ; PL1
-    db   $18,$19,$17,$18,$2B,$23,$13,$1F,$22,$15,$10 ; HIGH-SCORE
-    db   $10,$10,$10,$20,$1C,$02,$10,$10,$10,$FF    ; PL2
+    db   __,__,__,__,P_,L_,1,__,__,__,__   ; PL1
+    db   H_,I_,G_,H_,$2B,S_,C_,O_,R_,E_,__ ; HIGH-SCORE
+    db   __,__,__,P_,L_,2,__,__,__         ; PL2
+    db   $FF
 
 ;;; === END OF BG1.BIN, START OF BG2.BIN =======
 
@@ -5274,36 +5278,36 @@ enter_hiscore_screen:
     db   $00, $00 ; params to DRAW_SCREEN
     call draw_tiles_h
     db   $04,$0A
-    db   $20,$1C,$11,$29,$15,$22,$FF ;  PLAYER
+    db   P_,L_,A_,Y_,E_,R_,$FF ;  PLAYER
     call draw_tiles_h
-    db   $07,$03
-    db   $29,$1F,$25,$10,$12,$15,$11,$24,$10,$24,$18,$15,$10,$18,$19,$17
-    db   $18,$15,$23,$24,$FF ;  YOU BEAT THE HIGHEST
+    db   $07,$03 ;  YOU BEAT THE HIGHEST
+    db   Y_,O_,U_,__,B_,E_,A_,T_,__,T_,H_,E_,__,H_,I_,G_,H_,E_,S_,T_,$FF
     call draw_tiles_h
     db   $09,$03 ;  SCORE OF THE DAY
-    db   $23,$13,$1F,$22,$15,$10,$1F,$16,$10,$24,$18,$15,$10,$14,$11,$29,$FF
+    db   S_,C_,O_,R_,E_,__,O_,F_,__,T_,H_,E_,__,D_,A_,Y_,$FF
     call draw_tiles_h
     db   $0B,$03
-    db   $20,$1C,$15,$11,$23,$15,$10,$15,$1E,$24,$15,$22,$10,$29,$1F,$25
-    db   $22,$10,$1E,$11,$1D,$15,$FF
+    db   P_,L_,E_,A_,S_,E_,__,E_,N_,T_,E_,R_,__,Y_,O_,U_,R_,__,N_,A_,M_,E_,$FF
     call draw_tiles_h
     db   $0D,$03
 ;; drawing the alphabet A-L
-    db   $11,$10,$12,$10,$13,$10,$14,$10,$15,$10,$16,$10,$17,$10,$18,$10,$19
-    db   $10,$1A,$10,$1B,$10,$1C,$FF
+    db   A_,__,B_,__,C_,__,D_,__,E_,__,F_,__
+    db   G_,__,H_,__,I_,__,J_,__,K_,__,L_,$FF
     call draw_tiles_h
     db   $0F,$03
 ;; drawing the alphabet M-X
-    db   $1D,$10,$1E,$10,$1F,$10,$20,$10,$21,$10,$22,$10,$23,$10,$24,$10,$25
-    db   $10,$26,$10,$27,$10,$28,$FF
+    db   M_,__,N_,__,O_,__,P_,__,Q_,__,R_,__
+    db   S_,__,T_,__,U_,__,V_,__,W_,__,X_,$FF
     call draw_tiles_h
     db   $11,$03
 ;; Y,Z... characters
-    db   $29,$10,$2A,$10,$10,$10,$10,$10,$10,$10,$51,$10,$52,$10,$53,$10,$10
-    db   $10,$10,$10,$58,$59,$5A,$5B,$FF
+    db   Y_,__,Z_,__,__,__,__,__,__,__
+    db   $51,__,$52,__,$53,__,__,__,__,__ ; Circles
+    db   $58,$59,$5A,$5B,$FF              ; Rub End
     call draw_tiles_h
     db   $17,$0A
-    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    dc   10, tile_hyphen
+    db   $FF
     call draw_score
     ld   a,$09 ; 90 seconds timer
     ld   (_9382),a ; num 1 to screen
@@ -7473,7 +7477,7 @@ draw_proudly_presents:
 draw_copyright:
     call draw_tiles_h
     db   $10,$04
-    db   $8B,$01,$09,$08,$03,$FF ;  (c) 1983
+    db   $8B,1,9,8,3,$FF ;  (c) 1983
     call draw_tiles_h
     db   $12,$04
     db   J_,E_,T_,S_,O_,F_,T_,$FF ;  JETSOFT
@@ -10911,7 +10915,8 @@ sfx_9_data:
 
 call_draw_extra_bonus_screen:
     jp   draw_extra_bonus_screen
-;;
+;;; How is this different to the other extra bonus screen?...
+;;; does it ever get here?
     call jmp_hl
     ld   hl,draw_border_1
     call jmp_hl
@@ -10920,18 +10925,19 @@ call_draw_extra_bonus_screen:
     db   E_,X_,T_,R_,A_,__,B_,O_,N_,U_,S_,$FF
     call draw_tiles_h_copy
     db   $09,$08
-    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    dc   11, tile_hyphen        ; hyphens under EXTRA BONUS
+    db   $FF
     call wait_60_for_start_button
     call wait_60_for_start_button
     call draw_tiles_h_copy
     db   $0C,$07
-    db   P_,I_,C_,K_,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
+    db   P_,I_,C_,K_,__,U_,P_,__,6,__,B_,O_,N_,U_,S_,$FF
     call draw_tiles_h_copy
     db   $10,$07
-    db   O_,B_,J_,E_,C_,T_,S_,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
+    db   O_,B_,J_,E_,C_,T_,S_,__,W_,I_,T_,H_,O_,U_,T_,$FF
     call draw_tiles_h_copy
     db   $14,$07
-    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
+    db   L_,O_,S_,I_,N_,G_,__,A_,__,L_,I_,F_,E_,$FF
     call wait_60_for_start_button
     call wait_60_for_start_button
     call draw_tiles_h_copy
@@ -11146,6 +11152,7 @@ set_screen_color_to_4:
 
     dc   4, $FF
 
+;;; How is this different to the other extra bonus screen?
 draw_extra_bonus_screen:
     ld   hl,reset_xoff_sprites_and_clear_screen
     call jmp_hl
@@ -11155,22 +11162,22 @@ draw_extra_bonus_screen:
     call draw_tiles_h_copy
     db   $08,$08
 ;; EXTRA BONUS
-    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
+    db   E_,X_,T_,R_,A_,__,B_,O_,N_,U_,S_,$FF
     call draw_tiles_h_copy
     db   $09,$08
-    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
+    dc   11, tile_hyphen        ; hyphen underline
+    db   $FF
     call flash_border
     call flash_border
     call draw_tiles_h_copy
     db   $0C,$07
-;; PICK UP 6 BONUS
-    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
+    db   P_,I_,C_,K_,__,U_,P_,__,6,__,B_,O_,N_,U_,S_,$FF
     call draw_tiles_h_copy
     db   $10,$07
-    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
+    db   O_,B_,J_,E_,C_,T_,S_,__,W_,I_,T_,H_,O_,U_,T_,$FF
     call draw_tiles_h_copy
     db   $14,$07
-    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
+    db   L_,O_,S_,I_,N_,G_,__,A_,__,L_,I_,F_,E_,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $17,$0B
