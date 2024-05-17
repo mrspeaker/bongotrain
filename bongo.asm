@@ -10917,7 +10917,7 @@ call_draw_extra_bonus_screen:
     call jmp_hl
     call draw_tiles_h_copy
     db   $08,$08
-    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
+    db   E_,X_,T_,R_,A_,__,B_,O_,N_,U_,S_,$FF
     call draw_tiles_h_copy
     db   $09,$08
     db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
@@ -10925,10 +10925,10 @@ call_draw_extra_bonus_screen:
     call wait_60_for_start_button
     call draw_tiles_h_copy
     db   $0C,$07
-    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
+    db   P_,I_,C_,K_,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
     call draw_tiles_h_copy
     db   $10,$07
-    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
+    db   O_,B_,J_,E_,C_,T_,S_,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
     call draw_tiles_h_copy
     db   $14,$07
     db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
