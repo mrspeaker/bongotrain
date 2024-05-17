@@ -315,14 +315,13 @@
     _911A             = $911A  ; ?
     scr_lives_p2      = $9122  ; icons for lives, p2
     scr_pik_n_n       = $915A  ; pickup right n_n levels
-    _9179             = $9179  ;
     _9184             = $9184  ;
     _9189             = $9189  ;
     _918A             = $918A  ;
     _918B             = $918B  ;
     _918C             = $918C  ;
     _918E             = $918E  ;
-    _9199             = $9199  ;
+    scr_num_creds     = $9199  ;
     _91A1             = $91A1  ;
     _91A9             = $91A9  ;
     _91AA             = $91AA  ;
@@ -486,12 +485,12 @@ _play_splash:
     call wait_vblank
     ld   a,(credits)
     cp   $01
-    jr   nz,_00B3
+    jr   nz,_many_credits
     call attract_press_p1_screen
-    jr   _00B6
-_00B3:
+    jr   _done__stsg
+_many_credits:
     call draw_one_or_two_player
-_00B6:
+_done__stsg:
     ld   a,(num_players)
     and  a
     jp   nz,start_game
@@ -543,10 +542,10 @@ attract_press_p1_screen:
     db   C_,R_,E_,D_,I_,T_,S_,$FF ; CREDITS
     ld   hl,credits
     xor  a
+    rld                         ; roll in num credits
+    ld   (scr_num_creds-0*$20),a ; 1's
     rld
-    ld   (_9199),a
-    rld
-    ld   (_9179),a
+    ld   (scr_num_creds-1*$20),a ; 10's
     rld
     ld   a,(credits)
     ld   (credits_umm),a
