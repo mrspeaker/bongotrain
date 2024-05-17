@@ -15,7 +15,14 @@ Not 100% complete... still a bunch of placeholder symbols, but I found so much i
 ** Building ROMs
 The Bongo source can be compiled with the `zmac` (http://48k.ca/zmac.html) z80 compiler, then split into chunks that recreate the 6 original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
 
-`build.sh` compiles the source with `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken.
+`build.sh` compiles the source with `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken. It's then zipped up into `zout/bongo.zip` that can be run in MAME.
+
+If you change bytes, the CRCs will fail - but you can still get a bootleg build of Bongo... why not make your very own version?
+
+** TODOs
+Although most of the larger structure has been reversed, there are still heaps of unknown/unspecified symbols and addresses.
+
+Also, the audio routines have not been figured out at all... they are mostly towards the end of the file, and contain a lot of data. I'm not sure about the format of it, so I can't just squish it all into db's: there is obviously lots of "note" data, but also there are a lot of indirect address jumps: which is hard to verify. The best way is look at `bongo.lst` as you need to know where the addresses jump to!
 
 ** scratchpad
 
