@@ -19,7 +19,7 @@ rm -rf zout
 echo "clean:     go."
 
 # compile to un-annotated bytes
-zmac -j -c -n --oo cim bongo.asm
+zmac -j -c -n --oo cim,lst bongo.asm
 echo "compile:   go."
 
 # split bytes into 4K chunks (to mimic ROMs)
@@ -46,8 +46,8 @@ rom=(
 
 err=0
 for index in ${!obj[*]}; do
-    a=`shasum ${obj[$index]} | sed 's/.*=.//g'`
-    b=`shasum ${rom[$index]} | sed 's/.*=.//g'`
+    a=`shasum ${obj[$index]} | awk '{ print $1 }'`
+    b=`shasum ${rom[$index]} | awk '{ print $1 }'`
     a_sha=`echo $a | cut -c 1-40`
     b_sha=`echo $b | cut -c 1-40`
     if test "$a_sha" != "$b_sha"
@@ -75,14 +75,10 @@ zip -j -q bongo.zip *.bin
 cd ..
 if [ "$err" -eq "0" ]; then
     echo "bongo.zip: go."
-else
-    echo "(bootleg) bongo.zip: go."
-fi
-
-
-if [ "$err" -eq "0" ]; then
     echo "bon:       go."
 else
+    echo "(bootleg) bongo.zip: go."
+    echo
     echo "no go."
 fi
 
