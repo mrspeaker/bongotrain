@@ -10181,6 +10181,8 @@ _jump_up_stair:
 
     dc   1, $FF
 
+;;; On the splash screen, player animates jumping
+;;; up one stair (this repeats for each stair)
 attract_jump_up_one_stair:
     ld   d,$00
 _lp_532A:
@@ -10243,7 +10245,6 @@ attract_animate_dino_head:
 _53A6:
     ld   a,$2D
     ld   (bongo_frame),a
-
 _done_54AB:
     ret
 
@@ -10259,7 +10260,7 @@ _53AE:
 ;; identical to jump up, but point at down data.
 attract_jump_down_one_stair:
     ld   d,$00
-_lp_53BA:
+_loop__53BA:
     ld   hl,attract_player_down_stair_data
     ld   a,d
     add  a,a
@@ -10294,7 +10295,7 @@ _lp_53BA:
     inc  d
     ld   a,d
     cp   $06
-    jr   nz,_lp_53BA
+    jr   nz,_loop__53BA
     call wait_15_for_start_button
     ret
 
