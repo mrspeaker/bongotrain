@@ -198,10 +198,7 @@
     _8046             = $8046  ; ?
     _8049             = $8049  ; ?
     _804A             = $804A  ; ?
-    _8101             = $8101  ; ?
-    _8105             = $8105  ; ?
     _8106             = $8106  ; ?
-    _8108             = $8108  ; ?
     _8126             = $8126  ; ?
     _8128             = $8128  ; ?
     _8129             = $8129  ; ?
@@ -587,7 +584,7 @@ do_jmp_hl_plus_4k:
 
     dc   9,$FF
 
-did_player_press_start:; Did player start the game?
+did_player_press_start: ; Did player start the game?
     ld   a,(credits) ; check you have credits
     and  a
     ret  z
@@ -702,7 +699,7 @@ _0260:
     ld   (_B007),a
 _0267:
     ld   a,(input_buttons_2)
-    bit  3,a ; is this INfinite Lives DIP setting? resets lives on death
+    bit  3,a ; is this Infinite Lives DIP setting? resets lives on death
     jr   z,_027E
     ld   a,$03 ; set 3 lives
     ld   (lives),a
@@ -883,6 +880,7 @@ _0390:
 
     dc   11, $FF
 
+;;; Draw icons for the number of lives remaining
 draw_lives:
     call set_lives_row_color
     ld   a,(lives)
@@ -945,7 +943,7 @@ _03FA:
 
 set_lives_row_color:
     ld   a,$01
-    ld   (_8105),a
+    ld   (screen_xoff_col+5),a  ; 3rd row
     ret
 
     dc   2, $FF
@@ -7007,9 +7005,9 @@ player_enemies_collision:
     dc   6, $FF
 
 copy_xoffs:
-    ld   hl,_8108
+    ld   hl,screen_xoff_col+8  ; row 5?
 _3BCB:
-    ld   a,(_8106)
+    ld   a,(screen_xoff_col+6)  ; row 4
     ld   (hl),a
     inc  hl
     inc  hl
@@ -9450,7 +9448,7 @@ done_caged_dino:
     xor  a
     ld   (dino_x),a
     ld   (dino_x_legs),a
-_4DD7:
+_loop__cage_dino:
     call draw_cage_tiles
     push hl
     ld   hl,wait_vblank
@@ -9459,7 +9457,7 @@ _4DD7:
     inc  hl
     ld   a,$DC
     cp   l
-    jr   nz,_4DD7
+    jr   nz,_loop__cage_dino
     ld   a,$91
     ld   (dino_x),a
     ld   a,$38
@@ -9503,7 +9501,7 @@ attract_splash_bongo:
     ld   hl,_9248 ; draw the BONGO logo
     ld   b,$A0
     ld   c,$05
-_lp_4E53:
+_loop_4E53:
     ld   (hl),b ; top right
     inc  b
     inc  hl
@@ -9520,7 +9518,7 @@ _lp_4E53:
     inc  b
     call wait_30_for_start_button
     dec  c
-    jr   nz,_lp_4E53
+    jr   nz,_loop_4E53
     ld   hl,draw_copyright
     call jmp_hl
     jp   attract_animate_player_up_stairs
@@ -9588,7 +9586,7 @@ wait_60_for_start_button:
 
 wait_15_for_start_button:
     ld   d,$0E
-_4EC4:
+_loop__w15:
     push hl
     push bc
     push de
@@ -9598,7 +9596,7 @@ _4EC4:
     pop  bc
     pop  hl
     dec  d
-    jr   nz,_4EC4
+    jr   nz,_loop__w15
     ret
 
 ;; what 30 for start
@@ -11132,7 +11130,7 @@ _5AC6:
 
 set_row_colors:
     ld   b,a
-    ld   hl,_8101 ; col for row 1
+    ld   hl,screen_xoff_col+1 ; col for row 1
 _5ADC:
     ld   (hl),b
     inc  hl
