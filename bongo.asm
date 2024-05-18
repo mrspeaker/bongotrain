@@ -639,11 +639,11 @@ start_game:
     ld   (speed_delay_p1),a
     ld   (speed_delay_p2),a
     nop
-    ld   a,(input_buttons_2) ; from dip-switch settings?
-    and  $06
+    ld   a,(input_buttons_2) ; "num lives" from dip-switch settings
+    and  0110b
     sra  a
     add  a,$02
-    ld   (lives),a
+    ld   (lives),a              ; set beginning lives
     ld   (lives_p2),a
     ld   a,(num_players)
     dec  a
@@ -652,17 +652,18 @@ start_game:
     ld   (player_num),a
     ld   a,(is_2_players)
     and  a
-    jr   nz,_0215
-    xor  a
+    jr   nz,_is_2P
+    xor  a                      ; 1P only, zero p2 lives
     ld   (lives_p2),a
-_0215:
-    ld   a,$01
+_is_2P:
+    ld   a,$01                  ; set initial screen number
     ld   (screen_num),a
     ld   (screen_num_p2),a
     ld   (_8090),a
+
 post_death_reset:
     ld   sp,stack_location ; hmm. sets stack pointer?
-    ld   a,(player_num) ; flip flops?!
+    ld   a,(player_num)
     xor  $01
     ld   (player_num),a
     ld   hl,lives
@@ -670,8 +671,8 @@ post_death_reset:
     ld   l,a
     ld   a,(hl)
     and  a
-    jr   nz,_0246
-    ld   a,(player_num) ; and back again?
+    jr   nz,_more_lives         ; out of lives yet?
+    ld   a,(player_num)
     xor  $01
     ld   (player_num),a
     ld   hl,lives
@@ -679,12 +680,13 @@ post_death_reset:
     ld   l,a
     ld   a,(hl)
     and  a
-    jp   z,game_over
-_0246:
+    jp   z,game_over            ; yep, game over
+
+_more_lives:                    ; some dip-switch shenanigans
     dec  a
     ld   (hl),a
     ld   a,(input_buttons)
-  bit  7,a ; what is this "button"?!
+    bit  7,a ; what is this "button"?!
     jr   z,_0260
     ld   a,(player_num)
     cp   $01
@@ -699,17 +701,17 @@ _0260:
     ld   (_B007),a
 _0267:
     ld   a,(input_buttons_2)
-    bit  3,a ; is this Infinite Lives DIP setting? resets lives on death
-    jr   z,_027E
+    bit  3,a ; Infinite Lives DIP setting? resets lives on death
+    jr   z,_done__ml
     ld   a,$03 ; set 3 lives
     ld   (lives),a
     ld   a,(lives_p2)
     and  a
-    jr   z,_027E
+    jr   z,_done__ml
     ld   a,$03
     ld   (lives_p2),a
-_027E:
-    jp   big_reset
+_done__ml:
+    jp   big_reset              ; reset the for next life
 
     dc   7, $FF
 
@@ -818,19 +820,19 @@ draw_tiles_h:
     add  hl,de
     add  hl,de
     inc  bc
-_lp_032E:
+_loop__032E:
     ld   a,(bc) ; read data until 0xff
     inc  bc
     cp   $FF
-    jr   nz,_0336
+    jr   nz,_next_tile
     push bc
     ret
-_0336:
+_next_tile:
     ld   (hl),a
     ld   d,$FF
     ld   e,$E0
-    add  hl,de
-    jr   _lp_032E
+    add  hl,de ; $FFE0 = -32 (one column)
+    jr   _loop__032E
 
     dc   10, $FF
 
@@ -874,9 +876,10 @@ reset_ents_all:
 
     db   $FF
 
-_0390:
+;;; Don't think it's called?
+infinte_vblanks:
     call wait_vblank
-    jr   _0390
+    jr   infinte_vblanks
 
     dc   11, $FF
 
@@ -933,10 +936,10 @@ clear_after_game_over:
     dc   6, $FF
 
     ld   c,$E0
-_03FA:
+_loop__vb:
     call wait_vblank
     inc  c
-    jr   nz,_03FA
+    jr   nz,_loop__vb
     ret
 
     dc  7, $FF
@@ -1218,7 +1221,7 @@ _05ED:
     dc   9, $FF
 
 player_frame_data_walk_right:
-    db  $0C,$0E,$10,$0E,$0C,$12,$14,$12
+    db   $0C,$0E,$10,$0E,$0C,$12,$14,$12
     dc   8, $FF
 
 player_move_right:
@@ -1499,6 +1502,7 @@ play_jump_sfx:
 ;; is indirectly fetched via (bc) addresses.
 ;; I set a breakpoint here and played a bunch (even cutscene)
 ;; but could not get it to trigger... not used? debug?
+draw_tile_unused:
     ld   bc,hard_reset
     nop
     nop
@@ -1534,16 +1538,16 @@ play_jump_sfx:
     ld   d,a
     inc  bc
     push bc
-_lp_082D:
+_next_tile__082D:
     ld   a,(de)
     cp   $FF ; $FF delimited
     ret  z
     inc  de
     ld   (hl),a
     ld   b,$FF
-    ld   c,$E0
+    ld   c,$E0 ; Subtract 32 (one column)
     add  hl,bc
-    jr   _lp_082D
+    jr   _next_tile__082D
 
     dc   6, $FF
 

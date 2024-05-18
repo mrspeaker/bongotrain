@@ -44,18 +44,18 @@ rom=(
   dump/romgo/bg6.bin
 )
 
+#shasum `echo zout/bg*` | awk '{ print $1 }'
+
 err=0
 for index in ${!obj[*]}; do
     a=`shasum ${obj[$index]} | awk '{ print $1 }'`
     b=`shasum ${rom[$index]} | awk '{ print $1 }'`
-    a_sha=`echo $a | cut -c 1-40`
-    b_sha=`echo $b | cut -c 1-40`
-    if test "$a_sha" != "$b_sha"
+    if test "$a" != "$b"
     then
-        err=$((err+1))
         echo
         echo "CRC error: ${obj[$index]} - ${rom[$index]} (${index}k):"
         cmp -l -x ${obj[$index]} ${rom[$index]} | head -n 5
+        err=$((err+1))
     fi
 done
 
@@ -68,11 +68,13 @@ mv bg3 bg4.bin
 mv bg4 bg5.bin
 mv bg5 bg6.bin
 rm bongo.cim
+# copy over color and gfx ROMs
 cp ../dump/romgo/b-clr.bin .
 cp ../dump/romgo/b-h.bin .
 cp ../dump/romgo/b-k.bin .
 zip -j -q bongo.zip *.bin
 cd ..
+
 if [ "$err" -eq "0" ]; then
     echo "bongo.zip: go."
     echo "bon:       go."
