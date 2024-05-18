@@ -85,6 +85,9 @@
     ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
     ch2_sfx           = $8043  ; SFX channel 2
     sfx_id            = $8044  ; queued sound effect ID to play
+    _8046             = $8046  ; ?
+    _8049             = $8049  ; ?
+    _804A             = $804A  ; ?
 
     lava_tile_offset  = $804B  ; Current lava tile (offset?)
 
@@ -111,10 +114,9 @@
 
     splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
     sfx_prev          = $8065  ; prevent retrigger effect?
-
-    _8066             = $8066  ; ?? OE when alive, 02 when dead?
-    _8067             = $8067  ; ?? used with 66
-    _8068             = $8068  ; ?? used with 67
+    ch1_cur_id        = $8066  ; sfx id (?) OE when alive, 02 when dead etc
+    ch2_cur_id        = $8067  ;
+    ch3_cur_id        = $8068  ;
 
     extra_got_p1      = $8070  ; P1 Earned extra life
     extra_got_p2      = $8071  ; P2 Earned extra life
@@ -132,7 +134,7 @@
     _80FF             = $80FF  ; cleared at start (HARD_RESET)
 
     screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
-                                ; Gets memcpy'd to $9800
+                               ; 40 bytes, Gets memcpy'd to $9800
 
 ;;; ======== SPRITES ========
 ;;; all have the form: X, FRAME, COL, Y.
@@ -173,8 +175,14 @@
     platform_xoffs    = $8180  ; maybe
 
     synth1            = $82A0  ; bunch of bytes for sfx
+    synthy_um_1       = $82A5  ; ?
     synth2            = $82A8  ; bunch of bytes for sfx
+    synthy_um_2       = $82AD  ; no idea. Read once... written where?
     synth3            = $82B0  ; bunch of bytes for sfx
+    synthy_um_3       = $82B5  ; ?
+    synth1_um_b       = $82B8  ; ?
+    synth2_um_b       = $82D0  ; ?
+    synth3_um_b       = $82E8  ; ?
 
     hiscore           = $8300  ;
     hiscore_1         = $8301  ;
@@ -194,27 +202,7 @@
     input_buttons     = $83F1  ; copied to 800C and 800D
     input_buttons_2   = $83F2  ; dunno what buttons
 
-    ;; TODO: give these symbols a name!
-    _8046             = $8046  ; ?
-    _8049             = $8049  ; ?
-    _804A             = $804A  ; ?
-    _8106             = $8106  ; ?
-    _8126             = $8126  ; ?
-    _8128             = $8128  ; ?
-    _8129             = $8129  ; ?
-    _812A             = $812A  ; ?
-    _8131             = $8131  ; ?
-    _8133             = $8133  ; ?
-    _8135             = $8135  ; ?
-    _8137             = $8137  ; ?
-    _8138             = $8138  ; ?
-    _813F             = $813F  ; ?
-    _82A5             = $82A5  ; ?
-    _82AD             = $82AD  ; ?
-    _82B5             = $82B5  ; ?
-    _82B8             = $82B8  ; ?
-    _82D0             = $82D0  ; ?
-    _82E8             = $82E8  ; ?
+;;;  constants
 
     ;; 16bit signed sub constants
     JMP_HL_OFFSET     = $4000
@@ -223,8 +211,7 @@
     MINUS_36          = $FFDC
     scr_line_prev     = $FFE0       ; -32 = previous screen line
 
-;;;  constants
-
+    ;; 8bit constants
     screen_width      = $E0  ; 224
     scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
     scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
@@ -267,6 +254,7 @@
     tile_platform_c   = $FD
     tile_platform_l   = $FE
 
+    ;; Alphabet tile indexes
     __                = $10
     A_                = $11
     B_                = $12
@@ -411,7 +399,7 @@ hard_reset:
     jp   clear_ram ; jumps back here after clear
 _ret_hard_reset:
     ld   sp,stack_location
-    call delay_83_call_weird_a
+    call clear_83_call_weird_a
     call init_screen
     call write_out_0_and_1
     jp   setup_then_start_game
@@ -499,7 +487,7 @@ nmi_int_handler:
     exx
     call coinage_routine
     call copy_xoffs_and_cols_to_screen
-    call save_ix_and_um
+    call call_player_all_sfx_chunks
     call copy_ports_to_buttons
     exx
     ret
@@ -591,7 +579,7 @@ did_player_press_start: ; Did player start the game?
     ld   a,(input_buttons) ; P1 pressed?
     bit  0,a
     jr   z,_01AD
-    call delay_83
+    call clear_83
     ld   a,$01 ; start the game, 1 player
     ld   (num_players),a
     ld   a,(credits) ; use a credit
@@ -606,7 +594,7 @@ _01AD:
     ld   a,(input_buttons)
     bit  1,a ; is P2 pressed?
     ret  z
-    call delay_83
+    call clear_83
     ld   a,$02 ; start the game, 2 player
     ld   (num_players),a
     ld   a,(credits)
@@ -1336,11 +1324,7 @@ _06CE:
 
 ;; "Physics": do jumps according to jump lookup tables
 player_physics:
-    nop
-    nop
-    nop
-    nop
-    nop
+    dc   5, 0                   ; some nops
     ld   a,(jump_tbl_idx)
     dec  a ; idx - 1
     ld   (jump_tbl_idx),a
@@ -1926,10 +1910,10 @@ fall_under_a_ledge:
 set_level_platform_xoffs:
     ld   a,(player_num)
     and  a
-    jr   nz,_0ADB ; p2?
+    jr   nz,_P2__slpx
     ld   a,(screen_num)
     jr   _0ADE
-_0ADB:
+_P2__slpx:
     ld   a,(screen_num_p2)
 _0ADE:
     dec  a ; scr - 1
@@ -1942,13 +1926,13 @@ _0ADE:
     ld   b,(hl)
     ld   hl,platform_xoffs
     ld   d,$23
-_0AEE:
+_next_row:
     ld   a,(bc)
     ld   (hl),a
     inc  bc
     inc  hl
     dec  d
-    jr   nz,_0AEE
+    jr   nz,_next_row
     call reset_xoffs
     ret
 
@@ -1993,7 +1977,7 @@ reset_dino_counter:
 
 moving_platforms:
     ld   ix,platform_xoffs
-    ld   iy,_8138
+    ld   iy,screen_xoff_col+$38
     ld   d,$09 ; loop 9 times
 _0BBA:
     ld   a,(ix+$01) ; xoff + 1
@@ -2063,7 +2047,7 @@ animate_player_to_ground_if_dead:
     ld   a,(player_died)
     and  a
     ret  z ; player still alive... leave.
-_loop:
+_loop__apg:
     call wait_vblank
     ld   a,(player_y) ; push player towards ground
     inc  a
@@ -2084,7 +2068,7 @@ _loop:
     call get_tile_addr_from_xy
     ld   a,(hl)
     cp   tile_blank ; are we still in the air?
-    jr   z,_loop ; keep falling
+    jr   z,_loop__apg ; keep falling
 _0C8E:
     call do_death_sequence
     xor  a
@@ -2096,10 +2080,10 @@ _0C8E:
 
 delay_8_vblanks:
     ld   e,$08
-_0CA2:
+_wait_8_vb:
     call wait_vblank
     dec  e
-    jr   nz,_0CA2
+    jr   nz,_wait_8_vb
     ret
 
     dc   7, $FF
@@ -2485,7 +2469,7 @@ big_reset:
     call set_level_platform_xoffs
     call draw_bongo
     ld   a,$02 ; bottom row is red
-    ld   (_813F),a
+    ld   (screen_xoff_col+$3F),a
 ;;; falls through to main loop:
 
 ;;; =========================================
@@ -2595,28 +2579,31 @@ tick_ticks:                     ;
 
     dc   5, $FF
 
-;; ?? is it about dino?
-mystery_8066_fn:
+;;; resets any current sfx id to 0
+;;; I think this function did more originally... whatever the important
+;;; part was (masking and bit-twiddling), the store was nopped out
+;;; at the end of the sub.
+reset_sfx_ids:
     push af
     push hl
-    ld   hl,_8066
-    xor  a ; cp: If A == N, then Z flag is set
-    cp   (hl) ; state == 0?
-    jr   nz,_1121 ; no, off to AND
-    inc  hl ; yep, what about _8067
-    cp   (hl) ; == 0?
-    jr   nz,_1121
-    inc  hl ; yep, what about _8068
-    cp   (hl) ; == 0?
-    jr   z,_1126 ; no, all zero - don't load
-_1121:
-    ld   a,(hl) ; ...first non-zero
-    ld   (hl),$00
-    add  a,$18 ; 0001 1000
-_1126:
-    and  $7F ; 0111 1111
-    nop
-    nop
+    ld   hl,ch1_cur_id          ; sfx id
+    xor  a                      ; cp: If A == N, then Z flag is set
+    cp   (hl)                   ; state == 0?
+    jr   nz,_has_sfx_id         ; no, off to ADD
+    inc  hl                     ; yep, what about $8067 (ch2_cur_id)
+    cp   (hl)                   ; == 0?
+    jr   nz,_has_sfx_id
+    inc  hl                     ; yep, what about $8068 (ch3_cur_id)
+    cp   (hl)                   ; == 0?
+    jr   z,_done__msf           ; no, all zero - don't clear
+_has_sfx_id:
+    ld   a,(hl)                 ; ...first non-zero channel cur id
+    ld   (hl),$00               ; zero it...
+    add  a,$18                  ; 0001 1000 ... add 24
+_done__msf:
+    and  $7F   ; 0111 1111      ; mask off top bit then...
+    nop        ; ... noped out?! Does nothing with value,
+    nop        ; because A is popped before ret?
     pop  hl
     pop  af
     ret
@@ -2866,7 +2853,7 @@ scroll_one_column:
     ld   e,$04 ; 4 loops of 2 pixels
     push hl
 _1303:
-    ld   hl,_8106
+    ld   hl,screen_xoff_col+$06
 _1306:
     dec  (hl)
     dec  (hl)
@@ -3077,16 +3064,16 @@ _1436:
 
     dc   12, $FF
 
-delay_83:                       ; maybe a delay?
+clear_83:
     ld   hl,tick_mod_3
-_1463:
+_loop__c83:
     ld   (hl),$00
     inc  l
-    jr   nz,_1463
+    jr   nz,_loop__c83
     inc  h
     ld   a,h
     cp   $83 ; 1000 0011
-    jr   nz,_1463
+    jr   nz,_loop__c83
     ret
 
     dc   1, $FF
@@ -3548,7 +3535,7 @@ add_amount_bdc:
     dc   2, $FF
 
 reset_jump_and_redify_bottom_row:
-    ld   (_813F),a ; set bottom row col
+    ld   (screen_xoff_col+$3F),a ; set bottom row col
     xor  a
     ld   (jump_tbl_idx),a
     ld   (jump_triggered),a
@@ -4732,18 +4719,19 @@ move_dino_x:
     ld   (dino_x_legs),a
     ret
 
-;;
-_2901:
+;;; Called from NMI: so maybe this is the bit that
+;;; plays the current samples of sfx
+player_all_sfx_chunks:
     ld   hl,sfx_sumfin_0 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    call mystery_8066_fn
+    call reset_sfx_ids
     ld   hl,sfx_sumfin_1 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     ld   hl,sfx_sumfin_2 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    call mystery_8066_fn
+    call reset_sfx_ids
     ld   hl,sfx_queuer - JMP_HL_OFFSET
-    jr   jmp_hl_pl_4k_and_mystery_8066_fn
+    jr   call_sfx_queuer_and_reset_sfx_ids
 
     dc   2, $FF
 
@@ -4767,16 +4755,16 @@ _2931:
 
     dc   11, $FF
 
-jmp_hl_pl_4k_and_mystery_8066_fn:
-    call jmp_hl_plus_4k ; hl = DRAW_SCREEN
-    call mystery_8066_fn
+call_sfx_queuer_and_reset_sfx_ids:
+    call jmp_hl_plus_4k ; hl+4k = sfx_queuer
+    call reset_sfx_ids
     ret
 
     dc   25, $FF
 
-save_ix_and_um: ; called?
+call_player_all_sfx_chunks:
     push ix
-    call _2901
+    call player_all_sfx_chunks
     pop  ix
     ret
 
@@ -7291,10 +7279,10 @@ draw_cage_and_scene:            ; for cutscene
     inc  hl
     ld   (hl),$6D
     ld   a,$02 ; red
-    ld   (_8131),a
-    ld   (_8133),a
-    ld   (_8135),a
-    ld   (_8137),a
+    ld   (screen_xoff_col+$31),a
+    ld   (screen_xoff_col+$33),a
+    ld   (screen_xoff_col+$35),a
+    ld   (screen_xoff_col+$37),a
     call draw_tiles_h
     db   $1C,$00 ;  Row of upward spikes
     db   $38,$39,$3A,$39,$38,$39,$3C,$3D,$39,$3A,$38,$38,$3C,$3C,$3D,$3C
@@ -7313,7 +7301,7 @@ cutscene_run_offscreen:
     ld   a,$0D
     ld   (player_frame_legs),a
     ld   a,$29
-    ld   (_8129),a
+    ld   (screen_xoff_col+$29),a
     ld   e,$70
 _lp_3E33:
     push de
@@ -7403,8 +7391,8 @@ animate_player_right:
 
     dc   8, $FF
 
-delay_83_call_weird_a:
-    call delay_83
+clear_83_call_weird_a:
+    call clear_83
     ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
     call jmp_hl_plus_4k ; seems to do nothing in sub
     ret
@@ -7697,8 +7685,7 @@ hit_bonus:
     call jmp_hl
     ret
 
-;; Called directly by SFX_SUMFIN_2 and
-;; indirectly (maybe) from weird_unsed_maybe_load
+;; Called directly by SFX_SUMFIN_2
 _4100:
     ld   a,(ix+$05)
     and  a
@@ -7736,25 +7723,27 @@ add_pickup_pat_10:
 
     dc   8, $FF
 
-set_synth_settings:
+;;; "set_synth_settings" subs are all almost identical
+;;; except for variable (8068-8088) and hard-coded values
+set_synth_settings_1:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (_8066),a ; not synth!
+    ld   (ch1_cur_id),a         ; sfx_id?
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
-    ld   l,a
+    ld   l,a                    ; ?  1 3 5 (ch 1,2,3)
     ld   a,$01
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$00
+    ld   a,$00                  ; ?  0 2 4 (ch 1,2,3)
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$08
+    ld   a,$08                  ; ?  8 9 A (ch 1,2,3)
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -7771,25 +7760,27 @@ _4170:
 
     dc   7, $FF
 
-related_to_mystery_8066:
+;;; "set_synth_settings" subs are all almost identical
+;;; except for variable (8068-8088) and hard-coded values
+set_synth_settings_2:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (_8067),a ; 8067
+    ld   (ch2_cur_id),a         ; sfx_id
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
     ld   l,a
-    ld   a,$03
+    ld   a,$03                  ; ?  1 3 5 (ch 1,2,3)
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$02
+    ld   a,$02                  ; ?  0 2 4 (ch 1,2,3)
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$09
+    ld   a,$09                  ; ?  8 9 A (ch 1,2,3)
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -7832,24 +7823,26 @@ hit_bonus_draw_points:
 
 ;; How do i get here?... what is this Weird load for?
 weird_unsed_maybe_load:
-    ld   a,(_4100)
-    ld   bc,jmp_hl_plus_4k
-    push bc
+    ld   a,(_4100)              ; +4k = $8100: screen_xoff_col attrs?
+    ld   bc,jmp_hl_plus_4k      ; hmm, but can't jump to that.
+    push bc                     ; dunno, why keeping these
     push hl
     ret
 
-;; DRAW_CROWN_PIK_BOT_RIGHT
+;; DRAW_CROWN_PIK_BOT_RIGHT (never called?)
+_41EC:
     ld   a,$9C
     ld   (scr_pik_n_n),a
     ret
 
-;; DRAW_CROSS_PIK_BOT_RIGHT
+;; DRAW_CROSS_PIK_BOT_RIGHT (never called?)
+_41F2:
     ld   a,$9D
     ld   (scr_pik_n_n),a
     ret
 
 ;; draw pikup cross, bot, right-er
-_41F8:
+draw_pikup_cross_bot_r:
     ld   a,$9D
     ld   (_911A),a
     ret
@@ -7862,7 +7855,7 @@ sfx_sumfin_0:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_2
-    call set_synth_settings
+    call set_synth_settings_1
     ld   (ix+$04),$00
     ret
 _i_2:
@@ -7880,7 +7873,7 @@ sfx_sumfin_1:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_3
-    call related_to_mystery_8066
+    call set_synth_settings_2
     ld   (ix+$04),$00
     ret
 _i_3:
@@ -7898,7 +7891,7 @@ sfx_sumfin_2:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_4
-    call related_to_mystery_8066_2
+    call set_synth_settings_3
     ld   (ix+$04),$00
     ret
 _i_4:
@@ -7963,25 +7956,27 @@ funky_looking_set_ring:
 
     dc   7, $FF
 
-related_to_mystery_8066_2:
+;;; "set_synth_settings" subs are all almost identical
+;;; except for variable (8068-8088) and hard-coded values
+set_synth_settings_3:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (_8068),a
+    ld   (ch3_cur_id),a
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
     ld   l,a
-    ld   a,$05
+    ld   a,$05                  ; diff
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$04
+    ld   a,$04                  ; diff
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$0A
+    ld   a,$0A                  ; diff
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8035,9 +8030,9 @@ blank_out_1up_text:
     db   $FF
 
 ;;
-    call _41F8
+    call draw_pikup_cross_bot_r
     ld   a,$9E
-    ld   (_927A),a
+    ld   (_927A),a              ;draw some other pikup
     ret
 
     dc   5, $FF
@@ -8462,7 +8457,7 @@ _4652:
 
 ;;; sfx something #10
 _4680:
-    ld   ix,_82B8
+    ld   ix,synth1_um_b
     ld   a,(ix+$0d)
     and  a
     jr   z,_46A1
@@ -8493,7 +8488,7 @@ add_a_to_ret_addr:
     dc   9, $FF
 
 zero_out_some_sfx:
-    ld   hl,_82B8
+    ld   hl,synth1_um_b
     ld   b,$18
 _46C5:
     ld   (hl),$00
@@ -8508,7 +8503,7 @@ clear_sfx_1:
     call zero_out_some_sfx
     ld   a,(ch1_sfx)
     call point_hl_to_sfx_data
-    ld   ix,_82B8
+    ld   ix,synth1_um_b
     call do_something_with_sfx_data
     xor  a
     ld   (ch1_sfx),a
@@ -8714,7 +8709,7 @@ _done_486A:
 
 ;;; called from PLAY_SFX...
 zero_out_some_sfx_2:
-    ld   hl,_82E8
+    ld   hl,synth3_um_b
     ld   b,$18
 _4875:
     ld   (hl),$00
@@ -8726,7 +8721,7 @@ _4875:
 
 ;;; more sfx something
 more_sfx_something:
-    ld   ix,_82E8
+    ld   ix,synth3_um_b
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -8748,7 +8743,7 @@ play_sfx:
     call zero_out_some_sfx_2
     ld   a,(sfx_id)
     call point_hl_to_sfx_data
-    ld   ix,_82E8
+    ld   ix,synth3_um_b
     call do_something_with_sfx_data
     xor  a
     ld   (sfx_id),a
@@ -8771,7 +8766,7 @@ attract_your_being_chased_flash:
 
 ;;; Even more sfx something
 _48E0:
-    ld   ix,_82D0
+    ld   ix,synth2_um_b
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -8802,7 +8797,7 @@ jump_rel_a_copy:  ; duplicate routine
     dc   7, $FF
 
 zero_out_some_sfx_3:
-    ld   hl,_82D0
+    ld   hl,synth2_um_b
     ld   b,$18
 _4915:
     ld   (hl),$00
@@ -8816,7 +8811,7 @@ clear_sfx_2:
     call zero_out_some_sfx_3
     ld   a,(ch2_sfx)
     call point_hl_to_sfx_data
-    ld   ix,_82D0
+    ld   ix,synth2_um_b
     call do_something_with_sfx_data
     xor  a
     ld   (ch2_sfx),a
@@ -9381,9 +9376,9 @@ _4D47:
 
 reset_3_row_xoffs:              ; which ones?
     xor  a
-    ld   (_8126),a
-    ld   (_8128),a
-    ld   (_812A),a
+    ld   (screen_xoff_col+$26),a
+    ld   (screen_xoff_col+$28),a
+    ld   (screen_xoff_col+$2A),a
     ret
 
     dc   9, $FF
@@ -10471,7 +10466,7 @@ sfx_8_data:
 reset_sfx_something_1:
     xor  a
     ld   (_8046),a
-    ld   a,(_82A5)
+    ld   a,(synthy_um_1)
     and  a
     jr   nz,_552F
     ld   a,$F9
@@ -10479,7 +10474,7 @@ reset_sfx_something_1:
     nop
     nop
 _552F:
-    ld   a,(_82AD)
+    ld   a,(synthy_um_2)
     and  a
     jr   nz,_553A
     ld   a,$FD
@@ -10487,7 +10482,7 @@ _552F:
     nop
     nop
 _553A:
-    ld   a,(_82B5)
+    ld   a,(synthy_um_3)
     and  a
     jr   nz,_5545
     ld   a,$FB

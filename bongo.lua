@@ -44,12 +44,12 @@ loop_screens = {}--{13,14,18,21,25,27} -- Loop if you want to practise levels, e
 -- {}: no looping, normal Bongo sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round (1: initial speed, 2+: faster)
+round = 5 -- starting round (1: initial speed, 2+: faster)
 -- 1: default Bongo speed for dinosaur and enemies
 -- 2: faster movement for player and enemies, and dinosaur starts earlier
 -- 3+: each round after 2, the player and enemeies are the same speed,
 --     but the dinosaur starts earlier and earlier and earlier...
-infinite_lives = false
+infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
 disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
@@ -101,7 +101,7 @@ ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 
 -- Removed features I found in the code, and tweaks/tests
-show_timers = true             -- speed run timers! Don't know why they removed them
+show_timers = false             -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false     -- makes jumping from underneath really crap!
 alt_bongo_place = false        -- maybe supposed to put lil guy on the ground for highwire levels?
 one_px_moves = false           -- test how it feels moving 1px per frame, not 3px per 3 frames.

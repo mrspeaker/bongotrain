@@ -11,7 +11,6 @@
 
 # Test which bits are diff:
 # cmp  -l -x dump/suprmous.x3 zout/fac
-
 set -e
 
 # clear previous output
@@ -19,33 +18,28 @@ rm -rf zout
 echo "clean:     go."
 
 # compile to un-annotated bytes
+echo -n "compile:   "
 zmac -j -c -n --oo cim,lst bongo.asm
-echo "compile:   go."
+echo "go."
 
 # split bytes into 4K chunks (to mimic ROMs)
+echo -n "split:     "
 split -b4k -d -a 1 zout/bongo.cim zout/bg
-echo "split:     go."
 
 # check the checksums match to real ROM dumps
-obj=(
-  zout/bg0
-  zout/bg1
-  zout/bg2
-  zout/bg3
-  zout/bg4
-  zout/bg5
-)
-rom=(
-  dump/romgo/bg1.bin
-  dump/romgo/bg2.bin
-  dump/romgo/bg3.bin
-  dump/romgo/bg4.bin
-  dump/romgo/bg5.bin
-  dump/romgo/bg6.bin
-)
+obj=(`echo zout/bg*`)
+rom=(`echo dump/romgo/bg*.bin`)
 
-#shasum `echo zout/bg*` | awk '{ print $1 }'
+if [ ${#obj[@]} -eq "6" ]; then
+    echo "go."
+else
+    echo "-"
+    echo "Error: bad split. ${#obj[@]} files instead of 6"
+    echo
+    exit 1
+fi
 
+# CRC verify split files
 err=0
 for index in ${!obj[*]}; do
     a=`shasum ${obj[$index]} | awk '{ print $1 }'`
@@ -60,6 +54,7 @@ for index in ${!obj[*]}; do
 done
 
 # package up full Bongo MAME ROMs
+echo -n "zip:       "
 cd zout
 mv bg0 bg1.bin
 mv bg1 bg2.bin
@@ -69,19 +64,20 @@ mv bg4 bg5.bin
 mv bg5 bg6.bin
 rm bongo.cim
 # copy over color and gfx ROMs
-cp ../dump/romgo/b-clr.bin .
-cp ../dump/romgo/b-h.bin .
-cp ../dump/romgo/b-k.bin .
+cp ../dump/romgo/b-*.bin .
 zip -j -q bongo.zip *.bin
 cd ..
 
 if [ "$err" -eq "0" ]; then
-    echo "bongo.zip: go."
-    echo "bon:       go."
+    echo "go."
+    echo "bon:       go!"
 else
-    echo "(bootleg) bongo.zip: go."
+    echo "-"
+    echo "(bootleg) zip: go."
     echo
     echo "no go."
 fi
 
 echo
+
+set +e
