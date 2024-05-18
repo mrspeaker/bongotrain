@@ -1,8 +1,8 @@
 ;;; Bongo by JetSoft
-;;; picked apart by Mr Speaker
+;;; picked apart and rebuilt by Mr Speaker
 ;;; https://www.mrspeaker.net
 
-;;; Builds to MAME-exact version of Bongo ROMS
+;;; Builds to MAME-exact version of Bongo ROM zip file.
 ;;; Read README.org for details and building instructions.
 
 ;;; Overview:
@@ -283,7 +283,7 @@
     Y_                = $29
     Z_                = $2A
 
-;;; hardware
+;;; hardware locations
 
     screen_ram        = $9000 ; - 0x93ff  videoram
     start_of_tiles    = $9040 ; top-right tile
@@ -361,7 +361,7 @@
 
     end_of_tiles      = $93BF ; bottom left tile
 
-    ;; what's all the stuff in herer? $93ff-$9800
+    ;; Anything in $93ff-$9800?
 
     xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
     sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
@@ -400,17 +400,19 @@ hard_reset:
 _ret_hard_reset:
     ld   sp,stack_location
     call clear_83_call_weird_a
-    call init_screen
+    call check_credit_fault
     call write_out_0_and_1
     jp   setup_then_start_game
 
-;; data? no?
-    db  $DD,$19
-_0020:          ; called here once - but looks suspicious
-    db  $DD,$19,$2B,$10,$AF
-    db  $ED,$67,$DD,$77,$ED,$6F,$DD
-    db  $DD,$19,$ED,$6F,$DD
-
+;; Data? unused? If code, looks... odd
+    db  $DD,$19        ; (add  ix,de)
+unlikely_fn:           ; uncalled "err_um_call_0020" points here
+    db  $DD,$19        ; (add  ix,de)
+    db  $2B            ; (dec   hl)
+    db  $10,$AF        ; (djnz $FFD4 ?)
+    db  $ED,$67,$DD,$77
+    db  $ED,$6F,$DD,$DD
+    db  $19,$ED,$6F,$DD
     dc  7, $FF
 
 ;;  Reset vector
@@ -420,8 +422,10 @@ reset_vector:
 
     dc 11, $FF
 
-;; Called once at startup
-init_screen:
+;;; Called once at startup
+;;; No idea what a "credit fault" is,
+;;; but must be hardware issue?
+check_credit_fault:
     ld   a,(port_in0)
     and  $83 ; 1000 0011
     ret  z
@@ -429,7 +433,7 @@ init_screen:
     call draw_tiles_h
     db   $09, $00 ; CREDIT FAULT
     db   C_,R_,E_,D_,I_,T_,__,F_,A_,U_,L_,T_,$FF
-    jr   init_screen
+    jr   check_credit_fault     ; loop!
 
     db   $FF
 
@@ -441,39 +445,40 @@ nmi_loop:
     call nmi_int_handler
     ld   a,(num_players)
     and  a
-    jr   nz,_0079
+    jr   nz,_is_playing
     call did_player_press_start
-_0079:
+_is_playing:
     ld   b,$01
     call tick_ticks ; update ticks...
     call copy_inp_to_buttons_and_check_buttons
     nop
     ld   a,(port_in0)
     bit  1,a
-    jp   nz,_C003 ; c003?!
+    jp   nz,_C003 ; c003?! Hardware function?
     retn ; NMI return
 
     db   $FF
 
 setup_then_start_game:
-    call setup_more
-    call set_hiscore_text
-_after_game_over:
+    call setup_more             ; wait. this jumps... no ret?
+    call set_hiscore_text       ; does it actually get here?
+
+reset_then_start_game:          ; also jumps here after game-over
     call wait_vblank
     ld   a,(credits)
     and  a
     jr   nz,_play_splash
     call reset_ents_all
     call reset_xoff_sprites_and_clear_screen
-    jr   _after_game_over
+    jr   reset_then_start_game
 _play_splash:
     call wait_vblank
     ld   a,(credits)
     cp   $01
-    jr   nz,_many_credits
-    call attract_press_p1_screen
+    jr   nz,_multiple_credits
+    call attract_press_p1_screen ; one credit
     jr   _done__stsg
-_many_credits:
+_multiple_credits:
     call draw_one_or_two_player
 _done__stsg:
     ld   a,(num_players)
@@ -554,25 +559,29 @@ draw_one_or_two_player:
 
     dc   9,$FF
 
+;;; Kind of think was just some random bytes left around
 err_um_call_0020:
-    call _0020
+    call unlikely_fn
     ret
 
     dc   12,$FF
 
-;; called a lot (via... JMP_HL_PLUS_4K)
-;; why? Why not just jump?
-;; Is there a max jump distance or something?
+;;; Jumps to the address in HL + 4k.
+;;; (called a lot, mostly via... JMP_HL_PLUS_4K)
+;;; But why do this indirect-style jump? Oh! Perhaps the ROM
+;;; might have been at different locations (Eg, 8k) on different
+;;; hardware - so this is just a single place to change?
 do_jmp_hl_plus_4k:
     push bc
-    ld   bc,int_handler
+    ld   bc,JMP_HL_OFFSET
     add  hl,bc
     pop  bc
     jp   (hl)
 
     dc   9,$FF
 
-did_player_press_start: ; Did player start the game?
+;;; Did player start the game with P1/P2 button?
+did_player_press_start:
     ld   a,(credits) ; check you have credits
     and  a
     ret  z
@@ -617,7 +626,11 @@ copy_ports_to_buttons:
     ld   (buttons_2),a
     ret
 
-;;
+;;; Indirect indirect jump to HL+4K
+;;; Calls the sub that jumps to the location in (HL)+OFFSET
+;;; But why all the inderection? Perphas do_jmp_hl_plus_4k location
+;;; varied during development, and THIS sub was all they could
+;;; rely on to be fixed address?
 jmp_hl_plus_4k:
     jp   do_jmp_hl_plus_4k
     ret
@@ -785,7 +798,8 @@ _0304:
 
     dc   4, $FF
 
-;; draw sequence of tiles at (y, x)
+;;; Draw sequence of tiles horizontally at (y, x)
+;;; Data for the draw is located AFTER the call to this function
 draw_tiles_h:
     ld   a,(watchdog)
     ld   hl,start_of_tiles
@@ -826,9 +840,9 @@ _next_tile:
 
 ;;
 setup_more:
-    nop
-    nop
-    nop
+    nop                         ; I love seeing all the nops around
+    nop                         ; feel very "hand made"... but I do
+    nop                         ; wonder what they nopped!
     call reset_xoff_sprites_and_clear_screen
     ld   hl,tick_mod_3 ; reset $8000-$88FF? to 0
 _lp_0351:
@@ -843,7 +857,7 @@ _lp_0351:
     ld   sp,stack_location
     ld   a,$01
     ld   (_8090),a
-    jp   _setup_more_ret
+    jp   setup_more_post
 
     dc   6, $FF
 
@@ -919,7 +933,7 @@ clear_after_game_over:
     xor  a
     ld   (num_players),a
     ld   (credits_umm),a
-    jp   _after_game_over
+    jp   reset_then_start_game
 
     dc   6, $FF
 
@@ -1132,33 +1146,34 @@ hiscore_for_p2:
 
     dc   23, $FF
 
-;; (free bytes?)
-_setup_2: ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
-    call setup_more
-_setup_more_ret:                ; returns here after setup_more
+setup_uncalled: ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
+    call setup_more             ; but setup_more returns to the next line
+                                ; and is called from another sub
+
+setup_more_post:                ; jumps here after setup_more
     call set_hiscore_text
-_play_splash_2:
+_loop__smp:
     call wait_vblank
     ld   a,(num_players)
     and  a
-    jr   nz,_05AB
+    jr   nz,_is_playing__smp
     ld   a,(credits)
     and  a
-    jr   nz,_059D
+    jr   nz,_has_credits
     call reset_ents_all
     call reset_xoff_sprites_and_clear_screen
-    jr   _play_splash_2
-_059D:
+    jr   _loop__smp
+_has_credits:
     cp   $01
-    jr   nz,_05A6
+    jr   nz,_2P
     call attract_press_p1_screen
-    jr   _play_splash_2
-_05A6:
+    jr   _loop__smp
+_2P:
     call draw_one_or_two_player
-    jr   _play_splash_2
-_05AB:
+    jr   _loop__smp
+_is_playing__smp:
     jp   nz,start_game
-    jr   _play_splash_2
+    jr   _loop__smp
 
     dc   8, $FF
 
@@ -4515,7 +4530,7 @@ _part_two:
     dc   8, $FF
 _part_three:
     ld   (hl),e
-    ld   bc,_0020
+    ld   bc,$0020
     add  hl,bc
     ld   a,h
     cp   $94
@@ -4526,7 +4541,7 @@ _part_four:
     call wait_vblank
 _25AB:
     ld   (hl),e
-    ld   bc,_0020
+    ld   bc,$0020
     add  hl,bc
     ld   a,(hl)
     cp   e
@@ -4548,7 +4563,7 @@ _25C3:
 _part_six:
     call wait_vblank
     ld   (hl),e
-    ld   bc,_0020
+    ld   bc,$0020
     sbc  hl,bc
     ld   a,(hl)
     cp   e
@@ -5396,7 +5411,7 @@ pop_hls_then_copy_hiscore_name:
     dc   6, $FF
 
 hiscore_rub_letter:
-    ld   de,_0020
+    ld   de,$0020
     add  iy,de
     ld   (iy+$00),$2B
     ld   a,$10

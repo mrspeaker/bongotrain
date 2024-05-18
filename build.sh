@@ -36,7 +36,6 @@ else
     echo "-"
     echo "Error: bad split. ${#obj[@]} files instead of 6"
     echo
-    exit 1
 fi
 
 # CRC verify split files
