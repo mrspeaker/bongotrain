@@ -296,9 +296,9 @@
     ;; (use some x/y system, or $start_of_tiles + x)
     p2_score_digits   = $9061  ; score for player 2
     p2_timer_digits   = $9082  ; timer for player 1
-    _908E             = $908E  ; ?​​
+    _908E             = $908E  ; ?
     _hi_under_X       = $9090  ; hiscore screen, under X (wrap point)
-    _9092             = $9092  ; ?​​
+    _9092             = $9092  ; ?
     scr_pik_r_W       = $90CB  ; highwire pickup, right
     _90E2             = $90E2  ;
     _911A             = $911A  ; ?
@@ -403,10 +403,13 @@ hard_reset:
     jp   clear_ram ; jumps back here after clear
 _ret_hard_reset:
     ld   sp,stack_location
-    call clear_83_call_weird_a
+    call clear_ram_call_weird_a
     call check_credit_fault
     call write_out_0_and_1
     jp   call_setup_then_start_game
+
+
+;;; ==========================================
 
 ;; Data? unused? If code, looks... odd
     db  $DD,$19        ; (add  ix,de)
@@ -419,12 +422,17 @@ unlikely_fn:           ; uncalled "err_um_call_0020" points here
     db  $19,$ED,$6F,$DD
     dc  7, $FF
 
+
+;;; ============== reset vector ==============
+
 ;;  Reset vector
 reset_vector:
     ld   a,(watchdog)
     jr   reset_vector
 
     dc 11, $FF
+
+;;; ==========================================
 
 ;;; Called once at startup
 ;;; No idea what a "credit fault" is,
@@ -440,6 +448,8 @@ check_credit_fault:
     jr   check_credit_fault     ; loop!
 
     db   $FF
+
+;;; =============== NMI Loop =================
 
 ;; Non-Maskable Interrupt handler. Fires every frame
 nmi_loop:
@@ -461,11 +471,16 @@ _is_playing:
     jp   nz,_C003 ; c003?! Hardware function?
     retn ; NMI return
 
+;;; ==========================================
+
     db   $FF
 
 call_setup_then_start_game:
     call setup_then_start_game  ; jmps to pre_game_attractions...
     call set_hiscore_text       ; ...never gets here.
+
+
+;;; ==========================================
 
 reset_then_start_game:          ; also jumps here after game-over
     call wait_vblank
@@ -493,6 +508,8 @@ _done__stsg:
 
     db   $FF
 
+;;; ==========================================
+
 nmi_int_handler:
     exx
     call coinage_routine
@@ -504,7 +521,8 @@ nmi_int_handler:
 
     db   $FF
 
-;;;
+;;; ============== PRESS P1 ===============
+
 attract_press_p1_screen:
     ld   a,$01
     ld   (_8090),a
@@ -571,6 +589,8 @@ err_um_call_0020:
 
     dc   12,$FF
 
+;;; ============= indirect jump: hl + 4k ==============
+
 ;;; Jumps to the address in HL + 4k.
 ;;; (called a lot, mostly via... JMP_HL_PLUS_4K)
 ;;; But why do this indirect-style jump? Oh! Perhaps the ROM
@@ -585,6 +605,8 @@ do_jmp_hl_plus_4k:
 
     dc   9,$FF
 
+;;; ==========================================
+
 ;;; Did player start the game with P1/P2 button?
 did_player_press_start:
     ld   a,(credits) ; check you have credits
@@ -592,8 +614,8 @@ did_player_press_start:
     ret  z
     ld   a,(input_buttons) ; P1 pressed?
     bit  0,a
-    jr   z,_01AD
-    call clear_83
+    jr   z,_P2__dpps
+    call clear_ram_x83_bytes
     ld   a,$01 ; start the game, 1 player
     ld   (num_players),a
     ld   a,(credits) ; use a credit
@@ -601,14 +623,14 @@ did_player_press_start:
     daa
     ld   (credits),a
     ret
-_01AD:
+_P2__dpps:
     ld   a,(credits)
     dec  a
     ret  z
     ld   a,(input_buttons)
     bit  1,a ; is P2 pressed?
     ret  z
-    call clear_83
+    call clear_ram_x83_bytes
     ld   a,$02 ; start the game, 2 player
     ld   (num_players),a
     ld   a,(credits)
@@ -621,7 +643,8 @@ _01AD:
 
     dc   5,$FF
 
-;;;
+;;; ==========================================
+
 copy_ports_to_buttons:
     ld   a,(port_in0)
     ld   (controls),a
@@ -631,6 +654,8 @@ copy_ports_to_buttons:
     ld   (buttons_2),a
     ret
 
+;;; ==========================================
+
 ;;; Indirect indirect jump to HL+4K
 ;;; Calls the sub that jumps to the location in (HL)+OFFSET
 ;;; But why all the inderection? Perphas do_jmp_hl_plus_4k location
@@ -639,6 +664,8 @@ copy_ports_to_buttons:
 jmp_hl_plus_4k:
     jp   do_jmp_hl_plus_4k
     ret
+
+;;; ===================== start game =====================
 
 start_game:
     ld   a,$1F
@@ -666,6 +693,7 @@ _is_2P:
     ld   (screen_num),a
     ld   (screen_num_p2),a
     ld   (_8090),a
+    ;; ... drops through ...
 
 post_death_reset:
     ld   sp,stack_location ; hmm. sets stack pointer?
@@ -720,6 +748,9 @@ _done__ml:
     jp   big_reset              ; reset the for next life
 
     dc   7, $FF
+
+
+;;; ==========================================
 
 coinage_routine:
     ld   a,(coinage)
@@ -803,6 +834,9 @@ _0304:
 
     dc   4, $FF
 
+
+;;; ============= Draw Tiles Horizontally ==============
+
 ;;; Draw sequence of tiles horizontally at (y, x)
 ;;; Data for the draw is located AFTER the call to this function
 draw_tiles_h:
@@ -843,6 +877,8 @@ _next_tile:
 
     dc   10, $FF
 
+;;; ============== setup, then start =====================
+
 ;; Clears RAM, sets the stack location
 setup_then_start_game:
     nop                         ; I love seeing all the nops around
@@ -866,6 +902,8 @@ _lp_0351:
 
     dc   6, $FF
 
+;;; ================ attract screens =================
+
 ;;; Plays a sequence of attract screens
 ;;; - Bongo splash screen animation
 ;;; - EXTRA BONUS screen
@@ -887,12 +925,17 @@ play_attract_screens:
 
     db   $FF
 
+
+;;; ==========================================
+
 ;;; Don't think it's called?
 infinte_vblanks:
     call wait_vblank
     jr   infinte_vblanks
 
     dc   11, $FF
+
+;;; ================ draw lives ====================
 
 ;;; Draw icons for the number of lives remaining
 draw_lives:
@@ -938,6 +981,8 @@ _done_p1_lives:
 
     db   $FF
 
+;;; ==========================================
+
 clear_after_game_over:
     xor  a
     ld   (num_players),a
@@ -955,12 +1000,18 @@ _loop__vb:
 
     dc  7, $FF
 
+
+;;; ==========================================
+
 set_lives_row_color:
     ld   a,$01
     ld   (screen_xoff_col+5),a  ; 3rd row
     ret
 
     dc   2, $FF
+
+
+;;; ================ GAME OVER  ================
 
 game_over:
     ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
@@ -974,14 +1025,16 @@ game_over:
 
     dc   10, $FF
 
+;;; ==========================================
+
 check_if_hiscore:
-    call check_if_hiscore_p1
-    call check_if_hiscore_p2
+    call _check_if_hiscore_p1
+    call _check_if_hiscore_p2
     ret
 
     dc   9, $FF
 
-check_if_hiscore_p1:
+_check_if_hiscore_p1:
     ld   a,(p1_score_2)
     ld   c,a
     ld   a,(hiscore_2)
@@ -1009,7 +1062,7 @@ check_if_hiscore_p1:
 
     dc   6, $FF
 
-check_if_hiscore_p2:
+_check_if_hiscore_p2:
     ld   a,(p2_score_2)
     ld   c,a
     ld   a,(hiscore_2)
@@ -1046,6 +1099,9 @@ _04B2:
 
     dc   1, $FF
 
+
+;;; ============ dino timer ==============
+
 ;; count up timer - every SPEED_DELAY ticks
 check_dino_timer:
     call move_dino_x
@@ -1072,6 +1128,8 @@ _04D4:
 
     dc   3, $FF
 
+;;; ==========================================
+
 hiscore_for_p1:
     ld   a,(p1_score)
     ld   (hiscore),a
@@ -1095,6 +1153,8 @@ hiscore_for_p2:
     ret
 
     dc   4, $FF
+
+;;; ==========================================
 
 ;; who calls?
 ;; This looks suspicious. 25 bytes written
@@ -1155,12 +1215,14 @@ hiscore_for_p2:
 
     dc   23, $FF
 
-    ;;
+
+;;; ==========================================
+
 setup_uncalled: ;looks a lot like call_setup_then_start_game
     call setup_then_start_game  ; but it return to below
                                 ; (and and is called at init)
 
-    ;; =============================
+;;; ============ pre-game screens ================
 
 ;;; Handle attract mode and credit screens before
 ;;; player has started
@@ -1192,11 +1254,11 @@ _is_playing__smp:
     jp   nz,start_game
     jr   _loop__smp
 
-    ;; =============================
-
     dc   8, $FF
 
-;; who calls?
+;;; ==========================================
+
+;;; who calls?
     ld   a,(credits)
     and  a
     jr   nz,_05C2
@@ -1211,7 +1273,11 @@ _05C2:
 
     dc   7, $FF
 
-;; Not really sure.
+;;; ==========================================
+
+;;; Not really sure what this does - seems to
+;;; take the hardware input and copy to variables
+
 normalize_input:
     ld   a,(player_num)
     and  a
@@ -1242,9 +1308,13 @@ _05ED:
 
     dc   9, $FF
 
+;;; ==========================================
+
 player_frame_data_walk_right:
     db   $0C,$0E,$10,$0E,$0C,$12,$14,$12
     dc   8, $FF
+
+;;; ==========================================
 
 player_move_right:
     ld   a,(walk_anim_timer)
@@ -1299,6 +1369,8 @@ player_move_left:
     ret
 
     dc   10, $FF
+
+;;; ================ Player input ================
 
 player_input:
     ld   a,(tick_num)
@@ -1356,6 +1428,8 @@ _06CE:
 
     dc   3, $FF
 
+;;; ============== Player Physics ===================
+
 ;; "Physics": do jumps according to jump lookup tables
 player_physics:
     dc   5, 0                   ; some nops
@@ -1385,6 +1459,9 @@ player_physics:
     ld   (ix+$03),a ; player y
     ret
 
+
+;;; ==========================================
+
 ;;; jump pressed, sets these... why?
 ;;; 804a and 8049 never read?
 ;;; wpset 804a,1,r never triggers?
@@ -1397,7 +1474,6 @@ set_unused_804a_49:
     pop  af
     ret
 
-;; wassis?
     dc   3, $FF
     db   $8C,$10 ; rando two bytes (addr?)
     dc   6, $FF
@@ -1515,6 +1591,9 @@ play_jump_sfx:
 
     dc   3, $FF
 
+
+;;; ==========================================
+
 ;; who calls? (free bytes)
 ;; this looks similar to other DRAW_TILES code, but tile data
 ;; is indirectly fetched via (bc) addresses.
@@ -1569,7 +1648,8 @@ _next_tile__082D:
 
     dc   6, $FF
 
-;;
+;;; ================ Draw Screen ===================
+    ;;
 draw_screen:
     push hl
     exx
@@ -1619,6 +1699,8 @@ _done_0880:
 
     dc   6, $FF
 
+;;; ==========================================
+
 clear_jump_button:
     ld   a,(controlsn)
     bit  5,a ; jump
@@ -1628,6 +1710,8 @@ clear_jump_button:
     ret
 
     dc   5, $FF
+
+;;; ==========================================
 
 init_player_sprite:
     ld   hl,player_x
@@ -1669,6 +1753,8 @@ trigger_jump_straight_up:
 
     dc   12, $FF
 
+;;; ==========================================
+
 move_bongo_right:
     ld   a,(tick_num)
     and  $07
@@ -1703,6 +1789,8 @@ _0920:
 
     dc   8, $FF
 
+;;; ==========================================
+
 face_backwards_and_play_jump_sfx:
     ld   a,$18
     ld   (player_frame_legs),a
@@ -1724,6 +1812,9 @@ phys_jump_lookup_up:
     db   $00,$17,$18,$F4  ; -12
 
     dc   4, $FF
+
+
+;;; =========== get tile from x/y ==============
 
 ;; Get tile from x/y
 ;; in: h = x, l = y
@@ -1750,7 +1841,8 @@ get_tile_addr_from_xy:
 
     dc   8, $FF
 
-;;; ground check
+;;; ============== ground check ==================
+
 ground_check:
     ld   a,(player_y_legs)
     add  a,$10 ; +  16   : the ground
@@ -1780,6 +1872,8 @@ _09B1:
     ret
 
     dc   12, $FF
+
+;;; ==========================================
 
 check_if_landed_on_ground:      ; only when big fall?
     ld   a,(player_died)
@@ -1820,6 +1914,8 @@ _on_ground:
 
     dc   9, $FF
 
+;;; ==========================================
+
 move_bongo_left:
     ld   a,(tick_num)
     and  $07
@@ -1847,6 +1943,8 @@ _0A24:
 
     db   $FF
 
+;;; ==========================================
+
 kill_player:
     nop ; weee, nopslide
     nop
@@ -1858,6 +1956,8 @@ kill_player:
     ret
 
     dc   2, $FF
+
+;;; ==========================================
 
 ;; There's a bug in level one/two: if you jump of the
 ;; edge of level one, and hold jump... it bashes invisible
@@ -1885,6 +1985,8 @@ _fall_ok:
 
     dc   10, $FF
 
+;;; ==========================================
+
 ;; TODO: figure out what this does to gameplay. what if it was removed?
 ;; (Is this why it "snaps upwards" on my fake platform in nTn?)
 snap_y_to_8:
@@ -1896,6 +1998,8 @@ snap_y_to_8:
     ret
 
     dc   10, $FF
+
+;;; ==========================================
 
 check_head_hit_tile:
     ld   a,(player_died)
@@ -1926,6 +2030,8 @@ check_head_hit_tile:
 
     dc   9, $FF
 
+;;; ==========================================
+
 fall_under_a_ledge:
     ld   a,(falling_timer)
     and  a
@@ -1939,6 +2045,8 @@ fall_under_a_ledge:
     ret
 
     dc   3, $FF
+
+;;; ==========================================
 
 set_level_platform_xoffs:
     ld   a,(player_num)
@@ -1986,6 +2094,8 @@ platform_scroll_data_addr:
 
     dc 4,$FF
 
+;;; ==========================================
+
 move_moving_platform:
     ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
     ld   (ix+$03),a
@@ -2001,12 +2111,16 @@ _0B96:
     dec  (iy+$04)
     ret
 
+;;; ==========================================
+
 reset_dino_counter:
     xor  a
     ld   (dino_counter),a
     ret
 
     dc   11, $FF
+
+;;; ==========================================
 
 moving_platforms:
     ld   ix,platform_xoffs
@@ -2050,6 +2164,8 @@ _0BE6:
 
     dc   18, $FF
 
+;;; ==========================================
+
 platform_moving_data: ; All "S" levels.
     db   $00,$00,$00,$00
     db   $00,$00,$00,$00
@@ -2075,6 +2191,8 @@ platform_static_data: ; All non-"S" levels.
     db   $00,$00,$00,$00
 
     dc   4, $FF
+
+;;; ==========================================
 
 animate_player_to_ground_if_dead:
     ld   a,(player_died)
@@ -2111,6 +2229,8 @@ _0C8E:
 
     dc   7, $FF
 
+;;; ==========================================
+
 delay_8_vblanks:
     ld   e,$08
 _wait_8_vb:
@@ -2121,6 +2241,8 @@ _wait_8_vb:
 
     dc   7, $FF
 
+;;; ==========================================
+;;; what's he so happy about hey?
 bongo_jump_on_player_death:
     ld   e,$03 ; jumps 3 times
 _0CB2:
@@ -2132,6 +2254,8 @@ _0CB2:
     ret
 
     dc   1, $FF
+
+;;; ==========================================
 
 do_death_sequence:
     ld   a,$02
@@ -2172,6 +2296,7 @@ _done_if_zero:
     jr   nz,_lp_0D08
     ret
 
+;;; ==========================================
 ;; who calls?
 move_player_towards_ground_for_a_while:
     ld   d,$08 ; 8 frames
@@ -2190,6 +2315,8 @@ _0D19:
 
     dc   2, $FF
 
+;;; ==========================================
+
 start_bongo_jump:
     ld   a,(bongo_jump_timer)
     and  a
@@ -2199,6 +2326,9 @@ start_bongo_jump:
     ret
 
     dc   5, $FF
+
+
+;;; ==========================================
 
 ;; Oooh, mystery function - commented out.
 ;; Think it was going to place Bongo on the
@@ -2223,6 +2353,8 @@ move_bongo_redacted:
 
     dc   7, $FF
 
+;;; ==========================================
+
 jump_bongo:
     call move_bongo_redacted ; also called from UPDATE_EVERYTHING
     ld   a,(bongo_jump_timer)
@@ -2246,6 +2378,8 @@ _0D79:
 
     dc   6, $FF
 
+;;; ==========================================
+
 on_the_spot_bongo:   ; animate on the spot (no left/right)
     ld   a,(tick_num)
     and  $07
@@ -2257,7 +2391,7 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
     nop
     nop
     ld   (bongo_anim_timer),a
-    ld   hl,_0DB0
+    ld   hl,_bongo_data_wat
     add  a,l
     ld   l,a
     ld   a,(hl)
@@ -2266,9 +2400,10 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
 
     dc   12, $FF
 
-;; wat
-_0DB0:
+_bongo_data_wat:
     db   $05,$06,$07,$08,$FF,$FF,$FF,$FF
+
+;;; ============ Draw Bongo =================
 
 draw_bongo:
     xor  a
@@ -2311,6 +2446,9 @@ bongo_lookup2:
     db   $E0,$38,$E0,$38,$D0,$38,$00,$00
     db   $00,$00,$00,$00,$00,$00,$FF,$FF
 
+
+;;; ==========================================
+
 bongo_move_and_animate:
     ld   a,(bongo_dir_flag)
     and  $03 ; left or right
@@ -2333,6 +2471,8 @@ _0E58:
     ret
 
     dc   14, $FF
+
+;;; ==========================================
 
 bongo_animate_per_screen:
     ld   a,(tick_num)
@@ -2397,7 +2537,11 @@ bongo_anim_data:
 
     dc   8, $FF
 
-;;
+;;; ==========================================
+;;; when the player gets close, Bongo runs away
+;;; (you can catch him on fast rounds though...
+;;; ... but nothing happens)
+
 bongo_run_when_player_close:
     ld   a,(bongo_x)
     scf
@@ -2439,6 +2583,8 @@ _0F4E:
     db   $04,$00,$00,$00
     db   $04,$00,$00,$00
     db   $04,$00,$00,$00
+
+;;; ==========================================
 
 draw_border_1:
 ;;  intro inside border top
@@ -2505,7 +2651,7 @@ big_reset:
     ld   (screen_xoff_col+$3F),a
 ;;; falls through to main loop:
 
-;;; =========================================
+;;; ============= Main loop ====================
 main_loop:
     call set_tick_mod_3_and_add_score
     call update_screen_tile_animations
@@ -2520,9 +2666,8 @@ main_loop:
 
     dc   15, $FF
 
-;;; =========================================
+;;; =============== Extra Life =================
 
-;;;  Extra life
 extra_life:
     ld   a,(player_num)
     and  a
@@ -2579,6 +2724,8 @@ _p2_extra_life:
 
     dc   22, $FF
 
+;;; ==========================================
+
 set_tick_mod_3_and_add_score:
     ld   a,(tick_mod_3)
     inc  a
@@ -2602,6 +2749,8 @@ _dino_collision:
 
     db   $FF
 
+;;; ============= Tick ticks ==================
+
 ;; Ticks the main ticks and speed timers
 tick_ticks:                     ;
     ld   a,(tick_num)
@@ -2612,6 +2761,8 @@ tick_ticks:                     ;
 
     dc   5, $FF
 
+
+;;; ==========================================
 ;;; resets any current sfx id to 0
 ;;; I think this function did more originally... whatever the important
 ;;; part was (masking and bit-twiddling), the store was nopped out
@@ -2643,6 +2794,7 @@ _done__msf:
 
     dc   3, $FF
 
+;;; ==========================================
 ;;
 update_screen_tile_animations:
     ld   a,(tick_mod_6) ; set tick % 6
@@ -2684,6 +2836,8 @@ _1139:
 
     dc   17, $FF
 
+;;; =============== Update Everything ===============
+
 update_everything:
     call check_exit_stage_left
     call update_time_timer
@@ -2712,6 +2866,8 @@ update_everything:
     ret
 
     dc   7, $FF
+
+;;; ==========================================
 
 wrap_other_spears_left:
     ld   a,(enemy_2_x)
@@ -2751,6 +2907,7 @@ _11FC:
 
     dc   3, $FF
 
+;;; ==========================================
 ;;;
 player_pos_update:
     ld   a,(player_y_legs)
@@ -2791,6 +2948,8 @@ _did_leg_thing:
 
     dc   15, $FF
 
+;;; ==========================================
+
 ;;; only called from PREVENT_CLOUD_JUMP_REDACTED
 prevent_cloud_jump_redacted_2:
     push hl
@@ -2828,6 +2987,9 @@ _1280:
 
     dc   14, $FF
 
+
+;;; ==========================================
+
 ;; ANOTHER commented out one!
 ;; This stops a player jumping up through a platform
 ;; from underneath it. Probably more realistic, but
@@ -2851,6 +3013,8 @@ _12A1:
     ret
 
     dc  14, $FF
+
+;;; ==========================================
 
 draw_background:
 ;; draw first 6 columns
@@ -2881,6 +3045,8 @@ reset_enemies_and_draw_bottom_row:
     call jmp_hl_plus_4k
     jp   draw_bottom_row_numbers
 
+;;; ==========================================
+
 ;; scrolls the screen one tile - done in a loop for the transition
 scroll_one_column:
     ld   e,$04 ; 4 loops of 2 pixels
@@ -2905,6 +3071,9 @@ _1306:
     ret
 
     dc   12, $FF
+
+
+;;; ==========================================
 
 ;; ix = level data
 ;; hl = screen pos
@@ -2947,7 +3116,8 @@ __next_seg:
 
     dc   2, $FF
 
-;;
+;;; ==========================================
+
 during_transition_next:
     call bongo_runs_off_screen
     nop
@@ -2976,6 +3146,8 @@ _reset_for_next_level:
 
     db   $FF
 
+
+;;; ==========================================
 ;; "jump relative A": dispatches to address based on A
 jump_rel_a:
     exx
@@ -2989,6 +3161,7 @@ jump_rel_a:
 
     dc   7, $FF
 
+;;; ==========================================
 ;;; Looks important. VBLANK?
 wait_vblank:
     ld   b,$00
@@ -3006,6 +3179,8 @@ _13A2:
 
     db   $FF
 
+;;; ==========================================
+
 bongo_runs_off_screen:
     ld   hl,bongo_x
 _13BB:
@@ -3017,6 +3192,8 @@ _13BB:
     ret
 
     dc   12, $FF
+
+;;; ==========================================
 
 update_time_timer:
     ld   a,(second_timer)
@@ -3055,6 +3232,8 @@ _13FC:
     ret
 
     dc   5, $FF
+
+;;; ==========================================
 
 ;; draws the player's time under score
 ;; ret's immediately: must have been removed! aww :(
@@ -3097,8 +3276,10 @@ _1436:
 
     dc   12, $FF
 
-clear_83:
-    ld   hl,tick_mod_3
+;;; ==========================================
+
+clear_ram_x83_bytes:
+    ld   hl,START_OF_RAM
 _loop__c83:
     ld   (hl),$00
     inc  l
@@ -3111,6 +3292,7 @@ _loop__c83:
 
     dc   1, $FF
 
+;;; ==========================================
 ;; lotsa calls here
 reset_xoff_sprites_and_clear_screen:
     call reset_xoff_and_cols_and_sprites ; then nop slides
@@ -3128,6 +3310,8 @@ reset_xoff_sprites_and_clear_screen:
     nop
     nop ; end of weird nopslide
 
+;;; ==========================================
+
 clear_screen:
     ld   hl,screen_ram
 _1483:
@@ -3142,6 +3326,8 @@ _1483:
 
     db   $FF
 
+;;; ==========================================
+
 ;; Lotsa calls here (via $1470);
 reset_xoff_and_cols_and_sprites:    ; sets 128 locations to 0
     ld   hl,screen_xoff_col
@@ -3155,7 +3341,8 @@ _1493:
 
     dc   4, $FF
 
-;;
+;;; ==========================================
+
 clear_ram:
     ld   hl,START_OF_RAM ; = $8000
 _14A3:
@@ -3167,6 +3354,8 @@ _14A3:
     jp   _ret_hard_reset ; Return
 
     dc   2, $FF
+
+;;; ==========================================
 
 screen_reset:
     ld   hl,play_tune_for_cur_screen - JMP_HL_OFFSET
@@ -3196,6 +3385,8 @@ _14CC:
     ret
 
     dc   2, $FF
+
+;;; ==========================================
 
 reset_enemies_2:
     ld   a,(tick_mod_fast) ; faster in round 2
@@ -3357,6 +3548,8 @@ clear_and_draw_screen:
 
     dc   6, $FF
 
+;;; ==========================================
+
 animate_splash_screen:
     ld   d,$10
 _1662:
@@ -3375,6 +3568,7 @@ _166A:
 
     dc   2, $FF
 
+;;; ==========================================
 ;;
 bonus_multplier_data:
     db   $E8
@@ -3383,6 +3577,8 @@ bonus_multplier_data:
     db   $ED
     db   $EF
     db   $F1
+
+;;; ==========================================
 
 update_speed_timers:
     ld   a,(player_num)
@@ -3431,6 +3627,8 @@ _16C0:
 
     dc   12, $FF
 
+;;; ==========================================
+
 draw_bonus:
     call draw_tiles_h
     db   $0A,$00
@@ -3448,6 +3646,8 @@ draw_bonus:
 
     dc   3, $FF
 
+
+;;; ==========================================
 ;; Adds whatever is in 801d
 add_score:
     ld   a,(num_players)
@@ -3486,6 +3686,8 @@ _1722:
 
     dc   23, $FF
 
+;;; ==========================================
+
 check_done_screen:
     scf
     ccf
@@ -3504,6 +3706,7 @@ _175C:
     call transition_to_next_screen ; jump to next screen
     ret
 
+;;; ==========================================
 ;;
 clear_column_of_tiles:
     push hl
@@ -3520,6 +3723,8 @@ _lp_176F:
     ret
 
     db   $FF
+
+;;; ==========================================
 
 transition_to_next_screen:
     call reset_dino
@@ -3576,6 +3781,8 @@ reset_jump_and_redify_bottom_row:
 
     db   $FF
 
+;;; ==========================================
+
 reset_dino:
     xor  a
     ld   (dino_counter),a
@@ -3619,6 +3826,8 @@ reset_player_sprite_frame_col:
     ret
 
     dc   6, $FF
+
+;;; ==========================================
 
 init_player_pos_for_screen:
     ld   a,(player_num)
@@ -7424,8 +7633,8 @@ animate_player_right:
 
     dc   8, $FF
 
-clear_83_call_weird_a:
-    call clear_83
+clear_ram_call_weird_a:
+    call clear_ram_x83_bytes
     ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
     call jmp_hl_plus_4k ; seems to do nothing in sub
     ret
