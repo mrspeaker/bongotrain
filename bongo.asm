@@ -1,5 +1,5 @@
-;;; Bongo by JetSoft
-;;; picked apart and rebuilt by Mr Speaker
+;;; Bongo by JetSoft, 1983
+;;; picked apart and rebuilt by Mr Speaker, 2023.
 ;;; https://www.mrspeaker.net
 
 ;;; Builds to MAME-exact version of Bongo ROM zip file.
@@ -3856,6 +3856,7 @@ _182E:
 
     dc   5, $FF
 
+;;; ==========================================
 ;; [x, y]
 player_start_pos_data:
     db   $20,$D0
@@ -3889,6 +3890,9 @@ player_start_pos_data:
     dc   10, $00
     dc   8, $FF
 
+
+;;; ==========================================
+
 reset_xoffs:
     ld   hl,screen_xoff_col
 _189B:
@@ -3902,6 +3906,7 @@ _189B:
 
     dc   11, $FF
 
+;;; ==========================================
 ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
 ;; (all `n_n` screens).
 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
@@ -3932,6 +3937,7 @@ level_bg__n_n:
 
     dc   3, $FF
 
+;;; ==========================================
 ;;; Skip level AFTER getting bonus
 bonus_skip_screen:
 ;; Draws the Bongo Tree. I thought this must have been a glitch,
@@ -3951,6 +3957,8 @@ bonus_skip_screen:
     ld   (player_col_legs),a
     jp   transition_to_next_screen
 
+
+;;; ==========================================
 ;; Clear screen to blanks
 clear_scr_to_blanks:
     ld   hl,screen_ram
@@ -3986,6 +3994,8 @@ _done_19E3:
 
     dc   9, $FF
 
+;;; ==========================================
+
 check_fall_off_bottom_scr:
     ld   a,(player_y_legs)
     scf
@@ -4000,6 +4010,7 @@ check_fall_off_bottom_scr:
 
     db   $FF
 
+;;; ==========================================
 ;; Die if you go out the screen to the left (16px)
 check_exit_stage_left:
     ld   a,(player_x)
@@ -4050,6 +4061,8 @@ level_bg__stairs_up:
 
     dc   3, $FF
 
+;;; ==========================================
+
 call_do_death_sequence:
     call do_death_sequence
     call post_death_reset
@@ -4057,6 +4070,7 @@ call_do_death_sequence:
 
     db   $FF
 
+;;; =============== unused? ====================
 ;; ? unused?
     ld   a,$03
     ld   (_8080),a
@@ -4078,6 +4092,8 @@ _1B69:
     jp   big_reset
 
     dc   13, $FF
+
+;;; ==========================================
 
 init_score_and_screen_once:
     ld   a,(is_2_players)
@@ -4123,6 +4139,8 @@ _1BCB:
 
     dc   1, $FF
 
+;;; ==========================================
+
 draw_border_1_b:
     call draw_tiles_h
     db   $1B,$02
@@ -4133,6 +4151,8 @@ draw_border_1_b:
 
     dc   9, $FF
 
+;;; ==========================================
+
 delay_18_vblanks:
     ld   e,$18
 _1C02:
@@ -4142,6 +4162,8 @@ _1C02:
     ret
 
     dc   7, $FF
+
+;;; ==========================================
 
 dino_caught_player_right:
     ld   a,(player_x)
@@ -4164,6 +4186,8 @@ dino_caught_player_right:
     call kill_player
     ret
 
+;;; ==========================================
+
 play_intro_jingle:
     ld   a,$0F ; intro jingle
     ld   (sfx_id),a
@@ -4173,6 +4197,8 @@ play_intro_jingle:
     ret
 
     dc   2, $FF
+
+;;; ==========================================
 
 dino_caught_player_left:
     ld   a,(player_x)
@@ -4195,15 +4221,16 @@ dino_caught_player_left:
     call kill_player
     ret
 
-_1C81:
-    jp   (hl)
-    djnz _1CC4
-    ld   bc,_1C81
+_a_thing_1C81:                  ; surely not real code?
+    db   $E9, $10,$40           ; jp (hl); djnz $1cc4
+    ld   bc,_a_thing_1C81
     push bc
     push hl
     ret
 
     dc   6, $FF
+
+;;; ==========================================
 
 dino_got_player_left_or_right:
     ld   a,(player_x)
@@ -4220,6 +4247,8 @@ _1CA0:
     ret
 
     dc   12, $FF
+
+;;; ==========================================
 
 dino_collision:
     ld   a,(dino_x)
@@ -4350,6 +4379,7 @@ level_bg__S_S:
 
     dc   6, $FF
 
+;;; ==========================================
 ;; Waits 1 vblank, checks if credit is added yet
 wait_for_start_button:
     call wait_vblank
@@ -4362,6 +4392,7 @@ wait_for_start_button:
 ;;
     dc   10, $FF
 
+;;; ==========================================
 ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
 ;; (all `nTn` and `W` levels)
 ;; See DRAW_SCREEN_FROM_LEVEL_DATA
@@ -4390,6 +4421,8 @@ level_bg__nTn:
     db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
     db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
+;;; ==========================================
+
 write_out_0_and_1:
     ld   a,$07
     out  ($00),a
@@ -4398,6 +4431,8 @@ write_out_0_and_1:
     ret
 
     dc   15, $FF
+
+;;; ==========================================
 
 update_dino:
     ld   a,(hl)
@@ -4444,6 +4479,8 @@ _22D8:
     jp   _23E0
 
     db   $FF
+
+;;; ==========================================
 
 dino_pathfind_nopslide:
     nop
@@ -4496,6 +4533,8 @@ _2316:
     ret
 
     db   $FF
+
+;;; ==========================================
 
 ;; location of path data for each screen
 dino_path_lookup:
@@ -4558,6 +4597,8 @@ _23E0:
 
     dc   20, $FF
 
+;;; ==========================================
+
 dino_anim_lookup:
     db   $2F,$00,$2E,$00
     db   $2D,$00,$2C,$00
@@ -4587,6 +4628,8 @@ _2432:
     ret
 
     dc   23, $FF
+
+;;; ==========================================
 
 draw_score:
     xor  a
@@ -4652,6 +4695,8 @@ draw_score:
 
     dc   13, $FF
 
+;;; ==========================================
+
 delay_60_vblanks:
     ld   h,$60
 _24E2:
@@ -4661,6 +4706,8 @@ _24E2:
     ret
 
     dc   3, $FF
+
+;;; ==========================================
 
 delay_8_play_sound:
     push bc
@@ -4687,6 +4734,8 @@ _2503:
     ret
 
     dc   12, $FF
+
+;;; ==========================================
 
 test_then_dino_collision:
     ld   a,(dino_counter)
@@ -4888,6 +4937,7 @@ dino_path_5:
 
     dc   8, $FF
 
+;;; ==========================================
 ;;;
 set_player_y_level_start:
     ld   a,(player_y)
@@ -4941,6 +4991,8 @@ dino_path_6:
 
     dc   16, $FF
 
+;;; ==========================================
+
 move_dino_x:
     ld   a,(tick_num)
     and  $03
@@ -4961,6 +5013,7 @@ move_dino_x:
     ld   (dino_x_legs),a
     ret
 
+;;; ==========================================
 ;;; Called from NMI: so maybe this is the bit that
 ;;; plays the current samples of sfx
 player_all_sfx_chunks:
@@ -4977,6 +5030,7 @@ player_all_sfx_chunks:
 
     dc   2, $FF
 
+;;; ==========================================
 ;;
 set_dino_dir:
     inc  hl
@@ -4996,6 +5050,8 @@ _2931:
     ret
 
     dc   11, $FF
+
+;;; ==========================================
 
 call_sfx_queuer_and_reset_sfx_ids:
     call jmp_hl_plus_4k ; hl+4k = sfx_queuer
@@ -5116,6 +5172,8 @@ dino_path_7:
     db   $C8,$40,$06,$00,$D0,$38,$04,$00
     db   $D8,$30,$05,$00,$E0,$28,$06,$00
 
+;;; ==========================================
+
 draw_bonus_state:
     call draw_bonus
     ld   a,(bonuses)
@@ -5133,6 +5191,8 @@ _2ADE:
 
     dc   27, $FF
 
+;;; ==========================================
+
 ;; who calls? (free bytes)
     ld   a,(_8093)
     ld   b,a
@@ -5149,6 +5209,8 @@ _done_2B14:
     ret
 
     dc   11, $FF
+
+;;; ==========================================
 
 ;; who calls? (free bytes?)
     ld   b,a
@@ -5177,6 +5239,7 @@ _2B3A:
 
     dc   16, $FF
 
+;;; ==========================================
 ;; Run enemy update subs, based on current screen
 update_enemies:
     ld   a,(player_num)
@@ -5322,12 +5385,16 @@ _2C37:
 
     dc   8, $FF
 
+;;; ==========================================
+
 enemy_pattern_scr_2:
     call rock_fall_1
     call update_enemy_1
     ret
 
     dc   9, $FF
+
+;;; ==========================================
 
 enemy_pattern_scr_4:
     call rock_fall_1
@@ -5338,6 +5405,7 @@ enemy_pattern_scr_4:
 
     dc   11, $FF
 
+;;; ==========================================
 ;;
 hiscore_check_buttons:
     ld   a,(input_buttons)
@@ -5359,6 +5427,8 @@ _2C88:
 
     dc   10, $FF
 
+;;; ==========================================
+
 enemy_pattern_scr_8:
     call rock_fall_1
     call update_enemy_1
@@ -5370,6 +5440,7 @@ enemy_pattern_scr_8:
 
     dc   5, $FF
 
+;;; ==========================================
 ;; wonder what this was for? No paths call anything
 ;; maybe a debug tool?
 ;; -- i've stolen this area for OGNOB mode.
@@ -5431,7 +5502,8 @@ _2CBE:
 
     dc   16, $FF
 
-;; HiScore somthing
+;;; ==========================================
+
 set_hiscore_and_reset_game:
     ld   hl,hiscore
     ld   a,(p1_score)
@@ -5494,6 +5566,8 @@ _2D70:
     ret
 
     dc   18, $FF
+
+;;; ==========================================
 
 enter_hiscore_screen:
     push af
@@ -5598,6 +5672,7 @@ _done_2EC8:
 
     dc   11, $FF
 
+;;; ==========================================
 ;; called when entered a letter on name
 hiscore_select_letter:
     ld   a,$10
@@ -5627,6 +5702,8 @@ _enter_letter:
 
     dc   16, $FF
 
+;;; ==========================================
+
 pop_hls_then_copy_hiscore_name:
     xor  a
     ld   (_8086),a
@@ -5636,6 +5713,8 @@ pop_hls_then_copy_hiscore_name:
     ret
 
     dc   6, $FF
+
+;;; ==========================================
 
 hiscore_rub_letter:
     ld   de,$0020
@@ -5662,6 +5741,8 @@ _2F3E:
     ret
 
     dc   11, $FF
+
+;;; ==========================================
 
 hiscore_back_cursor:
     ld   (hl),$10
@@ -5690,6 +5771,8 @@ _2F6C:
 
     dc   20, $FF
 
+;;; ==========================================
+
 hiscore_clear_name:
     push hl
     ld   hl,hiscore_name ; default is "HI-SCORE", clearing...
@@ -5706,6 +5789,7 @@ _2F8C:
     rra ; weird 0x1F. Dump error?
     dc   14, $FF
 
+;;; ==========================================
 ;;
 hiscore_fwd_cursor:
     ld   a,$10
@@ -5743,6 +5827,8 @@ _2FD5:
     ret
 
     db   $FF
+
+;;; ==========================================
 
 copy_hiscore_name_to_screen:
     ld   hl,hiscore_name
@@ -5791,6 +5877,7 @@ _3022:
 
     dc   15, $FF
 
+;;; ==========================================
 ;; writes some chars to screen
 ;; actually - different screen loc than copy_msg 1!
 copy_hiscore_name_to_screen_2:
@@ -5818,6 +5905,7 @@ copy_hiscore_name_to_screen_2:
 
     dc   11, $FF
 
+;;; ==========================================
 ;; Writes HIGH-SCORE to bytes (later to screen)
 set_hiscore_text:
     ld   hl,hiscore_name
@@ -5852,6 +5940,8 @@ set_hiscore_text:
 
     dc   19, $FF
 
+;;; ==========================================
+
 _30C0:
     ld   c,$00
     ld   hl,hiscore_name+9
@@ -5878,8 +5968,10 @@ _30D8:
 
     dc   7, $FF
 
+;;; ==========================================
+
 _30E8:
-    ld   d,$0A                  ;hiscore name length
+    ld   d,$0A              ;hiscore name length
     ld   ix,hiscore_name+$08
 _30EE:
     ld   a,(ix+$00)
@@ -5893,6 +5985,7 @@ _30EE:
 
     dc   9, $FF
 
+;;; ==========================================
 ;;
 hiscore_enter_timer:
     push hl
@@ -5934,6 +6027,8 @@ _3110:
 
     db   $FF
 
+;;; ==========================================
+
 ;; load rock pos (reset rock pos?)
 update_enemy_1:
     ld   a,(enemy_1_active)
@@ -5958,6 +6053,8 @@ _314B:
     ret
 
     dc   9, $FF
+
+;;; ==========================================
 
 ;; looks the same as 1?
 enemy_pattern_scr_9:
@@ -5990,6 +6087,8 @@ rock_fall_lookup:
 
     dc   18, $FF
 
+;;; ==========================================
+
 set_bird_left_y_c4:
     ld   a,$F0
     ld   (enemy_2_x),a
@@ -6004,6 +6103,8 @@ set_bird_left_y_c4:
     ret
 
     dc   14, $FF
+
+;;; ==========================================
 
 wrap_bird_left_y_c4:
     ld   a,(enemy_2_x)
@@ -6022,6 +6123,8 @@ _324D:
     ret
 
     dc   15, $FF
+
+;;; ==========================================
 
 move_animate_bird_left:
     ld   a,(tick_mod_fast)
@@ -6052,6 +6155,8 @@ _3287:
 
     dc   35, $FF
 
+;;; ==========================================
+
 set_blue_meanie_a0_d0:
     ld   a,$A0
     ld   (enemy_1_x),a
@@ -6066,6 +6171,8 @@ set_blue_meanie_a0_d0:
     ret
 
     dc   6, $FF
+
+;;; ==========================================
 
 update_stair_up_blue_timer:
     ld   a,(tick_num)
@@ -6084,6 +6191,8 @@ _32DF:
     ret
 
     dc   8, $FF
+
+;;; ==========================================
 
 _32F0:
     ld   a,(enemy_3_active)
@@ -6174,6 +6283,8 @@ _wrap_bird_1:
     ret
 
     dc   7, $FF
+
+;;; ==========================================
 
 _3398:
     call wrap_bird_left_y_40
@@ -6351,6 +6462,8 @@ _34C8:
 
     dc   6, $FF
 
+;;; ==========================================
+
 update_stairdown_blue_left_timer:
     ld   a,(tick_num)
     and  $03
@@ -6388,6 +6501,7 @@ reset_enemies:
     ld   (enemy_6_active),a
     ret
 
+;;; ==========================================
 ;;
 _3538:
     call wrap_bird_left_y_c4
@@ -6502,6 +6616,8 @@ _3605:
 
     dc   7, $FF
 
+;;; ==========================================
+
 move_animate_bird_right:
     ld   a,(tick_mod_fast)
     and  $01
@@ -6529,6 +6645,8 @@ _3637:
     ret
 
     dc   3, $FF
+
+;;; ==========================================
 
 check_buttons_for_something:
     push bc
@@ -6597,6 +6715,8 @@ _36BD:
     ret
 
     dc   15, $FF
+
+;;; ==========================================
 
 _36D0:
     call wrap_bird_right_y_bc
@@ -6855,6 +6975,8 @@ enemy_pattern_scr_26:
 
     dc   25, $FF
 
+;;; ==========================================
+
 set_spear_left_bottom:
     ld   a,(enemy_1_x)
     and  a
@@ -6872,6 +6994,8 @@ set_spear_left_bottom:
     ret
 
     dc   9, $FF
+
+;;; ==========================================
 
 set_spear_left_middle:
     ld   a,(enemy_2_x)
@@ -7198,6 +7322,8 @@ _3B78:
     pop  hl
     ret
 
+;;; ==========================================
+
 ;; interesting algorithm for collision detection!
 player_enemy_collision:
 ;; Check X
@@ -7223,6 +7349,8 @@ _hit:
     ret
 
     dc   6, $FF
+
+;;; ==========================================
 
 ;; Always checks all 3 enemies. "Offscreen" enemies
 ;; have x = 0, so the "check x" test fails.
@@ -7251,6 +7379,8 @@ _3BCB:
     ret
 
     dc   1, $FF
+
+;;; ==========================================
 
 ;; bytes after the call are:
 ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -7284,6 +7414,8 @@ _3BFC:
 
     dc   1, $FF
 
+;;; ==========================================
+
 screen_tile_animations:
     ld   a,(player_num)
     and  a
@@ -7312,6 +7444,8 @@ _3C10:
     cp   $18
     jr   z,bubble_lava_var
     ret
+
+;;; ==========================================
 
 bubble_lava:
     ld   a,(lava_tile_offset)
@@ -7389,6 +7523,7 @@ bubble_lava_var_3:
 
     db   $FF
 
+;;; ==========================================
 ;; x, frame, color, y
 cutscene_data:
     db   $80,$3A,$11,$70 ;  player
@@ -7415,6 +7550,8 @@ _lp_3CE2:
 
     dc   19, $FF
 
+;;; ==========================================
+
 ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
 dance_frame_data:
     db   $3C,$3D,$06,$01
@@ -7425,6 +7562,8 @@ dance_frame_data:
     db   $3A,$3B,$07,$02
     db   $3E,$3F,$08,$03
     db   $3A,$3B,$05,$00
+
+;;; ==========================================
 
 update_dance_frames:
     ld   a,(hl)
@@ -7448,6 +7587,7 @@ update_dance_frames:
 
     dc   9, $FF
 
+;;; ==========================================
 ;;; Cut sceen
 do_cutscene:
     ld   a,$06
@@ -7495,6 +7635,8 @@ _3D96:
     ret
     dc   1, $FF
 
+;;; ==========================================
+
 draw_cage_and_scene:            ; for cutscene
     ld   hl,screen_ram+$218
     ld   (hl),$66
@@ -7537,6 +7679,8 @@ draw_cage_and_scene:            ; for cutscene
 
     db   $FF
 
+;;; ==========================================
+
 cutscene_run_offscreen:
     ld   a,$0C
     ld   (player_frame),a
@@ -7571,6 +7715,8 @@ _lp_3E52:
     ret
 
     dc   1, $FF
+
+;;; ==========================================
 
 cutscene_jump_up_and_down:
     ld   ix,player_x
@@ -7641,6 +7787,8 @@ clear_ram_call_weird_a:
 
     dc   6, $FF
 
+;;; ==========================================
+
 ;;; level tiles at the bottom of the screen
 draw_bottom_row_numbers:
     call draw_tiles_h
@@ -7691,11 +7839,15 @@ _lp:
 
     dc   2, $FF
 
+;;; ==========================================
+
 draw_jetsoft:
     call draw_tiles_h
     db   $0C,$0A ;  JETSOFT
     db   J_,E_,T_,S_,O_,F_,T_,$FF
     ret
+
+;;; ==========================================
 
 draw_proudly_presents:
     call draw_tiles_h
@@ -7704,6 +7856,8 @@ draw_proudly_presents:
     ret
 
     dc   2, $FF
+
+;;; ==========================================
 
 draw_copyright:
     call draw_tiles_h
@@ -7725,6 +7879,8 @@ blank_out_bottom_row:
     ret
 
     dc   5, $FF
+
+;;; ==========================================
 
 do_bonus_flashing:
     nop ; wonder what these did originally?
@@ -7768,6 +7924,8 @@ int_handler:
 
     dc   5, $FF
 
+;;; ==========================================
+
 ;; Looks like more general updates
 update_everything_more:
     call add_move_score
@@ -7777,7 +7935,7 @@ update_everything_more:
     call animate_all_pickups
     ret
 
-    ret         ;? extra ret
+    ret         ;? extra ret for fun
     dc   7, $FF
 
 ;; who calls?
@@ -7789,6 +7947,7 @@ update_everything_more:
 
     dc   1, $FF
 
+;;; ==========================================
 
 add_pickup_pat_8:
     call add_pickup_pat_3
@@ -8255,22 +8414,9 @@ blank_out_1up_text:
     dc   5, $FF
 
 ;; data?
-    db   $F0
-    db   $70
-    db   $B0
-    db   $30,$D0
-    db   $50
-    db   $90
-    db   $10,$E0
-    db   $60
-    db   $A0
-    db   $20,$C0
-    db   $40
-    db   $80
-    db   $00
-    db   $FF
-    db   $FF
-
+    db   $F0,$70,$B0,$30,$D0,$50,$90,$10
+    db   $E0,$60,$A0,$20,$C0,$40,$80,$00
+    db   $FF,$FF
 ;;
     call draw_pikup_cross_bot_r
     ld   a,$9E

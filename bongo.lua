@@ -44,7 +44,7 @@ loop_screens = {}--{13,14,18,21,25,27} -- Loop if you want to practise levels, e
 -- {}: no looping, normal Bongo sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 1 -- starting round (1: initial speed, 2+: faster)
+round = 2 -- starting round (1: initial speed, 2+: faster)
 -- 1: default Bongo speed for dinosaur and enemies
 -- 2: faster movement for player and enemies, and dinosaur starts earlier
 -- 3+: each round after 2, the player and enemeies are the same speed,
@@ -52,7 +52,7 @@ round = 1 -- starting round (1: initial speed, 2+: faster)
 infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
-disable_dino = true          -- no pesky dino (oh, but also now you can't catch 'im)
+disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
 disable_round_speed_up = true -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
 disable_cutscene = true       -- don't show the awesome cutscene
