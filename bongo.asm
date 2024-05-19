@@ -18,6 +18,10 @@
 ;;;   He's complicated: celebrates the player's death,
 ;;;   but also parties with player on dino capture.
 
+;;; Entry Point: $0000 - `hard_reset`.
+
+    START_OF_RAM      = $8000
+
     tick_mod_3        = $8000  ; timer for every 3 frames
     tick_mod_6        = $8001  ; timer for every 6 frames
     pl_y_legs_copy    = $8002  ; copy of player y legs?
@@ -246,8 +250,8 @@
     tile_pik_cross    = $9D
     tile_pik_ring     = $9E
     tile_pik_vase     = $9F
-    tile_lvl_01       = $C0
 
+    tile_lvl_01       = $C0  ; start of row 7 of 8 on tilesheet
     ;; tile > $F8 is a platform
     tile_solid        = $F8 ; high-wire platform R
     tile_platform_r   = $FC
@@ -402,7 +406,7 @@ _ret_hard_reset:
     call clear_83_call_weird_a
     call check_credit_fault
     call write_out_0_and_1
-    jp   setup_then_start_game
+    jp   call_setup_then_start_game
 
 ;; Data? unused? If code, looks... odd
     db  $DD,$19        ; (add  ix,de)
@@ -459,19 +463,20 @@ _is_playing:
 
     db   $FF
 
-setup_then_start_game:
-    call setup_more             ; wait. this jumps... no ret?
-    call set_hiscore_text       ; does it actually get here?
+call_setup_then_start_game:
+    call setup_then_start_game  ; jmps to pre_game_attractions...
+    call set_hiscore_text       ; ...never gets here.
 
 reset_then_start_game:          ; also jumps here after game-over
     call wait_vblank
     ld   a,(credits)
     and  a
-    jr   nz,_play_splash
-    call reset_ents_all
+    jr   nz, play_attract_PRESS_P1P2
+    call play_attract_screens
     call reset_xoff_sprites_and_clear_screen
     jr   reset_then_start_game
-_play_splash:
+
+play_attract_PRESS_P1P2:
     call wait_vblank
     ld   a,(credits)
     cp   $01
@@ -484,7 +489,7 @@ _done__stsg:
     ld   a,(num_players)
     and  a
     jp   nz,start_game
-    jr   _play_splash
+    jr   play_attract_PRESS_P1P2
 
     db   $FF
 
@@ -838,13 +843,13 @@ _next_tile:
 
     dc   10, $FF
 
-;;
-setup_more:
+;; Clears RAM, sets the stack location
+setup_then_start_game:
     nop                         ; I love seeing all the nops around
     nop                         ; feel very "hand made"... but I do
     nop                         ; wonder what they nopped!
     call reset_xoff_sprites_and_clear_screen
-    ld   hl,tick_mod_3 ; reset $8000-$88FF? to 0
+    ld   hl,START_OF_RAM ; reset $8000-$8088 to 0
 _lp_0351:
     ld   (hl),$00
     inc  l
@@ -857,11 +862,15 @@ _lp_0351:
     ld   sp,stack_location
     ld   a,$01
     ld   (_8090),a
-    jp   setup_more_post
+    jp   pre_game_attractions
 
     dc   6, $FF
 
-reset_ents_all:
+;;; Plays a sequence of attract screens
+;;; - Bongo splash screen animation
+;;; - EXTRA BONUS screen
+;;; - YOUR BEING CHASED screen
+play_attract_screens:
     call reset_xoff_sprites_and_clear_screen
     ld   hl,reset_sfx_something_1 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
@@ -871,8 +880,8 @@ reset_ents_all:
     call jmp_hl_plus_4k
     ld   hl,chased_by_a_dino_screen - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    nop
-    nop
+    nop      ; tantalizing nops...
+    nop      ; were there more attract screens?
     nop
     ret
 
@@ -1146,12 +1155,18 @@ hiscore_for_p2:
 
     dc   23, $FF
 
-setup_uncalled: ;looks a lot like SETUP_THEN_START_GAME - no one calls it?
-    call setup_more             ; but setup_more returns to the next line
-                                ; and is called from another sub
+    ;;
+setup_uncalled: ;looks a lot like call_setup_then_start_game
+    call setup_then_start_game  ; but it return to below
+                                ; (and and is called at init)
 
-setup_more_post:                ; jumps here after setup_more
+    ;; =============================
+
+;;; Handle attract mode and credit screens before
+;;; player has started
+pre_game_attractions:          ; jumps here after setup
     call set_hiscore_text
+
 _loop__smp:
     call wait_vblank
     ld   a,(num_players)
@@ -1160,9 +1175,11 @@ _loop__smp:
     ld   a,(credits)
     and  a
     jr   nz,_has_credits
-    call reset_ents_all
+
+    call play_attract_screens ;
     call reset_xoff_sprites_and_clear_screen
     jr   _loop__smp
+
 _has_credits:
     cp   $01
     jr   nz,_2P
@@ -1174,6 +1191,8 @@ _2P:
 _is_playing__smp:
     jp   nz,start_game
     jr   _loop__smp
+
+    ;; =============================
 
     dc   8, $FF
 
@@ -1851,14 +1870,14 @@ add_gravity_and_check_big_fall:
     dec  a
     ld   (falling_timer),a
     and  a
-    jr   nz,_0A50
+    jr   nz,_fall_ok
     call kill_player ; yep.
     ret
-;; Ok, what's this... "gravity"? always pushing down 2
-_0A50:
+;;
+_fall_ok:
     ld   a,(player_y)
-    inc  a ; Why? Looks suspicious - related to bug?
-    inc  a ; force to ground I think
+    inc  a ; kind of "gravity" pushing player down
+    inc  a ; 2px when falling - push to ground
     ld   (player_y),a
     add  a,$10
     ld   (player_y_legs),a
@@ -1866,8 +1885,7 @@ _0A50:
 
     dc   10, $FF
 
-;; TODO: figure out what this does to gameplay.
-;; what if it was removed?
+;; TODO: figure out what this does to gameplay. what if it was removed?
 ;; (Is this why it "snaps upwards" on my fake platform in nTn?)
 snap_y_to_8:
     ld   a,(player_y)
@@ -1900,8 +1918,8 @@ check_head_hit_tile:
     ld   l,a
     call get_tile_addr_from_xy
     ld   a,(hl)
-    and  $C0 ; 1100 0000
-    cp   $C0 ; whats a C0 tile?
+    and  $C0 ; 1100 0000 ; bottom 2 rows of tilesheet - including platforms,
+    cp   $C0 ; (and also bunch of non-level tiles)
     ret  nz
     call fall_under_a_ledge
     ret
@@ -3139,7 +3157,7 @@ _1493:
 
 ;;
 clear_ram:
-    ld   hl,tick_mod_3 ; = $8000, start of ram
+    ld   hl,START_OF_RAM ; = $8000
 _14A3:
     ld   (hl),$00
     inc  hl
@@ -4129,9 +4147,9 @@ wait_for_start_button:
     ld   a,(credits)
     and  a
     ret  z
-;; credit added! - start the game
+;; credit added!
     call reset_xoff_and_cols_and_sprites
-    jp   _play_splash
+    jp   play_attract_PRESS_P1P2
 ;;
     dc   10, $FF
 
