@@ -1,0 +1,80 @@
+* Bongo set 2!
+spoilers: absolutely nothin' in it.
+
+** 11 bytes diff. Only 2 look like they do stuff.
+
+Changes in two roms:
+bg1.bin -> 1-2532.bin
+bg2.bin -> 3-2532.bin
+
+ cmp -l -x zout/bg1.bin dump/bongoa/1-2532.bin
+00000b40 00 a7
+00000b41 00 c0
+00000b42 00 f5
+00000b43 00 3e
+00000b44 00 ff
+00000b45 00 32
+00000b47 00 b8
+00000b48 00 f1
+00000b49 00 c9
+
+cmp -l -x zout/bg3.bin dump/bongoa/3-2532.bin
+00000288 3e c9
+0000042c cd c9
+
+Total of 11 bytes changed. no new game modes, or gfx changes or anything :(
+
+bytes added at 0xb40:
+a7 and a
+c0 ret nz
+f5 push af
+3e ff  ld a,$ff
+32 00 b8   ld ($B800),a
+f1  pop af
+c9  rt
+
+Previously was just nops.. in my code I had
+```;; 70 zeros/nops. That's a lotta nops. (free bytes?)
+    dc 70,$0
+```
+somone thought the same and put that routine there.
+Thing is, it's loaded at 0x0b40... but nothing ever calls taht.
+
+
+in rom 3: 00000288 3e -> c9 (ret)
+
+2288          	write_out_0_and_1:
+2288  3E07    	    ld   a,$07               <- returns here, doesn't do this hardware check
+228A  D300    	    out  ($00),a
+228C  3E38    	    ld   a,$38
+228E  D301    	    out  ($01),a
+2290  C9      	    ret
+
+in rom 3: 0000042c cd -> c9 (ret)
+
+2420          	copy_inp_to_buttons_and_check_buttons:
+2420  3A00A8  	    ld   a,(port_in1)
+2423  32F183  	    ld   (input_buttons),a
+2426  3A00B0  	    ld   a,(port_in2)
+2429  32F283  	    ld   (input_buttons_2),a
+242C  CD4036  	    call check_buttons_for_something <- returns here
+242F  C9      	    ret
+
+
+Func that's skipped is:
+3640          	check_buttons_for_something:
+3640  C5      	    push bc
+3641  3AF183  	    ld   a,(input_buttons)
+3644  E63F    	    and  $3F ; 0011 1111
+3646  4F      	    ld   c,a
+3647  3E0E    	    ld   a,$0E
+3649  D300    	    out  ($00),a
+364B  DB02    	    in   a,($02)
+364D  32F283  	    ld   (input_buttons_2),a
+3650  E6C0    	    and  $C0
+3652  81      	    add  a,c
+3653  32F183  	    ld   (input_buttons),a
+3656  C1      	    pop  bc
+3657  C9      	    ret
+
+
