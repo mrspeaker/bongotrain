@@ -292,8 +292,7 @@
     screen_ram        = $9000 ; - 0x93ff  videoram
     start_of_tiles    = $9040 ; top-right tile
 
-    ;; TODO: a hundred-odd screen locations. Figure 'em out, and name them.
-    ;; (use some x/y system, or $start_of_tiles + x)
+    ;; TODO: a whole bunch of screen locations. Figure 'em out, and name them.
     p2_score_digits   = $9061  ; score for player 2
     p2_timer_digits   = $9082  ; timer for player 1
     _908E             = $908E  ; ?
@@ -305,32 +304,17 @@
     scr_lives_p2      = $9122  ; icons for lives, p2
     scr_pik_n_n       = $915A  ; pickup right n_n levels
     _9184             = $9184  ;
-    _9189             = $9189  ;
-    _918A             = $918A  ;
-    _918B             = $918B  ;
-    _918C             = $918C  ;
+    scr_cage_up       = $9189  ; top-right tile of cage at top of screen
     _918E             = $918E  ;
     scr_num_creds     = $9199  ;
-    _91A1             = $91A1  ;
-    _91A9             = $91A9  ;
-    _91AA             = $91AA  ;
-    _91AB             = $91AB  ;
-    _91AC             = $91AC  ;
+    scr_hiscore       = $91A1  ; trailing 0 of hiscore
     _91B1             = $91B1  ;
-    _91C1             = $91C1  ;
     _91C9             = $91C9  ;
-    _91CA             = $91CA  ;
-    _91CB             = $91CB  ;
-    _91CC             = $91CC  ;
     _91D2             = $91D2  ;
-    _91E1             = $91E1  ;
-    _9201             = $9201  ;
     _9217             = $9217  ;
-    _9221             = $9221  ;
     _9224             = $9224  ;
     _922B             = $922B  ;
     _9231             = $9231  ;
-    _9241             = $9241  ;
     _9248             = $9248  ;
     hi_name_entry     = $9277  ; as you enter your name
     _927A             = $927A  ;
@@ -346,22 +330,12 @@
     _930C             = $930C  ;
     _9310             = $9310  ;
     _9314             = $9314  ;
-    _9321             = $9321  ;
-    _9322             = $9322  ;
-    _934B             = $934B  ;
-    _934C             = $934C  ;
+    scr_bonus_sq      = $934B  ; top-right red square over bonus number
     _934E             = $934E  ;
     _9350             = $9350  ;
     _9352             = $9352  ;
-    _9361             = $9361  ;
-    _9362             = $9362  ;
-    _936B             = $936B  ;
-    _936C             = $936C  ;
-    _9381             = $9381  ;
-    _9382             = $9382  ;
-    _938B             = $938B  ;
-    _938C             = $938C  ;
-    _93A0             = $93A0  ;
+    scr_hs_timer      = $9362  ; second digit of 90 second timer in hiscore
+    scr_unused_spiral = $93A0  ;
 
     end_of_tiles      = $93BF ; bottom left tile
 
@@ -4673,23 +4647,23 @@ draw_score:
     ld   (p2_score_digits+0*$20),a ; digit 0 - always 0.
     ld   hl,hiscore
     rrd
-    ld   (_91C1),a
+    ld   (scr_hiscore+$20),a    ; last digit of highscore
     rrd
-    ld   (_91E1),a
-    rrd
-    inc  l
-    rrd
-    ld   (_9201),a
-    rrd
-    ld   (_9221),a
+    ld   (scr_hiscore+$40),a
     rrd
     inc  l
     rrd
-    ld   (_9241),a
+    ld   (scr_hiscore+$60),a
+    rrd
+    ld   (scr_hiscore+$80),a
+    rrd
+    inc  l
+    rrd
+    ld   (scr_hiscore+$A0),a    ; first digit of hiscore
     rrd
     rrd
     xor  a
-    ld   (_91A1),a
+    ld   (scr_hiscore),a  ; hiscore trailing 0
     call copy_hiscore_name_to_screen_2
     ret
 
@@ -4779,7 +4753,7 @@ unused_spiral_cage_fill_transition:
     ld   hl,start_of_tiles
     ld   e,$79
     call _part_two
-    ld   hl,_93A0
+    ld   hl,scr_unused_spiral
     call _part_two
     ld   hl,screen_ram
     call _part_three
@@ -5075,25 +5049,25 @@ got_a_bonus:
     cp   $01
     jr   nz,_2991
     ld   a,$F2
-    ld   (_934B),a ; uncovering bonus red squares
+    ld   (scr_bonus_sq+$00),a ; uncovering bonus red squares
     ret
 _2991:
     cp   $02
     jr   nz,_299B
     ld   a,$F3
-    ld   (_934C),a
+    ld   (scr_bonus_sq+$01),a
     ret
 _299B:
     cp   $03
     jr   nz,_29A5
     ld   a,$EA
-    ld   (_936B),a
+    ld   (scr_bonus_sq+$20),a
     ret
 _29A5:
     cp   $04
     jr   nz,_29AF
     ld   a,$EB
-    ld   (_936C),a
+    ld   (scr_bonus_sq+$21),a
     ret
 _29AF:
     cp   $05
@@ -5103,7 +5077,7 @@ _29AF:
     add  a,l
     ld   l,a
     ld   a,(hl)
-    ld   (_938B),a
+    ld   (scr_bonus_sq+$40),a
     ret
 ;; 6 Bonuses got!
 _29C0:
@@ -5112,7 +5086,7 @@ _29C0:
     add  a,l
     ld   l,a
     ld   a,(hl)
-    ld   (_938C),a
+    ld   (scr_bonus_sq+$41),a
     call do_bonus_flashing
     ld   c,$0A ; 10x
 _29D1:
@@ -5615,9 +5589,9 @@ enter_hiscore_screen:
     db   $FF
     call draw_score
     ld   a,$09 ; 90 seconds timer
-    ld   (_9382),a ; num 1 to screen
+    ld   (scr_hs_timer+$20),a       ; second digit
     xor  a
-    ld   (_9362),a ; num 2 to screen
+    ld   (scr_hs_timer+$00),a ; first digit
     ld   (hiscore_timer),a
     pop  af
     ld   iy,hi_name_entry
@@ -6015,9 +5989,9 @@ _3110:
     ld   (hl),a ; load a into $HISCORE_TIMER
     xor  a
     rld
-    ld   (_9382),a ; Timer countdown char 1
+    ld   (scr_hs_timer+$20),a ; Timer countdown char 1
     rld
-    ld   (_9362),a ; Timer countdown char 2
+    ld   (scr_hs_timer+$00),a ; Timer countdown char 2
     rld
     pop  ix
     pop  iy
@@ -8576,25 +8550,25 @@ _4492:
     cp   num_screens ; are we on screen 27?
     ret  nz ; Nope, leave.
     ld   a,tile_cage
-    ld   (_91A9),a
+    ld   (scr_cage_up+$20),a
     inc  a
-    ld   (_91AA),a
+    ld   (scr_cage_up+$21),a
     inc  a
-    ld   (_91C9),a
+    ld   (scr_cage_up+$40),a
     inc  a
-    ld   (_91CA),a
+    ld   (scr_cage_up+$41),a
     inc  a
-    ld   (_91AB),a
+    ld   (scr_cage_up+$22),a
     inc  a
-    ld   (_91AC),a
+    ld   (scr_cage_up+$23),a
     inc  a
-    ld   (_91CB),a
+    ld   (scr_cage_up+$42),a
     inc  a
-    ld   (_91CC),a
+    ld   (scr_cage_up+$43),a
     inc  a
-    ld   (_918B),a
+    ld   (scr_cage_up+$02),a
     inc  a
-    ld   (_918C),a
+    ld   (scr_cage_up+$03),a
     jr   _more_cage
 ;; notes
     db   $10,$01,$12,$03
@@ -8610,9 +8584,9 @@ _4492:
 
 _more_cage:
     inc  a
-    ld   (_9189),a
+    ld   (scr_cage_up+$00),a
     inc  a
-    ld   (_918A),a
+    ld   (scr_cage_up+$01),a
     ret
 
     dc   19, $FF
