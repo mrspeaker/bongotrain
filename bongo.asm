@@ -206,6 +206,18 @@
     input_buttons     = $83F1  ; copied to 800C and 800D
     input_buttons_2   = $83F2  ; dunno what buttons
 
+
+;;; ============ Bongo World Map  =============
+;;;
+;;;  1:  n_n  n_n  nTn  n_n   /   W
+;;;  7:   \   n_n  nTn   /    W
+;;; 12:   \   n_n  nTn  n_n   S
+;;; 17:   \   n_n   S    \   S_S
+;;; 22:   W    \   S_S
+;;; 25:   W    \    S
+;;;
+
+
 ;;;  constants
 
     ;; 16bit signed sub constants
@@ -216,10 +228,10 @@
     scr_line_prev     = $FFE0       ; -32 = previous screen line
 
     ;; 8bit constants
-    screen_width      = $E0  ; 224
-    scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
-    scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
-    num_screens       = $1B  ; 27 screens
+    screen_width      = $E0 ; 224
+    scr_tile_w        = $1A ; 26 columns (just playable? TW=27.)
+    scr_tile_h        = $1C ; 28 rows    (only playable area? TH=31.)
+    num_screens       = $1B ; 27 screens
 
     round1_speed      = $1F
     round2_speed      = $10
@@ -251,7 +263,7 @@
     tile_pik_ring     = $9E
     tile_pik_vase     = $9F
 
-    tile_lvl_01       = $C0  ; start of row 7 of 8 on tilesheet
+    tile_lvl_01       = $C0 ; start of row 7 of 8 on tilesheet
     ;; tile > $F8 is a platform
     tile_solid        = $F8 ; high-wire platform R
     tile_platform_r   = $FC
@@ -289,53 +301,53 @@
 
 ;;; hardware locations
 
+    ;; =============== Video RAM: background tiles ==============
+
+    ;; Background tiles layout is top-to-bottom, right-to-left (!).
+    ;; The first visible tile at the top-right at $9040. The next tile
+    ;; ($9041) is directly BELOW that. At $9040+$20 (32 tiles later) it
+    ;; wraps to the previous column, until $93BF in the bottom left.
+
     screen_ram        = $9000 ; - 0x93ff  videoram
     start_of_tiles    = $9040 ; top-right tile
 
-    ;; TODO: a whole bunch of screen locations. Figure 'em out, and name them.
-    p2_score_digits   = $9061  ; score for player 2
-    p2_timer_digits   = $9082  ; timer for player 1
-    _908E             = $908E  ; ?
-    _hi_under_X       = $9090  ; hiscore screen, under X (wrap point)
-    _9092             = $9092  ; ?
-    scr_pik_r_W       = $90CB  ; highwire pickup, right
-    _90E2             = $90E2  ;
-    _911A             = $911A  ; ?
-    scr_lives_p2      = $9122  ; icons for lives, p2
-    scr_pik_n_n       = $915A  ; pickup right n_n levels
-    _9184             = $9184  ;
-    scr_cage_up       = $9189  ; top-right tile of cage at top of screen
-    _918E             = $918E  ;
-    scr_num_creds     = $9199  ;
-    scr_hiscore       = $91A1  ; trailing 0 of hiscore
-    _91B1             = $91B1  ;
-    _91C9             = $91C9  ;
-    _91D2             = $91D2  ;
-    _9217             = $9217  ;
-    _9224             = $9224  ;
-    _922B             = $922B  ;
-    _9231             = $9231  ;
-    _9248             = $9248  ;
-    hi_name_entry     = $9277  ; as you enter your name
-    _927A             = $927A  ;
-    hi_name           = $9280  ; hiscore name
-    _9297             = $9297  ;
-    _92AB             = $92AB  ;
-    scr_lives_p1      = $92C2  ; first "life" icon for p1
-    scr_lvl_bg_start  = $92E0  ; pos (6,0): first tile in level background
-    p1_score_digits   = $92E1  ;
-    scr_pik_S_top     = $92EE  ; top-left pickup for S levels
-    p1_timer_digits   = $9302  ;
-    _9308             = $9308  ;
-    _930C             = $930C  ;
-    _9310             = $9310  ;
-    _9314             = $9314  ;
-    scr_bonus_sq      = $934B  ; top-right red square over bonus number
-    _934E             = $934E  ;
-    _9350             = $9350  ;
-    _9352             = $9352  ;
-    scr_hs_timer      = $9362  ; second digit of 90 second timer in hiscore
-    scr_unused_spiral = $93A0  ;
+    ;; screen tile locations
+    p2_score_digits   = $9061 ; score for player 2
+    p2_timer_digits   = $9082 ; timer for player 1
+    _908E             = $908E ; something in hiscore screen
+    scr_hi_under_X    = $9090 ; hiscore screen, under X (wrap point)
+    _9092             = $9092 ; something in hiscore screen
+    scr_pik_r_W       = $90CB ; "W" highwire pickup, right
+    _911A             = $911A ; pickup
+    scr_lives_p2      = $9122 ; icons for lives, p2
+    scr_pik_n_n       = $915A ; pickup right "n_n" levels
+    _9184             = $9184 ; something in hiscore screen
+    scr_cage_up       = $9189 ; top-right tile of cage at top of screen
+    _918E             = $918E ; pickup
+    scr_num_creds     = $9199
+    scr_hiscore       = $91A1 ; trailing 0 of hiscore
+    _91B1             = $91B1 ; pickup
+    _91C9             = $91C9 ; cage location?
+    _91D2             = $91D2 ; pickup
+    _9217             = $9217 ; pickup
+    scr_attract_cage  = $9224 ;
+    _922B             = $922B ; pickup
+    _9231             = $9231 ; pickup
+    scr_bongo_logo    = $9248
+    scr_hi_name_entry = $9277 ; as you enter your name
+    _927A             = $927A ; pickup
+    scr_hi_name       = $9280 ; hiscore name
+    _92AB             = $92AB ; pickup
+    scr_lives_p1      = $92C2 ; first "life" icon for p1
+    scr_lvl_bg_start  = $92E0 ; pos (6,0): first tile in level background
+    p1_score_digits   = $92E1
+    scr_pik_S_top     = $92EE ; top-left pickup for "S" levels
+    p1_timer_digits   = $9302
+    attract_piks      = $9308 ; pickup location in attract screen
+    scr_bonus_sq      = $934B ; top-right red square over bonus number
+    scr_cursor_line_hs= $934E ; under the letters in hiscore entry
+    scr_hs_timer      = $9362 ; second digit of 90 second timer in hiscore
+    scr_unused_spiral = $93A0 ; the spiral transition routine
 
     end_of_tiles      = $93BF ; bottom left tile
 
@@ -353,17 +365,6 @@
     watchdog          = $B800 ; main timer?
     _C000             = $C000 ;
     _C003             = $C003 ;
-
-
-;;; ============ Bongo World Map  =============
-;;;
-;;;  1:  n_n  n_n  nTn  n_n   /   W
-;;;  7:   \   n_n  nTn   /    W
-;;; 12:   \   n_n  nTn  n_n   S
-;;; 17:   \   n_n   S    \   S_S
-;;; 22:   W    \   S_S
-;;; 25:   W    \    S
-;;;
 
 
 ;;; ============ START OF BG1.BIN =============
@@ -3406,56 +3407,56 @@ animate_splash_pickup_nops:
     nop
     nop
 animate_splash_pickups:
-    ld   a,(_9308)
+    ld   a,(attract_piks+$00)
     cp   tile_blank
     jr   z,_157D
     cp   tile_crown_pika
     jr   nz,_1578
     ld   a,$9C
-    ld   (_9308),a
+    ld   (attract_piks+$00),a
     jr   _157D
 _1578:
     ld   a,tile_crown_pika
-    ld   (_9308),a
+    ld   (attract_piks+$00),a
 ;;
 _157D:
-    ld   a,(_930C)
+    ld   a,(attract_piks+$04)
     cp   tile_blank
     jr   z,_1594
     cp   $8D
     jr   nz,_158F
     ld   a,$9D
-    ld   (_930C),a
+    ld   (attract_piks+$04),a
     jr   _1594
 _158F:
     ld   a,$8D
-    ld   (_930C),a
+    ld   (attract_piks+$04),a
 ;;
 _1594:
-    ld   a,(_9310)
+    ld   a,(attract_piks+$08)
     cp   tile_blank
     jr   z,_15AB
     cp   $8E
     jr   nz,_15A6
     ld   a,$9E
-    ld   (_9310),a
+    ld   (attract_piks+$08),a
     jr   _15AB
 _15A6:
     ld   a,$8E
-    ld   (_9310),a
+    ld   (attract_piks+$08),a
 
 _15AB:
-    ld   a,(_9314)
+    ld   a,(attract_piks+$0C)
     cp   tile_blank
     jr   z,_15C2
     cp   $8F
     jr   nz,_15BD
     ld   a,$9F
-    ld   (_9314),a
+    ld   (attract_piks+$0C),a
     jr   _15C2
 _15BD:
     ld   a,$8F
-    ld   (_9314),a
+    ld   (attract_piks+$0C),a
 _15C2:
     ret
 
@@ -3475,28 +3476,28 @@ attract_bonus_screen:
     call draw_border_1
     call animate_splash_screen
     ld   a,tile_crown_pika
-    ld   (_9308),a
+    ld   (attract_piks+$00),a
     call animate_splash_screen
     call draw_tiles_h
     db   $08,$10
     db   $02,$00,$00,$10,$20,$24,$23,$FF ;  200
     call animate_splash_screen
     ld   a,$8D
-    ld   (_930C),a
+    ld   (attract_piks+$04),a
     call animate_splash_screen
     call draw_tiles_h
     db   $0C,$10
     db   $04,$00,$00,$10,$20,$24,$23,$FF ;  400 ...
     call animate_splash_screen
     ld   a,$8E
-    ld   (_9310),a
+    ld   (attract_piks+$08),a
     call animate_splash_screen
     call draw_tiles_h
     db   $10,$10
     db   $06,$00,$00,$10,$20,$24,$23,$FF ;  600 ...8
     call animate_splash_screen
     ld   a,$8F
-    ld   (_9314),a
+    ld   (attract_piks+$0C),a
     call animate_splash_screen
     call draw_tiles_h
     db   $14,$10
@@ -3661,7 +3662,12 @@ _1722:
     dc   23, $FF
 
 ;;; ==========================================
-
+;;; Go to the next level when the player gets to the right edge
+;;; of the screen, at the top or the bottom. This prevents the
+;;; game transitioning if you jump of the moving platforms in
+;;; the middle of the screen. (Though, it is possible to skip
+;;; the tricky lava-jump "S_S" levels, if you carefully jump UNDER
+;;; the platform on the bottom right!)
 check_done_screen:
     scf
     ccf
@@ -5594,10 +5600,10 @@ enter_hiscore_screen:
     ld   (scr_hs_timer+$00),a ; first digit
     ld   (hiscore_timer),a
     pop  af
-    ld   iy,hi_name_entry
+    ld   iy,scr_hi_name_entry
     ld   (_9184),a ; something else on screen...
     call hiscore_clear_name
-    ld   hl,_934E
+    ld   hl,scr_cursor_line_hs
 set_cursor:
     ld   (hl),tile_cursor
     ld   ix,input_buttons
@@ -5695,7 +5701,7 @@ hiscore_rub_letter:
     add  iy,de
     ld   (iy+$00),$2B
     ld   a,$10
-    ld   (_9297),a
+    ld   (scr_hi_name_entry+$20),a
     push hl
     push iy
     pop  hl
@@ -5728,7 +5734,7 @@ hiscore_back_cursor:
     ld   a,$92
     cp   l
     jr   nz,_2F63
-    ld   hl,_hi_under_X
+    ld   hl,scr_hi_under_X
     ret
 _2F63:
     ld   a,$90
@@ -5777,19 +5783,19 @@ hiscore_fwd_cursor:
     ld   a,$4E
     cp   l
     jr   nz,_2FC1
-    ld   hl,_9350 ; wrap line 1
+    ld   hl,scr_cursor_line_hs+$2 ; wrap line 1
     ret
 _2FC1:
     ld   a,$50
     cp   l
     jr   nz,_2FCA
-    ld   hl,_9352 ; wrap line 2
+    ld   hl,scr_cursor_line_hs+$4 ; wrap line 2
     ret
 _2FCA:
     ld   a,$52
     cp   l
     ret  nz
-    ld   hl,_934E ; wrap line 3
+    ld   hl,scr_cursor_line_hs ; wrap line 3
     ret
 
     dc   3, $FF
@@ -5806,34 +5812,34 @@ _2FD5:
 
 copy_hiscore_name_to_screen:
     ld   hl,hiscore_name
-    ld   a,(hi_name_entry-0*$20) ; char 1
+    ld   a,(scr_hi_name_entry-0*$20) ; char 1
     ld   (hl),a
-    ld   a,(hi_name_entry-1*$20) ; char 2
+    ld   a,(scr_hi_name_entry-1*$20) ; char 2
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-2*$20) ; char 3
+    ld   a,(scr_hi_name_entry-2*$20) ; char 3
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-3*$20) ; char 4
+    ld   a,(scr_hi_name_entry-3*$20) ; char 4
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-4*$20) ; char 5
+    ld   a,(scr_hi_name_entry-4*$20) ; char 5
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-5*$20) ; char 6
+    ld   a,(scr_hi_name_entry-5*$20) ; char 6
     inc  hl
     ld   (hl),a
 ;;; === END OF BG3.BIN, START OF BG4.BIN ======
-    ld   a,(hi_name_entry-6*$20) ; char 7
+    ld   a,(scr_hi_name_entry-6*$20) ; char 7
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-7*$20) ; char 8
+    ld   a,(scr_hi_name_entry-7*$20) ; char 8
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-8*$20) ; char 9
+    ld   a,(scr_hi_name_entry-8*$20) ; char 9
     inc  hl
     ld   (hl),a
-    ld   a,(hi_name_entry-9*$20) ; char 10
+    ld   a,(scr_hi_name_entry-9*$20) ; char 10
     inc  hl
     ld   (hl),a
     call _30C0
@@ -5856,25 +5862,25 @@ _3022:
 ;; actually - different screen loc than copy_msg 1!
 copy_hiscore_name_to_screen_2:
     ld   a,(hiscore_name+0)
-    ld   (hi_name-0*$20),a   ; char 1
+    ld   (scr_hi_name-0*$20),a   ; char 1
     ld   a,(hiscore_name+1)
-    ld   (hi_name-1*$20),a   ; char 2
+    ld   (scr_hi_name-1*$20),a   ; char 2
     ld   a,(hiscore_name+2)
-    ld   (hi_name-2*$20),a   ; char 3
+    ld   (scr_hi_name-2*$20),a   ; char 3
     ld   a,(hiscore_name+3)
-    ld   (hi_name-3*$20),a   ; char 4
+    ld   (scr_hi_name-3*$20),a   ; char 4
     ld   a,(hiscore_name+4)
-    ld   (hi_name-4*$20),a   ; char 5
+    ld   (scr_hi_name-4*$20),a   ; char 5
     ld   a,(hiscore_name+5)
-    ld   (hi_name-5*$20),a   ; char 6
+    ld   (scr_hi_name-5*$20),a   ; char 6
     ld   a,(hiscore_name+6)
-    ld   (hi_name-6*$20),a   ; char 7
+    ld   (scr_hi_name-6*$20),a   ; char 7
     ld   a,(hiscore_name+7)
-    ld   (hi_name-7*$20),a   ; char 8
+    ld   (scr_hi_name-7*$20),a   ; char 8
     ld   a,(hiscore_name+8)
-    ld   (hi_name-8*$20),a   ; char 9
+    ld   (scr_hi_name-8*$20),a   ; char 9
     ld   a,(hiscore_name+9)
-    ld   (hi_name-9*$20),a   ; char 10
+    ld   (scr_hi_name-9*$20),a   ; char 10
     ret
 
     dc   11, $FF
@@ -8237,6 +8243,7 @@ _i_2:
     call _4080
     ret
 
+;;; uncalled?
     ld   a,$9C
     ld   (_91B1),a
     ret
@@ -8255,6 +8262,7 @@ _i_3:
     call _40C0
     ret
 
+;;; uncalled?
     ld   a,$9C
     ld   (_918E),a
     ret
@@ -9859,7 +9867,7 @@ attract_splash_bongo:
     call jmp_hl
     ld   hl,blank_out_bottom_row
     call jmp_hl
-    ld   hl,_9248 ; draw the BONGO logo
+    ld   hl,scr_bongo_logo ; draw the BONGO logo
     ld   b,$A0
     ld   c,$05
 _loop_4E53:
@@ -10681,7 +10689,7 @@ call_attract_bonus_screen:
     dc   1, $FF
 
 attract_cage_falls_on_dino:
-    ld   hl,_9224
+    ld   hl,scr_attract_cage
 _lp_5433:
     call draw_cage_tiles
     push hl
@@ -10755,7 +10763,7 @@ attract_catch_dino:
     ld   (hl),$12 ; col legs
     inc  hl
     ld   (hl),$CF ; y legs
-    ld   hl,_9224
+    ld   hl,scr_attract_cage
     call draw_cage_tiles
     call attract_dino_runs_along_ground
     call attract_dino_cage_invert
