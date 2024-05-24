@@ -8244,6 +8244,7 @@ _i_2:
     ret
 
 ;;; uncalled?
+_4216:
     ld   a,$9C
     ld   (_91B1),a
     ret
@@ -8263,6 +8264,7 @@ _i_3:
     ret
 
 ;;; uncalled?
+_4236:
     ld   a,$9C
     ld   (_918E),a
     ret
