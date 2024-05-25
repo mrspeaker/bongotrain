@@ -351,10 +351,11 @@
 
     end_of_tiles      = $93BF ; bottom left tile
 
-    ;; Anything in $93ff-$9800?
+    ;; $9400-$97FF seems to be mirrored to the first screen ($9000-$93FF).
+    ;; Change a value in one, it's reflected instantly in the other
 
     xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
-    sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
+    sprites           = $9840 ; 0x9840 - 0x98ff is spriteram
     port_in0          = $A000 ;
     port_in1          = $A800 ;
     port_in2          = $B000 ;
@@ -3261,7 +3262,7 @@ _loop__c83:
     jr   nz,_loop__c83
     inc  h
     ld   a,h
-    cp   $83 ; 1000 0011
+    cp   $83
     jr   nz,_loop__c83
     ret
 
@@ -3286,17 +3287,21 @@ reset_xoff_sprites_and_clear_screen:
     nop ; end of weird nopslide
 
 ;;; ==========================================
-
+;;; Clears video RAM from $9000-$97FF
+;;; I don't understand the $9400-$97ff screen.
+;;; It's a mirror to the first, so this seems like
+;;; clearing up to $9800 (instead of $9400) would
+;;; be a waste of time?
 clear_screen:
     ld   hl,screen_ram
-_1483:
+_loop_cs:
     ld   (hl),tile_blank
     inc  l
-    jr   nz,_1483
+    jr   nz,_loop_cs
     inc  h
     ld   a,h
-    cp   $98
-    jr   nz,_1483
+    cp   $98     ; Hit $9800?
+    jr   nz,_loop_cs
     ret
 
     db   $FF
@@ -3480,28 +3485,28 @@ attract_bonus_screen:
     call animate_splash_screen
     call draw_tiles_h
     db   $08,$10
-    db   $02,$00,$00,$10,$20,$24,$23,$FF ;  200
+    db   2,0,0,__,P_,T_,S_,$FF ;  200 PTS
     call animate_splash_screen
     ld   a,$8D
     ld   (attract_piks+$04),a
     call animate_splash_screen
     call draw_tiles_h
     db   $0C,$10
-    db   $04,$00,$00,$10,$20,$24,$23,$FF ;  400 ...
+    db   4,0,0,__,P_,T_,S_,$FF ;  400 PTS
     call animate_splash_screen
     ld   a,$8E
     ld   (attract_piks+$08),a
     call animate_splash_screen
     call draw_tiles_h
     db   $10,$10
-    db   $06,$00,$00,$10,$20,$24,$23,$FF ;  600 ...8
+    db   6,0,0,__,P_,T_,S_,$FF ;  600 PTS
     call animate_splash_screen
     ld   a,$8F
     ld   (attract_piks+$0C),a
     call animate_splash_screen
     call draw_tiles_h
     db   $14,$10
-    db   $01,$00,$00,$00,$10,$20,$24,$23,$FF ;  1000 ...8
+    db   1,0,0,0,__,P_,T_,S_,$FF ;  1000 PTS
     call animate_splash_screen
     call animate_splash_screen
     call animate_splash_screen
@@ -3673,11 +3678,11 @@ check_done_screen:
     ccf
     ld   a,(player_y) ; Test if player is at top or bottom
     add  a,$48 ; Y + 72 > 255?
-    jr   c,_175C ; ...yep, check x
+    jr   c,_valid_exit_y ; ...yep, check x
     sub  $78 ; Y - 120 < 0?
     ret  nc ; ...no, can't finish level here...
 ;; check if gone past edge of screen
-_175C:
+_valid_exit_y:
     ld   a,(player_x)
     scf
     ccf
