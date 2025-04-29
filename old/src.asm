@@ -1,372 +1,417 @@
-;;; Bongo by JetSoft, 1983
-;;; picked apart and rebuilt by Mr Speaker, 2023.
-;;; https://www.mrspeaker.net
+;; Bongo by JetSoft
+;; picked apart by Mr Speaker
+;; https://www.mrspeaker.net
 
-;;; Builds to MAME-exact version of Bongo ROM zip file.
-;;; Read README.org for details and building instructions.
+;; NOTE: see README for building details
 
-;;; Overview:
-;;; - BIG_RESET ($1000) inits and starts loop
-;;; - Main loop is at MAIN_LOOP ($104b)
-;;; - ... which calls UPDATE_EVERYTHING ($1170)
-;;; - Also a NMI interrupt loop ($66)
-;;; - ... which calls hardware-y stuff
+;; Overview:
+;; - BIG_RESET ($1000) inits and starts loop
+;; - Main loop is at MAIN_LOOP ($104b)
+;; - ... which calls UPDATE_EVERYTHING ($1170)
+;; - Also a NMI interrupt loop ($66)
+;; - ... which calls hardware-y stuff
 
-;;; Important Bongo lore:
-;;; - We decided "Bongo" is actually name of the lil' jumpy
-;;;   guy in the corner of the screen, not the player.
-;;;   He's complicated: celebrates the player's death,
-;;;   but also parties with player on dino capture.
+;; Important Bongo lore:
+;; - We decided "Bongo" is actually name of the lil' jumpy
+;;   guy in the corner of the screen, not the player.
+;;   He's complicated: celebrates the player's death,
+;;   but also parties with player on dino capture.
 
-;;; Entry Point: $0000 - `hard_reset`.
+tick_mod_3        = $8000  ; timer for every 3 frames
+tick_mod_6        = $8001  ; timer for every 6 frames
+pl_y_legs_copy    = $8002  ; copy of player y legs?
+_8003             = $8003  ; ? used with 8002 s bunch
+player_num        = $8004  ; current player
+jump_triggered    = $8005  ; jump triggered by setting jump_tbl_idx
+second_timer      = $8006
+p1_time           = $8007  ; time of player's run: never displayed!
+p1_timer_h        = $8008  ; hi byte of timer 1
+p2_time           = $8009  ; ...we could have had speed running!
+p2_timer_h        = $800A  ; hi byte of timer 2
+controls          = $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
+buttons_1         = $800C  ; P1/P2 buttons... and?
+buttons_2         = $800D  ; ... more buttons?
+controlsn         = $800E  ; some kind of "normalized" controls
+jump_tbl_idx      = $800F  ; index into table for physics jump
+walk_anim_timer   = $8010  ; % 7?
+falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
+player_died       = $8012  ; 0 = no, 1 = yep, dead
+p1_score          = $8014  ; (BCD score)
+p1_score_1        = $8015  ; (BCD score)
+p1_score_2        = $8016  ; (BCD score)
+p2_score          = $8017  ; (BCD score)
+p2_score_1        = $8018  ; (BCD score)
+p2_score_2        = $8019  ; (BCD score)
+_unused_1         = $801B  ; unused? Set once, never read
+score_to_add      = $801D  ; amount to add to the current score
 
-    START_OF_RAM      = $8000
+screen_ram_ptr    = $801E  ; maybe it's where to start drawing bg?
+level_bg_ptr      = $8020  ; screen data pointer (2 byte addr)
 
-    tick_mod_3        = $8000  ; timer for every 3 frames
-    tick_mod_6        = $8001  ; timer for every 6 frames
-    pl_y_legs_copy    = $8002  ; copy of player y legs?
-    _8003             = $8003  ; ? used with 8002 s bunch
-    player_num        = $8004  ; current player
-    jump_triggered    = $8005  ; jump triggered by setting jump_tbl_idx
-    second_timer      = $8006
-    p1_time           = $8007  ; time of player's run: never displayed!
-    p1_timer_h        = $8008  ; hi byte of timer 1
-    p2_time           = $8009  ; ...we could have had speed running!
-    p2_timer_h        = $800A  ; hi byte of timer 2
-    controls          = $800B  ; 0010 0000 = jump, 1000 = right, 0100 = left
-    buttons_1         = $800C  ; P1/P2 buttons... and?
-    buttons_2         = $800D  ; ... more buttons?
-    controlsn         = $800E  ; some kind of "normalized" controls
-    jump_tbl_idx      = $800F  ; index into table for physics jump
-    walk_anim_timer   = $8010  ; % 7?
-    falling_timer     = $8011  ; set to $10 when falling - if hits 0, dead.
-    player_died       = $8012  ; 0 = no, 1 = yep, dead
-    p1_score          = $8014  ; (BCD score)
-    p1_score_1        = $8015  ; (BCD score)
-    p1_score_2        = $8016  ; (BCD score)
-    p2_score          = $8017  ; (BCD score)
-    p2_score_1        = $8018  ; (BCD score)
-    p2_score_2        = $8019  ; (BCD score)
-    _unused_1         = $801B  ; unused? Set once, never read
-    score_to_add      = $801D  ; amount to add to the current score
+did_init          = $8022  ; set after first init, not really used
+bongo_anim_timer  = $8023  ; [0,1,2] updated every 8 ticks
+bongo_jump_timer  = $8024  ; amount of ticks keep jumping for
+bongo_dir_flag    = $8025  ; 4 = jump | 2 = left | 1 = right
+bongo_timer       = $8027  ; ticks 0-1f for troll
 
-    screen_ram_ptr    = $801E  ; maybe it's where to start drawing bg?
-    level_bg_ptr      = $8020  ; screen data pointer (2 byte addr)
+screen_num        = $8029  ; Current screen player is on
+screen_num_p2     = $802A  ; Player 2 screen
+_802c             = $802C  ; ??
+dino_counter      = $802D  ; Ticks up when DINO_TIMER is done
+dino_dir          = $802E  ; 01 = right, ff = left
 
-    did_init          = $8022  ; set after first init, not really used
-    bongo_anim_timer  = $8023  ; [0,1,2] updated every 8 ticks
-    bongo_jump_timer  = $8024  ; amount of ticks keep jumping for
-    bongo_dir_flag    = $8025  ; 4 = jump | 2 = left | 1 = right
-    bongo_timer       = $8027  ; ticks 0-1f for troll
+player_max_x      = $8030  ; furthest x pos (used for move score)
+is_2_players      = $8031  ; 1=2p, 0=1p mode (not used much)
+lives             = $8032
+lives_p2          = $8033
+num_players       = $8034  ; attract mode = 0, 1P = 1, 2P = 2
+credits_umm       = $8035  ; something to do with credits
 
-    screen_num        = $8029  ; Current screen player is on
-    screen_num_p2     = $802A  ; Player 2 screen
-    _802c             = $802C  ; ??
-    dino_counter      = $802D  ; Ticks up when DINO_TIMER is done
-    dino_dir          = $802E  ; 01 = right, ff = left
+;; Enemies: seems to be mix-and-match per screen
+rock_fall_timer   = $8036  ; resets falling pos of rock
+enemy_1_active    = $8037  ; not really "active":  has many values.
+enemy_1_timer     = $8038  ; unused?
+enemy_2_active    = $8039  ;
+enemy_2_timer     = $803A  ;
+enemy_3_active    = $803B  ;
+enemy_3_timer     = $803C  ;
+enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
+rock_left_timer   = $803E  ; Rock left timer
+_803f             = $803F  ; ...2
+_8040             = $8040  ; ?
+enemy_6_active    = $8041  ;
 
-    player_max_x      = $8030  ; furthest x pos (used for move score)
-    is_2_players      = $8031  ; 1=2p, 0=1p mode (not used much)
-    lives             = $8032
-    lives_p2          = $8033
-    num_players       = $8034  ; attract mode = 0, 1P = 1, 2P = 2
-    credits_umm       = $8035  ; something to do with credits
+ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+ch2_sfx           = $8043  ; SFX channel 2
+sfx_id            = $8044  ; queued sound effect ID to play
 
-    ;; Enemies: seems to be mix-and-match per screen
-    rock_fall_timer   = $8036  ; resets falling pos of rock
-    enemy_1_active    = $8037  ; not really "active":  has many values.
-    enemy_1_timer     = $8038  ; unused?
-    enemy_2_active    = $8039  ;
-    enemy_2_timer     = $803A  ;
-    enemy_3_active    = $803B  ;
-    enemy_3_timer     = $803C  ;
-    enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
-    rock_left_timer   = $803E  ; Rock left timer
-    _803f             = $803F  ; ...2
-    _8040             = $8040  ; ?
-    enemy_6_active    = $8041  ;
+lava_tile_offset  = $804B  ; Current lava tile (offset?)
 
-    ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
-    ch2_sfx           = $8043  ; SFX channel 2
-    sfx_id            = $8044  ; queued sound effect ID to play
-    _8046             = $8046  ; ?
-    _8049             = $8049  ; ?
-    _804A             = $804A  ; ?
+1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
+1up_scr_pos_2     = $804E  ; ... but not used I reckon,
+1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
 
-    lava_tile_offset  = $804B  ; Current lava tile (offset?)
+1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
+is_hit_cage       = $8051  ; did player trigger cage?
 
-    1up_scr_pos       = $804C  ; I reckon its where the 1up bonus text is on screen
-    1up_scr_pos_2     = $804E  ; ... but not used I reckon,
-    1up_scr_pos_3     = $804F  ; ... as they decided not to clear the text
+sfx_val_1         = $8052  ; All used in similar looking sfx subs
+sfx_val_2         = $8053  ;
+sfx_val_3         = $8054  ;
+sfx_val_4         = $8055  ;
+sfx_val_5         = $8056  ;
+sfx_val_6         = $8057  ;
 
-    1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
-    is_hit_cage       = $8051  ; did player trigger cage?
+speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
+speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
+dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
 
-    sfx_val_1         = $8052  ; All used in similar looking sfx subs
-    sfx_val_2         = $8053  ;
-    sfx_val_3         = $8054  ;
-    sfx_val_4         = $8055  ;
-    sfx_val_5         = $8056  ;
-    sfx_val_6         = $8057  ;
+bonuses           = $8060  ; How many bonuses collected
+bonus_mult        = $8062  ; Bonus multiplier.
 
-    speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
-    speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
-    dino_timer        = $805D  ; timer based on SPEED_DELAY (current round)
+splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
+sfx_prev          = $8065  ; prevent retrigger effect?
 
-    bonuses           = $8060  ; How many bonuses collected
-    bonus_mult        = $8062  ; Bonus multiplier.
+_8066             = $8066  ; ?? OE when alive, 02 when dead?
+_8067             = $8067  ; ?? used with 66
+_8068             = $8068  ; ?? used with 67
 
-    splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
-    sfx_prev          = $8065  ; prevent retrigger effect?
-    ch1_cur_id        = $8066  ; sfx id (?) OE when alive, 02 when dead etc
-    ch2_cur_id        = $8067  ;
-    ch3_cur_id        = $8068  ;
+extra_got_p1      = $8070  ; P1 Earned extra life
+extra_got_p2      = $8071  ; P2 Earned extra life
 
-    extra_got_p1      = $8070  ; P1 Earned extra life
-    extra_got_p2      = $8071  ; P2 Earned extra life
-
-    hiscore_timer     = $8075  ; Countdown for entering time in hiscore screen
-    hiscore_timer2    = $8076  ; 16 counter for countdown
+hiscore_timer     = $8075  ; Countdown for entering time in hiscore screen
+hiscore_timer2    = $8076  ; 16 counter for countdown
 
 
-    ;; Bunch of unused/debugs/tmps?
-    _8080             = $8080  ; set to 3 in unused sub, never read
-    _8086             = $8086  ; set in hiscore, never read
-    _8090             = $8090  ; set to 1, never read?
-    _8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
-    _8094             = $8094  ; unused? used with 8093
-    _80FF             = $80FF  ; cleared at start (HARD_RESET)
+;; Bunch of unused/debugs/tmps?
+_8080             = $8080  ; set to 3 in unused sub, never read
+_8086             = $8086  ; set in hiscore, never read
+_8090             = $8090  ; set to 1, never read?
+_8093             = $8093  ; set to $20 in coinage... hiscore, cursor?
+_8094             = $8094  ; unused? used with 8093
+_80FF             = $80FF  ; cleared at start (HARD_RESET)
 
-    screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
-                               ; 40 bytes, Gets memcpy'd to $9800
+screen_xoff_col   = $8100  ; OFFSET and COL for each row of tiles
+; Gets memcpy'd to $9800
+
 
 ;;; ======== SPRITES ========
 ;;; all have the form: X, FRAME, COL, Y.
-    player_x          = $8140
-    player_frame      = $8141
-    player_col        = $8142
-    player_y          = $8143
-    player_x_legs     = $8144
-    player_frame_legs = $8145
-    player_col_legs   = $8146
-    player_y_legs     = $8147
-    bongo_x           = $8148
-    bongo_frame       = $8149
-    bongo_col         = $814A
-    bongo_y           = $814B
-    dino_x            = $814C
-    dino_frame        = $814D
-    dino_col          = $814E
-    dino_y            = $814F
-    dino_x_legs       = $8150
-    dino_frame_legs   = $8151
-    dino_col_legs     = $8152
-    dino_y_legs       = $8153
-    enemy_1_x         = $8154
-    enemy_1_frame     = $8155
-    enemy_1_col       = $8156
-    enemy_1_y         = $8157
-    enemy_2_x         = $8158
-    enemy_2_frame     = $8159
-    enemy_2_col       = $815A
-    enemy_2_y         = $815B
-    enemy_3_x         = $815C
-    enemy_3_frame     = $815D
-    enemy_3_col       = $815E
-    enemy_3_y         = $815F
+player_x          = $8140
+player_frame      = $8141
+player_col        = $8142
+player_y          = $8143
+player_x_legs     = $8144
+player_frame_legs = $8145
+player_col_legs   = $8146
+player_y_legs     = $8147
+bongo_x           = $8148
+bongo_frame       = $8149
+bongo_col         = $814A
+bongo_y           = $814B
+dino_x            = $814C
+dino_frame        = $814D
+dino_col          = $814E
+dino_y            = $814F
+dino_x_legs       = $8150
+dino_frame_legs   = $8151
+dino_col_legs     = $8152
+dino_y_legs       = $8153
+enemy_1_x         = $8154
+enemy_1_frame     = $8155
+enemy_1_col       = $8156
+enemy_1_y         = $8157
+enemy_2_x         = $8158
+enemy_2_frame     = $8159
+enemy_2_col       = $815A
+enemy_2_y         = $815B
+enemy_3_x         = $815C
+enemy_3_frame     = $815D
+enemy_3_col       = $815E
+enemy_3_y         = $815F
 ;;; ============================
 
-    platform_xoffs    = $8180  ; maybe
+platform_xoffs    = $8180  ; maybe
 
-    synth1            = $82A0  ; bunch of bytes for sfx
-    synthy_um_1       = $82A5  ; ?
-    synth2            = $82A8  ; bunch of bytes for sfx
-    synthy_um_2       = $82AD  ; no idea. Read once... written where?
-    synth3            = $82B0  ; bunch of bytes for sfx
-    synthy_um_3       = $82B5  ; ?
-    synth1_um_b       = $82B8  ; ?
-    synth2_um_b       = $82D0  ; ?
-    synth3_um_b       = $82E8  ; ?
+synth1            = $82A0  ; bunch of bytes for sfx
+synth2            = $82A8  ; bunch of bytes for sfx
+synth3            = $82B0  ; bunch of bytes for sfx
 
-    hiscore           = $8300  ;
-    hiscore_1         = $8301  ;
-    hiscore_2         = $8302
+hiscore           = $8300  ;
+hiscore_1         = $8301  ;
+hiscore_2         = $8302
 
-    credits           = $8303  ; how many credits in machine
-    coinage_2         = $8305  ; Coins? dunno
-    coinage           = $8306  ; dunno what "coinage" is really.
-    hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
+credits           = $8303  ; how many credits in machine
+_8305             = $8305  ; Coins? dunno
+hiscore_name      = $8307  ; - $8310: Start of HI-SCORE text message area (10 bytes)
 
-    tick_num          = $8312  ; adds 1 every tick
-    ;; NOTE: TICK_MOD is sped up after round 1!
-    tick_mod_fast     = $8315  ; % 3 in round 1, % 2 in round 2+
-    tick_mod_slow     = $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
+tick_num          = $8312  ; adds 1 every tick
+;; NOTE: TICK_MOD is sped up after round 1!
+tick_mod_fast     = $8315  ; % 3 in round 1, % 2 in round 2+
+tick_mod_slow     = $8316  ; % 6 in round 1, % 4 in round 2+. (offset by 1 from $8001)
 
-    stack_location    = $83F0  ; I think?
-    input_buttons     = $83F1  ; copied to 800C and 800D
-    input_buttons_2   = $83F2  ; dunno what buttons
+stack_location    = $83F0  ; I think?
+input_buttons     = $83F1  ; copied to 800C and 800D
+input_buttons_2   = $83F2  ; dunno what buttons
 
+;; TODO: give these symbols a name!
+_8046             = $8046  ; ?
+_8049             = $8049  ; ?
+_804A             = $804A  ; ?
+_8101             = $8101  ; ?
+_8105             = $8105  ; ?
+_8106             = $8106  ; ?
+_8108             = $8108  ; ?
+_8126             = $8126  ; ?
+_8128             = $8128  ; ?
+_8129             = $8129  ; ?
+_812A             = $812A  ; ?
+_8131             = $8131  ; ?
+_8133             = $8133  ; ?
+_8135             = $8135  ; ?
+_8137             = $8137  ; ?
+_8138             = $8138  ; ?
+_813F             = $813F  ; ?
+_82A5             = $82A5  ; ?
+_82AD             = $82AD  ; ?
+_82B5             = $82B5  ; ?
+_82B8             = $82B8  ; ?
+_82D0             = $82D0  ; ?
+_82E8             = $82E8  ; ?
+_8306             = $8306  ; ?
+_8308             = $8308  ; ?
+_8309             = $8309  ; ?
+_830A             = $830A  ; ?
+_830B             = $830B  ; ?
+_830C             = $830C  ; ?
+_830D             = $830D  ; ?
+_830E             = $830E  ; ?
+_830F             = $830F  ; ?
+_8310             = $8310  ; ?
 
-;;; ============ Bongo World Map  =============
-;;;
-;;;  1:  n_n  n_n  nTn  n_n   /   W
-;;;  7:   \   n_n  nTn   /    W
-;;; 12:   \   n_n  nTn  n_n   S
-;;; 17:   \   n_n   S    \   S_S
-;;; 22:   W    \   S_S
-;;; 25:   W    \    S
-;;;
-
+;; 16bit signed sub constants
+JMP_HL_OFFSET     = $4000
+MINUS_95          = $FFA1
+MINUS_64          = $FFC0
+MINUS_36          = $FFDC
 
 ;;;  constants
 
-    ;; 16bit signed sub constants
-    JMP_HL_OFFSET     = $4000
-    MINUS_95          = $FFA1
-    MINUS_64          = $FFC0
-    MINUS_36          = $FFDC
-    scr_line_prev     = $FFE0       ; -32 = previous screen line
+screen_width      = $E0  ; 224
+scr_tile_w        = $1A  ; 26 columns (just playable? TW=27.)
+scr_tile_h        = $1C  ; 28 rows    (only playable area? TH=31.)
+num_screens       = $1B  ; 27 screens
 
-    ;; 8bit constants
-    screen_width      = $E0 ; 224
-    scr_tile_w        = $1A ; 26 columns (just playable? TW=27.)
-    scr_tile_h        = $1C ; 28 rows    (only playable area? TH=31.)
-    num_screens       = $1B ; 27 screens
+round1_speed      = $1F
+round2_speed      = $10
+round3_speed      = $0D
 
-    round1_speed      = $1F
-    round2_speed      = $10
-    round3_speed      = $0D
+fr_rock_1         = $1D
+fr_spear          = $22
+fr_bird_1         = $23
+fr_bird_2         = $24
+fr_blue_1         = $34
+fr_blue_2         = $35
 
-    fr_rock_1         = $1D
-    fr_spear          = $22
-    fr_bird_1         = $23
-    fr_bird_2         = $24
-    fr_blue_1         = $34
-    fr_blue_2         = $35
+tile_0            = $00
+tile_9            = $09
+tile_blank        = $10
+tile_a            = $11
+tile_z            = $2A
+tile_hyphen       = $2B
 
-    tile_0            = $00
-    tile_9            = $09
-    tile_blank        = $10
-    tile_a            = $11
-    tile_z            = $2A
-    tile_hyphen       = $2B
+tile_cage         = $74       ; - $7f
+tile_cursor       = $89
+tile_crown_pika   = $8C ; alt crown
+tile_pik_crossa   = $8D
+tile_pik_ringa    = $8E
+tile_pik_vasea    = $8F
+tile_crown_pik    = $9C
+tile_pik_cross    = $9D
+tile_pik_ring     = $9E
+tile_pik_vase     = $9F
+tile_lvl_01       = $C0
 
-    tile_cage         = $74 ; - $7f
-    tile_cursor       = $89
-    tile_lives        = $8A
-    tile_crown_pika   = $8C ; alt crown
-    tile_pik_crossa   = $8D
-    tile_pik_ringa    = $8E
-    tile_pik_vasea    = $8F
-    tile_crown_pik    = $9C
-    tile_pik_cross    = $9D
-    tile_pik_ring     = $9E
-    tile_pik_vase     = $9F
+;; tile > $F8 is a platform
+tile_solid        = $F8 ; high-wire platform R
+tile_platform_r   = $FC
+tile_platform_c   = $FD
+tile_platform_l   = $FE
 
-    tile_lvl_01       = $C0 ; start of row 7 of 8 on tilesheet
-    ;; tile > $F8 is a platform
-    tile_solid        = $F8 ; high-wire platform R
-    tile_platform_r   = $FC
-    tile_platform_c   = $FD
-    tile_platform_l   = $FE
+scr_line_prev     = $FFE0       ; -32 = previous screen line
 
-    ;; Alphabet tile indexes
-    __                = $10
-    A_                = $11
-    B_                = $12
-    C_                = $13
-    D_                = $14
-    E_                = $15
-    F_                = $16
-    G_                = $17
-    H_                = $18
-    I_                = $19
-    J_                = $1A
-    K_                = $1B
-    L_                = $1C
-    M_                = $1D
-    N_                = $1E
-    O_                = $1F
-    P_                = $20
-    Q_                = $21
-    R_                = $22
-    S_                = $23
-    T_                = $24
-    U_                = $25
-    V_                = $26
-    W_                = $27
-    X_                = $28
-    Y_                = $29
-    Z_                = $2A
+;;; hardware
 
-;;; hardware locations
+screen_ram        = $9000 ; - 0x93ff  videoram
+start_of_tiles    = $9040 ; top right tile
 
-    ;; =============== Video RAM: background tiles ==============
+;; a hundred-odd screen locations. Figure 'em out, and name them.
+_9010             = $9010  ; ?​​
+_901F             = $901F  ; ?​​
+_9061             = $9061  ; ?​​
+_9081             = $9081  ; ?​​
+_9082             = $9082  ; ?​​
+_908E             = $908E  ; ?​​
+_9090             = $9090  ; ?​​
+_9092             = $9092  ; ?​​
+_90A1             = $90A1  ; ?​​
+_90A2             = $90A2  ; ?​​
+_90C1             = $90C1  ; ?​​
+_90CB             = $90CB  ; ?​​
+_90E1             = $90E1  ; ?​​
+_90E2             = $90E2  ; ?​​
+_9101             = $9101  ; ?​​
+_9102             = $9102  ; ?​​
+_911A             = $911A  ; ?​​
+_9122             = $9122  ; ?​​
+_9142             = $9142  ; ?​​
+_9157             = $9157  ; ?​​
+scr_pik_n_n       = $915A  ; pickup right n_n levels
+_9160             = $9160  ; ?​​
+_9162             = $9162  ; ?​​
+_9177             = $9177  ; ?​​
+_9179             = $9179  ; ?​​
+_9180             = $9180  ; ?​​
+_9182             = $9182  ; ?​​
+_9184             = $9184  ; ?​​
+_9189             = $9189  ; ?​​
+_918A             = $918A  ; ?​​
+_918B             = $918B  ; ?​​
+_918C             = $918C  ; ?​​
+_918E             = $918E  ; ?​​
+_9197             = $9197  ; ?​​
+_9199             = $9199  ; ?​​
+_91A0             = $91A0  ; ?​​
+_91A1             = $91A1  ; ?​​
+_91A2             = $91A2  ; ?​​
+_91A9             = $91A9  ; ?​​
+_91AA             = $91AA  ; ?​​
+_91AB             = $91AB  ; ?​​
+_91AC             = $91AC  ; ?​​
+_91B1             = $91B1  ; ?​​
+_91B7             = $91B7  ; ?​​
+_91C0             = $91C0  ; ?​​
+_91C1             = $91C1  ; ?​​
+_91C9             = $91C9  ; ?​​
+_91CA             = $91CA  ; ?​​
+_91CB             = $91CB  ; ?​​
+_91CC             = $91CC  ; ?​​
+_91D2             = $91D2  ; ?​​
+_91D7             = $91D7  ; ?​​
+_91D8             = $91D8  ; ?​​
+_91E0             = $91E0  ; ?​​
+_91E1             = $91E1  ; ?​​
+_91F7             = $91F7  ; ?​​
+_91F8             = $91F8  ; ?​​
+_91F9             = $91F9  ; ?​​
+_9200             = $9200  ; ?​​
+_9201             = $9201  ; ?​​
+_9217             = $9217  ; ?​​
+_9218             = $9218  ; ?​​
+_9219             = $9219  ; ?​​
+_9220             = $9220  ; ?​​
+_9221             = $9221  ; ?​​
+_9224             = $9224  ; ?​​
+_922B             = $922B  ; ?​​
+_9231             = $9231  ; ?​​
+_9237             = $9237  ; ?​​
+_9238             = $9238  ; ?​​
+_9239             = $9239  ; ?​​
+_9240             = $9240  ; ?​​
+_9241             = $9241  ; ?​​
+_9242             = $9242  ; ?​​
+_9248             = $9248  ; ?​​
+_9257             = $9257  ; ?​​
+_9260             = $9260  ; ?​​
+_9262             = $9262  ; ?​​
+_9277             = $9277  ; ?​​
+_927A             = $927A  ; ?​​
+_9280             = $9280  ; ?​​
+_9282             = $9282  ; ?​​
+_9297             = $9297  ; ?​​
+_92A2             = $92A2  ; ?​​
+_92AB             = $92AB  ; ?​​
+_92C2             = $92C2  ; ?​​
+_92E0             = $92E0  ; ?​​
+_92E1             = $92E1  ; ?​​
+_92EE             = $92EE  ; ?​​
+_9301             = $9301  ; ?​​
+_9302             = $9302  ; ?​​
+_9308             = $9308  ; ?​​
+_930C             = $930C  ; ?​​
+_9310             = $9310  ; ?​​
+_9314             = $9314  ; ?​​
+_9321             = $9321  ; ?​​
+_9322             = $9322  ; ?​​
+_9341             = $9341  ; ?​​
+_934B             = $934B  ; ?​​
+_934C             = $934C  ; ?​​
+_934E             = $934E  ; ?
+_9350             = $9350  ; ?​​
+_9352             = $9352  ; ?​​
+_9361             = $9361  ; ?​​
+_9362             = $9362  ; ?​​
+_936B             = $936B  ; ?​​
+_936C             = $936C  ; ?​​
+_9381             = $9381  ; ?​​
+_9382             = $9382  ; ?​​
+_938B             = $938B  ; ?​​
+_938C             = $938C  ; ?​​
+_93A0             = $93A0  ; ?
 
-    ;; Background tiles layout is top-to-bottom, right-to-left (!).
-    ;; The first visible tile at the top-right at $9040. The next tile
-    ;; ($9041) is directly BELOW that. At $9040+$20 (32 tiles later) it
-    ;; wraps to the previous column, until $93BF in the bottom left.
-
-    screen_ram        = $9000 ; - 0x93ff  videoram
-    start_of_tiles    = $9040 ; top-right tile
-
-    ;; screen tile locations
-    p2_score_digits   = $9061 ; score for player 2
-    p2_timer_digits   = $9082 ; timer for player 1
-    _908E             = $908E ; something in hiscore screen
-    scr_hi_under_X    = $9090 ; hiscore screen, under X (wrap point)
-    _9092             = $9092 ; something in hiscore screen
-    scr_pik_r_W       = $90CB ; "W" highwire pickup, right
-    _911A             = $911A ; pickup
-    scr_lives_p2      = $9122 ; icons for lives, p2
-    scr_pik_n_n       = $915A ; pickup right "n_n" levels
-    _9184             = $9184 ; something in hiscore screen
-    scr_cage_up       = $9189 ; top-right tile of cage at top of screen
-    _918E             = $918E ; pickup
-    scr_num_creds     = $9199
-    scr_hiscore       = $91A1 ; trailing 0 of hiscore
-    _91B1             = $91B1 ; pickup
-    _91C9             = $91C9 ; cage location?
-    _91D2             = $91D2 ; pickup
-    _9217             = $9217 ; pickup
-    scr_attract_cage  = $9224 ;
-    _922B             = $922B ; pickup
-    _9231             = $9231 ; pickup
-    scr_bongo_logo    = $9248
-    scr_hi_name_entry = $9277 ; as you enter your name
-    _927A             = $927A ; pickup
-    scr_hi_name       = $9280 ; hiscore name
-    _92AB             = $92AB ; pickup
-    scr_lives_p1      = $92C2 ; first "life" icon for p1
-    scr_lvl_bg_start  = $92E0 ; pos (6,0): first tile in level background
-    p1_score_digits   = $92E1
-    scr_pik_S_top     = $92EE ; top-left pickup for "S" levels
-    p1_timer_digits   = $9302
-    attract_piks      = $9308 ; pickup location in attract screen
-    scr_bonus_sq      = $934B ; top-right red square over bonus number
-    scr_cursor_line_hs= $934E ; under the letters in hiscore entry
-    scr_hs_timer      = $9362 ; second digit of 90 second timer in hiscore
-    scr_unused_spiral = $93A0 ; the spiral transition routine
-
-    end_of_tiles      = $93BF ; bottom left tile
-
-    ;; $9400-$97FF seems to be mirrored to the first screen ($9000-$93FF).
-    ;; Change a value in one, it's reflected instantly in the other
-
-    xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
-    sprites           = $9840 ; 0x9840 - 0x98ff is spriteram
-    port_in0          = $A000 ;
-    port_in1          = $A800 ;
-    port_in2          = $B000 ;
-    int_enable        = $B001 ; interrupt enable
-    _B004             = $B004 ; "galaxian stars enable"?
-    _B006             = $B006 ; set to 1 for P1 or
-    _B007             = $B007 ; 0 for P2... why? Controls?
-    watchdog          = $B800 ; main timer?
-    _C000             = $C000 ;
-    _C003             = $C003 ;
-
+end_of_tiles      = $93BF ; bottom left tile
+;; what's all the stuff in herer?
+xoff_col_ram      = $9800 ; xoffset and color data per tile row (attributes)
+sprites           = $9840 ; 0x9800 - 0x98ff is spriteram
+port_in0          = $A000 ;
+port_in1          = $A800 ;
+port_in2          = $B000 ;
+int_enable        = $B001 ; interrupt enable
+_B004             = $B004 ; "galaxian stars enable"?
+_B006             = $B006 ; set to 1 for P1 or
+_B007             = $B007 ; 0 for P2... why? Controls?
+watchdog          = $B800 ; main timer?
+_C000             = $C000 ;
+_C003             = $C003 ;
 
 ;;; ============ START OF BG1.BIN =============
 
@@ -379,27 +424,19 @@ hard_reset:
     jp   clear_ram ; jumps back here after clear
 _ret_hard_reset:
     ld   sp,stack_location
-    call clear_ram_call_weird_a
-    call check_credit_fault
+    call delay_83_call_weird_a
+    call init_screen
     call write_out_0_and_1
-    jp   call_setup_then_start_game
+    jp   setup_then_start_game
 
+;; data? no?
+    db  $DD,$19
+_0020:          ; called here once - but looks suspicious
+    db  $DD,$19,$2B,$10,$AF
+    db  $ED,$67,$DD,$77,$ED,$6F,$DD
+    db  $DD,$19,$ED,$6F,$DD
 
-;;; ==========================================
-
-;; Data? unused? If code, looks... odd
-    db  $DD,$19        ; (add  ix,de)
-unlikely_fn:           ; uncalled "err_um_call_0020" points here
-    db  $DD,$19        ; (add  ix,de)
-    db  $2B            ; (dec   hl)
-    db  $10,$AF        ; (djnz $FFD4 ?)
-    db  $ED,$67,$DD,$77
-    db  $ED,$6F,$DD,$DD
-    db  $19,$ED,$6F,$DD
     dc  7, $FF
-
-
-;;; ============== reset vector ==============
 
 ;;  Reset vector
 reset_vector:
@@ -408,24 +445,18 @@ reset_vector:
 
     dc 11, $FF
 
-;;; ==========================================
-
-;;; Called once at startup
-;;; No idea what a "credit fault" is,
-;;; but must be hardware issue?
-check_credit_fault:
+;; Called once at startup
+init_screen:
     ld   a,(port_in0)
     and  $83 ; 1000 0011
     ret  z
     call reset_xoff_sprites_and_clear_screen
     call draw_tiles_h
-    db   $09, $00 ; CREDIT FAULT
-    db   C_,R_,E_,D_,I_,T_,__,F_,A_,U_,L_,T_,$FF
-    jr   check_credit_fault     ; loop!
+    db   $09, $00
+    db   $13,$22,$15,$14,$19,$24,$10,$16,$11,$25,$1C,$24,$FF ; CREDIT FAULT
+    jr   init_screen
 
     db   $FF
-
-;;; =============== NMI Loop =================
 
 ;; Non-Maskable Interrupt handler. Fires every frame
 nmi_loop:
@@ -435,70 +466,60 @@ nmi_loop:
     call nmi_int_handler
     ld   a,(num_players)
     and  a
-    jr   nz,_is_playing
+    jr   nz,_0079
     call did_player_press_start
-_is_playing:
+_0079:
     ld   b,$01
     call tick_ticks ; update ticks...
     call copy_inp_to_buttons_and_check_buttons
     nop
     ld   a,(port_in0)
     bit  1,a
-    jp   nz,_C003 ; c003?! Hardware function?
+    jp   nz,_C003 ; c003?!
     retn ; NMI return
-
-;;; ==========================================
 
     db   $FF
 
-call_setup_then_start_game:
-    call setup_then_start_game  ; jmps to pre_game_attractions...
-    call set_hiscore_text       ; ...never gets here.
-
-
-;;; ==========================================
-
-reset_then_start_game:          ; also jumps here after game-over
+setup_then_start_game:
+    call setup_more
+    call set_hiscore_text
+_after_game_over:
     call wait_vblank
     ld   a,(credits)
     and  a
-    jr   nz, play_attract_PRESS_P1P2
-    call play_attract_screens
+    jr   nz,_play_splash
+    call reset_ents_all
     call reset_xoff_sprites_and_clear_screen
-    jr   reset_then_start_game
-
-play_attract_PRESS_P1P2:
+    jr   _after_game_over
+_play_splash:
     call wait_vblank
     ld   a,(credits)
     cp   $01
-    jr   nz,_multiple_credits
-    call attract_press_p1_screen ; one credit
-    jr   _done__stsg
-_multiple_credits:
+    jr   nz,_00B3
+    call attract_press_p1_screen
+    jr   _00B6
+_00B3:
     call draw_one_or_two_player
-_done__stsg:
+_00B6:
     ld   a,(num_players)
     and  a
     jp   nz,start_game
-    jr   play_attract_PRESS_P1P2
+    jr   _play_splash
 
     db   $FF
-
-;;; ==========================================
 
 nmi_int_handler:
     exx
     call coinage_routine
     call copy_xoffs_and_cols_to_screen
-    call call_player_all_sfx_chunks
+    call save_ix_and_um
     call copy_ports_to_buttons
     exx
     ret
 
     db   $FF
 
-;;; ============== PRESS P1 ===============
-
+;;;
 attract_press_p1_screen:
     ld   a,$01
     ld   (_8090),a
@@ -519,22 +540,22 @@ attract_press_p1_screen:
     call draw_score
     call draw_tiles_h
     db   $09, $0B
-    db   P_,R_,E_,S_,S_,$FF ; PRESS
+    db   $20,$22,$15,$23,$23,$FF ; PRESS
     call draw_tiles_h
     db   $0C, $09
-    db   O_,N_,E_,__,P_,L_,A_,Y_,E_,R_,$FF ; ONE PLAYER
+    db   $1F,$1E,$15,$10,$20,$1C,$11,$29,$15,$22,$FF ; ONE PLAYER
     call draw_tiles_h
     db   $0F, $8B
-    db   B_,U_,T_,T_,O_,N_,$FF ; BUTTON
+    db   $12,$25,$24,$24,$1F,$1E,$FF ; BUTTON
     call draw_tiles_h
     db   $19, $09
-    db   C_,R_,E_,D_,I_,T_,S_,$FF ; CREDITS
+    db   $13,$22,$15,$14,$19,$24,$23,$FF ; CREDITS
     ld   hl,credits
     xor  a
-    rld                         ; roll in num credits
-    ld   (scr_num_creds-0*$20),a ; 1's
     rld
-    ld   (scr_num_creds-1*$20),a ; 10's
+    ld   (_9199),a
+    rld
+    ld   (_9179),a
     rld
     ld   a,(credits)
     ld   (credits_umm),a
@@ -552,46 +573,37 @@ draw_one_or_two_player:
     nop
     call attract_press_p1_screen
     call draw_tiles_h
-    db   $0C, $06; ONE OR TWO PLAYER
-    db   O_,N_,E_,__,O_,R_,__,T_,W_,O_,__,P_,L_,A_,Y_,E_,R_,$FF
-    ret
+    db   $0C, $06
+    db   $1F,$1E,$15,$10,$1F,$22,$10,$24,$27,$1F,$10,$20,$1C,$11,$29,$15
+    db   $22,$FF,$C9,$FF  ; ONE OR TWO PLAYER
+;; Does it fall through here?
+    dc   8,$FF
 
-    dc   9,$FF
-
-;;; Kind of think was just some random bytes left around
-err_um_call_0020:
-    call unlikely_fn
+    call _0020
     ret
 
     dc   12,$FF
 
-;;; ============= indirect jump: hl + 4k ==============
-
-;;; Jumps to the address in HL + 4k.
-;;; (called a lot, mostly via... JMP_HL_PLUS_4K)
-;;; But why do this indirect-style jump? Oh! Perhaps the ROM
-;;; might have been at different locations (Eg, 8k) on different
-;;; hardware - so this is just a single place to change?
+;; called a lot (via... JMP_HL_PLUS_4K)
+;; why? Why not just jump?
+;; Is there a max jump distance or something?
 do_jmp_hl_plus_4k:
     push bc
-    ld   bc,JMP_HL_OFFSET
+    ld   bc,int_handler
     add  hl,bc
     pop  bc
     jp   (hl)
 
     dc   9,$FF
 
-;;; ==========================================
-
-;;; Did player start the game with P1/P2 button?
-did_player_press_start:
+did_player_press_start:; Did player start the game?
     ld   a,(credits) ; check you have credits
     and  a
     ret  z
     ld   a,(input_buttons) ; P1 pressed?
     bit  0,a
-    jr   z,_P2__dpps
-    call clear_ram_x83_bytes
+    jr   z,_01AD
+    call delay_83
     ld   a,$01 ; start the game, 1 player
     ld   (num_players),a
     ld   a,(credits) ; use a credit
@@ -599,14 +611,14 @@ did_player_press_start:
     daa
     ld   (credits),a
     ret
-_P2__dpps:
+_01AD:
     ld   a,(credits)
     dec  a
     ret  z
     ld   a,(input_buttons)
     bit  1,a ; is P2 pressed?
     ret  z
-    call clear_ram_x83_bytes
+    call delay_83
     ld   a,$02 ; start the game, 2 player
     ld   (num_players),a
     ld   a,(credits)
@@ -619,8 +631,7 @@ _P2__dpps:
 
     dc   5,$FF
 
-;;; ==========================================
-
+;;;
 copy_ports_to_buttons:
     ld   a,(port_in0)
     ld   (controls),a
@@ -630,29 +641,21 @@ copy_ports_to_buttons:
     ld   (buttons_2),a
     ret
 
-;;; ==========================================
-
-;;; Indirect indirect jump to HL+4K
-;;; Calls the sub that jumps to the location in (HL)+OFFSET
-;;; But why all the inderection? Perphas do_jmp_hl_plus_4k location
-;;; varied during development, and THIS sub was all they could
-;;; rely on to be fixed address?
+;;
 jmp_hl_plus_4k:
     jp   do_jmp_hl_plus_4k
     ret
-
-;;; ===================== start game =====================
 
 start_game:
     ld   a,$1F
     ld   (speed_delay_p1),a
     ld   (speed_delay_p2),a
     nop
-    ld   a,(input_buttons_2) ; "num lives" from dip-switch settings
-    and  0110b
+    ld   a,(input_buttons_2) ; from dip-switch settings?
+    and  $06
     sra  a
     add  a,$02
-    ld   (lives),a              ; set beginning lives
+    ld   (lives),a
     ld   (lives_p2),a
     ld   a,(num_players)
     dec  a
@@ -661,19 +664,17 @@ start_game:
     ld   (player_num),a
     ld   a,(is_2_players)
     and  a
-    jr   nz,_is_2P
-    xor  a                      ; 1P only, zero p2 lives
+    jr   nz,_0215
+    xor  a
     ld   (lives_p2),a
-_is_2P:
-    ld   a,$01                  ; set initial screen number
+_0215:
+    ld   a,$01
     ld   (screen_num),a
     ld   (screen_num_p2),a
     ld   (_8090),a
-    ;; ... drops through ...
-
 post_death_reset:
     ld   sp,stack_location ; hmm. sets stack pointer?
-    ld   a,(player_num)
+    ld   a,(player_num) ; flip flops?!
     xor  $01
     ld   (player_num),a
     ld   hl,lives
@@ -681,8 +682,8 @@ post_death_reset:
     ld   l,a
     ld   a,(hl)
     and  a
-    jr   nz,_more_lives         ; out of lives yet?
-    ld   a,(player_num)
+    jr   nz,_0246
+    ld   a,(player_num) ; and back again?
     xor  $01
     ld   (player_num),a
     ld   hl,lives
@@ -690,13 +691,12 @@ post_death_reset:
     ld   l,a
     ld   a,(hl)
     and  a
-    jp   z,game_over            ; yep, game over
-
-_more_lives:                    ; some dip-switch shenanigans
+    jp   z,game_over
+_0246:
     dec  a
     ld   (hl),a
     ld   a,(input_buttons)
-    bit  7,a ; what is this "button"?!
+  bit  7,a ; what is this "button"?!
     jr   z,_0260
     ld   a,(player_num)
     cp   $01
@@ -711,35 +711,32 @@ _0260:
     ld   (_B007),a
 _0267:
     ld   a,(input_buttons_2)
-    bit  3,a ; Infinite Lives DIP setting? resets lives on death
-    jr   z,_done__ml
+    bit  3,a ; is this INfinite Lives DIP setting? resets lives on death
+    jr   z,_027E
     ld   a,$03 ; set 3 lives
     ld   (lives),a
     ld   a,(lives_p2)
     and  a
-    jr   z,_done__ml
+    jr   z,_027E
     ld   a,$03
     ld   (lives_p2),a
-_done__ml:
-    jp   big_reset              ; reset the for next life
+_027E:
+    jp   big_reset
 
     dc   7, $FF
 
-
-;;; ==========================================
-
 coinage_routine:
-    ld   a,(coinage)
+    ld   a,(_8306)
     and  a
     jr   z,_029F
     dec  a
-    ld   (coinage),a
+    ld   (_8306),a
     ret  nz
     ld   a,(port_in0)
     and  $03
     ret  z
     ld   a,$05
-    ld   (coinage),a
+    ld   (_8306),a
     ret
 _029F:
     ld   a,(port_in0)
@@ -751,21 +748,21 @@ _029F:
     ld   a,b
     cp   $01
     jr   nz,_02B9
-    ld   a,(coinage_2)
+    ld   a,(_8305)
     inc  a
-    ld   (coinage_2),a
+    ld   (_8305),a
     jr   _02C1
 _02B9:
-    ld   a,(coinage_2)
+    ld   a,(_8305)
     add  a,$06
-    ld   (coinage_2),a
+    ld   (_8305),a
 _02C1:
     ld   a,$07
-    ld   (coinage),a
+    ld   (_8306),a
     ld   a,(input_buttons)
     bit  6,a ; added credit
     jr   z,_02E3
-    ld   a,(coinage_2)
+    ld   a,(_8305)
     and  a
     ret  z
     ld   b,a
@@ -777,10 +774,10 @@ _02D6:
     jr   nz,_02D6
     ld   (credits),a
     xor  a
-    ld   (coinage_2),a
+    ld   (_8305),a
     ret
 _02E3:
-    ld   a,(coinage_2)
+    ld   a,(_8305)
     and  a
     ret  z
     cp   $01
@@ -800,21 +797,17 @@ _02F9:
     daa
     ld   (credits),a
     ld   a,$01
-    ld   (coinage_2),a
+    ld   (_8305),a
     ret
 _0304:
     ld   (credits),a
     xor  a
-    ld   (coinage_2),a
+    ld   (_8305),a
     ret
 
     dc   4, $FF
 
-
-;;; ============= Draw Tiles Horizontally ==============
-
-;;; Draw sequence of tiles horizontally at (y, x)
-;;; Data for the draw is located AFTER the call to this function
+;; draw sequence of tiles at (y, x)
 draw_tiles_h:
     ld   a,(watchdog)
     ld   hl,start_of_tiles
@@ -837,31 +830,29 @@ draw_tiles_h:
     add  hl,de
     add  hl,de
     inc  bc
-_loop__032E:
+_lp_032E:
     ld   a,(bc) ; read data until 0xff
     inc  bc
     cp   $FF
-    jr   nz,_next_tile
+    jr   nz,_0336
     push bc
     ret
-_next_tile:
+_0336:
     ld   (hl),a
     ld   d,$FF
     ld   e,$E0
-    add  hl,de ; $FFE0 = -32 (one column)
-    jr   _loop__032E
+    add  hl,de
+    jr   _lp_032E
 
     dc   10, $FF
 
-;;; ============== setup, then start =====================
-
-;; Clears RAM, sets the stack location
-setup_then_start_game:
-    nop                         ; I love seeing all the nops around
-    nop                         ; feel very "hand made"... but I do
-    nop                         ; wonder what they nopped!
+;;
+setup_more:
+    nop
+    nop
+    nop
     call reset_xoff_sprites_and_clear_screen
-    ld   hl,START_OF_RAM ; reset $8000-$8088 to 0
+    ld   hl,tick_mod_3 ; reset $8000-$88FF? to 0
 _lp_0351:
     ld   (hl),$00
     inc  l
@@ -874,17 +865,11 @@ _lp_0351:
     ld   sp,stack_location
     ld   a,$01
     ld   (_8090),a
-    jp   pre_game_attractions
+    jp   _setup_more_ret
 
     dc   6, $FF
 
-;;; ================ attract screens =================
-
-;;; Plays a sequence of attract screens
-;;; - Bongo splash screen animation
-;;; - EXTRA BONUS screen
-;;; - YOUR BEING CHASED screen
-play_attract_screens:
+reset_ents_all:
     call reset_xoff_sprites_and_clear_screen
     ld   hl,reset_sfx_something_1 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
@@ -894,100 +879,85 @@ play_attract_screens:
     call jmp_hl_plus_4k
     ld   hl,chased_by_a_dino_screen - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    nop      ; tantalizing nops...
-    nop      ; were there more attract screens?
+    nop
+    nop
     nop
     ret
 
     db   $FF
 
-
-;;; ==========================================
-
-;;; Don't think it's called?
-infinte_vblanks:
+_0390:
     call wait_vblank
-    jr   infinte_vblanks
+    jr   _0390
 
     dc   11, $FF
 
-;;; ================ draw lives ====================
-
-;;; Draw icons for the number of lives remaining
 draw_lives:
     call set_lives_row_color
     ld   a,(lives)
     and  a
     ld   b,a
-    ld   a,tile_lives
-    jr   z,_done_p1_lives
+    ld   a,$8A
+    jr   z,_03C7
     dec  b
-    ld   (scr_lives_p1-0*$20),a
-    jr   z,_done_p1_lives
+    ld   (_92C2),a
+    jr   z,_03C7
     dec  b
-    ld   (scr_lives_p1-1*$20),a
-    jr   z,_done_p1_lives
+    ld   (_92A2),a
+    jr   z,_03C7
     dec  b
-    ld   (scr_lives_p1-2*$20),a
-    jr   z,_done_p1_lives
+    ld   (_9282),a
+    jr   z,_03C7
     dec  b
-    ld   (scr_lives_p1-3*$20),a
-    jr   z,_done_p1_lives
-    ld   (scr_lives_p1-4*$20),a
-_done_p1_lives:
+    ld   (_9262),a
+    jr   z,_03C7
+    ld   (_9242),a
+_03C7:
     ld   a,(lives_p2)
     and  a
     ld   b,a
     ret  z
-    ld   a,tile_lives
+    ld   a,$8A
     dec  b
-    ld   (scr_lives_p2+0*$20),a
+    ld   (_9122),a
     ret  z
     dec  b
-    ld   (scr_lives_p2+1*$20),a
+    ld   (_9142),a
     ret  z
     dec  b
-    ld   (scr_lives_p2+2*$20),a
+    ld   (_9162),a
     ret  z
     dec  b
-    ld   (scr_lives_p2+3*$20),a
+    ld   (_9182),a
     ret  z
-    ld   (scr_lives_p2+4*$20),a
+    ld   (_91A2),a
     ret
 
     db   $FF
-
-;;; ==========================================
 
 clear_after_game_over:
     xor  a
     ld   (num_players),a
     ld   (credits_umm),a
-    jp   reset_then_start_game
+    jp   _after_game_over
 
     dc   6, $FF
 
     ld   c,$E0
-_loop__vb:
+_03FA:
     call wait_vblank
     inc  c
-    jr   nz,_loop__vb
+    jr   nz,_03FA
     ret
 
     dc  7, $FF
 
-
-;;; ==========================================
-
 set_lives_row_color:
     ld   a,$01
-    ld   (screen_xoff_col+5),a  ; 3rd row
+    ld   (_8105),a
     ret
 
     dc   2, $FF
-
-
-;;; ================ GAME OVER  ================
 
 game_over:
     ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
@@ -1001,16 +971,14 @@ game_over:
 
     dc   10, $FF
 
-;;; ==========================================
-
 check_if_hiscore:
-    call _check_if_hiscore_p1
-    call _check_if_hiscore_p2
+    call check_if_hiscore_p1
+    call check_if_hiscore_p2
     ret
 
     dc   9, $FF
 
-_check_if_hiscore_p1:
+check_if_hiscore_p1:
     ld   a,(p1_score_2)
     ld   c,a
     ld   a,(hiscore_2)
@@ -1038,7 +1006,7 @@ _check_if_hiscore_p1:
 
     dc   6, $FF
 
-_check_if_hiscore_p2:
+check_if_hiscore_p2:
     ld   a,(p2_score_2)
     ld   c,a
     ld   a,(hiscore_2)
@@ -1075,9 +1043,6 @@ _04B2:
 
     dc   1, $FF
 
-
-;;; ============ dino timer ==============
-
 ;; count up timer - every SPEED_DELAY ticks
 check_dino_timer:
     call move_dino_x
@@ -1104,8 +1069,6 @@ _04D4:
 
     dc   3, $FF
 
-;;; ==========================================
-
 hiscore_for_p1:
     ld   a,(p1_score)
     ld   (hiscore),a
@@ -1129,8 +1092,6 @@ hiscore_for_p2:
     ret
 
     dc   4, $FF
-
-;;; ==========================================
 
 ;; who calls?
 ;; This looks suspicious. 25 bytes written
@@ -1191,50 +1152,37 @@ hiscore_for_p2:
 
     dc   23, $FF
 
-
-;;; ==========================================
-
-setup_uncalled: ;looks a lot like call_setup_then_start_game
-    call setup_then_start_game  ; but it return to below
-                                ; (and and is called at init)
-
-;;; ============ pre-game screens ================
-
-;;; Handle attract mode and credit screens before
-;;; player has started
-pre_game_attractions:          ; jumps here after setup
+;; (free bytes?)
+_setup_2:;looks a lot like SETUP_THEN_START_GAME - no one calls it?
+    call setup_more
+_setup_more_ret:                ; returns here after setup_more
     call set_hiscore_text
-
-_loop__smp:
+_play_splash_2:
     call wait_vblank
     ld   a,(num_players)
     and  a
-    jr   nz,_is_playing__smp
+    jr   nz,_05AB
     ld   a,(credits)
     and  a
-    jr   nz,_has_credits
-
-    call play_attract_screens ;
+    jr   nz,_059D
+    call reset_ents_all
     call reset_xoff_sprites_and_clear_screen
-    jr   _loop__smp
-
-_has_credits:
+    jr   _play_splash_2
+_059D:
     cp   $01
-    jr   nz,_2P
+    jr   nz,_05A6
     call attract_press_p1_screen
-    jr   _loop__smp
-_2P:
+    jr   _play_splash_2
+_05A6:
     call draw_one_or_two_player
-    jr   _loop__smp
-_is_playing__smp:
+    jr   _play_splash_2
+_05AB:
     jp   nz,start_game
-    jr   _loop__smp
+    jr   _play_splash_2
 
     dc   8, $FF
 
-;;; ==========================================
-
-;;; who calls?
+;; who calls?
     ld   a,(credits)
     and  a
     jr   nz,_05C2
@@ -1249,11 +1197,7 @@ _05C2:
 
     dc   7, $FF
 
-;;; ==========================================
-
-;;; Not really sure what this does - seems to
-;;; take the hardware input and copy to variables
-
+;; Not really sure.
 normalize_input:
     ld   a,(player_num)
     and  a
@@ -1284,13 +1228,9 @@ _05ED:
 
     dc   9, $FF
 
-;;; ==========================================
-
 player_frame_data_walk_right:
-    db   $0C,$0E,$10,$0E,$0C,$12,$14,$12
+    db  $0C,$0E,$10,$0E,$0C,$12,$14,$12
     dc   8, $FF
-
-;;; ==========================================
 
 player_move_right:
     ld   a,(walk_anim_timer)
@@ -1345,8 +1285,6 @@ player_move_left:
     ret
 
     dc   10, $FF
-
-;;; ================ Player input ================
 
 player_input:
     ld   a,(tick_num)
@@ -1404,11 +1342,13 @@ _06CE:
 
     dc   3, $FF
 
-;;; ============== Player Physics ===================
-
 ;; "Physics": do jumps according to jump lookup tables
 player_physics:
-    dc   5, 0                   ; some nops
+    nop
+    nop
+    nop
+    nop
+    nop
     ld   a,(jump_tbl_idx)
     dec  a ; idx - 1
     ld   (jump_tbl_idx),a
@@ -1435,12 +1375,9 @@ player_physics:
     ld   (ix+$03),a ; player y
     ret
 
-
-;;; ==========================================
-
-;;; jump pressed, sets these... why?
-;;; 804a and 8049 never read?
-;;; wpset 804a,1,r never triggers?
+;; jump pressed, sets these... why?
+;; 804a and 8049 never read?
+;; wpset 804a,1,r never triggers?
 set_unused_804a_49:
     push af
     ld   a,$A0
@@ -1450,6 +1387,7 @@ set_unused_804a_49:
     pop  af
     ret
 
+;; wassis?
     dc   3, $FF
     db   $8C,$10 ; rando two bytes (addr?)
     dc   6, $FF
@@ -1567,15 +1505,11 @@ play_jump_sfx:
 
     dc   3, $FF
 
-
-;;; ==========================================
-
 ;; who calls? (free bytes)
 ;; this looks similar to other DRAW_TILES code, but tile data
 ;; is indirectly fetched via (bc) addresses.
 ;; I set a breakpoint here and played a bunch (even cutscene)
 ;; but could not get it to trigger... not used? debug?
-draw_tile_unused:
     ld   bc,hard_reset
     nop
     nop
@@ -1611,21 +1545,20 @@ draw_tile_unused:
     ld   d,a
     inc  bc
     push bc
-_next_tile__082D:
+_lp_082D:
     ld   a,(de)
     cp   $FF ; $FF delimited
     ret  z
     inc  de
     ld   (hl),a
     ld   b,$FF
-    ld   c,$E0 ; Subtract 32 (one column)
+    ld   c,$E0
     add  hl,bc
-    jr   _next_tile__082D
+    jr   _lp_082D
 
     dc   6, $FF
 
-;;; ================ Draw Screen ===================
-    ;;
+;;
 draw_screen:
     push hl
     exx
@@ -1675,8 +1608,6 @@ _done_0880:
 
     dc   6, $FF
 
-;;; ==========================================
-
 clear_jump_button:
     ld   a,(controlsn)
     bit  5,a ; jump
@@ -1686,8 +1617,6 @@ clear_jump_button:
     ret
 
     dc   5, $FF
-
-;;; ==========================================
 
 init_player_sprite:
     ld   hl,player_x
@@ -1729,8 +1658,6 @@ trigger_jump_straight_up:
 
     dc   12, $FF
 
-;;; ==========================================
-
 move_bongo_right:
     ld   a,(tick_num)
     and  $07
@@ -1765,8 +1692,6 @@ _0920:
 
     dc   8, $FF
 
-;;; ==========================================
-
 face_backwards_and_play_jump_sfx:
     ld   a,$18
     ld   (player_frame_legs),a
@@ -1788,9 +1713,6 @@ phys_jump_lookup_up:
     db   $00,$17,$18,$F4  ; -12
 
     dc   4, $FF
-
-
-;;; =========== get tile from x/y ==============
 
 ;; Get tile from x/y
 ;; in: h = x, l = y
@@ -1817,8 +1739,7 @@ get_tile_addr_from_xy:
 
     dc   8, $FF
 
-;;; ============== ground check ==================
-
+;;; ground check
 ground_check:
     ld   a,(player_y_legs)
     add  a,$10 ; +  16   : the ground
@@ -1848,8 +1769,6 @@ _09B1:
     ret
 
     dc   12, $FF
-
-;;; ==========================================
 
 check_if_landed_on_ground:      ; only when big fall?
     ld   a,(player_died)
@@ -1890,8 +1809,6 @@ _on_ground:
 
     dc   9, $FF
 
-;;; ==========================================
-
 move_bongo_left:
     ld   a,(tick_num)
     and  $07
@@ -1919,8 +1836,6 @@ _0A24:
 
     db   $FF
 
-;;; ==========================================
-
 kill_player:
     nop ; weee, nopslide
     nop
@@ -1933,8 +1848,6 @@ kill_player:
 
     dc   2, $FF
 
-;;; ==========================================
-
 ;; There's a bug in level one/two: if you jump of the
 ;; edge of level one, and hold jump... it bashes invisible
 ;; head barrier at the start of level two and dies.
@@ -1946,14 +1859,14 @@ add_gravity_and_check_big_fall:
     dec  a
     ld   (falling_timer),a
     and  a
-    jr   nz,_fall_ok
+    jr   nz,_0A50
     call kill_player ; yep.
     ret
-;;
-_fall_ok:
+;; Ok, what's this... "gravity"? always pushing down 2
+_0A50:
     ld   a,(player_y)
-    inc  a ; kind of "gravity" pushing player down
-    inc  a ; 2px when falling - push to ground
+    inc  a ; Why? Looks suspicious - related to bug?
+    inc  a ; force to ground I think
     ld   (player_y),a
     add  a,$10
     ld   (player_y_legs),a
@@ -1961,9 +1874,8 @@ _fall_ok:
 
     dc   10, $FF
 
-;;; ==========================================
-
-;; TODO: figure out what this does to gameplay. what if it was removed?
+;; TODO: figure out what this does to gameplay.
+;; what if it was removed?
 ;; (Is this why it "snaps upwards" on my fake platform in nTn?)
 snap_y_to_8:
     ld   a,(player_y)
@@ -1974,8 +1886,6 @@ snap_y_to_8:
     ret
 
     dc   10, $FF
-
-;;; ==========================================
 
 check_head_hit_tile:
     ld   a,(player_died)
@@ -1998,15 +1908,13 @@ check_head_hit_tile:
     ld   l,a
     call get_tile_addr_from_xy
     ld   a,(hl)
-    and  $C0 ; 1100 0000 ; bottom 2 rows of tilesheet - including platforms,
-    cp   $C0 ; (and also bunch of non-level tiles)
+    and  $C0 ; 1100 0000
+    cp   $C0 ; whats a C0 tile?
     ret  nz
     call fall_under_a_ledge
     ret
 
     dc   9, $FF
-
-;;; ==========================================
 
 fall_under_a_ledge:
     ld   a,(falling_timer)
@@ -2022,15 +1930,13 @@ fall_under_a_ledge:
 
     dc   3, $FF
 
-;;; ==========================================
-
 set_level_platform_xoffs:
     ld   a,(player_num)
     and  a
-    jr   nz,_P2__slpx
+    jr   nz,_0ADB ; p2?
     ld   a,(screen_num)
     jr   _0ADE
-_P2__slpx:
+_0ADB:
     ld   a,(screen_num_p2)
 _0ADE:
     dec  a ; scr - 1
@@ -2043,17 +1949,17 @@ _0ADE:
     ld   b,(hl)
     ld   hl,platform_xoffs
     ld   d,$23
-_next_row:
+_0AEE:
     ld   a,(bc)
     ld   (hl),a
     inc  bc
     inc  hl
     dec  d
-    jr   nz,_next_row
+    jr   nz,_0AEE
     call reset_xoffs
     ret
 
-    dc   7,$FF
+    dc   7, $FF
 
 ;;; platform data. points to either $0c10 (moving) or $0c38 (static)
 platform_scroll_data_addr:
@@ -2068,9 +1974,7 @@ platform_scroll_data_addr:
 ;; 70 zeros/nops. That's a lotta nops. (free bytes?)
     dc 70,$0
 
-    dc 4,$FF
-
-;;; ==========================================
+    dc   4, $FF
 
 move_moving_platform:
     ld   a,(ix+$01) ; $PLATFORM_XOFFS+1
@@ -2087,8 +1991,6 @@ _0B96:
     dec  (iy+$04)
     ret
 
-;;; ==========================================
-
 reset_dino_counter:
     xor  a
     ld   (dino_counter),a
@@ -2096,11 +1998,9 @@ reset_dino_counter:
 
     dc   11, $FF
 
-;;; ==========================================
-
 moving_platforms:
     ld   ix,platform_xoffs
-    ld   iy,screen_xoff_col+$38
+    ld   iy,_8138
     ld   d,$09 ; loop 9 times
 _0BBA:
     ld   a,(ix+$01) ; xoff + 1
@@ -2140,8 +2040,6 @@ _0BE6:
 
     dc   18, $FF
 
-;;; ==========================================
-
 platform_moving_data: ; All "S" levels.
     db   $00,$00,$00,$00
     db   $00,$00,$00,$00
@@ -2168,13 +2066,11 @@ platform_static_data: ; All non-"S" levels.
 
     dc   4, $FF
 
-;;; ==========================================
-
 animate_player_to_ground_if_dead:
     ld   a,(player_died)
     and  a
     ret  z ; player still alive... leave.
-_loop__apg:
+_loop:
     call wait_vblank
     ld   a,(player_y) ; push player towards ground
     inc  a
@@ -2195,7 +2091,7 @@ _loop__apg:
     call get_tile_addr_from_xy
     ld   a,(hl)
     cp   tile_blank ; are we still in the air?
-    jr   z,_loop__apg ; keep falling
+    jr   z,_loop ; keep falling
 _0C8E:
     call do_death_sequence
     xor  a
@@ -2205,20 +2101,16 @@ _0C8E:
 
     dc   7, $FF
 
-;;; ==========================================
-
 delay_8_vblanks:
     ld   e,$08
-_wait_8_vb:
+_0CA2:
     call wait_vblank
     dec  e
-    jr   nz,_wait_8_vb
+    jr   nz,_0CA2
     ret
 
     dc   7, $FF
 
-;;; ==========================================
-;;; what's he so happy about hey?
 bongo_jump_on_player_death:
     ld   e,$03 ; jumps 3 times
 _0CB2:
@@ -2230,8 +2122,6 @@ _0CB2:
     ret
 
     dc   1, $FF
-
-;;; ==========================================
 
 do_death_sequence:
     ld   a,$02
@@ -2272,7 +2162,6 @@ _done_if_zero:
     jr   nz,_lp_0D08
     ret
 
-;;; ==========================================
 ;; who calls?
 move_player_towards_ground_for_a_while:
     ld   d,$08 ; 8 frames
@@ -2291,8 +2180,6 @@ _0D19:
 
     dc   2, $FF
 
-;;; ==========================================
-
 start_bongo_jump:
     ld   a,(bongo_jump_timer)
     and  a
@@ -2302,9 +2189,6 @@ start_bongo_jump:
     ret
 
     dc   5, $FF
-
-
-;;; ==========================================
 
 ;; Oooh, mystery function - commented out.
 ;; Think it was going to place Bongo on the
@@ -2329,8 +2213,6 @@ move_bongo_redacted:
 
     dc   7, $FF
 
-;;; ==========================================
-
 jump_bongo:
     call move_bongo_redacted ; also called from UPDATE_EVERYTHING
     ld   a,(bongo_jump_timer)
@@ -2354,8 +2236,6 @@ _0D79:
 
     dc   6, $FF
 
-;;; ==========================================
-
 on_the_spot_bongo:   ; animate on the spot (no left/right)
     ld   a,(tick_num)
     and  $07
@@ -2367,7 +2247,7 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
     nop
     nop
     ld   (bongo_anim_timer),a
-    ld   hl,_bongo_data_wat
+    ld   hl,_0DB0
     add  a,l
     ld   l,a
     ld   a,(hl)
@@ -2376,10 +2256,9 @@ on_the_spot_bongo:   ; animate on the spot (no left/right)
 
     dc   12, $FF
 
-_bongo_data_wat:
+;; wat
+_0DB0:
     db   $05,$06,$07,$08,$FF,$FF,$FF,$FF
-
-;;; ============ Draw Bongo =================
 
 draw_bongo:
     xor  a
@@ -2422,9 +2301,6 @@ bongo_lookup2:
     db   $E0,$38,$E0,$38,$D0,$38,$00,$00
     db   $00,$00,$00,$00,$00,$00,$FF,$FF
 
-
-;;; ==========================================
-
 bongo_move_and_animate:
     ld   a,(bongo_dir_flag)
     and  $03 ; left or right
@@ -2447,8 +2323,6 @@ _0E58:
     ret
 
     dc   14, $FF
-
-;;; ==========================================
 
 bongo_animate_per_screen:
     ld   a,(tick_num)
@@ -2513,11 +2387,7 @@ bongo_anim_data:
 
     dc   8, $FF
 
-;;; ==========================================
-;;; when the player gets close, Bongo runs away
-;;; (you can catch him on fast rounds though...
-;;; ... but nothing happens)
-
+;;
 bongo_run_when_player_close:
     ld   a,(bongo_x)
     scf
@@ -2560,37 +2430,32 @@ _0F4E:
     db   $04,$00,$00,$00
     db   $04,$00,$00,$00
 
-;;; ==========================================
-
 draw_border_1:
 ;;  intro inside border top
     call draw_tiles_h
     db   $02, $02
-    db   $E0 ; corner
-    dc   22, $E7
-    db   $DF ; corner
-    db   $FF
+    db   $E0,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
+    db   $E7,$E7,$E7,$E7,$E7,$E7,$E7,$DF,$FF
 
 ;; intro inside border right
     call draw_tiles_v_copy
     db   $02, $03
-    dc   24, $E6
-    db   $FF
+    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6
+    db   $E6,$E6,$E6,$E6,$E6,$E6,$E6,$E6,$FF
 
     jp   draw_border_1_b
 
 ;; couple of $0Fs in a sea of $FFs
     dc   10, $FF
-    db   $0F
+    rrca
     dc   11, $FF
-    db   $0F
+    rrca
     dc   2, $FF
 
 header_text_data:
-    db   __,__,__,__,P_,L_,1,__,__,__,__   ; PL1
-    db   H_,I_,G_,H_,$2B,S_,C_,O_,R_,E_,__ ; HIGH-SCORE
-    db   __,__,__,P_,L_,2,__,__,__         ; PL2
-    db   $FF
+    db   $10,$10,$10,$10,$20,$1C,$01,$10,$10,$10,$10 ; PL1
+    db   $18,$19,$17,$18,$2B,$23,$13,$1F,$22,$15,$10 ; HIGH-SCORE
+    db   $10,$10,$10,$20,$1C,$02,$10,$10,$10,$FF    ; PL2
 
 ;;; === END OF BG1.BIN, START OF BG2.BIN =======
 
@@ -2624,10 +2489,10 @@ big_reset:
     call set_level_platform_xoffs
     call draw_bongo
     ld   a,$02 ; bottom row is red
-    ld   (screen_xoff_col+$3F),a
+    ld   (_813F),a
 ;;; falls through to main loop:
 
-;;; ============= Main loop ====================
+;;; =========================================
 main_loop:
     call set_tick_mod_3_and_add_score
     call update_screen_tile_animations
@@ -2642,8 +2507,9 @@ main_loop:
 
     dc   15, $FF
 
-;;; =============== Extra Life =================
+;;; =========================================
 
+;;;  Extra life
 extra_life:
     ld   a,(player_num)
     and  a
@@ -2700,8 +2566,6 @@ _p2_extra_life:
 
     dc   22, $FF
 
-;;; ==========================================
-
 set_tick_mod_3_and_add_score:
     ld   a,(tick_mod_3)
     inc  a
@@ -2725,8 +2589,6 @@ _dino_collision:
 
     db   $FF
 
-;;; ============= Tick ticks ==================
-
 ;; Ticks the main ticks and speed timers
 tick_ticks:                     ;
     ld   a,(tick_num)
@@ -2737,40 +2599,34 @@ tick_ticks:                     ;
 
     dc   5, $FF
 
-
-;;; ==========================================
-;;; resets any current sfx id to 0
-;;; I think this function did more originally... whatever the important
-;;; part was (masking and bit-twiddling), the store was nopped out
-;;; at the end of the sub.
-reset_sfx_ids:
+;; ?? is it about dino?
+mystery_8066_fn:
     push af
     push hl
-    ld   hl,ch1_cur_id          ; sfx id
-    xor  a                      ; cp: If A == N, then Z flag is set
-    cp   (hl)                   ; state == 0?
-    jr   nz,_has_sfx_id         ; no, off to ADD
-    inc  hl                     ; yep, what about $8067 (ch2_cur_id)
-    cp   (hl)                   ; == 0?
-    jr   nz,_has_sfx_id
-    inc  hl                     ; yep, what about $8068 (ch3_cur_id)
-    cp   (hl)                   ; == 0?
-    jr   z,_done__msf           ; no, all zero - don't clear
-_has_sfx_id:
-    ld   a,(hl)                 ; ...first non-zero channel cur id
-    ld   (hl),$00               ; zero it...
-    add  a,$18                  ; 0001 1000 ... add 24
-_done__msf:
-    and  $7F   ; 0111 1111      ; mask off top bit then...
-    nop        ; ... noped out?! Does nothing with value,
-    nop        ; because A is popped before ret?
+    ld   hl,_8066
+    xor  a ; cp: If A == N, then Z flag is set
+    cp   (hl) ; state == 0?
+    jr   nz,_1121 ; no, off to AND
+    inc  hl ; yep, what about _8067
+    cp   (hl) ; == 0?
+    jr   nz,_1121
+    inc  hl ; yep, what about _8068
+    cp   (hl) ; == 0?
+    jr   z,_1126 ; no, all zero - don't load
+_1121:
+    ld   a,(hl) ; ...first non-zero
+    ld   (hl),$00
+    add  a,$18 ; 0001 1000
+_1126:
+    and  $7F ; 0111 1111
+    nop
+    nop
     pop  hl
     pop  af
     ret
 
     dc   3, $FF
 
-;;; ==========================================
 ;;
 update_screen_tile_animations:
     ld   a,(tick_mod_6) ; set tick % 6
@@ -2812,8 +2668,6 @@ _1139:
 
     dc   17, $FF
 
-;;; =============== Update Everything ===============
-
 update_everything:
     call check_exit_stage_left
     call update_time_timer
@@ -2842,8 +2696,6 @@ update_everything:
     ret
 
     dc   7, $FF
-
-;;; ==========================================
 
 wrap_other_spears_left:
     ld   a,(enemy_2_x)
@@ -2883,7 +2735,6 @@ _11FC:
 
     dc   3, $FF
 
-;;; ==========================================
 ;;;
 player_pos_update:
     ld   a,(player_y_legs)
@@ -2924,8 +2775,6 @@ _did_leg_thing:
 
     dc   15, $FF
 
-;;; ==========================================
-
 ;;; only called from PREVENT_CLOUD_JUMP_REDACTED
 prevent_cloud_jump_redacted_2:
     push hl
@@ -2963,9 +2812,6 @@ _1280:
 
     dc   14, $FF
 
-
-;;; ==========================================
-
 ;; ANOTHER commented out one!
 ;; This stops a player jumping up through a platform
 ;; from underneath it. Probably more realistic, but
@@ -2990,8 +2836,6 @@ _12A1:
 
     dc  14, $FF
 
-;;; ==========================================
-
 draw_background:
 ;; draw first 6 columns
     call draw_tiles_h
@@ -3004,7 +2848,7 @@ draw_background:
     db   $1E,$00
     db   $FE,$FD,$FD,$FD,$FD,$FC,$FF ; bottomleft platform
     call screen_reset
-    ld   hl,scr_lvl_bg_start ; screen pos (6,0)
+    ld   hl,_92E0 ; screen pos (6,0)
     ld   ix,(level_bg_ptr)
     ld   d,$17 ; call 23 columns = width - 6
 _draw_column:                   ; because first 6 are constant
@@ -3021,14 +2865,12 @@ reset_enemies_and_draw_bottom_row:
     call jmp_hl_plus_4k
     jp   draw_bottom_row_numbers
 
-;;; ==========================================
-
 ;; scrolls the screen one tile - done in a loop for the transition
 scroll_one_column:
     ld   e,$04 ; 4 loops of 2 pixels
     push hl
 _1303:
-    ld   hl,screen_xoff_col+$06
+    ld   hl,_8106
 _1306:
     dec  (hl)
     dec  (hl)
@@ -3047,9 +2889,6 @@ _1306:
     ret
 
     dc   12, $FF
-
-
-;;; ==========================================
 
 ;; ix = level data
 ;; hl = screen pos
@@ -3092,8 +2931,7 @@ __next_seg:
 
     dc   2, $FF
 
-;;; ==========================================
-
+;;
 during_transition_next:
     call bongo_runs_off_screen
     nop
@@ -3122,8 +2960,6 @@ _reset_for_next_level:
 
     db   $FF
 
-
-;;; ==========================================
 ;; "jump relative A": dispatches to address based on A
 jump_rel_a:
     exx
@@ -3137,7 +2973,6 @@ jump_rel_a:
 
     dc   7, $FF
 
-;;; ==========================================
 ;;; Looks important. VBLANK?
 wait_vblank:
     ld   b,$00
@@ -3155,8 +2990,6 @@ _13A2:
 
     db   $FF
 
-;;; ==========================================
-
 bongo_runs_off_screen:
     ld   hl,bongo_x
 _13BB:
@@ -3168,8 +3001,6 @@ _13BB:
     ret
 
     dc   12, $FF
-
-;;; ==========================================
 
 update_time_timer:
     ld   a,(second_timer)
@@ -3209,12 +3040,10 @@ _13FC:
 
     dc   5, $FF
 
-;;; ==========================================
-
 ;; draws the player's time under score
 ;; ret's immediately: must have been removed! aww :(
 draw_time:
-    ret                         ; nooo! Put the timer back plz!
+    ret
     ld   a,(player_num)
     bit  0,a
     jr   nz,_1436
@@ -3222,53 +3051,50 @@ draw_time:
     xor  a
     ld   hl,p1_time
     rrd
-    ld   (p1_timer_digits+0*$20),a ; digit 1
+    ld   (_9302),a
     rrd
-    ld   (p1_timer_digits+1*$20),a ; digit 2
+    ld   (_9322),a
     rrd
     inc  hl
     rrd
-    ld   (p1_timer_digits+3*$20),a ; digit 3
+    ld   (_9362),a
     rrd
-    ld   (p1_timer_digits+4*$20),a ; digit 4
+    ld   (_9382),a
     rrd
     ret
-;;  p1 version
+;;  p2 version
 _1436:
     xor  a
     ld   hl,p2_time
     rrd
-    ld   (p2_timer_digits+0*$20),a ; digit 1
+    ld   (_9082),a
     rrd
-    ld   (p2_timer_digits+1*$20),a ; digit 2
+    ld   (_90A2),a
     rrd
     inc  hl
     rrd
-    ld   (p2_timer_digits+3*$20),a ; digit 3
+    ld   (_90E2),a
     rrd
-    ld   (p2_timer_digits+4*$20),a ; digit 4
+    ld   (_9102),a
     rrd
     ret
 
     dc   12, $FF
 
-;;; ==========================================
-
-clear_ram_x83_bytes:
-    ld   hl,START_OF_RAM
-_loop__c83:
+delay_83:                       ; maybe a delay?
+    ld   hl,tick_mod_3
+_1463:
     ld   (hl),$00
     inc  l
-    jr   nz,_loop__c83
+    jr   nz,_1463
     inc  h
     ld   a,h
-    cp   $83
-    jr   nz,_loop__c83
+    cp   $83 ; 1000 0011
+    jr   nz,_1463
     ret
 
     dc   1, $FF
 
-;;; ==========================================
 ;; lotsa calls here
 reset_xoff_sprites_and_clear_screen:
     call reset_xoff_and_cols_and_sprites ; then nop slides
@@ -3286,27 +3112,19 @@ reset_xoff_sprites_and_clear_screen:
     nop
     nop ; end of weird nopslide
 
-;;; ==========================================
-;;; Clears video RAM from $9000-$97FF
-;;; I don't understand the $9400-$97ff screen.
-;;; It's a mirror to the first, so this seems like
-;;; clearing up to $9800 (instead of $9400) would
-;;; be a waste of time?
 clear_screen:
     ld   hl,screen_ram
-_loop_cs:
+_1483:
     ld   (hl),tile_blank
     inc  l
-    jr   nz,_loop_cs
+    jr   nz,_1483
     inc  h
     ld   a,h
-    cp   $98     ; Hit $9800?
-    jr   nz,_loop_cs
+    cp   $98
+    jr   nz,_1483
     ret
 
     db   $FF
-
-;;; ==========================================
 
 ;; Lotsa calls here (via $1470);
 reset_xoff_and_cols_and_sprites:    ; sets 128 locations to 0
@@ -3321,10 +3139,9 @@ _1493:
 
     dc   4, $FF
 
-;;; ==========================================
-
+;;
 clear_ram:
-    ld   hl,START_OF_RAM ; = $8000
+    ld   hl,tick_mod_3 ; = $8000, start of ram
 _14A3:
     ld   (hl),$00
     inc  hl
@@ -3334,8 +3151,6 @@ _14A3:
     jp   _ret_hard_reset ; Return
 
     dc   2, $FF
-
-;;; ==========================================
 
 screen_reset:
     ld   hl,play_tune_for_cur_screen - JMP_HL_OFFSET
@@ -3365,8 +3180,6 @@ _14CC:
     ret
 
     dc   2, $FF
-
-;;; ==========================================
 
 reset_enemies_2:
     ld   a,(tick_mod_fast) ; faster in round 2
@@ -3412,56 +3225,56 @@ animate_splash_pickup_nops:
     nop
     nop
 animate_splash_pickups:
-    ld   a,(attract_piks+$00)
+    ld   a,(_9308)
     cp   tile_blank
     jr   z,_157D
     cp   tile_crown_pika
     jr   nz,_1578
     ld   a,$9C
-    ld   (attract_piks+$00),a
+    ld   (_9308),a
     jr   _157D
 _1578:
     ld   a,tile_crown_pika
-    ld   (attract_piks+$00),a
+    ld   (_9308),a
 ;;
 _157D:
-    ld   a,(attract_piks+$04)
+    ld   a,(_930C)
     cp   tile_blank
     jr   z,_1594
     cp   $8D
     jr   nz,_158F
     ld   a,$9D
-    ld   (attract_piks+$04),a
+    ld   (_930C),a
     jr   _1594
 _158F:
     ld   a,$8D
-    ld   (attract_piks+$04),a
+    ld   (_930C),a
 ;;
 _1594:
-    ld   a,(attract_piks+$08)
+    ld   a,(_9310)
     cp   tile_blank
     jr   z,_15AB
     cp   $8E
     jr   nz,_15A6
     ld   a,$9E
-    ld   (attract_piks+$08),a
+    ld   (_9310),a
     jr   _15AB
 _15A6:
     ld   a,$8E
-    ld   (attract_piks+$08),a
+    ld   (_9310),a
 
 _15AB:
-    ld   a,(attract_piks+$0C)
+    ld   a,(_9314)
     cp   tile_blank
     jr   z,_15C2
     cp   $8F
     jr   nz,_15BD
     ld   a,$9F
-    ld   (attract_piks+$0C),a
+    ld   (_9314),a
     jr   _15C2
 _15BD:
     ld   a,$8F
-    ld   (attract_piks+$0C),a
+    ld   (_9314),a
 _15C2:
     ret
 
@@ -3481,32 +3294,32 @@ attract_bonus_screen:
     call draw_border_1
     call animate_splash_screen
     ld   a,tile_crown_pika
-    ld   (attract_piks+$00),a
+    ld   (_9308),a
     call animate_splash_screen
     call draw_tiles_h
     db   $08,$10
-    db   2,0,0,__,P_,T_,S_,$FF ;  200 PTS
+    db   $02,$00,$00,$10,$20,$24,$23,$FF ;  200
     call animate_splash_screen
     ld   a,$8D
-    ld   (attract_piks+$04),a
+    ld   (_930C),a
     call animate_splash_screen
     call draw_tiles_h
     db   $0C,$10
-    db   4,0,0,__,P_,T_,S_,$FF ;  400 PTS
+    db   $04,$00,$00,$10,$20,$24,$23,$FF ;  400 ...
     call animate_splash_screen
     ld   a,$8E
-    ld   (attract_piks+$08),a
+    ld   (_9310),a
     call animate_splash_screen
     call draw_tiles_h
     db   $10,$10
-    db   6,0,0,__,P_,T_,S_,$FF ;  600 PTS
+    db   $06,$00,$00,$10,$20,$24,$23,$FF ;  600 ...8
     call animate_splash_screen
     ld   a,$8F
-    ld   (attract_piks+$0C),a
+    ld   (_9314),a
     call animate_splash_screen
     call draw_tiles_h
     db   $14,$10
-    db   1,0,0,0,__,P_,T_,S_,$FF ;  1000 PTS
+    db   $01,$00,$00,$00,$10,$20,$24,$23,$FF ;  1000 ...8
     call animate_splash_screen
     call animate_splash_screen
     call animate_splash_screen
@@ -3528,8 +3341,6 @@ clear_and_draw_screen:
 
     dc   6, $FF
 
-;;; ==========================================
-
 animate_splash_screen:
     ld   d,$10
 _1662:
@@ -3548,7 +3359,6 @@ _166A:
 
     dc   2, $FF
 
-;;; ==========================================
 ;;
 bonus_multplier_data:
     db   $E8
@@ -3557,8 +3367,6 @@ bonus_multplier_data:
     db   $ED
     db   $EF
     db   $F1
-
-;;; ==========================================
 
 update_speed_timers:
     ld   a,(player_num)
@@ -3607,8 +3415,6 @@ _16C0:
 
     dc   12, $FF
 
-;;; ==========================================
-
 draw_bonus:
     call draw_tiles_h
     db   $0A,$00
@@ -3626,8 +3432,6 @@ draw_bonus:
 
     dc   3, $FF
 
-
-;;; ==========================================
 ;; Adds whatever is in 801d
 add_score:
     ld   a,(num_players)
@@ -3666,23 +3470,16 @@ _1722:
 
     dc   23, $FF
 
-;;; ==========================================
-;;; Go to the next level when the player gets to the right edge
-;;; of the screen, at the top or the bottom. This prevents the
-;;; game transitioning if you jump of the moving platforms in
-;;; the middle of the screen. (Though, it is possible to skip
-;;; the tricky lava-jump "S_S" levels, if you carefully jump UNDER
-;;; the platform on the bottom right!)
 check_done_screen:
     scf
     ccf
     ld   a,(player_y) ; Test if player is at top or bottom
     add  a,$48 ; Y + 72 > 255?
-    jr   c,_valid_exit_y ; ...yep, check x
+    jr   c,_175C ; ...yep, check x
     sub  $78 ; Y - 120 < 0?
     ret  nc ; ...no, can't finish level here...
 ;; check if gone past edge of screen
-_valid_exit_y:
+_175C:
     ld   a,(player_x)
     scf
     ccf
@@ -3691,7 +3488,6 @@ _valid_exit_y:
     call transition_to_next_screen ; jump to next screen
     ret
 
-;;; ==========================================
 ;;
 clear_column_of_tiles:
     push hl
@@ -3708,8 +3504,6 @@ _lp_176F:
     ret
 
     db   $FF
-
-;;; ==========================================
 
 transition_to_next_screen:
     call reset_dino
@@ -3758,15 +3552,13 @@ add_amount_bdc:
     dc   2, $FF
 
 reset_jump_and_redify_bottom_row:
-    ld   (screen_xoff_col+$3F),a ; set bottom row col
+    ld   (_813F),a ; set bottom row col
     xor  a
     ld   (jump_tbl_idx),a
     ld   (jump_triggered),a
     ret
 
     db   $FF
-
-;;; ==========================================
 
 reset_dino:
     xor  a
@@ -3812,8 +3604,6 @@ reset_player_sprite_frame_col:
 
     dc   6, $FF
 
-;;; ==========================================
-
 init_player_pos_for_screen:
     ld   a,(player_num)
     and  a
@@ -3841,7 +3631,6 @@ _182E:
 
     dc   5, $FF
 
-;;; ==========================================
 ;; [x, y]
 player_start_pos_data:
     db   $20,$D0
@@ -3870,28 +3659,24 @@ player_start_pos_data:
     db   $20,$D0
     db   $20,$26
     db   $20,$26
-    db   $20,$D0  ; cage
+    db   $20,$D0
 
     dc   10, $00
     dc   8, $FF
 
-
-;;; ==========================================
-
 reset_xoffs:
     ld   hl,screen_xoff_col
-_loop_rx:
+_189B:
     ld   (hl),$00
     inc  hl
     inc  hl
     ld   a,l
     cp   $40
-    jr   nz,_loop_rx
+    jr   nz,_189B
     ret
 
     dc   11, $FF
 
-;;; ==========================================
 ;; Level data for screens 1, 2, 4, 8, 13, 15, 18
 ;; (all `n_n` screens).
 ;; See by DRAW_SCREEN_FROM_LEVEL_DATA
@@ -3922,7 +3707,6 @@ level_bg__n_n:
 
     dc   3, $FF
 
-;;; ==========================================
 ;;; Skip level AFTER getting bonus
 bonus_skip_screen:
 ;; Draws the Bongo Tree. I thought this must have been a glitch,
@@ -3942,8 +3726,6 @@ bonus_skip_screen:
     ld   (player_col_legs),a
     jp   transition_to_next_screen
 
-
-;;; ==========================================
 ;; Clear screen to blanks
 clear_scr_to_blanks:
     ld   hl,screen_ram
@@ -3979,8 +3761,6 @@ _done_19E3:
 
     dc   9, $FF
 
-;;; ==========================================
-
 check_fall_off_bottom_scr:
     ld   a,(player_y_legs)
     scf
@@ -3995,7 +3775,6 @@ check_fall_off_bottom_scr:
 
     db   $FF
 
-;;; ==========================================
 ;; Die if you go out the screen to the left (16px)
 check_exit_stage_left:
     ld   a,(player_x)
@@ -4046,8 +3825,6 @@ level_bg__stairs_up:
 
     dc   3, $FF
 
-;;; ==========================================
-
 call_do_death_sequence:
     call do_death_sequence
     call post_death_reset
@@ -4055,7 +3832,6 @@ call_do_death_sequence:
 
     db   $FF
 
-;;; =============== unused? ====================
 ;; ? unused?
     ld   a,$03
     ld   (_8080),a
@@ -4077,8 +3853,6 @@ _1B69:
     jp   big_reset
 
     dc   13, $FF
-
-;;; ==========================================
 
 init_score_and_screen_once:
     ld   a,(is_2_players)
@@ -4124,32 +3898,25 @@ _1BCB:
 
     dc   1, $FF
 
-;;; ==========================================
-
 draw_border_1_b:
     call draw_tiles_h
     db   $1B,$02
-    db   $E2
-    dc   22,$E3
-    db   $E4,$FF
+    db   $E2,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3,$E3
+    db   $E3,$E3,$E3,$E3,$E3,$E3,$E3,$E4,$FF
 
     jp   draw_border_1_c
 
     dc   9, $FF
 
-;;; ==========================================
-
 delay_18_vblanks:
     ld   e,$18
-_loop_dv18:
+_1C02:
     call wait_vblank
     dec  e
-    jr   nz,_loop_dv18
+    jr   nz,_1C02
     ret
 
     dc   7, $FF
-
-;;; ==========================================
 
 dino_caught_player_right:
     ld   a,(player_x)
@@ -4172,8 +3939,6 @@ dino_caught_player_right:
     call kill_player
     ret
 
-;;; ==========================================
-
 play_intro_jingle:
     ld   a,$0F ; intro jingle
     ld   (sfx_id),a
@@ -4183,8 +3948,6 @@ play_intro_jingle:
     ret
 
     dc   2, $FF
-
-;;; ==========================================
 
 dino_caught_player_left:
     ld   a,(player_x)
@@ -4207,18 +3970,15 @@ dino_caught_player_left:
     call kill_player
     ret
 
-;;; ==========================================
-
-_a_thing_1C81:                  ; surely not real code?
-    db   $E9, $10,$40           ; jp (hl); djnz $1cc4
-    ld   bc,_a_thing_1C81
+_1C81:
+    jp   (hl)
+    djnz _1CC4
+    ld   bc,_1C81
     push bc
     push hl
     ret
 
     dc   6, $FF
-
-;;; ==========================================
 
 dino_got_player_left_or_right:
     ld   a,(player_x)
@@ -4235,8 +3995,6 @@ _1CA0:
     ret
 
     dc   12, $FF
-
-;;; ==========================================
 
 dino_collision:
     ld   a,(dino_x)
@@ -4267,9 +4025,6 @@ _1CD2:
 
     dc   2, $FF
 
-
-;;; ==========================================
-
 draw_border_1_c:
     call draw_tiles_v_copy
     db   $19,$03
@@ -4278,8 +4033,6 @@ draw_border_1_c:
     ret
 
     dc   9, $FF
-
-;;; ==========================================
 
 ;; Level data for screens: 16, 19, 27
 ;; (all `S` screens)
@@ -4372,20 +4125,18 @@ level_bg__S_S:
 
     dc   6, $FF
 
-;;; ==========================================
 ;; Waits 1 vblank, checks if credit is added yet
 wait_for_start_button:
     call wait_vblank
     ld   a,(credits)
     and  a
     ret  z
-;; credit added!
+;; credit added! - start the game
     call reset_xoff_and_cols_and_sprites
-    jp   play_attract_PRESS_P1P2
+    jp   _play_splash
 ;;
     dc   10, $FF
 
-;;; ==========================================
 ;; Level data for screens 3, 6, 9, 11, 14, 22, 25
 ;; (all `nTn` and `W` levels)
 ;; See DRAW_SCREEN_FROM_LEVEL_DATA
@@ -4414,8 +4165,6 @@ level_bg__nTn:
     db   $03,$41,$00,$09,$FD,$00,$1E,$FD,$FF
     db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
-;;; ==========================================
-
 write_out_0_and_1:
     ld   a,$07
     out  ($00),a
@@ -4424,8 +4173,6 @@ write_out_0_and_1:
     ret
 
     dc   15, $FF
-
-;;; ==========================================
 
 update_dino:
     ld   a,(hl)
@@ -4472,8 +4219,6 @@ _22D8:
     jp   _23E0
 
     db   $FF
-
-;;; ==========================================
 
 dino_pathfind_nopslide:
     nop
@@ -4526,8 +4271,6 @@ _2316:
     ret
 
     db   $FF
-
-;;; ==========================================
 
 ;; location of path data for each screen
 dino_path_lookup:
@@ -4590,8 +4333,6 @@ _23E0:
 
     dc   20, $FF
 
-;;; ==========================================
-
 dino_anim_lookup:
     db   $2F,$00,$2E,$00
     db   $2D,$00,$2C,$00
@@ -4622,73 +4363,69 @@ _2432:
 
     dc   23, $FF
 
-;;; ==========================================
-
 draw_score:
     xor  a
     ld   hl,p1_score
     rrd
-    ld   (p1_score_digits+1*$20),a ; digit 2
+    ld   (_9301),a
     rrd
-    ld   (p1_score_digits+2*$20),a ; digit 3
-    rrd
-    inc  l
-    rrd
-    ld   (p1_score_digits+3*$20),a ; digit 4
-    rrd
-    ld   (p1_score_digits+4*$20),a ; digit 4
+    ld   (_9321),a
     rrd
     inc  l
     rrd
-    ld   (p1_score_digits+5*$20),a ; digit 5
+    ld   (_9341),a
+    rrd
+    ld   (_9361),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9381),a
     rrd
     rrd
     xor  a
-    ld   (p1_score_digits+0*$20),a ; digit 0 - always 0.
+    ld   (_92E1),a
     ld   hl,p2_score
     rrd
-    ld   (p2_score_digits+1*$20),a ; digit 1
+    ld   (_9081),a
     rrd
-    ld   (p2_score_digits+2*$20),a ; digit 2
-    rrd
-    inc  l
-    rrd
-    ld   (p2_score_digits+3*$20),a ; digit 3
-    rrd
-    ld   (p2_score_digits+4*$20),a ; digit 4
+    ld   (_90A1),a
     rrd
     inc  l
     rrd
-    ld   (p2_score_digits+5*$20),a ; digit 5
+    ld   (_90C1),a
+    rrd
+    ld   (_90E1),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9101),a
     rrd
     rrd
     xor  a
-    ld   (p2_score_digits+0*$20),a ; digit 0 - always 0.
+    ld   (_9061),a
     ld   hl,hiscore
     rrd
-    ld   (scr_hiscore+$20),a    ; last digit of highscore
+    ld   (_91C1),a
     rrd
-    ld   (scr_hiscore+$40),a
-    rrd
-    inc  l
-    rrd
-    ld   (scr_hiscore+$60),a
-    rrd
-    ld   (scr_hiscore+$80),a
+    ld   (_91E1),a
     rrd
     inc  l
     rrd
-    ld   (scr_hiscore+$A0),a    ; first digit of hiscore
+    ld   (_9201),a
+    rrd
+    ld   (_9221),a
+    rrd
+    inc  l
+    rrd
+    ld   (_9241),a
     rrd
     rrd
     xor  a
-    ld   (scr_hiscore),a  ; hiscore trailing 0
+    ld   (_91A1),a
     call copy_hiscore_name_to_screen_2
     ret
 
     dc   13, $FF
-
-;;; ==========================================
 
 delay_60_vblanks:
     ld   h,$60
@@ -4699,8 +4436,6 @@ _24E2:
     ret
 
     dc   3, $FF
-
-;;; ==========================================
 
 delay_8_play_sound:
     push bc
@@ -4717,23 +4452,16 @@ _24EF:
 
     dc   3, $FF
 
-
-;;; ==========================================
-;;; Called?
-
-_2500:
     ld   hl,hiscore
 _2503:
     ld   (hl),$00
     inc  l
     ld   a,l
-    cp   $E1                    ; why e1?
+    cp   $E1
     jr   nz,_2503
     ret
 
     dc   12, $FF
-
-;;; ==========================================
 
 test_then_dino_collision:
     ld   a,(dino_counter)
@@ -4751,7 +4479,7 @@ test_then_dino_collision:
 unused_draw_d4_everywhere:
     ld   de,$0016 ; +22 each outer loop?
     ld   c,$20
-    ld   hl,screen_ram+$10
+    ld   hl,_9010
 _j_1:                             ; 32 loops
     ld   b,$0A
 _i_1:                             ; 10 loops
@@ -4777,14 +4505,14 @@ unused_spiral_cage_fill_transition:
     ld   hl,start_of_tiles
     ld   e,$79
     call _part_two
-    ld   hl,scr_unused_spiral
+    ld   hl,_93A0
     call _part_two
     ld   hl,screen_ram
     call _part_three
-    ld   hl,screen_ram+$1F
+    ld   hl,_901F
     call _part_three
     ld   d,$10
-    ld   hl,screen_ram+$61
+    ld   hl,_9061
 _lp_2575:
     call _part_four
     call _part_five
@@ -4804,7 +4532,7 @@ _part_two:
     dc   8, $FF
 _part_three:
     ld   (hl),e
-    ld   bc,$0020
+    ld   bc,_0020
     add  hl,bc
     ld   a,h
     cp   $94
@@ -4815,7 +4543,7 @@ _part_four:
     call wait_vblank
 _25AB:
     ld   (hl),e
-    ld   bc,$0020
+    ld   bc,_0020
     add  hl,bc
     ld   a,(hl)
     cp   e
@@ -4837,7 +4565,7 @@ _25C3:
 _part_six:
     call wait_vblank
     ld   (hl),e
-    ld   bc,$0020
+    ld   bc,_0020
     sbc  hl,bc
     ld   a,(hl)
     cp   e
@@ -4935,7 +4663,6 @@ dino_path_5:
 
     dc   8, $FF
 
-;;; ==========================================
 ;;;
 set_player_y_level_start:
     ld   a,(player_y)
@@ -4989,8 +4716,6 @@ dino_path_6:
 
     dc   16, $FF
 
-;;; ==========================================
-
 move_dino_x:
     ld   a,(tick_num)
     and  $03
@@ -5011,24 +4736,21 @@ move_dino_x:
     ld   (dino_x_legs),a
     ret
 
-;;; ==========================================
-;;; Called from NMI: so maybe this is the bit that
-;;; plays the current samples of sfx
-player_all_sfx_chunks:
+;;
+_2901:
     ld   hl,sfx_sumfin_0 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    call reset_sfx_ids
+    call mystery_8066_fn
     ld   hl,sfx_sumfin_1 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     ld   hl,sfx_sumfin_2 - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    call reset_sfx_ids
+    call mystery_8066_fn
     ld   hl,sfx_queuer - JMP_HL_OFFSET
-    jr   call_sfx_queuer_and_reset_sfx_ids
+    jr   jmp_hl_pl_4k_and_mystery_8066_fn
 
     dc   2, $FF
 
-;;; ==========================================
 ;;
 set_dino_dir:
     inc  hl
@@ -5049,18 +4771,16 @@ _2931:
 
     dc   11, $FF
 
-;;; ==========================================
-
-call_sfx_queuer_and_reset_sfx_ids:
-    call jmp_hl_plus_4k ; hl+4k = sfx_queuer
-    call reset_sfx_ids
+jmp_hl_pl_4k_and_mystery_8066_fn:
+    call jmp_hl_plus_4k ; hl = DRAW_SCREEN
+    call mystery_8066_fn
     ret
 
     dc   25, $FF
 
-call_player_all_sfx_chunks:
+save_ix_and_um: ; called?
     push ix
-    call player_all_sfx_chunks
+    call _2901
     pop  ix
     ret
 
@@ -5071,49 +4791,49 @@ got_a_bonus:
     inc  a
     ld   (bonuses),a
     cp   $01
-    jr   nz,_gab_2
+    jr   nz,_2991
     ld   a,$F2
-    ld   (scr_bonus_sq+$00),a ; uncovering bonus red squares
+    ld   (_934B),a ; uncovering bonus red squares
     ret
-_gab_2:
+_2991:
     cp   $02
-    jr   nz,_gab_3
+    jr   nz,_299B
     ld   a,$F3
-    ld   (scr_bonus_sq+$01),a
+    ld   (_934C),a
     ret
-_gab_3:
+_299B:
     cp   $03
-    jr   nz,_gab_4
+    jr   nz,_29A5
     ld   a,$EA
-    ld   (scr_bonus_sq+$20),a
+    ld   (_936B),a
     ret
-_gab_4:
+_29A5:
     cp   $04
-    jr   nz,_gab_5
+    jr   nz,_29AF
     ld   a,$EB
-    ld   (scr_bonus_sq+$21),a
+    ld   (_936C),a
     ret
-_gab_5:
+_29AF:
     cp   $05
-    jr   nz,_gab_6
+    jr   nz,_29C0
     ld   a,(bonus_mult)
     ld   hl,bonus_multplier_data
     add  a,l
     ld   l,a
     ld   a,(hl)
-    ld   (scr_bonus_sq+$40),a
+    ld   (_938B),a
     ret
 ;; 6 Bonuses got!
-_gab_6:
+_29C0:
     ld   a,(bonus_mult)
     ld   hl,bonus_multplier_data + 4
     add  a,l
     ld   l,a
     ld   a,(hl)
-    ld   (scr_bonus_sq+$41),a
+    ld   (_938C),a
     call do_bonus_flashing
     ld   c,$0A ; 10x
-_gab_flash:
+_29D1:
     ld   a,(bonus_mult)
     ld   b,a
     inc  b
@@ -5126,13 +4846,13 @@ _29D6:
     call delay_8_play_sound
     djnz _29D6
     dec  c
-    jr   nz,_gab_flash
+    jr   nz,_29D1
     ld   a,(bonus_mult)
     inc  a
     cp   $04 ; Cap bonus to 4x
-    jr   nz,_gab_mult
+    jr   nz,_29F2
     ld   a,$03
-_gab_mult:
+_29F2:
     ld   (bonus_mult),a
     xor  a
     ld   (bonuses),a
@@ -5170,8 +4890,6 @@ dino_path_7:
     db   $C8,$40,$06,$00,$D0,$38,$04,$00
     db   $D8,$30,$05,$00,$E0,$28,$06,$00
 
-;;; ==========================================
-
 draw_bonus_state:
     call draw_bonus
     ld   a,(bonuses)
@@ -5181,15 +4899,13 @@ draw_bonus_state:
     ld   a,e
     and  a
     ret  z
-_dbs_clear:
+_2ADE:
     call got_a_bonus ; clear out "got" bonuses
     dec  e
-    jr   nz,_dbs_clear
+    jr   nz,_2ADE
     ret
 
     dc   27, $FF
-
-;;; ==========================================
 
 ;; who calls? (free bytes)
     ld   a,(_8093)
@@ -5207,8 +4923,6 @@ _done_2B14:
     ret
 
     dc   11, $FF
-
-;;; ==========================================
 
 ;; who calls? (free bytes?)
     ld   b,a
@@ -5237,7 +4951,6 @@ _2B3A:
 
     dc   16, $FF
 
-;;; ==========================================
 ;; Run enemy update subs, based on current screen
 update_enemies:
     ld   a,(player_num)
@@ -5383,16 +5096,12 @@ _2C37:
 
     dc   8, $FF
 
-;;; ==========================================
-
 enemy_pattern_scr_2:
     call rock_fall_1
     call update_enemy_1
     ret
 
     dc   9, $FF
-
-;;; ==========================================
 
 enemy_pattern_scr_4:
     call rock_fall_1
@@ -5403,7 +5112,6 @@ enemy_pattern_scr_4:
 
     dc   11, $FF
 
-;;; ==========================================
 ;;
 hiscore_check_buttons:
     ld   a,(input_buttons)
@@ -5425,8 +5133,6 @@ _2C88:
 
     dc   10, $FF
 
-;;; ==========================================
-
 enemy_pattern_scr_8:
     call rock_fall_1
     call update_enemy_1
@@ -5438,7 +5144,6 @@ enemy_pattern_scr_8:
 
     dc   5, $FF
 
-;;; ==========================================
 ;; wonder what this was for? No paths call anything
 ;; maybe a debug tool?
 ;; -- i've stolen this area for OGNOB mode.
@@ -5500,8 +5205,7 @@ _2CBE:
 
     dc   16, $FF
 
-;;; ==========================================
-
+;; HiScore somthing
 set_hiscore_and_reset_game:
     ld   hl,hiscore
     ld   a,(p1_score)
@@ -5565,8 +5269,6 @@ _2D70:
 
     dc   18, $FF
 
-;;; ==========================================
-
 enter_hiscore_screen:
     push af
     ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
@@ -5581,47 +5283,47 @@ enter_hiscore_screen:
     db   $00, $00 ; params to DRAW_SCREEN
     call draw_tiles_h
     db   $04,$0A
-    db   P_,L_,A_,Y_,E_,R_,$FF ;  PLAYER
+    db   $20,$1C,$11,$29,$15,$22,$FF ;  PLAYER
     call draw_tiles_h
-    db   $07,$03 ;  YOU BEAT THE HIGHEST
-    db   Y_,O_,U_,__,B_,E_,A_,T_,__,T_,H_,E_,__,H_,I_,G_,H_,E_,S_,T_,$FF
+    db   $07,$03
+    db   $29,$1F,$25,$10,$12,$15,$11,$24,$10,$24,$18,$15,$10,$18,$19,$17
+    db   $18,$15,$23,$24,$FF ;  YOU BEAT THE HIGHEST
     call draw_tiles_h
     db   $09,$03 ;  SCORE OF THE DAY
-    db   S_,C_,O_,R_,E_,__,O_,F_,__,T_,H_,E_,__,D_,A_,Y_,$FF
+    db   $23,$13,$1F,$22,$15,$10,$1F,$16,$10,$24,$18,$15,$10,$14,$11,$29,$FF
     call draw_tiles_h
     db   $0B,$03
-    db   P_,L_,E_,A_,S_,E_,__,E_,N_,T_,E_,R_,__,Y_,O_,U_,R_,__,N_,A_,M_,E_,$FF
+    db   $20,$1C,$15,$11,$23,$15,$10,$15,$1E,$24,$15,$22,$10,$29,$1F,$25
+    db   $22,$10,$1E,$11,$1D,$15,$FF
     call draw_tiles_h
     db   $0D,$03
 ;; drawing the alphabet A-L
-    db   A_,__,B_,__,C_,__,D_,__,E_,__,F_,__
-    db   G_,__,H_,__,I_,__,J_,__,K_,__,L_,$FF
+    db   $11,$10,$12,$10,$13,$10,$14,$10,$15,$10,$16,$10,$17,$10,$18,$10,$19
+    db   $10,$1A,$10,$1B,$10,$1C,$FF
     call draw_tiles_h
     db   $0F,$03
 ;; drawing the alphabet M-X
-    db   M_,__,N_,__,O_,__,P_,__,Q_,__,R_,__
-    db   S_,__,T_,__,U_,__,V_,__,W_,__,X_,$FF
+    db   $1D,$10,$1E,$10,$1F,$10,$20,$10,$21,$10,$22,$10,$23,$10,$24,$10,$25
+    db   $10,$26,$10,$27,$10,$28,$FF
     call draw_tiles_h
     db   $11,$03
 ;; Y,Z... characters
-    db   Y_,__,Z_,__,__,__,__,__,__,__
-    db   $51,__,$52,__,$53,__,__,__,__,__ ; Circles
-    db   $58,$59,$5A,$5B,$FF              ; Rub End
+    db   $29,$10,$2A,$10,$10,$10,$10,$10,$10,$10,$51,$10,$52,$10,$53,$10,$10
+    db   $10,$10,$10,$58,$59,$5A,$5B,$FF
     call draw_tiles_h
     db   $17,$0A
-    dc   10, tile_hyphen
-    db   $FF
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
     call draw_score
     ld   a,$09 ; 90 seconds timer
-    ld   (scr_hs_timer+$20),a       ; second digit
+    ld   (_9382),a ; num 1 to screen
     xor  a
-    ld   (scr_hs_timer+$00),a ; first digit
+    ld   (_9362),a ; num 2 to screen
     ld   (hiscore_timer),a
     pop  af
-    ld   iy,scr_hi_name_entry
+    ld   iy,_9277
     ld   (_9184),a ; something else on screen...
     call hiscore_clear_name
-    ld   hl,scr_cursor_line_hs
+    ld   hl,_934E
 set_cursor:
     ld   (hl),tile_cursor
     ld   ix,input_buttons
@@ -5670,7 +5372,6 @@ _done_2EC8:
 
     dc   11, $FF
 
-;;; ==========================================
 ;; called when entered a letter on name
 hiscore_select_letter:
     ld   a,$10
@@ -5700,8 +5401,6 @@ _enter_letter:
 
     dc   16, $FF
 
-;;; ==========================================
-
 pop_hls_then_copy_hiscore_name:
     xor  a
     ld   (_8086),a
@@ -5712,14 +5411,12 @@ pop_hls_then_copy_hiscore_name:
 
     dc   6, $FF
 
-;;; ==========================================
-
 hiscore_rub_letter:
-    ld   de,$0020
+    ld   de,_0020
     add  iy,de
     ld   (iy+$00),$2B
     ld   a,$10
-    ld   (scr_hi_name_entry+$20),a
+    ld   (_9297),a
     push hl
     push iy
     pop  hl
@@ -5740,8 +5437,6 @@ _2F3E:
 
     dc   11, $FF
 
-;;; ==========================================
-
 hiscore_back_cursor:
     ld   (hl),$10
     ld   de,$0040
@@ -5752,7 +5447,7 @@ hiscore_back_cursor:
     ld   a,$92
     cp   l
     jr   nz,_2F63
-    ld   hl,scr_hi_under_X
+    ld   hl,_9090 ; screen somewhere
     ret
 _2F63:
     ld   a,$90
@@ -5768,8 +5463,6 @@ _2F6C:
     ret
 
     dc   20, $FF
-
-;;; ==========================================
 
 hiscore_clear_name:
     push hl
@@ -5787,7 +5480,6 @@ _2F8C:
     rra ; weird 0x1F. Dump error?
     dc   14, $FF
 
-;;; ==========================================
 ;;
 hiscore_fwd_cursor:
     ld   a,$10
@@ -5801,19 +5493,19 @@ hiscore_fwd_cursor:
     ld   a,$4E
     cp   l
     jr   nz,_2FC1
-    ld   hl,scr_cursor_line_hs+$2 ; wrap line 1
+    ld   hl,_9350 ; wrap line 1
     ret
 _2FC1:
     ld   a,$50
     cp   l
     jr   nz,_2FCA
-    ld   hl,scr_cursor_line_hs+$4 ; wrap line 2
+    ld   hl,_9352 ; wrap line 2
     ret
 _2FCA:
     ld   a,$52
     cp   l
     ret  nz
-    ld   hl,scr_cursor_line_hs ; wrap line 3
+    ld   hl,_934E ; wrap line 3
     ret
 
     dc   3, $FF
@@ -5826,38 +5518,36 @@ _2FD5:
 
     db   $FF
 
-;;; ==========================================
-
 copy_hiscore_name_to_screen:
     ld   hl,hiscore_name
-    ld   a,(scr_hi_name_entry-0*$20) ; char 1
+    ld   a,(_9277)
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-1*$20) ; char 2
+    ld   a,(_9257)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-2*$20) ; char 3
+    ld   a,(_9237)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-3*$20) ; char 4
+    ld   a,(_9217)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-4*$20) ; char 5
+    ld   a,(_91F7)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-5*$20) ; char 6
+    ld   a,(_91D7)
     inc  hl
     ld   (hl),a
 ;;; === END OF BG3.BIN, START OF BG4.BIN ======
-    ld   a,(scr_hi_name_entry-6*$20) ; char 7
+    ld   a,(_91B7)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-7*$20) ; char 8
+    ld   a,(_9197)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-8*$20) ; char 9
+    ld   a,(_9177)
     inc  hl
     ld   (hl),a
-    ld   a,(scr_hi_name_entry-9*$20) ; char 10
+    ld   a,(_9157)
     inc  hl
     ld   (hl),a
     call _30C0
@@ -5875,35 +5565,33 @@ _3022:
 
     dc   15, $FF
 
-;;; ==========================================
 ;; writes some chars to screen
 ;; actually - different screen loc than copy_msg 1!
 copy_hiscore_name_to_screen_2:
-    ld   a,(hiscore_name+0)
-    ld   (scr_hi_name-0*$20),a   ; char 1
-    ld   a,(hiscore_name+1)
-    ld   (scr_hi_name-1*$20),a   ; char 2
-    ld   a,(hiscore_name+2)
-    ld   (scr_hi_name-2*$20),a   ; char 3
-    ld   a,(hiscore_name+3)
-    ld   (scr_hi_name-3*$20),a   ; char 4
-    ld   a,(hiscore_name+4)
-    ld   (scr_hi_name-4*$20),a   ; char 5
-    ld   a,(hiscore_name+5)
-    ld   (scr_hi_name-5*$20),a   ; char 6
-    ld   a,(hiscore_name+6)
-    ld   (scr_hi_name-6*$20),a   ; char 7
-    ld   a,(hiscore_name+7)
-    ld   (scr_hi_name-7*$20),a   ; char 8
-    ld   a,(hiscore_name+8)
-    ld   (scr_hi_name-8*$20),a   ; char 9
-    ld   a,(hiscore_name+9)
-    ld   (scr_hi_name-9*$20),a   ; char 10
+    ld   a,(hiscore_name)
+    ld   (_9280),a
+    ld   a,(_8308)
+    ld   (_9260),a
+    ld   a,(_8309)
+    ld   (_9240),a
+    ld   a,(_830A)
+    ld   (_9220),a
+    ld   a,(_830B)
+    ld   (_9200),a
+    ld   a,(_830C)
+    ld   (_91E0),a
+    ld   a,(_830D)
+    ld   (_91C0),a
+    ld   a,(_830E)
+    ld   (_91A0),a
+    ld   a,(_830F)
+    ld   (_9180),a
+    ld   a,(_8310)
+    ld   (_9160),a
     ret
 
     dc   11, $FF
 
-;;; ==========================================
 ;; Writes HIGH-SCORE to bytes (later to screen)
 set_hiscore_text:
     ld   hl,hiscore_name
@@ -5938,11 +5626,9 @@ set_hiscore_text:
 
     dc   19, $FF
 
-;;; ==========================================
-
 _30C0:
     ld   c,$00
-    ld   hl,hiscore_name+9
+    ld   hl,_8310
 _30C5:
     ld   a,(hl)
     cp   $2B
@@ -5966,11 +5652,9 @@ _30D8:
 
     dc   7, $FF
 
-;;; ==========================================
-
 _30E8:
-    ld   d,$0A              ;hiscore name length
-    ld   ix,hiscore_name+$08
+    ld   d,$0A
+    ld   ix,_830F
 _30EE:
     ld   a,(ix+$00)
     ld   (ix+$01),a
@@ -5983,7 +5667,6 @@ _30EE:
 
     dc   9, $FF
 
-;;; ==========================================
 ;;
 hiscore_enter_timer:
     push hl
@@ -6013,9 +5696,9 @@ _3110:
     ld   (hl),a ; load a into $HISCORE_TIMER
     xor  a
     rld
-    ld   (scr_hs_timer+$20),a ; Timer countdown char 1
+    ld   (_9382),a ; Timer countdown char 1
     rld
-    ld   (scr_hs_timer+$00),a ; Timer countdown char 2
+    ld   (_9362),a ; Timer countdown char 2
     rld
     pop  ix
     pop  iy
@@ -6024,8 +5707,6 @@ _3110:
     ret
 
     db   $FF
-
-;;; ==========================================
 
 ;; load rock pos (reset rock pos?)
 update_enemy_1:
@@ -6051,8 +5732,6 @@ _314B:
     ret
 
     dc   9, $FF
-
-;;; ==========================================
 
 ;; looks the same as 1?
 enemy_pattern_scr_9:
@@ -6085,8 +5764,6 @@ rock_fall_lookup:
 
     dc   18, $FF
 
-;;; ==========================================
-
 set_bird_left_y_c4:
     ld   a,$F0
     ld   (enemy_2_x),a
@@ -6101,8 +5778,6 @@ set_bird_left_y_c4:
     ret
 
     dc   14, $FF
-
-;;; ==========================================
 
 wrap_bird_left_y_c4:
     ld   a,(enemy_2_x)
@@ -6121,8 +5796,6 @@ _324D:
     ret
 
     dc   15, $FF
-
-;;; ==========================================
 
 move_animate_bird_left:
     ld   a,(tick_mod_fast)
@@ -6153,8 +5826,6 @@ _3287:
 
     dc   35, $FF
 
-;;; ==========================================
-
 set_blue_meanie_a0_d0:
     ld   a,$A0
     ld   (enemy_1_x),a
@@ -6169,8 +5840,6 @@ set_blue_meanie_a0_d0:
     ret
 
     dc   6, $FF
-
-;;; ==========================================
 
 update_stair_up_blue_timer:
     ld   a,(tick_num)
@@ -6189,8 +5858,6 @@ _32DF:
     ret
 
     dc   8, $FF
-
-;;; ==========================================
 
 _32F0:
     ld   a,(enemy_3_active)
@@ -6281,8 +5948,6 @@ _wrap_bird_1:
     ret
 
     dc   7, $FF
-
-;;; ==========================================
 
 _3398:
     call wrap_bird_left_y_40
@@ -6460,8 +6125,6 @@ _34C8:
 
     dc   6, $FF
 
-;;; ==========================================
-
 update_stairdown_blue_left_timer:
     ld   a,(tick_num)
     and  $03
@@ -6499,7 +6162,6 @@ reset_enemies:
     ld   (enemy_6_active),a
     ret
 
-;;; ==========================================
 ;;
 _3538:
     call wrap_bird_left_y_c4
@@ -6614,8 +6276,6 @@ _3605:
 
     dc   7, $FF
 
-;;; ==========================================
-
 move_animate_bird_right:
     ld   a,(tick_mod_fast)
     and  $01
@@ -6643,8 +6303,6 @@ _3637:
     ret
 
     dc   3, $FF
-
-;;; ==========================================
 
 check_buttons_for_something:
     push bc
@@ -6713,8 +6371,6 @@ _36BD:
     ret
 
     dc   15, $FF
-
-;;; ==========================================
 
 _36D0:
     call wrap_bird_right_y_bc
@@ -6973,8 +6629,6 @@ enemy_pattern_scr_26:
 
     dc   25, $FF
 
-;;; ==========================================
-
 set_spear_left_bottom:
     ld   a,(enemy_1_x)
     and  a
@@ -6992,8 +6646,6 @@ set_spear_left_bottom:
     ret
 
     dc   9, $FF
-
-;;; ==========================================
 
 set_spear_left_middle:
     ld   a,(enemy_2_x)
@@ -7320,8 +6972,6 @@ _3B78:
     pop  hl
     ret
 
-;;; ==========================================
-
 ;; interesting algorithm for collision detection!
 player_enemy_collision:
 ;; Check X
@@ -7348,8 +6998,6 @@ _hit:
 
     dc   6, $FF
 
-;;; ==========================================
-
 ;; Always checks all 3 enemies. "Offscreen" enemies
 ;; have x = 0, so the "check x" test fails.
 player_enemies_collision:
@@ -7365,9 +7013,9 @@ player_enemies_collision:
     dc   6, $FF
 
 copy_xoffs:
-    ld   hl,screen_xoff_col+8  ; row 5?
+    ld   hl,_8108
 _3BCB:
-    ld   a,(screen_xoff_col+6)  ; row 4
+    ld   a,(_8106)
     ld   (hl),a
     inc  hl
     inc  hl
@@ -7377,8 +7025,6 @@ _3BCB:
     ret
 
     dc   1, $FF
-
-;;; ==========================================
 
 ;; bytes after the call are:
 ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -7412,8 +7058,6 @@ _3BFC:
 
     dc   1, $FF
 
-;;; ==========================================
-
 screen_tile_animations:
     ld   a,(player_num)
     and  a
@@ -7442,8 +7086,6 @@ _3C10:
     cp   $18
     jr   z,bubble_lava_var
     ret
-
-;;; ==========================================
 
 bubble_lava:
     ld   a,(lava_tile_offset)
@@ -7521,7 +7163,6 @@ bubble_lava_var_3:
 
     db   $FF
 
-;;; ==========================================
 ;; x, frame, color, y
 cutscene_data:
     db   $80,$3A,$11,$70 ;  player
@@ -7548,8 +7189,6 @@ _lp_3CE2:
 
     dc   19, $FF
 
-;;; ==========================================
-
 ;; player, player legs, bongo, dino_legs -bambongo1-dino-bambongo2
 dance_frame_data:
     db   $3C,$3D,$06,$01
@@ -7560,8 +7199,6 @@ dance_frame_data:
     db   $3A,$3B,$07,$02
     db   $3E,$3F,$08,$03
     db   $3A,$3B,$05,$00
-
-;;; ==========================================
 
 update_dance_frames:
     ld   a,(hl)
@@ -7585,7 +7222,6 @@ update_dance_frames:
 
     dc   9, $FF
 
-;;; ==========================================
 ;;; Cut sceen
 do_cutscene:
     ld   a,$06
@@ -7633,10 +7269,8 @@ _3D96:
     ret
     dc   1, $FF
 
-;;; ==========================================
-
 draw_cage_and_scene:            ; for cutscene
-    ld   hl,screen_ram+$218
+    ld   hl,_9218
     ld   (hl),$66
     inc  hl
     ld   (hl),$67
@@ -7644,7 +7278,7 @@ draw_cage_and_scene:            ; for cutscene
     ld   (hl),$6A
     inc  hl
     ld   (hl),$6B
-    ld   hl,screen_ram+$1F8
+    ld   hl,_91F8
     ld   (hl),$64
     inc  hl
     ld   (hl),$65
@@ -7652,7 +7286,7 @@ draw_cage_and_scene:            ; for cutscene
     ld   (hl),$68
     inc  hl
     ld   (hl),$69
-    ld   hl,screen_ram+$1D8
+    ld   hl,_91D8
     ld   (hl),$6E
     inc  hl
     ld   (hl),$6F
@@ -7661,10 +7295,10 @@ draw_cage_and_scene:            ; for cutscene
     inc  hl
     ld   (hl),$6D
     ld   a,$02 ; red
-    ld   (screen_xoff_col+$31),a
-    ld   (screen_xoff_col+$33),a
-    ld   (screen_xoff_col+$35),a
-    ld   (screen_xoff_col+$37),a
+    ld   (_8131),a
+    ld   (_8133),a
+    ld   (_8135),a
+    ld   (_8137),a
     call draw_tiles_h
     db   $1C,$00 ;  Row of upward spikes
     db   $38,$39,$3A,$39,$38,$39,$3C,$3D,$39,$3A,$38,$38,$3C,$3C,$3D,$3C
@@ -7677,15 +7311,13 @@ draw_cage_and_scene:            ; for cutscene
 
     db   $FF
 
-;;; ==========================================
-
 cutscene_run_offscreen:
     ld   a,$0C
     ld   (player_frame),a
     ld   a,$0D
     ld   (player_frame_legs),a
     ld   a,$29
-    ld   (screen_xoff_col+$29),a
+    ld   (_8129),a
     ld   e,$70
 _lp_3E33:
     push de
@@ -7713,8 +7345,6 @@ _lp_3E52:
     ret
 
     dc   1, $FF
-
-;;; ==========================================
 
 cutscene_jump_up_and_down:
     ld   ix,player_x
@@ -7777,15 +7407,13 @@ animate_player_right:
 
     dc   8, $FF
 
-clear_ram_call_weird_a:
-    call clear_ram_x83_bytes
+delay_83_call_weird_a:
+    call delay_83
     ld   hl,load_a_val_really_weird - JMP_HL_OFFSET
     call jmp_hl_plus_4k ; seems to do nothing in sub
     ret
 
     dc   6, $FF
-
-;;; ==========================================
 
 ;;; level tiles at the bottom of the screen
 draw_bottom_row_numbers:
@@ -7837,33 +7465,27 @@ _lp:
 
     dc   2, $FF
 
-;;; ==========================================
-
 draw_jetsoft:
     call draw_tiles_h
-    db   $0C,$0A ;  JETSOFT
-    db   J_,E_,T_,S_,O_,F_,T_,$FF
+    db   $0C,$0A
+    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
     ret
-
-;;; ==========================================
 
 draw_proudly_presents:
     call draw_tiles_h
     db   $14,$07 ;  PROUDLY PRESENTS
-    db   P_,R_,O_,U_,D_,L_,Y_,__,P_,R_,E_,S_,E_,N_,T_,$FF
+    db   $20,$22,$1F,$25,$14,$1C,$29,$10,$20,$22,$15,$23,$15,$1E,$24,$FF
     ret
 
     dc   2, $FF
 
-;;; ==========================================
-
 draw_copyright:
     call draw_tiles_h
     db   $10,$04
-    db   $8B,1,9,8,3,$FF ;  (c) 1983
+    db   $8B,$01,$09,$08,$03,$FF ;  (c) 1983
     call draw_tiles_h
     db   $12,$04
-    db   J_,E_,T_,S_,O_,F_,T_,$FF ;  JETSOFT
+    db   $1A,$15,$24,$23,$1F,$16,$24,$FF ;  JETSOFT
     ret
 
     dc   3, $FF
@@ -7871,14 +7493,11 @@ draw_copyright:
 blank_out_bottom_row:
     call draw_tiles_h
     db   $1F,$00 ;  Whole bunch of spaces over the level numbers
-    dc   28, tile_blank
-    db   $FF
-
+    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
+    db   $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$FF
     ret
 
     dc   5, $FF
-
-;;; ==========================================
 
 do_bonus_flashing:
     nop ; wonder what these did originally?
@@ -7922,8 +7541,6 @@ int_handler:
 
     dc   5, $FF
 
-;;; ==========================================
-
 ;; Looks like more general updates
 update_everything_more:
     call add_move_score
@@ -7933,7 +7550,7 @@ update_everything_more:
     call animate_all_pickups
     ret
 
-    ret         ;? extra ret for fun
+    ret         ;? extra ret
     dc   7, $FF
 
 ;; who calls?
@@ -7945,7 +7562,6 @@ update_everything_more:
 
     dc   1, $FF
 
-;;; ==========================================
 
 add_pickup_pat_8:
     call add_pickup_pat_3
@@ -8069,7 +7685,7 @@ _40CB:
 
 add_pickup_pat_9:
     ld   a,$8F
-    ld   (scr_pik_S_top),a
+    ld   (_92EE),a
     ld   a,$8E
     ld   (_9217),a
     ret
@@ -8084,7 +7700,8 @@ hit_bonus:
     call jmp_hl
     ret
 
-;; Called directly by SFX_SUMFIN_2
+;; Called directly by SFX_SUMFIN_2 and
+;; indirectly (maybe) from weird_unsed_maybe_load
 _4100:
     ld   a,(ix+$05)
     and  a
@@ -8122,27 +7739,25 @@ add_pickup_pat_10:
 
     dc   8, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_1:
+set_synth_settings:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch1_cur_id),a         ; sfx_id?
+    ld   (_8066),a ; not synth!
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
-    ld   l,a                    ; ?  1 3 5 (ch 1,2,3)
+    ld   l,a
     ld   a,$01
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$00                  ; ?  0 2 4 (ch 1,2,3)
+    ld   a,$00
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$08                  ; ?  8 9 A (ch 1,2,3)
+    ld   a,$08
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8159,27 +7774,25 @@ _4170:
 
     dc   7, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_2:
+related_to_mystery_8066:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch2_cur_id),a         ; sfx_id
+    ld   (_8067),a ; 8067
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
     ld   l,a
-    ld   a,$03                  ; ?  1 3 5 (ch 1,2,3)
+    ld   a,$03
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$02                  ; ?  0 2 4 (ch 1,2,3)
+    ld   a,$02
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$09                  ; ?  8 9 A (ch 1,2,3)
+    ld   a,$09
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8222,26 +7835,24 @@ hit_bonus_draw_points:
 
 ;; How do i get here?... what is this Weird load for?
 weird_unsed_maybe_load:
-    ld   a,(_4100)              ; +4k = $8100: screen_xoff_col attrs?
-    ld   bc,jmp_hl_plus_4k      ; hmm, but can't jump to that.
-    push bc                     ; dunno, why keeping these
+    ld   a,(_4100)
+    ld   bc,jmp_hl_plus_4k
+    push bc
     push hl
     ret
 
-;; DRAW_CROWN_PIK_BOT_RIGHT (never called?)
-_41EC:
+;; DRAW_CROWN_PIK_BOT_RIGHT
     ld   a,$9C
     ld   (scr_pik_n_n),a
     ret
 
-;; DRAW_CROSS_PIK_BOT_RIGHT (never called?)
-_41F2:
+;; DRAW_CROSS_PIK_BOT_RIGHT
     ld   a,$9D
     ld   (scr_pik_n_n),a
     ret
 
 ;; draw pikup cross, bot, right-er
-draw_pikup_cross_bot_r:
+_41F8:
     ld   a,$9D
     ld   (_911A),a
     ret
@@ -8254,15 +7865,13 @@ sfx_sumfin_0:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_2
-    call set_synth_settings_1
+    call set_synth_settings
     ld   (ix+$04),$00
     ret
 _i_2:
     call _4080
     ret
 
-;;; uncalled?
-_4216:
     ld   a,$9C
     ld   (_91B1),a
     ret
@@ -8274,15 +7883,13 @@ sfx_sumfin_1:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_3
-    call set_synth_settings_2
+    call related_to_mystery_8066
     ld   (ix+$04),$00
     ret
 _i_3:
     call _40C0
     ret
 
-;;; uncalled?
-_4236:
     ld   a,$9C
     ld   (_918E),a
     ret
@@ -8294,7 +7901,7 @@ sfx_sumfin_2:
     ld   a,(ix+$04)
     and  a
     jr   z,_i_4
-    call set_synth_settings_3
+    call related_to_mystery_8066_2
     ld   (ix+$04),$00
     ret
 _i_4:
@@ -8353,33 +7960,31 @@ _vasea:
 ;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
 funky_looking_set_ring:
     ld   a,$8E
-    ld   (scr_pik_r_W),a
+    ld   (_90CB),a
     call _3602 ; <- that looks odd. Weird jump to middle of code
     ret
 
     dc   7, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_3:
+related_to_mystery_8066_2:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch3_cur_id),a
+    ld   (_8068),a
     sla  a
     ld   hl,sfx_synth_settings
     add  a,l
     ld   l,a
-    ld   a,$05                  ; diff
+    ld   a,$05
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
     inc  hl
-    ld   a,$04                  ; diff
+    ld   a,$04
     out  ($00),a
     ld   a,(hl)
     out  ($01),a
-    ld   a,$0A                  ; diff
+    ld   a,$0A
     out  ($00),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8416,13 +8021,26 @@ blank_out_1up_text:
     dc   5, $FF
 
 ;; data?
-    db   $F0,$70,$B0,$30,$D0,$50,$90,$10
-    db   $E0,$60,$A0,$20,$C0,$40,$80,$00
-    db   $FF,$FF
+    db   $F0
+    db   $70
+    db   $B0
+    db   $30,$D0
+    db   $50
+    db   $90
+    db   $10,$E0
+    db   $60
+    db   $A0
+    db   $20,$C0
+    db   $40
+    db   $80
+    db   $00
+    db   $FF
+    db   $FF
+
 ;;
-    call draw_pikup_cross_bot_r
+    call _41F8
     ld   a,$9E
-    ld   (_927A),a              ;draw some other pikup
+    ld   (_927A),a
     ret
 
     dc   5, $FF
@@ -8528,7 +8146,7 @@ _43C0:
     dc   10, $FF
 
     ld   a,$9F
-    ld   (scr_pik_S_top),a
+    ld   (_92EE),a
     ld   a,$9E
     ld   (_9217),a
     ret
@@ -8578,25 +8196,25 @@ _4492:
     cp   num_screens ; are we on screen 27?
     ret  nz ; Nope, leave.
     ld   a,tile_cage
-    ld   (scr_cage_up+$20),a
+    ld   (_91A9),a
     inc  a
-    ld   (scr_cage_up+$21),a
+    ld   (_91AA),a
     inc  a
-    ld   (scr_cage_up+$40),a
+    ld   (_91C9),a
     inc  a
-    ld   (scr_cage_up+$41),a
+    ld   (_91CA),a
     inc  a
-    ld   (scr_cage_up+$22),a
+    ld   (_91AB),a
     inc  a
-    ld   (scr_cage_up+$23),a
+    ld   (_91AC),a
     inc  a
-    ld   (scr_cage_up+$42),a
+    ld   (_91CB),a
     inc  a
-    ld   (scr_cage_up+$43),a
+    ld   (_91CC),a
     inc  a
-    ld   (scr_cage_up+$02),a
+    ld   (_918B),a
     inc  a
-    ld   (scr_cage_up+$03),a
+    ld   (_918C),a
     jr   _more_cage
 ;; notes
     db   $10,$01,$12,$03
@@ -8612,9 +8230,9 @@ _4492:
 
 _more_cage:
     inc  a
-    ld   (scr_cage_up+$00),a
+    ld   (_9189),a
     inc  a
-    ld   (scr_cage_up+$01),a
+    ld   (_918A),a
     ret
 
     dc   19, $FF
@@ -8703,7 +8321,7 @@ add_pickup_pat_4:
 
 add_pickup_pat_7:
     ld   a,$8E
-    ld   (scr_pik_r_W),a
+    ld   (_90CB),a
     call add_pickup_pat_5
     ret
 
@@ -8847,7 +8465,7 @@ _4652:
 
 ;;; sfx something #10
 _4680:
-    ld   ix,synth1_um_b
+    ld   ix,_82B8
     ld   a,(ix+$0d)
     and  a
     jr   z,_46A1
@@ -8878,7 +8496,7 @@ add_a_to_ret_addr:
     dc   9, $FF
 
 zero_out_some_sfx:
-    ld   hl,synth1_um_b
+    ld   hl,_82B8
     ld   b,$18
 _46C5:
     ld   (hl),$00
@@ -8893,7 +8511,7 @@ clear_sfx_1:
     call zero_out_some_sfx
     ld   a,(ch1_sfx)
     call point_hl_to_sfx_data
-    ld   ix,synth1_um_b
+    ld   ix,_82B8
     call do_something_with_sfx_data
     xor  a
     ld   (ch1_sfx),a
@@ -9099,7 +8717,7 @@ _done_486A:
 
 ;;; called from PLAY_SFX...
 zero_out_some_sfx_2:
-    ld   hl,synth3_um_b
+    ld   hl,_82E8
     ld   b,$18
 _4875:
     ld   (hl),$00
@@ -9111,7 +8729,7 @@ _4875:
 
 ;;; more sfx something
 more_sfx_something:
-    ld   ix,synth3_um_b
+    ld   ix,_82E8
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -9133,7 +8751,7 @@ play_sfx:
     call zero_out_some_sfx_2
     ld   a,(sfx_id)
     call point_hl_to_sfx_data
-    ld   ix,synth3_um_b
+    ld   ix,_82E8
     call do_something_with_sfx_data
     xor  a
     ld   (sfx_id),a
@@ -9156,7 +8774,7 @@ attract_your_being_chased_flash:
 
 ;;; Even more sfx something
 _48E0:
-    ld   ix,synth2_um_b
+    ld   ix,_82D0
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -9187,7 +8805,7 @@ jump_rel_a_copy:  ; duplicate routine
     dc   7, $FF
 
 zero_out_some_sfx_3:
-    ld   hl,synth2_um_b
+    ld   hl,_82D0
     ld   b,$18
 _4915:
     ld   (hl),$00
@@ -9201,7 +8819,7 @@ clear_sfx_2:
     call zero_out_some_sfx_3
     ld   a,(ch2_sfx)
     call point_hl_to_sfx_data
-    ld   ix,synth2_um_b
+    ld   ix,_82D0
     call do_something_with_sfx_data
     xor  a
     ld   (ch2_sfx),a
@@ -9766,9 +9384,9 @@ _4D47:
 
 reset_3_row_xoffs:              ; which ones?
     xor  a
-    ld   (screen_xoff_col+$26),a
-    ld   (screen_xoff_col+$28),a
-    ld   (screen_xoff_col+$2A),a
+    ld   (_8126),a
+    ld   (_8128),a
+    ld   (_812A),a
     ret
 
     dc   9, $FF
@@ -9837,7 +9455,7 @@ done_caged_dino:
     xor  a
     ld   (dino_x),a
     ld   (dino_x_legs),a
-_loop__cage_dino:
+_4DD7:
     call draw_cage_tiles
     push hl
     ld   hl,wait_vblank
@@ -9846,7 +9464,7 @@ _loop__cage_dino:
     inc  hl
     ld   a,$DC
     cp   l
-    jr   nz,_loop__cage_dino
+    jr   nz,_4DD7
     ld   a,$91
     ld   (dino_x),a
     ld   a,$38
@@ -9887,10 +9505,10 @@ attract_splash_bongo:
     call jmp_hl
     ld   hl,blank_out_bottom_row
     call jmp_hl
-    ld   hl,scr_bongo_logo ; draw the BONGO logo
+    ld   hl,_9248 ; draw the BONGO logo
     ld   b,$A0
     ld   c,$05
-_loop_4E53:
+_lp_4E53:
     ld   (hl),b ; top right
     inc  b
     inc  hl
@@ -9907,7 +9525,7 @@ _loop_4E53:
     inc  b
     call wait_30_for_start_button
     dec  c
-    jr   nz,_loop_4E53
+    jr   nz,_lp_4E53
     ld   hl,draw_copyright
     call jmp_hl
     jp   attract_animate_player_up_stairs
@@ -9975,7 +9593,7 @@ wait_60_for_start_button:
 
 wait_15_for_start_button:
     ld   d,$0E
-_loop__w15:
+_4EC4:
     push hl
     push bc
     push de
@@ -9985,7 +9603,7 @@ _loop__w15:
     pop  bc
     pop  hl
     dec  d
-    jr   nz,_loop__w15
+    jr   nz,_4EC4
     ret
 
 ;; what 30 for start
@@ -10570,8 +10188,6 @@ _jump_up_stair:
 
     dc   1, $FF
 
-;;; On the splash screen, player animates jumping
-;;; up one stair (this repeats for each stair)
 attract_jump_up_one_stair:
     ld   d,$00
 _lp_532A:
@@ -10634,6 +10250,7 @@ attract_animate_dino_head:
 _53A6:
     ld   a,$2D
     ld   (bongo_frame),a
+
 _done_54AB:
     ret
 
@@ -10649,7 +10266,7 @@ _53AE:
 ;; identical to jump up, but point at down data.
 attract_jump_down_one_stair:
     ld   d,$00
-_loop__53BA:
+_lp_53BA:
     ld   hl,attract_player_down_stair_data
     ld   a,d
     add  a,a
@@ -10684,7 +10301,7 @@ _loop__53BA:
     inc  d
     ld   a,d
     cp   $06
-    jr   nz,_loop__53BA
+    jr   nz,_lp_53BA
     call wait_15_for_start_button
     ret
 
@@ -10709,7 +10326,7 @@ call_attract_bonus_screen:
     dc   1, $FF
 
 attract_cage_falls_on_dino:
-    ld   hl,scr_attract_cage
+    ld   hl,_9224
 _lp_5433:
     call draw_cage_tiles
     push hl
@@ -10783,7 +10400,7 @@ attract_catch_dino:
     ld   (hl),$12 ; col legs
     inc  hl
     ld   (hl),$CF ; y legs
-    ld   hl,scr_attract_cage
+    ld   hl,_9224
     call draw_cage_tiles
     call attract_dino_runs_along_ground
     call attract_dino_cage_invert
@@ -10856,7 +10473,7 @@ sfx_8_data:
 reset_sfx_something_1:
     xor  a
     ld   (_8046),a
-    ld   a,(synthy_um_1)
+    ld   a,(_82A5)
     and  a
     jr   nz,_552F
     ld   a,$F9
@@ -10864,7 +10481,7 @@ reset_sfx_something_1:
     nop
     nop
 _552F:
-    ld   a,(synthy_um_2)
+    ld   a,(_82AD)
     and  a
     jr   nz,_553A
     ld   a,$FD
@@ -10872,7 +10489,7 @@ _552F:
     nop
     nop
 _553A:
-    ld   a,(synthy_um_3)
+    ld   a,(_82B5)
     and  a
     jr   nz,_5545
     ld   a,$FB
@@ -10950,25 +10567,34 @@ chased_by_a_dino_screen:
     call draw_tiles_h_copy
     db   $08,$0B
 ;; BEWARE
-    db   B_,E_,W_,A_,R_,E_,$FF
+    db   $12,$15,$27,$11,$22,$15,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $0C,$05
 ;; YOUR BEING CHASED
-    db   Y_,O_,U_,R_,__,B_,E_,I_,N_,G_,__,C_,H_,A_,S_,E_,D_,$FF
+    db   $29,$1F,$25,$22,$10,$12,$15,$19,$1E,$17,$10,$13,$18,$11,$23,$15,$14,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $10,$07
 ;; BY A DINOSAUR (classic!)
-    db   B_,Y_,__,A_,__,D_,I_,N_,O_,S_,A_,U_,R_,$FF
+    db   $12,$29,$10,$11,$10,$14,$19,$1E,$1F,$23,$11,$25,$22,$FF
     jp   attract_your_being_chased_flash
 
     dc   2, $FF
 
 ;;  notes
-    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
-    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
-    db   $FF,$FF,$FF,$FF
+    db   $A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$A1
+    db   $02
+    db   $C3,$02,$FF
+    db   $FF
+    db   $FF
+    db   $FF
     db   $00
     db   $02
     db   $FF
@@ -11293,29 +10919,27 @@ sfx_9_data:
 
 call_draw_extra_bonus_screen:
     jp   draw_extra_bonus_screen
-;;; How is this different to the other extra bonus screen?...
-;;; does it ever get here?
+;;
     call jmp_hl
     ld   hl,draw_border_1
     call jmp_hl
     call draw_tiles_h_copy
     db   $08,$08
-    db   E_,X_,T_,R_,A_,__,B_,O_,N_,U_,S_,$FF
+    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
     call draw_tiles_h_copy
     db   $09,$08
-    dc   11, tile_hyphen        ; hyphens under EXTRA BONUS
-    db   $FF
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
     call wait_60_for_start_button
     call wait_60_for_start_button
     call draw_tiles_h_copy
     db   $0C,$07
-    db   P_,I_,C_,K_,__,U_,P_,__,6,__,B_,O_,N_,U_,S_,$FF
+    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
     call draw_tiles_h_copy
     db   $10,$07
-    db   O_,B_,J_,E_,C_,T_,S_,__,W_,I_,T_,H_,O_,U_,T_,$FF
+    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
     call draw_tiles_h_copy
     db   $14,$07
-    db   L_,O_,S_,I_,N_,G_,__,A_,__,L_,I_,F_,E_,$FF
+    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
     call wait_60_for_start_button
     call wait_60_for_start_button
     call draw_tiles_h_copy
@@ -11511,7 +11135,7 @@ _5AC6:
 
 set_row_colors:
     ld   b,a
-    ld   hl,screen_xoff_col+1 ; col for row 1
+    ld   hl,_8101 ; col for row 1
 _5ADC:
     ld   (hl),b
     inc  hl
@@ -11530,7 +11154,6 @@ set_screen_color_to_4:
 
     dc   4, $FF
 
-;;; How is this different to the other extra bonus screen?
 draw_extra_bonus_screen:
     ld   hl,reset_xoff_sprites_and_clear_screen
     call jmp_hl
@@ -11540,22 +11163,22 @@ draw_extra_bonus_screen:
     call draw_tiles_h_copy
     db   $08,$08
 ;; EXTRA BONUS
-    db   E_,X_,T_,R_,A_,__,B_,O_,N_,U_,S_,$FF
+    db   $15,$28,$24,$22,$11,$10,$12,$1F,$1E,$25,$23,$FF
     call draw_tiles_h_copy
     db   $09,$08
-    dc   11, tile_hyphen        ; hyphen underline
-    db   $FF
+    db   $2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$2B,$FF
     call flash_border
     call flash_border
     call draw_tiles_h_copy
     db   $0C,$07
-    db   P_,I_,C_,K_,__,U_,P_,__,6,__,B_,O_,N_,U_,S_,$FF
+;; PICK UP 6 BONUS
+    db   $20,$19,$13,$1B,$10,$25,$20,$10,$06,$10,$12,$1F,$1E,$25,$23,$FF
     call draw_tiles_h_copy
     db   $10,$07
-    db   O_,B_,J_,E_,C_,T_,S_,__,W_,I_,T_,H_,O_,U_,T_,$FF
+    db   $1F,$12,$1A,$15,$13,$24,$23,$10,$27,$19,$24,$18,$1F,$25,$24,$FF
     call draw_tiles_h_copy
     db   $14,$07
-    db   L_,O_,S_,I_,N_,G_,__,A_,__,L_,I_,F_,E_,$FF
+    db   $1C,$1F,$23,$19,$1E,$17,$10,$11,$10,$1C,$19,$16,$15,$FF
     call flash_border
     call draw_tiles_h_copy
     db   $17,$0B
@@ -11571,7 +11194,7 @@ draw_extra_bonus_screen:
     db   $E2,$E3,$E3,$E3,$E4,$FF
     call flash_border
     call flash_border
-    call attract_10000_bonus
+    call _5BC8
     ret
 
     dc   11, $FF
@@ -11600,24 +11223,24 @@ _5BC3:
     dc   1, $FF
 
 ;;
-attract_10000_bonus:
-    ld   a,$F2                  ; 0000 top-right
-    ld   (screen_ram+$1F8),a
+_5BC8:
+    ld   a,$F2
+    ld   (_91F8),a
     call flash_border
-    ld   a,$F3                  ; 0000 bottom-right
-    ld   (screen_ram+$1F9),a
+    ld   a,$F3
+    ld   (_91F9),a
     call flash_border
-    ld   a,$EA                  ; 0000 top-left
-    ld   (screen_ram+$218),a
+    ld   a,$EA
+    ld   (_9218),a
     call flash_border
-    ld   a,$EB                  ; 0000 bottom-left
-    ld   (screen_ram+$219),a
+    ld   a,$EB
+    ld   (_9219),a
     call flash_border
-    ld   a,$E8                  ; 10 top
-    ld   (screen_ram+$238),a
+    ld   a,$E8
+    ld   (_9238),a
     call flash_border
-    ld   a,$E9                  ; 10 bottom
-    ld   (screen_ram+$239),a
+    ld   a,$E9
+    ld   (_9239),a
     call flash_border
     call flash_border
     call flash_border
