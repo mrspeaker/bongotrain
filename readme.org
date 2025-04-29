@@ -13,32 +13,40 @@ Welcom to bongo x bongo.
 - *zout/* : build folder for freshly assembled ROMs
 
 ** Bongo x Bongo
-`bongo.lua` is a trainer for Bongo, including a new game mode: OGNOB MODE.
-See the `RUNNING` section in the file for instructions (tl;dr:  `mame bongo --autoboot_script ./bongo.lua`)
+[[https://github.com/mrspeaker/bongotrain/blob/main/bongo.lua][bongo.lua]] is a trainer for Bongo, including a new game mode: OGNOB MODE.
+See the =RUNNING= section in the file for instructions (tl;dr:  =mame bongo --autoboot_script ./bongo.lua=)
 
 ** Reverse-engineered source code
-`bongo.asm` is a decompiled and annotated version of the Bongo object code back to source code.
+[[https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm][bongo.asm]] is a decompiled and annotated version of the Bongo object code back to source code.
 I used AI to generate the symbols and subroutine names. Did I say AI? I meant I tediously poured over the listing, manually search-replacing symbols as I figured out what they were for.
 
 Not 100% complete... still a bunch of placeholder symbols, but I found so much interesting stuff buried in the code... blog posts to come!
 
 ** Building ROMs
-The Bongo source can be compiled with the `zmac` (http://48k.ca/zmac.html) z80 compiler, then split into chunks that recreate the 6 original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
+The Bongo source can be compiled with the [[http://48k.ca/zmac.html][zmac]] z80 compiler, then split into chunks that recreate the 6 original Bongo ROM files. The output is a set of MAME-exact ROMS (i.e.; they have the correct CRCs) 
 
-`build.sh` compiles the source with `zmac`. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken. It's then zipped up into `zout/bongo.zip` that can be run in MAME.
+[[https://github.com/mrspeaker/bongotrain/blob/main/build.sh][build.sh]] compiles the source with =zmac=. The output file is split into 4k chunks, and each chunk compared against the origin ROM dumps to make sure nothing has been broken. It's then zipped up into =zout/bongo.zip= that can be run in MAME.
 
 If you change bytes, the CRCs will fail - but you can still get a bootleg build of Bongo... why not make your very own version?
+
+** TODOs
+Although most of the larger structure has been reversed, there are still heaps of unknown/unspecified symbols and addresses.
+
+Also, the audio routines have not been figured out at all... they are mostly towards the end of the file, and contain a lot of data. I'm not sure about the format of it, so I can't just squish it all into db's: there is obviously lots of "note" data, but also there are a lot of indirect address jumps: which is hard to verify. The best way is look at `bongo.lst` as you need to know where the addresses jump to!
 
 ** BONGOA: Bongo Set 2
 A new bongo set came out - which was exciting... buuut, spoilers: absolutely nothin' in it.
 
-*11 bytes diff. Only 2 look like they do stuff.*
+I did a diff between the old roms and the new roms: only a handful of bytes different, and only a couple look like they do anything at all.
 
 Changes in two roms:
+#+BEGIN_SRC
 bg1.bin -> 1-2532.bin
 bg2.bin -> 3-2532.bin
+#+END_SRC
 
- cmp -l -x zout/bg1.bin dump/bongoa/1-2532.bin
+#+BEGIN_SRC
+cmp -l -x zout/bg1.bin dump/bongoa/1-2532.bin
 00000b40 00 a7
 00000b41 00 c0
 00000b42 00 f5
@@ -48,41 +56,50 @@ bg2.bin -> 3-2532.bin
 00000b47 00 b8
 00000b48 00 f1
 00000b49 00 c9
+#+END_SRC
 
+#+BEGIN_SRC
 cmp -l -x zout/bg3.bin dump/bongoa/3-2532.bin
 00000288 3e c9
 0000042c cd c9
+#+END_SRC
 
 Total of 11 bytes changed. no new game modes, or gfx changes or anything :(
 
-bytes added at 0xb40:
-a7 and a
-c0 ret nz
-f5 push af
-3e ff  ld a,$ff
+There were also bytes added at 0xb40:
+#+BEGIN_SRC
+a7         and a
+c0         ret nz
+f5         push af
+3e ff      ld a,$ff
 32 00 b8   ld ($B800),a
-f1  pop af
-c9  rt
+f1         pop af
+c9         ret
+#+END_SRC
 
-Previously was just nops.. in my code I had
-```;; 70 zeros/nops. That's a lotta nops. (free bytes?)
-    dc 70,$0
-```
-somone thought the same and put that routine there.
-Thing is, it's loaded at 0x0b40... but nothing ever calls taht.
+Previously at this location it was just nops.. in my disassembly I had:
+#+BEGIN_SRC
+;; 70 zeros/nops. That's a lotta nops. (free bytes?)
+dc 70,$0
+#+END_SRC
 
+Looks like somone thought the same and put that routine there.
+Thing is, it's loaded at 0x0b40... but nothing ever calls that :(
 
-in rom 3: 00000288 3e -> c9 (ret)
+in rom 3: 00000288 3e -> c9 (ret
 
+#+BEGIN_SRC
 2288          	write_out_0_and_1:
-2288  3E07    	    ld   a,$07               <- returns here, doesn't do this hardware check
+2288  3E07    	    ld   a,$07        <- returns here, doesn't do this hardware check
 228A  D300    	    out  ($00),a
 228C  3E38    	    ld   a,$38
 228E  D301    	    out  ($01),a
 2290  C9      	    ret
+#+END_SRC
 
 in rom 3: 0000042c cd -> c9 (ret)
 
+#+BEGIN_SRC
 2420          	copy_inp_to_buttons_and_check_buttons:
 2420  3A00A8  	    ld   a,(port_in1)
 2423  32F183  	    ld   (input_buttons),a
@@ -90,8 +107,10 @@ in rom 3: 0000042c cd -> c9 (ret)
 2429  32F283  	    ld   (input_buttons_2),a
 242C  CD4036  	    call check_buttons_for_something <- returns here
 242F  C9      	    ret
+#+END_SRC
 
 Func that's skipped is:
+#+BEGIN_SRC
 3640          	check_buttons_for_something:
 3640  C5      	    push bc
 3641  3AF183  	    ld   a,(input_buttons)
@@ -106,12 +125,7 @@ Func that's skipped is:
 3653  32F183  	    ld   (input_buttons),a
 3656  C1      	    pop  bc
 3657  C9      	    ret
-
-
-** TODOs
-Although most of the larger structure has been reversed, there are still heaps of unknown/unspecified symbols and addresses.
-
-Also, the audio routines have not been figured out at all... they are mostly towards the end of the file, and contain a lot of data. I'm not sure about the format of it, so I can't just squish it all into db's: there is obviously lots of "note" data, but also there are a lot of indirect address jumps: which is hard to verify. The best way is look at `bongo.lst` as you need to know where the addresses jump to!
+#+END_SRC
 
 ** scratchpad
 
@@ -209,9 +223,3 @@ Also, the audio routines have not been figured out at all... they are mostly tow
   (parse-b-line "1234: 12 32 41 23 FF")
 
   #+END_SRC
-  (cdr (s-split ";" "asd ; asdf"))
-
-1234: 23 42 52 12 55 FF ; one two thre
-4342: 43 24 43
-2341: 32 12 53 33 13  ; foor five siz
-dfasd
