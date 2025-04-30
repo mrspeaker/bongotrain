@@ -121,7 +121,9 @@ const chunk = (arr, size) => {
             const spr = j * sw + i + 0;
             // Set correct colors for various sprites
             const col =
-                spr > 92 && spr < 98
+                spr < 64
+                    ? pal[0]
+                    : spr > 92 && spr < 98
                     ? pal[5]
                     : spr >= 98 && spr < 101
                     ? pal[6]
