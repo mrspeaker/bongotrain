@@ -293,6 +293,11 @@
     tile_circ_green   = $52
     tile_circ_white   = $53
 
+    tile_rub_l        = $58
+    tile_rub_r        = $59
+    tile_end_l        = $5A
+    tile_end_r        = $5B
+
     tile_cage         = $74 ; - $7f
     tile_cursor       = $89 ; "up" arrow
     tile_lives        = $8A
@@ -5659,8 +5664,12 @@ enter_hiscore_screen:
     db   $11,$03
 ;; Y,Z... characters
     db   Y_,__,Z_,__,__,__,__,__,__,__
-    db   $51,__,$52,__,$53,__,__,__,__,__ ; Circles
-    db   $58,$59,$5A,$5B,$FF              ; Rub End
+    db   tile_circ_red,__                 ; Circles
+    db   tile_circ_green,__
+    db   tile_circ_white,__,__,__,__,__
+    db   tile_rub_l,tile_rub_r            ; Rub
+    db   tile_end_l,tile_end_r            ; End
+    db   $FF
     call draw_tiles_h
     db   $17,$0A
     dc   10, tile_hyphen
