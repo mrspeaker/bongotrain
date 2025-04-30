@@ -1,20 +1,37 @@
 import { search_str } from "./search_str.js";
 
+const pal = [
+    ["#3ea202", "#e01d01", "#e0e0d9"],
+    ["#c3c344", "#e00700", "#0b01d9"],
+    ["#e08500", "#e00700", "#e0e0d9"],
+    ["#00a200", "#005b94", "#e00700"],
+    ["#c3c344", "#0b01d9", "#e0e0d9"],
+    ["#e00700", "#e0e0d9", "#a23ed9"],
+    ["#c3c344", "#0085d9", "#e0e0d9"],
+    ["#e0e0d9", "#0085d9", "#c3c344"],
+].map((p) =>
+    p.map((c) => ({
+        r: parseInt(c.substring(1, 3), 16),
+        g: parseInt(c.substring(3, 5), 16),
+        b: parseInt(c.substring(5, 7), 16),
+    })),
+);
+
+const chunk = (arr, size) => {
+    const out = [];
+    let i = 0;
+    while (i < arr.length) {
+        out.push(arr.slice(i, i + size));
+        i += size;
+    }
+    return out;
+};
+
 (async () => {
     const getRomBytes = (rom) =>
-        fetch(`./romgo/${rom}`)
+        fetch(`./dump/romgo/${rom}`)
             .then((r) => r.arrayBuffer())
             .then((buf) => [...new Uint8Array(buf)]);
-
-    const chunk = (arr, size) => {
-        const out = [];
-        let i = 0;
-        while (i < arr.length) {
-            out.push(arr.slice(i, i + size));
-            i += size;
-        }
-        return out;
-    };
 
     const b = (byte) => byte.toString(2).padStart(8, "0");
     const rot90 = (tile) => {
@@ -35,7 +52,7 @@ import { search_str } from "./search_str.js";
     const ctx = document.getElementById("board").getContext("2d");
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
-    let pix = ctx.getImageData(0, 0, w, h);
+    const pix = ctx.getImageData(0, 0, w, h);
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-k.bin");
@@ -72,44 +89,37 @@ import { search_str } from "./search_str.js";
         }
     };
 
-    const pal = [
-        ["#3ea202", "#e01d01", "#e0e0d9"],
-        ["#c3c344", "#e00700", "#0b01d9"],
-        ["#e08500", "#e00700", "#e0e0d9"],
-        ["#00a200", "#005b94", "#e00700"],
-        ["#c3c344", "#0b01d9", "#e0e0d9"],
-        ["#e00700", "#e0e0d9", "#a23ed9"],
-        ["#c3c344", "#0085d9", "#e0e0d9"],
-        ["#e0e0d9", "#0085d9", "#c3c344"],
-    ].map((p) =>
-        p.map((c) => ({
-            r: parseInt(c.substring(1, 3), 16),
-            g: parseInt(c.substring(3, 5), 16),
-            b: parseInt(c.substring(5, 7), 16),
-        })),
-    );
+    const cell_size = 8; // each sprite cell is 8 x 8
+    const spr_size = cell_size * 2; // a "sprite" is 2 x 2 cells
 
+    // Draw a 2x2 group of cells as a sprite
+    // The format in memory is weird: [[1, 0], [1, 1], [0, 0], [0, 1]]
     const drawSpr = (spr, x, y, cols) => {
         const off = 0 + spr * 4;
-        drawTile(tiles[off], x + 8, y, cols);
-        drawTile(tiles[off + 1], x + 8, y + 8, cols);
+        drawTile(tiles[off], x + cell_size, y, cols);
+        drawTile(tiles[off + 1], x + cell_size, y + cell_size, cols);
         drawTile(tiles[off + 2], x, y, cols);
-        drawTile(tiles[off + 3], x, y + 8, cols);
+        drawTile(tiles[off + 3], x, y + cell_size, cols);
     };
 
+    // Render tiles (alphabet single tiles)
     const tw = 32;
-    const th = 8;
+    const th = 2;
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
-            drawTile(tiles[t], i * 9, j * 9, pal[0]);
+            drawTile(tiles[t], i * cell_size, j * cell_size, pal[0]);
         }
     }
 
-    let yo = 78;
-    for (let j = 0; j < 4; j++) {
-        for (let i = 0; i < 16; i++) {
-            const spr = j * 16 + i + 64;
+    // Render sprites
+    let yoff = th * cell_size;
+    let sw = tw / 2;
+    let sh = 8;
+    for (let j = 0; j < sh; j++) {
+        for (let i = 0; i < sw; i++) {
+            const spr = j * sw + i + 0;
+            // Set correct colors for various sprites
             const col =
                 spr > 92 && spr < 98
                     ? pal[5]
@@ -118,11 +128,13 @@ import { search_str } from "./search_str.js";
                     : spr > 115 && spr < 120
                     ? pal[7]
                     : pal[2];
-            drawSpr(spr, i * 16, j * 16 + yo, col);
+            drawSpr(spr, i * spr_size, j * spr_size + yoff, col);
         }
     }
+
     ctx.putImageData(pix, 0, 0);
 
+    /*
     setInterval(() => {
         ctx.clearRect(ctx.canvas.width - 20, 0, 20, ctx.canvas.height);
         pix = ctx.getImageData(0, 0, w, h);
@@ -139,4 +151,5 @@ import { search_str } from "./search_str.js";
     Promise.all(fetches)
         .then((b) => b.map(search_str))
         .then(console.log);
+   */
 })();
