@@ -246,31 +246,13 @@
     fr_blue_1         = $34
     fr_blue_2         = $35
 
+    ;; ========= 256 Tiles GFX ==========
+
+    ;; first sixteen tiles are 0-9,A-F : Hex, lol!
     tile_0            = $00
-    tile_9            = $09
+    tile_F            = $0F
+
     tile_blank        = $10
-    tile_a            = $11
-    tile_z            = $2A
-    tile_hyphen       = $2B
-
-    tile_cage         = $74 ; - $7f
-    tile_cursor       = $89
-    tile_lives        = $8A
-    tile_crown_pika   = $8C ; alt crown
-    tile_pik_crossa   = $8D
-    tile_pik_ringa    = $8E
-    tile_pik_vasea    = $8F
-    tile_crown_pik    = $9C
-    tile_pik_cross    = $9D
-    tile_pik_ring     = $9E
-    tile_pik_vase     = $9F
-
-    tile_lvl_01       = $C0 ; start of row 7 of 8 on tilesheet
-    ;; tile > $F8 is a platform
-    tile_solid        = $F8 ; high-wire platform R
-    tile_platform_r   = $FC
-    tile_platform_c   = $FD
-    tile_platform_l   = $FE
 
     ;; Alphabet tile indexes
     __                = $10
@@ -300,6 +282,73 @@
     X_                = $28
     Y_                = $29
     Z_                = $2A
+
+    tile_hyphen       = $2B
+    tile_sq_open      = $2C
+    tile_sq_red       = $2D
+    tile_sq_green     = $2E
+    tile_sq_white     = $2F
+
+    tile_circ_red     = $51
+    tile_circ_green   = $52
+    tile_circ_white   = $53
+
+    tile_cage         = $74 ; - $7f
+    tile_cursor       = $89 ; "up" arrow
+    tile_lives        = $8A
+    tile_copy         = $8B ; copyright
+
+    tile_pik_crowna   = $8C ; pickups alt
+    tile_pik_crossa   = $8D
+    tile_pik_ringa    = $8E
+    tile_pik_vasea    = $8F
+
+    tile_lil_0        = $90 ; "bonus" figures
+    tile_lil_1        = $91 ;
+    tile_lil_2        = $92 ;
+    tile_lil_3        = $93 ;
+    tile_lil_4        = $94 ;
+    tile_lil_5        = $95 ;
+    tile_lil_6        = $96 ;
+    tile_lil_7        = $97 ;
+    tile_lil_8        = $98 ;
+    tile_lil_9        = $99 ;
+    tile_lil_10       = $9A ;
+    tile_lil_00       = $9B ; thousands 00
+
+    tile_pik_crown    = $9C ; pickups
+    tile_pik_cross    = $9D
+    tile_pik_ring     = $9E
+    tile_pik_vase     = $9F
+
+    tile_logo_st      = $A0 ; awesome BONGO logo
+    tile_logo_end     = $B3
+
+    tile_lvl_01       = $C0 ; current level markers
+    tile_lvl_26       = $D9
+    tile_lvl_cage     = $DA ; lil cage icon
+    tile_lvl_done     = $DB ; mask out completed level
+
+    tile_bonus_blank  = $E5
+
+    tile_bonus_10_tl  = $E8 ; uncovered bonus score. top of 10
+    tile_bonus_10_bl  = $E9 ; bottom of 10
+    tile_bonus_00_tl  = $EA ; top-left of 00
+    tile_bonus_00_bl  = $EB ; bottom-left of 00
+    tile_bonus_20_tl  = $EC ; top-left of 20
+    tile_bonus_20_bl  = $ED ; bottom-left of 20
+    tile_bonus_30_tl  = $EE ; top-left of 30
+    tile_bonus_30_bl  = $EF ; bottom-left of 30
+    tile_bonus_40_tl  = $F0 ; top-left of 40
+    tile_bonus_40_bl  = $F1 ; bottom-left of 40
+    tile_bonus_00_tr  = $F2 ; top-right of 00
+    tile_bonus_00_br  = $F3 ; bottom-right of 00
+
+    ;; tile > $F8 is a platform
+    tile_solid        = $F8 ; high-wire platform R
+    tile_platform_r   = $FC
+    tile_platform_c   = $FD
+    tile_platform_l   = $FE
 
 ;;; hardware locations
 
@@ -3417,13 +3466,13 @@ animate_splash_pickups:
     ld   a,(attract_piks+$00)
     cp   tile_blank
     jr   z,_157D
-    cp   tile_crown_pika
+    cp   tile_pik_crowna
     jr   nz,_1578
     ld   a,$9C
     ld   (attract_piks+$00),a
     jr   _157D
 _1578:
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (attract_piks+$00),a
 ;;
 _157D:
@@ -3482,7 +3531,7 @@ attract_bonus_screen:
     call reset_xoff_sprites_and_clear_screen
     call draw_border_1
     call animate_splash_screen
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (attract_piks+$00),a
     call animate_splash_screen
     call draw_tiles_h
@@ -3551,14 +3600,16 @@ _166A:
     dc   2, $FF
 
 ;;; ==========================================
-;;
+;;  tiles for the uncovered bonus amount
 bonus_multplier_data:
-    db   $E8
-    db   $EC,$EE,$F0
-    db   $E9
-    db   $ED
-    db   $EF
-    db   $F1
+    db   tile_bonus_10_tl
+    db   tile_bonus_20_tl
+    db   tile_bonus_30_tl
+    db   tile_bonus_40_tl
+    db   tile_bonus_10_bl
+    db   tile_bonus_20_bl
+    db   tile_bonus_30_bl
+    db   tile_bonus_40_bl
 
 ;;; ==========================================
 
@@ -3612,15 +3663,16 @@ _16C0:
 ;;; ==========================================
 
 draw_bonus:
+TBB = tile_bonus_blank
     call draw_tiles_h
     db   $0A,$00
     db   $E0,$DC,$DD,$DE,$DF,$FF
     call draw_tiles_h
     db   $0B,$00
-    db   $E1,$E5,$E5,$E5,$E6,$FF
+    db   $E1,TBB,TBB,TBB,$E6,$FF
     call draw_tiles_h
     db   $0C,$00
-    db   $E1,$E5,$E5,$E5,$E6,$FF
+    db   $E1,TBB,TBB,TBB,$E6,$FF
     call draw_tiles_h
     db   $0D,$00
     db   $E2,$E3,$E3,$E3,$E4,$FF
@@ -5074,25 +5126,25 @@ got_a_bonus:
     ld   (bonuses),a
     cp   $01
     jr   nz,_gab_2
-    ld   a,$F2
+    ld   a,tile_bonus_00_tr
     ld   (scr_bonus_sq+$00),a ; uncovering bonus red squares
     ret
 _gab_2:
     cp   $02
     jr   nz,_gab_3
-    ld   a,$F3
+    ld   a,tile_bonus_00_br
     ld   (scr_bonus_sq+$01),a
     ret
 _gab_3:
     cp   $03
     jr   nz,_gab_4
-    ld   a,$EA
+    ld   a,tile_bonus_00_tl
     ld   (scr_bonus_sq+$20),a
     ret
 _gab_4:
     cp   $04
     jr   nz,_gab_5
-    ld   a,$EB
+    ld   a,tile_bonus_00_bl
     ld   (scr_bonus_sq+$21),a
     ret
 _gab_5:
@@ -7813,7 +7865,7 @@ _lp_3F42:
     call delay_2_vblank ; slow things down
     dec  a
     jr   z,_done_3F50
-    ld   (hl),$DB
+    ld   (hl),tile_lvl_done
     ld   bc,scr_line_prev
     add  hl,bc
     jr   _lp_3F42
@@ -7862,7 +7914,7 @@ draw_proudly_presents:
 draw_copyright:
     call draw_tiles_h
     db   $10,$04
-    db   $8B,1,9,8,3,$FF ;  (c) 1983
+    db   tile_copy,1,9,8,3,$FF ;  (c) 1983
     call draw_tiles_h
     db   $12,$04
     db   J_,E_,T_,S_,O_,F_,T_,$FF ;  JETSOFT
@@ -7979,7 +8031,7 @@ add_move_score:
     dc   7, $FF
 
 add_pickup_pat_5:
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (_918E),a
     ret
 
@@ -8114,7 +8166,7 @@ _410B:
     dc   2, $FF
 
 add_pickup_pat_10:
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (_9217),a
     ld   a,$8D
     ld   (_9231),a
@@ -8204,7 +8256,7 @@ hit_bonus_draw_points:
     ld   (1up_scr_pos),hl
     ld   a,(hl)
     ld   (1up_scr_pos_2),a
-    ld   a,$90
+    ld   a,tile_lil_0
     srl  b
     srl  b
     srl  b
@@ -8215,7 +8267,7 @@ hit_bonus_draw_points:
     add  hl,de
     ld   a,(hl)
     ld   (1up_scr_pos_3),a
-    ld   (hl),$9B
+    ld   (hl),tile_lil_00
     ld   a,$40 ; 64 countdown. Never read.
     ld   (1up_timer),a
     jp   hit_bonus
@@ -8232,19 +8284,19 @@ weird_unsed_maybe_load:
 
 ;; DRAW_CROWN_PIK_BOT_RIGHT (never called?)
 _41EC:
-    ld   a,$9C
+    ld   a,tile_pik_crown
     ld   (scr_pik_n_n),a
     ret
 
 ;; DRAW_CROSS_PIK_BOT_RIGHT (never called?)
 _41F2:
-    ld   a,$9D
+    ld   a,tile_pik_cross
     ld   (scr_pik_n_n),a
     ret
 
 ;; draw pikup cross, bot, right-er
 draw_pikup_cross_bot_r:
-    ld   a,$9D
+    ld   a,tile_pik_cross
     ld   (_911A),a
     ret
 
@@ -8265,7 +8317,7 @@ _i_2:
 
 ;;; uncalled?
 _4216:
-    ld   a,$9C
+    ld   a,tile_pik_crown
     ld   (_91B1),a
     ret
 
@@ -8285,7 +8337,7 @@ _i_3:
 
 ;;; uncalled?
 _4236:
-    ld   a,$9C
+    ld   a,tile_pik_crown
     ld   (_918E),a
     ret
 
@@ -8317,28 +8369,28 @@ pickup_tile_collision:
     cp   tile_blank
     ret  z
 ;;
-    cp   tile_crown_pika
+    cp   tile_pik_crowna
     jr   nz,_crossa
     ld   a,$20 ; 200 bonus
     ld   (hl),tile_blank
     call hit_bonus_draw_points
     ret
 _crossa:
-    cp   $8D
+    cp   tile_pik_crossa
     jr   nz,_ringa
     ld   a,$40 ; 400 bonus
     ld   (hl),tile_blank
     call hit_bonus_draw_points
     ret
 _ringa:
-    cp   $8E
+    cp   tile_pik_ringa
     jr   nz,_vasea
     ld   a,$60 ; 600 bonus
     ld   (hl),tile_blank
     call hit_bonus_draw_points
     ret
 _vasea:
-    cp   $8F
+    cp   tile_pik_vasea
     ret  nz
     ld   a,$A0 ; 1000 bonus
     ld   (hl),tile_blank
@@ -8347,14 +8399,14 @@ _vasea:
 
 ;;; called? Draws a cross (same spot as "ADD_PICKUP_PAT_6", but A version)
 ;; might be old dud code
-    ld   a,$9D
+    ld   a,tile_pik_cross
     ld   (_91D2),a
     ret
 
 ;; Weird bug in it - same code as ADD_PICKUP_PAT_7,
 ;; but that called $ADD_PICKUP_PAT_5: not the middle of nowhere!
 funky_looking_set_ring:
-    ld   a,$8E
+    ld   a,tile_pik_ringa
     ld   (scr_pik_r_W),a
     call _3602 ; <- that looks odd. Weird jump to middle of code
     ret
@@ -8697,7 +8749,7 @@ add_pickup_pat_3:
     dc   2, $FF
 
 add_pickup_pat_4:
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (_91B1),a
     ret
 
@@ -9674,7 +9726,7 @@ _4C61:
     dc   12, $FF
 
 add_pickup_pat_1:
-    ld   a,tile_crown_pika
+    ld   a,tile_pik_crowna
     ld   (scr_pik_n_n),a
     ret
 
@@ -9890,7 +9942,7 @@ attract_splash_bongo:
     ld   hl,blank_out_bottom_row
     call jmp_hl
     ld   hl,scr_bongo_logo ; draw the BONGO logo
-    ld   b,$A0
+    ld   b,tile_logo_st
     ld   c,$05
 _loop_4E53:
     ld   (hl),b ; top right
@@ -10021,20 +10073,20 @@ _4EFD:
     jp   even_more_faster_dino ; round 4+ = get 2 faster each time!
 
 pickups_lookup:
-CPA = tile_crown_pika
-    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00 ;  up to 3 pickups per screen
+PCA = tile_pik_crowna
+    db   $91,$5A,PCA,$00,$00,$00,$00,$00,$00 ;  up to 3 pickups per screen
     db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00 ;  pos (hi), pos (lo), pickup symbol
     db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
-    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00
-    db   $91,$B1,CPA,$00,$00,$00,$00,$00,$00
-    db   $91,$8E,CPA,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,PCA,$00,$00,$00,$00,$00,$00
+    db   $91,$B1,PCA,$00,$00,$00,$00,$00,$00
+    db   $91,$8E,PCA,$00,$00,$00,$00,$00,$00
     db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
     db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
     db   $91,$1A,$8D,$00,$00,$00,$00,$00,$00
-    db   $91,$B1,CPA,$00,$00,$00,$00,$00,$00
-    db   $90,$CB,$8E,$91,$8E,CPA,$00,$00,$00
+    db   $91,$B1,PCA,$00,$00,$00,$00,$00,$00
+    db   $90,$CB,$8E,$91,$8E,PCA,$00,$00,$00
     db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
-    db   $91,$5A,CPA,$00,$00,$00,$00,$00,$00
+    db   $91,$5A,PCA,$00,$00,$00,$00,$00,$00
     db   $92,$7A,$8E,$91,$1A,$8D,$00,$00,$00
     db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
     db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
@@ -10042,11 +10094,11 @@ CPA = tile_crown_pika
     db   $91,$5A,$8D,$00,$00,$00,$00,$00,$00
     db   $92,$EE,$83,$92,$17,$8E,$00,$00,$00
     db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
-    db   $92,$17,CPA,$92,$31,$8D,$92,$2B,$8F
-    db   $90,$CB,$8E,$91,$8E,CPA,$00,$00,$00
+    db   $92,$17,PCA,$92,$31,$8D,$92,$2B,$8F
+    db   $90,$CB,$8E,$91,$8E,PCA,$00,$00,$00
     db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
-    db   $92,$17,CPA,$92,$31,$8D,$92,$2B,$8F
-    db   $90,$CB,$8E,$91,$8E,CPA,$92,$AB,$8E
+    db   $92,$17,PCA,$92,$31,$8D,$92,$2B,$8F
+    db   $90,$CB,$8E,$91,$8E,PCA,$92,$AB,$8E
     db   $91,$D2,$8D,$00,$00,$00,$00,$00,$00
     db   $00,$00,$00,$00,$00,$00,$00,$00,$00 ;  Screen 27 (cage - no pickups)
     db   $00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -11564,10 +11616,18 @@ draw_extra_bonus_screen:
     db   $E0,$DC,$DD,$DE,$DF,$FF
     call draw_tiles_h_copy
     db   $18,$0B
-    db   $E1,$E5,$E5,$E5,$E6,$FF
+    db   $E1
+    db   tile_bonus_blank
+    db   tile_bonus_blank
+    db   tile_bonus_blank
+    db   $E6,$FF
     call draw_tiles_h_copy
     db   $19,$0B
-    db   $E1,$E5,$E5,$E5,$E6,$FF
+    db   $E1
+    db   tile_bonus_blank
+    db   tile_bonus_blank
+    db   tile_bonus_blank
+    db   $E6,$FF
     call draw_tiles_h_copy
     db   $1A,$0B
     db   $E2,$E3,$E3,$E3,$E4,$FF
@@ -11603,22 +11663,22 @@ _5BC3:
 
 ;;
 attract_10000_bonus:
-    ld   a,$F2                  ; 0000 top-right
+    ld   a,tile_bonus_00_tr     ; 0000 top-right
     ld   (screen_ram+$1F8),a
     call flash_border
-    ld   a,$F3                  ; 0000 bottom-right
+    ld   a,tile_bonus_00_br     ; 0000 bottom-right
     ld   (screen_ram+$1F9),a
     call flash_border
-    ld   a,$EA                  ; 0000 top-left
+    ld   a,tile_bonus_00_tl     ; 0000 top-left
     ld   (screen_ram+$218),a
     call flash_border
-    ld   a,$EB                  ; 0000 bottom-left
+    ld   a,tile_bonus_00_bl     ; 0000 bottom-left
     ld   (screen_ram+$219),a
     call flash_border
-    ld   a,$E8                  ; 10 top
+    ld   a,tile_bonus_10_tl     ; 10 top
     ld   (screen_ram+$238),a
     call flash_border
-    ld   a,$E9                  ; 10 bottom
+    ld   a,tile_bonus_10_bl     ; 10 bottom
     ld   (screen_ram+$239),a
     call flash_border
     call flash_border
