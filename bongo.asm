@@ -1,4 +1,6 @@
 ;;; Bongo by JetSoft, 1983
+;;; written by John Hutchinson
+
 ;;; picked apart and rebuilt by Mr Speaker, 2023.
 ;;; https://www.mrspeaker.net
 
