@@ -146,14 +146,64 @@ const chunk = (arr, size) => {
         [0x52, 30, 0, 0], // green
         [0x53, 31, 0, 0], // white
 
-        [0x58, 24, 1, 0], // RUB start
-        [0x59, 25, 1, 0], // RUB end
-        [0x5a, 26, 1, 0], // END start
-        [0x5b, 27, 1, 0], // END end
+        ...(() =>
+            Array(28)
+                .fill(0)
+                .map((_, i) => [0xc0 + i, i, 1, 2]))(), // level nums
+
         [0x2c, 28, 1, 0], // sq open
         [0x2d, 29, 1, 0], // sq red
         [0x2e, 30, 1, 0], // sq green
         [0x2f, 31, 1, 0], // sq white
+
+        [0x58, 28, 2, 0], // RUB start
+        [0x59, 29, 2, 0], // RUB end
+        [0x5a, 30, 2, 0], // END start
+        [0x5b, 31, 2, 0], // END end
+
+        ...(() =>
+            Array(12)
+                .fill(0)
+                .map((_, i) => [0x90 + i, i, 2, 0]))(), // pickup numbers
+
+        [0x8a, 12, 2, 1], // lil guy
+        [0x8c, 13, 2, 0], // pickups 1
+        [0x8d, 14, 2, 0],
+        [0x8e, 15, 2, 0],
+        [0x8f, 16, 2, 0],
+        [0x9c, 17, 2, 0], // pickups 2
+        [0x9d, 18, 2, 0],
+        [0x9e, 19, 2, 0],
+        [0x9f, 20, 2, 0],
+
+        [0xb8, 20, 10, 0], // bonus 1
+        [0xb4, 21, 10, 0],
+        [0xb5, 22, 10, 0],
+        [0xb6, 23, 10, 0],
+        [0xb7, 24, 10, 0],
+        [0xb9, 20, 11, 0],
+        [0xbe, 24, 11, 0],
+        [0xba, 20, 12, 0],
+        [0xbb, 21, 12, 0],
+        [0xbb, 22, 12, 0],
+        [0xbb, 23, 12, 0],
+        [0xbc, 24, 12, 0],
+
+        [0xe0, 25, 10, 0], // bonus 2
+        [0xdc, 26, 10, 0],
+        [0xdd, 27, 10, 0],
+        [0xde, 28, 10, 0],
+        [0xdf, 29, 10, 0],
+        [0xe1, 25, 11, 0],
+        [0xe6, 29, 11, 0],
+        [0xe2, 25, 12, 0],
+        [0xe3, 26, 12, 0],
+        [0xe3, 27, 12, 0],
+        [0xe3, 28, 12, 0],
+        [0xe4, 29, 12, 0],
+
+        [0xbf, 30, 10, 0], //unused? tops
+        [0xe7, 30, 11, 0], //unused? tops
     ].forEach(([t, x, y, col]) => {
         drawTile(tiles[t], x * cell_size, y * cell_size, pal[col], pix_dst);
     });
