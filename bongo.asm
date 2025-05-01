@@ -245,6 +245,8 @@
     fr_bird_2         = $24
     fr_blue_1         = $34
     fr_blue_2         = $35
+    fr_flame_1        = $36
+    fr_flame_2        = $37
 
     ;; ========= 256 Tiles GFX ==========
 
@@ -3424,13 +3426,13 @@ _14CC:
 
 ;;; ==========================================
 
-reset_enemies_2:
+flame_enemies_rising:
     ld   a,(tick_mod_fast) ; faster in round 2
     and  $03
     ret  nz
-    call enemy_1_reset
-    call enemy_2_reset
-    call enemy_3_reset
+    call flame_1_rise
+    call flame_2_rise
+    call flame_3_rise
     ret
 
     dc   16, $FF
@@ -5371,7 +5373,7 @@ _2B5E:
     ret
     call _3868 ; scr 23
     ret
-    call _3B68 ; scr 24
+    call manage_flame_enemies ; scr 24
     ret
     call _3888 ; scr 25
     ret
@@ -7181,7 +7183,7 @@ _3A3E:
     dc   6, $FF
 
 ;;
-enemy_1_reset:
+flame_1_rise:
     ld   a,(enemy_1_active)
     and  a
     ret  z
@@ -7203,20 +7205,20 @@ _3A62:
     and  $03
     ret  nz
     ld   a,(enemy_1_frame)
-    cp   $36
+    cp   fr_flame_1
     jr   nz,_3A81
-    ld   a,$37
+    ld   a,fr_flame_2
     ld   (enemy_1_frame),a
     ret
 _3A81:
-    ld   a,$36
+    ld   a,fr_flame_1
     ld   (enemy_1_frame),a
     ret
 
     db   $FF
 
 ;;
-enemy_2_reset:
+flame_2_rise:
     ld   a,(enemy_2_active)
     and  a
     ret  z
@@ -7229,7 +7231,7 @@ enemy_2_reset:
     ret
 _3A9A:
     ld   (enemy_2_active),a
-    ld   a,(enemy_2_y)
+    ld   a,(enemy_2_y) ; make flame go up
     dec  a
     dec  a
     dec  a
@@ -7238,20 +7240,20 @@ _3A9A:
     and  $03
     ret  nz
     ld   a,(enemy_2_frame)
-    cp   $36
+    cp   fr_flame_1
     jr   nz,_3AB9
-    ld   a,$37
+    ld   a,fr_flame_2
     ld   (enemy_2_frame),a
     ret
 _3AB9:
-    ld   a,$36
+    ld   a,fr_flame_1
     ld   (enemy_2_frame),a
     ret
 
     dc   1, $FF
 
-;; enemy 3
-enemy_3_reset:
+;;  "flame go up"
+flame_3_rise:
     ld   a,(enemy_3_active)
     and  a
     ret  z
@@ -7263,8 +7265,8 @@ enemy_3_reset:
     ld   (enemy_3_active),a
     ret
 _3AD2:
-    ld   (enemy_3_active),a
-    ld   a,(enemy_3_y)
+    ld   (enemy_3_active),a ; can deactive flame
+    ld   a,(enemy_3_y) ; Flame goes up
     dec  a
     dec  a
     dec  a
@@ -7273,24 +7275,24 @@ _3AD2:
     and  $03
     ret  nz
     ld   a,(enemy_3_frame)
-    cp   $36
+    cp   fr_flame_1
     jr   nz,_3AF1
-    ld   a,$37
+    ld   a,fr_flame_2
     ld   (enemy_3_frame),a
     ret
 _3AF1:
-    ld   a,$36
+    ld   a,fr_flame_1
     ld   (enemy_3_frame),a
     ret
 
     dc   1, $FF
 
-;; enemy 1
-set_enemy_1_98_c0:
+;; enemy 1 (flame)
+activate_flame_1:
     ld   hl,enemy_1_x
     ld   (hl),$98 ; x
     inc  hl
-    ld   (hl),$36 ; frame
+    ld   (hl),fr_flame_1 ; frame
     inc  hl
     ld   (hl),$17 ; color
     inc  hl
@@ -7302,12 +7304,12 @@ set_enemy_1_98_c0:
 
     dc   3, $FF
 
-;; enemy 2
-set_enemy_2_90_c0:
+;; enemy 2 (flame)
+activate_flame_2:
     ld   hl,enemy_2_x
     ld   (hl),$90 ; x
     inc  hl
-    ld   (hl),$36 ; frame
+    ld   (hl),fr_flame_1 ; frame
     inc  hl
     ld   (hl),$17 ; color
     inc  hl
@@ -7319,12 +7321,12 @@ set_enemy_2_90_c0:
 
     dc   3, $FF
 
-;; enemy 3
-set_enemy_3_90_c0:
+;; enemy 3 (flame)
+activate_flame_3:
     ld   hl,enemy_3_x
     ld   (hl),$90 ; x
     inc  hl
-    ld   (hl),$36 ; frame
+    ld   (hl),fr_flame_1 ; frame
     inc  hl
     ld   (hl),$17 ; color
     inc  hl
@@ -7336,7 +7338,7 @@ set_enemy_3_90_c0:
 
     dc   3, $FF
 
-_3B40:
+maybe_activate_flames:
     call _3B78
     ld   a,(rock_fall_timer)
     inc  a
@@ -7347,25 +7349,25 @@ _3B4C:
     ld   (rock_fall_timer),a
     cp   $08
     jr   nz,_3B57
-    call set_enemy_1_98_c0
+    call activate_flame_1
     ret
 _3B57:
     cp   $30
     jr   nz,_3B5F
-    call set_enemy_2_90_c0
+    call activate_flame_2
     ret
 _3B5F:
     cp   $40
     ret  nz
-    call set_enemy_3_90_c0
+    call activate_flame_3
     ret
 
     dc   2, $FF
 
-_3B68:
-    call _3B40
-    call reset_enemies_2
-    nop
+manage_flame_enemies:
+    call maybe_activate_flames
+    call flame_enemies_rising
+    nop  ; I wonder what was here before?
     nop
     nop
     nop
