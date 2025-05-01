@@ -1,3 +1,5 @@
+import { search_str } from "./search_str.js";
+
 const pal = [
     ["#3ea202", "#e01d01", "#e0e0d9"],
     ["#c3c344", "#e00700", "#0b01d9"],
@@ -48,11 +50,9 @@ const chunk = (arr, size) => {
     };
 
     const ctx = document.getElementById("board").getContext("2d");
-    const ctx_dst = document.getElementById("dst").getContext("2d");
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
     const pix = ctx.getImageData(0, 0, w, h);
-    const pix_dst = ctx.getImageData(0, 0, w, h);
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-k.bin");
@@ -74,17 +74,17 @@ const chunk = (arr, size) => {
         }),
     );
 
-    const drawTile = (tile, x, y, cols, px) => {
+    const drawTile = (tile, x, y, cols) => {
         for (let j = 0; j < 8; j++) {
             const row = tile[j];
             for (let i = 0; i < 8; i++) {
                 const p = row[i];
                 if (p === 0) continue;
                 const off = (y * w + j * w + x + i) * 4;
-                (px || pix).data[off + 0] = cols[p - 1].r;
-                (px || pix).data[off + 1] = cols[p - 1].g;
-                (px || pix).data[off + 2] = cols[p - 1].b;
-                (px || pix).data[off + 3] = 255;
+                pix.data[off + 0] = cols[p - 1].r;
+                pix.data[off + 1] = cols[p - 1].g;
+                pix.data[off + 2] = cols[p - 1].b;
+                pix.data[off + 3] = 255;
             }
         }
     };
@@ -94,23 +94,24 @@ const chunk = (arr, size) => {
 
     // Draw a 2x2 group of cells as a sprite
     // The format in memory is weird: [[1, 0], [1, 1], [0, 0], [0, 1]]
-    const drawSpr = (spr, x, y, cols, px) => {
+    const drawSpr = (spr, x, y, cols) => {
         const off = 0 + spr * 4;
-        drawTile(tiles[off], x + cell_size, y, cols, px);
-        drawTile(tiles[off + 1], x + cell_size, y + cell_size, cols, px);
-        drawTile(tiles[off + 2], x, y, cols, px);
-        drawTile(tiles[off + 3], x, y + cell_size, cols, px);
+        drawTile(tiles[off], x + cell_size, y, cols);
+        drawTile(tiles[off + 1], x + cell_size, y + cell_size, cols);
+        drawTile(tiles[off + 2], x, y, cols);
+        drawTile(tiles[off + 3], x, y + cell_size, cols);
     };
 
     // Render tiles (alphabet single tiles)
     const tw = 32;
-    const th = 16;
+    const th = 2;
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
             drawTile(tiles[t], i * cell_size, j * cell_size, pal[0]);
         }
     }
+
     // Render sprites
     let yoff = th * cell_size;
     let sw = tw / 2;
@@ -133,109 +134,24 @@ const chunk = (arr, size) => {
         }
     }
 
-    // Map tiles to dest
-    [
-        [0x10, 0, 0, 0], // blank
-        ...(() =>
-            Array(27)
-                .fill(0)
-                .map((_, i) => [0x11 + i, i, 0, 0]))(), // alphabet
-        [0x8b, 27, 0, 0], // copyright
-        [0x89, 28, 0, 0], // cursor up arrow
-        [0x51, 29, 0, 0], // red circle
-        [0x52, 30, 0, 0], // green
-        [0x53, 31, 0, 0], // white
-
-        [0x58, 24, 1, 0], // RUB start
-        [0x59, 25, 1, 0], // RUB end
-        [0x5a, 26, 1, 0], // END start
-        [0x5b, 27, 1, 0], // END end
-        [0x2c, 28, 1, 0], // sq open
-        [0x2d, 29, 1, 0], // sq red
-        [0x2e, 30, 1, 0], // sq green
-        [0x2f, 31, 1, 0], // sq white
-    ].forEach(([t, x, y, col]) => {
-        drawTile(tiles[t], x * cell_size, y * cell_size, pal[col], pix_dst);
-    });
-
-    // Map sprites to dest
-    [
-        [0x28, 0, 4, 0], // B
-        [0x29, 2, 4, 0],
-        [0x2a, 4, 4, 0],
-        [0x2b, 6, 4, 0],
-        [0x2c, 8, 4, 0], // O
-
-        [0x40, 10, 4, 2], // nugget dance frame 1
-        [0x41, 12, 4, 2],
-        [0x42, 14, 4, 2],
-        [0x43, 16, 4, 2],
-        [0x45, 18, 4, 2], // bongo dance frame 1
-        [0x46, 20, 4, 2],
-        [0x47, 22, 4, 2],
-        [0x48, 24, 4, 2],
-
-        [0x69, 26, 4, 2], // bongo walk
-        [0x6a, 28, 4, 2],
-        [0x6b, 30, 4, 2],
-
-        [0x4c, 0, 6, 1], // main man
-        [0x4d, 0, 8, 1], // mm feet
-        [0x4e, 2, 6, 1], // fr2
-        [0x4f, 2, 8, 1],
-        [0x50, 4, 6, 1], // fr3
-        [0x51, 4, 8, 1],
-        [0x52, 6, 6, 1], // fr4
-        [0x53, 6, 8, 1],
-        [0x54, 8, 6, 1], // fr5
-        [0x55, 8, 8, 1],
-        [0x57, 10, 6, 1], // back fr 1
-        [0x58, 10, 8, 1],
-        [0x59, 12, 6, 1], // back fr 2
-        [0x5a, 12, 8, 1],
-        [0x5b, 14, 6, 1], // back fr 3
-        [0x5c, 14, 8, 1],
-        [0x7a, 16, 6, 1], // dance 1
-        [0x7b, 16, 8, 1],
-        [0x7c, 18, 6, 1], // dance 2
-        [0x7d, 18, 8, 1],
-        [0x7e, 20, 6, 1], // dance 3
-        [0x7f, 20, 8, 1],
-        [0x66, 22, 6, 1], // die
-        [0x67, 24, 6, 1],
-        [0x56, 22, 8, 1], // jump legs
-        [0x68, 24, 8, 1], // die cross
-
-        [0x6c, 1, 10, 2], // dino (head offset 1 in x)
-        [0x70, 0, 12, 2],
-        [0x6d, 4, 10, 2],
-        [0x71, 3, 12, 2],
-        [0x6e, 7, 10, 2],
-        [0x72, 6, 12, 2],
-        [0x6f, 10, 10, 2],
-        [0x73, 9, 12, 2],
-
-        [0x78, 13, 10, 2], // dino cage intro top
-        [0x79, 12, 12, 2], // dino cage intro
-
-        [0x64, 2, 14, 7], // blue guys
-        [0x74, 4, 14, 7],
-        [0x75, 6, 14, 7],
-        [0x76, 8, 14, 7],
-        [0x77, 10, 14, 7],
-        [0x62, 12, 14, 7],
-
-        [0x5d, 0, 16, 5], // rock fall
-        [0x5e, 2, 16, 5],
-        [0x5f, 4, 16, 5],
-        [0x60, 6, 16, 5],
-        [0x61, 8, 16, 5],
-
-        [0x63, 0, 14, 7],
-    ].forEach(([t, x, y, col]) => {
-        drawSpr(t, x * cell_size, y * cell_size, pal[col], pix_dst);
-    });
-
     ctx.putImageData(pix, 0, 0);
-    ctx_dst.putImageData(pix_dst, 0, 0);
+
+    /*
+    setInterval(() => {
+        ctx.clearRect(ctx.canvas.width - 20, 0, 20, ctx.canvas.height);
+        pix = ctx.getImageData(0, 0, w, h);
+
+        const t = Math.floor(Date.now() / 200);
+
+        drawSpr(16 * 4 + (t % 4), ctx.canvas.width - 20, 0, pal[2]);
+        drawSpr(16 * 4 + 5 + (t % 4), ctx.canvas.width - 20, 17, pal[2]);
+        ctx.putImageData(pix, 0, 0);
+    }, 16);
+
+    // Hunting in bin files for strings...
+    const fetches = [1, 2, 3, 4, 5, 6].map((v) => getRomBytes(`bg${v}.bin`));
+    Promise.all(fetches)
+        .then((b) => b.map(search_str))
+        .then(console.log);
+   */
 })();
