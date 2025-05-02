@@ -22,7 +22,7 @@
 
 ;;; Entry Point: $0000 - `hard_reset`.
 
-    START_OF_RAM      = $8000
+    START_OF_RAM      = $8000  ; 1024 bytes. End = $83FF
 
     tick_mod_3        = $8000  ; timer for every 3 frames
     tick_mod_6        = $8001  ; timer for every 6 frames
@@ -370,6 +370,20 @@
 
 ;;; hardware locations
 
+    ;; IO
+    aysnd_write_0     = $0000   ; 2 bytes
+    aysnd_write_1     = $0001
+    aysnd_read        = $0002
+
+    ay_chA_tone_fine  = $00     ; R0: chA tone period fine
+    ay_chA_tone       = $01     ; R0: chA tone period course
+    ay_enable         = $07     ; 7/6: IOB/IOA. 5/4/3: Noise. 2/1/0: Tone
+    ay_chA_env_vol    = $08     ; A. 5: env enable, 4/3/2/1/0: volume
+    ay_chB_env_vol    = $09     ; B. 5: env enable, 4/3/2/1/0: volume
+    ay_chC_env_vol    = $0A     ; C. 5: env enable, 4/3/2/1/0: volume
+    ay_port_a         = $0E     ; 8-Bit Parallel I/O on Port A
+    ay_port_b         = $0F     ; 8-Bit Parallel I/O on Port B
+
     ;; =============== Video RAM: background tiles ==============
 
     ;; Background tiles layout is top-to-bottom, right-to-left (!).
@@ -427,11 +441,11 @@
     sprites           = $9840 ; 0x9840 - 0x98ff is spriteram
     port_in0          = $A000 ;
     port_in1          = $A800 ;
-    port_in2          = $B000 ;
-    int_enable        = $B001 ; interrupt enable
-    _B004             = $B004 ; "galaxian stars enable"?
-    _B006             = $B006 ; set to 1 for P1 or
-    _B007             = $B007 ; 0 for P2... why? Controls?
+    dsw_0             = $B000 ; DSW0. Unused
+    int_enable        = $B001 ; interrupt enable. irq_enable_w
+    stars_enable      = $B004 ; "galaxian stars enable"
+    flip_scr_x        = $B006 ; galaxold_flip_screen_x_w
+    flip_scr_y        = $B007 ; galaxold_flip_screen_y_w
     watchdog          = $B800 ; main timer?
     _C000             = $C000 ;
     _C003             = $C003 ;
@@ -450,7 +464,7 @@ _ret_hard_reset:
     ld   sp,stack_location
     call clear_ram_call_weird_a
     call check_credit_fault
-    call write_out_0_and_1
+    call init_aysnd
     jp   call_setup_then_start_game
 
 
@@ -571,8 +585,8 @@ nmi_int_handler:
 attract_press_p1_screen:
     ld   a,$01
     ld   (_8090),a
-    xor  a
-    ld   (_B004),a
+    xor  a ; nop this and you get galaxian stars!
+    ld   (stars_enable),a
     ld   a,(credits)
     ld   b,a
     ld   a,(credits_umm)
@@ -771,13 +785,13 @@ _more_lives:                    ; some dip-switch shenanigans
     cp   $01
     jr   nz,_0260
     ld   a,$01
-    ld   (_B006),a ; a = 1 if P1,
-    ld   (_B007),a
+    ld   (flip_scr_x),a ; a = 1 if P1,
+    ld   (flip_scr_y),a
     jr   _0267
 _0260:
     xor  a ; 0 if P2
-    ld   (_B006),a
-    ld   (_B007),a
+    ld   (flip_scr_x),a
+    ld   (flip_scr_y),a
 _0267:
     ld   a,(input_buttons_2)
     bit  3,a ; Infinite Lives DIP setting? resets lives on death
@@ -805,7 +819,7 @@ coinage_routine:
     ld   (coinage),a
     ret  nz
     ld   a,(port_in0)
-    and  $03
+    and  $03 ; 0x00000011... coin1 is bit 1. bit 2?
     ret  z
     ld   a,$05
     ld   (coinage),a
@@ -1065,7 +1079,7 @@ game_over:
     call check_if_hiscore
     call reset_xoff_sprites_and_clear_screen
     xor  a
-    ld   (_B004),a
+    ld   (stars_enable),a
     jp   set_hiscore_and_reset_game
 
     dc   10, $FF
@@ -4488,11 +4502,11 @@ level_bg__nTn:
 
 ;;; ==========================================
 
-write_out_0_and_1:
-    ld   a,$07
-    out  ($00),a
-    ld   a,$38
-    out  ($01),a
+init_aysnd:
+    ld   a,ay_enable
+    out  (aysnd_write_0),a
+    ld   a,$38               ; 00111000 = all channels noise on.
+    out  (aysnd_write_1),a
     ret
 
     dc   15, $FF
@@ -4679,7 +4693,7 @@ dino_anim_lookup:
 copy_inp_to_buttons_and_check_buttons:
     ld   a,(port_in1)
     ld   (input_buttons),a
-    ld   a,(port_in2)
+    ld   a,(dsw_0)
     ld   (input_buttons_2),a
     call check_buttons_for_something
     ret
@@ -5610,8 +5624,8 @@ _2D1D:
 
 p1_got_hiscore:
     xor  a
-    ld   (_B006),a
-    ld   (_B007),a
+    ld   (flip_scr_x),a
+    ld   (flip_scr_y),a
     ld   a,$01
     call enter_hiscore_screen
     ret
@@ -5623,13 +5637,13 @@ p2_got_hiscore:
     bit  7,a ; hmm what is bit 7 button?
     jr   z,_2D69
     ld   a,$01
-    ld   (_B006),a
-    ld   (_B007),a
+    ld   (flip_scr_x),a
+    ld   (flip_scr_y),a
     jr   _2D70
 _2D69:
     xor  a
-    ld   (_B006),a
-    ld   (_B007),a
+    ld   (flip_scr_x),a
+    ld   (flip_scr_y),a
 _2D70:
     ld   a,$02
     call enter_hiscore_screen
@@ -6723,15 +6737,17 @@ _3637:
     dc   3, $FF
 
 ;;; ==========================================
-
+;;; seems odd: read input, write to sound
+;;; then read from sound and update input?
+;;; Happens every from from NMI
 check_buttons_for_something:
     push bc
     ld   a,(input_buttons)
     and  $3F ; 0011 1111
     ld   c,a
-    ld   a,$0E
-    out  ($00),a
-    in   a,($02)
+    ld   a,ay_port_a
+    out  (aysnd_write_0),a
+    in   a,(aysnd_read)
     ld   (input_buttons_2),a
     and  $C0
     add  a,c
@@ -8088,10 +8104,10 @@ _408B:
     ld   (ix+$02),a
     add  a,$00
     ld   l,a
-    ld   a,$08
-    out  ($00),a
+    ld   a,ay_chA_env_vol
+    out  (aysnd_write_0),a
     ld   a,l
-    out  ($01),a
+    out  (aysnd_write_1),a
     nop
     ret
 
@@ -8136,12 +8152,12 @@ _40CB:
     ret  z
     dec  a
     ld   (ix+$02),a
-    add  a,$00
+    add  a,$00 ; why?
     ld   l,a
-    ld   a,$09
-    out  ($00),a
+    ld   a,ay_chB_env_vol
+    out  (aysnd_write_0),a
     ld   a,l
-    out  ($01),a
+    out  (aysnd_write_1),a
     nop
     ret
 
@@ -8183,9 +8199,9 @@ _410B:
     add  a,$00
     ld   l,a
     ld   a,$0A
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,l
-    out  ($01),a
+    out  (aysnd_write_1),a
     nop
     ret
 
@@ -8214,19 +8230,19 @@ set_synth_settings_1:
     add  a,l
     ld   l,a                    ; ?  1 3 5 (ch 1,2,3)
     ld   a,$01
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     inc  hl
     ld   a,$00                  ; ?  0 2 4 (ch 1,2,3)
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,$08                  ; ?  8 9 A (ch 1,2,3)
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ret
@@ -8251,19 +8267,19 @@ set_synth_settings_2:
     add  a,l
     ld   l,a
     ld   a,$03                  ; ?  1 3 5 (ch 1,2,3)
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     inc  hl
     ld   a,$02                  ; ?  0 2 4 (ch 1,2,3)
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,$09                  ; ?  8 9 A (ch 1,2,3)
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ret
@@ -8451,19 +8467,19 @@ set_synth_settings_3:
     add  a,l
     ld   l,a
     ld   a,$05                  ; diff
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     inc  hl
     ld   a,$04                  ; diff
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(hl)
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,$0A                  ; diff
-    out  ($00),a
+    out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
-    out  ($01),a
+    out  (aysnd_write_1),a
     ld   a,(ix+$03)
     ld   (ix+$05),a
     ret
@@ -8632,17 +8648,18 @@ sfx_synth_settings:
     db   $02,$FA,$01,$DE,$01,$C3,$01,$AA
     db   $01,$92,$01,$7B,$01,$66,$01,$52
     db   $01,$3F,$01,$2D,$01,$1C,$01,$0C
-    db   $01,$00,$00,$EF,$00,$E2,$00,$D5
-    db   $00,$C9,$00,$BE,$00,$B3,$00,$A9
-    db   $00,$A0,$00,$96,$00,$8E,$00,$86
-    db   $00,$7F,$00,$78,$00,$71,$00,$6B
-    db   $00,$64,$00,$5F,$00,$59,$00,$54
-    db   $00,$50,$00,$4B,$00,$47,$00,$43
-    db   $00,$3F,$00,$3C,$00,$38,$00,$35
-    db   $00,$32,$00,$2F,$00,$2C,$00,$2A
-    db   $00,$28,$00,$25,$00,$23,$00,$21
-    db   $00,$1F,$00,$1E,$00,$00,$01,$04
-    db   $01,$07,$01
+    db   $01,$00,$00
+
+    db   $EF,$00,$E2,$00,$D5,$00,$C9,$00
+    db   $BE,$00,$B3,$00,$A9,$00,$A0,$00
+    db   $96,$00,$8E,$00,$86,$00,$7F,$00
+    db   $78,$00,$71,$00,$6B,$00,$64,$00
+    db   $5F,$00,$59,$00,$54,$00,$50,$00
+    db   $4B,$00,$47,$00,$43,$00,$3F,$00
+    db   $3C,$00,$38,$00,$35,$00,$32,$00
+    db   $2F,$00,$2C,$00,$2A,$00,$28,$00
+    db   $25,$00,$23,$00,$21,$00,$1F,$00
+    db   $1E,$00,$00,$01,$04,$01,$07,$01
 
     dc   9, $FF
 
