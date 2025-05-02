@@ -10,7 +10,9 @@
 # 4. copy zout/bongdump.lst back to be new source, then build.sh...
 
 # Test which bits are diff:
-# cmp  -l -x dump/suprmous.x3 zout/fac
+# cmp  -l -x dump/bg1.bin zout/bg1
+#
+
 set -e
 
 # clear previous output
@@ -62,6 +64,7 @@ mv bg3 bg4.bin
 mv bg4 bg5.bin
 mv bg5 bg6.bin
 rm bongo.cim
+
 # copy over color and gfx ROMs
 cp ../dump/bongo/b-*.bin .
 zip -j -q bongo.zip *.bin

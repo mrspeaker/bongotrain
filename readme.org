@@ -13,7 +13,7 @@ Welcom to Bongo x Bongo by [[https://www.mrspeaker.net][Mr Speaker]].
 - =zout/= : build folder for freshly assembled ROMs
 
 ** Bongo x Bongo
-[[https://github.com/mrspeaker/bongotrain/blob/main/bongo.lua][bongo.lua]] is a trainer for Bongo, including a new game mode: OGNOB MODE.
+[[https://github.com/mrspeaker/bongotrain/blob/main/bongo.lua][bongo.lua]] is a trainer/cheat-mode for Bongo, and includes a new game mode: OGNOB MODE.
 See the =RUNNING= section in the file for instructions (tl;dr:  =mame bongo --autoboot_script ./bongo.lua=)
 
 ** Reverse-engineered source code
