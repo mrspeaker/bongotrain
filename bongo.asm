@@ -375,12 +375,21 @@
     aysnd_write_1     = $0001
     aysnd_read        = $0002
 
-    ay_chA_tone_fine  = $00     ; R0: chA tone period fine
-    ay_chA_tone       = $01     ; R0: chA tone period course
+    ;; AY 3 8910 registers
+    ay_chA_tone_fine  = $00     ; chA tone period fine
+    ay_chA_tone       = $01     ; chA tone period course (lo 4 bit)
+    ay_chB_tone_fine  = $02     ; chB tone period fine
+    ay_chB_tone       = $03     ; chB tone period course (lo 4 bit)
+    ay_chC_tone_fine  = $04     ; chC tone period fine
+    ay_chC_tone       = $05     ; chC tone period course (lo 4 bit)
+    ay_noise_period   = $06     ; 4/3/2/1/0: period
     ay_enable         = $07     ; 7/6: IOB/IOA. 5/4/3: Noise. 2/1/0: Tone
     ay_chA_env_vol    = $08     ; A. 5: env enable, 4/3/2/1/0: volume
     ay_chB_env_vol    = $09     ; B. 5: env enable, 4/3/2/1/0: volume
     ay_chC_env_vol    = $0A     ; C. 5: env enable, 4/3/2/1/0: volume
+    ay_r11            = $0B     ; env period fine
+    ay_r12            = $0C     ; env period course (lo 4 bit)
+    ay_env_shape      = $0D     ; 3: CONT, 2: ATT, 1: ALT, 0: HOLD
     ay_port_a         = $0E     ; 8-Bit Parallel I/O on Port A
     ay_port_b         = $0F     ; 8-Bit Parallel I/O on Port B
 
@@ -5101,12 +5110,12 @@ move_dino_x:
 ;;; Called from NMI: so maybe this is the bit that
 ;;; plays the current samples of sfx
 player_all_sfx_chunks:
-    ld   hl,sfx_sumfin_0 - JMP_HL_OFFSET
+    ld   hl,sfx_sumfin_ch_a - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
-    ld   hl,sfx_sumfin_1 - JMP_HL_OFFSET
+    ld   hl,sfx_sumfin_ch_b - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    ld   hl,sfx_sumfin_2 - JMP_HL_OFFSET
+    ld   hl,sfx_sumfin_ch_c - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
     ld   hl,sfx_queuer - JMP_HL_OFFSET
@@ -8087,7 +8096,7 @@ add_pickup_pat_6:
     dc   2, $FF
 
 ;;
-_4080:
+sfx_ch_a_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_408B
@@ -8137,7 +8146,7 @@ get_tile_scr_pos:
 
     dc   1, $FF
 
-_40C0:
+sfx_ch_b_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_40CB
@@ -8180,8 +8189,9 @@ hit_bonus:
     call jmp_hl
     ret
 
-;; Called directly by SFX_SUMFIN_2
-_4100:
+    ;;
+_4100: ; address is referenced in weird jump
+sfx_ch_c_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_410B
@@ -8198,7 +8208,7 @@ _410B:
     ld   (ix+$02),a
     add  a,$00
     ld   l,a
-    ld   a,$0A
+    ld   a,ay_chC_env_vol
     out  (aysnd_write_0),a
     ld   a,l
     out  (aysnd_write_1),a
@@ -8218,27 +8228,26 @@ add_pickup_pat_10:
 
     dc   8, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_1:
+;;; sfx channel A
+set_synth_ch_a:
     ld   a,(ix+$00)
     and  a
     ret  z
     ld   (ch1_cur_id),a         ; sfx_id?
     sla  a
-    ld   hl,sfx_synth_settings
+    ld   hl,sfx_synth_data
     add  a,l
     ld   l,a                    ; ?  1 3 5 (ch 1,2,3)
-    ld   a,$01
+    ld   a,ay_chA_tone
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
     inc  hl
-    ld   a,$00                  ; ?  0 2 4 (ch 1,2,3)
+    ld   a,ay_chA_tone_fine     ; ?  0 2 4 (ch 1,2,3)
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
-    ld   a,$08                  ; ?  8 9 A (ch 1,2,3)
+    ld   a,ay_chA_env_vol       ; ?  8 9 A (ch 1,2,3)
     out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8255,27 +8264,26 @@ _4170:
 
     dc   7, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_2:
+;;; sfx channel b
+set_synth_ch_b:
     ld   a,(ix+$00)
     and  a
     ret  z
     ld   (ch2_cur_id),a         ; sfx_id
     sla  a
-    ld   hl,sfx_synth_settings
+    ld   hl,sfx_synth_data
     add  a,l
     ld   l,a
-    ld   a,$03                  ; ?  1 3 5 (ch 1,2,3)
+    ld   a,ay_chB_tone
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
     inc  hl
-    ld   a,$02                  ; ?  0 2 4 (ch 1,2,3)
+    ld   a,ay_chB_tone_fine
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
-    ld   a,$09                  ; ?  8 9 A (ch 1,2,3)
+    ld   a,ay_chB_env_vol
     out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8317,7 +8325,7 @@ hit_bonus_draw_points:
     dc   2, $FF
 
 ;; How do i get here?... what is this Weird load for?
-weird_unsed_maybe_load:
+weird_unused_maybe_load:
     ld   a,(_4100)              ; +4k = $8100: screen_xoff_col attrs?
     ld   bc,jmp_hl_plus_4k      ; hmm, but can't jump to that.
     push bc                     ; dunno, why keeping these
@@ -8344,17 +8352,17 @@ draw_pikup_cross_bot_r:
 
     dc   2, $FF
 
-;;
-sfx_sumfin_0:
+;;; Channel A
+sfx_sumfin_ch_a:
     ld   ix,synth1
     ld   a,(ix+$04)
     and  a
     jr   z,_i_2
-    call set_synth_settings_1
+    call set_synth_ch_a
     ld   (ix+$04),$00
     ret
 _i_2:
-    call _4080
+    call sfx_ch_a_env_vol
     ret
 
 ;;; uncalled?
@@ -8365,16 +8373,17 @@ _4216:
 
     dc   4, $FF
 
-sfx_sumfin_1:
+;;; Channel B
+sfx_sumfin_ch_b:
     ld   ix,synth2
     ld   a,(ix+$04)
     and  a
     jr   z,_i_3
-    call set_synth_settings_2
+    call set_synth_ch_b
     ld   (ix+$04),$00
     ret
 _i_3:
-    call _40C0
+    call sfx_ch_b_env_vol
     ret
 
 ;;; uncalled?
@@ -8385,16 +8394,17 @@ _4236:
 
     dc   4, $FF
 
-sfx_sumfin_2:
+;;; Channel C
+sfx_sumfin_ch_c:
     ld   ix,synth3
     ld   a,(ix+$04)
     and  a
     jr   z,_i_4
-    call set_synth_settings_3
+    call set_synth_ch_c
     ld   (ix+$04),$00
     ret
 _i_4:
-    call _4100
+    call sfx_ch_c_env_vol
     ret
 
     dc   2, $FF
@@ -8455,27 +8465,26 @@ funky_looking_set_ring:
 
     dc   7, $FF
 
-;;; "set_synth_settings" subs are all almost identical
-;;; except for variable (8068-8088) and hard-coded values
-set_synth_settings_3:
+;;; sfx channel C
+set_synth_ch_c:
     ld   a,(ix+$00)
     and  a
     ret  z
     ld   (ch3_cur_id),a
     sla  a
-    ld   hl,sfx_synth_settings
+    ld   hl,sfx_synth_data
     add  a,l
     ld   l,a
-    ld   a,$05                  ; diff
+    ld   a,ay_chC_tone
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
     inc  hl
-    ld   a,$04                  ; diff
+    ld   a,ay_chC_tone_fine
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
-    ld   a,$0A                  ; diff
+    ld   a,ay_chC_env_vol
     out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8642,7 +8651,7 @@ _43C0:
     dc   4, $FF
 
 ;;; SFX synth settings data
-sfx_synth_settings:
+sfx_synth_data:
     db   $03,$24,$03,$F6,$02,$CC,$02,$A4
     db   $02,$7E,$02,$5A,$02,$38,$02,$18
     db   $02,$FA,$01,$DE,$01,$C3,$01,$AA
