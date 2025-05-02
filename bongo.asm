@@ -239,6 +239,7 @@
     round2_speed      = $10
     round3_speed      = $0D
 
+    flip_x_offset     = $80 ; sprite frames. Add $80 to flip
     fr_rock_1         = $1D
     fr_spear          = $22
     fr_bird_1         = $23
@@ -247,6 +248,12 @@
     fr_blue_2         = $35
     fr_flame_1        = $36
     fr_flame_2        = $37
+
+    pal_yellow        = $11 ; main player
+    pal_orange        = $12 ; dino
+    pal_purple        = $15 ; rocks
+    pal_blue          = $16 ; birds
+    pal_blue_2        = $17 ; other blue things
 
     ;; ========= 256 Tiles GFX ==========
 
@@ -1753,7 +1760,7 @@ init_player_sprite:
     inc  hl
     ld   (hl),$0C ; frame
     inc  hl
-    ld   (hl),$12 ; color
+    ld   (hl),pal_orange ; color
     inc  hl
     ld   (hl),$CE ; y
     inc  hl
@@ -1761,7 +1768,7 @@ init_player_sprite:
     inc  hl
     ld   (hl),$0D ; frame legs
     inc  hl
-    ld   (hl),$12 ; color legs
+    ld   (hl),pal_orange ; color legs
     inc  hl
     ld   (hl),$DE ; y legs
     call init_player_pos_for_screen
@@ -2313,7 +2320,7 @@ do_death_sequence:
     ld   (enemy_3_x),a
     ld   a,$28
     ld   (enemy_3_frame),a
-    ld   a,$11
+    ld   a,pal_yellow
     ld   (enemy_3_col),a
     ld   a,(player_y)
     sub  $10
@@ -2462,7 +2469,7 @@ _0DD0:
     inc  hl
     ld   a,(hl)
     ld   (bongo_y),a
-    ld   a,$12
+    ld   a,pal_orange
     ld   (bongo_col),a
     ld   a,$05
     ld   (bongo_frame),a
@@ -3866,7 +3873,7 @@ reset_player_sprite_frame_col:
     ld   (player_frame),a
     inc  a
     ld   (player_frame_legs),a
-    ld   a,$11
+    ld   a,pal_yellow
     ld   (player_col),a
     ld   (player_col_legs),a
     ret
@@ -4169,12 +4176,12 @@ _both:
     jr   nz,_1BBD
     call draw_tiles_h
     db   $10,$0A
-    db   $20,$1C,$11,$29,$15,$22,$10,$01,$FF ;  PLAYER 1
+    db   P_,L_,A_,Y_,E_,R_,__,$01,$FF ;  PLAYER 1
     jr   _1BCB
 _1BBD:
     call draw_tiles_h
     db   $10,$0A
-    db   $20,$1C,$11,$29,$15,$22,$10,$02,$FF ;  PLAYER 2
+    db   P_,L_,A_,Y_,E_,R_,__,$02,$FF ;  PLAYER 2
 _1BCB:
     call play_intro_jingle
     ret
@@ -4495,7 +4502,7 @@ update_dino:
     ld   a,(hl)
     ld   (dino_y),a
     inc  hl
-    ld   a,$12
+    ld   a,pal_orange
     ld   (dino_col),a
     ld   (dino_col_legs),a
     ld   a,(hl) ; anim height (for hiding dino)
@@ -5416,9 +5423,9 @@ set_rock_1_b0_40:
     ld   (enemy_1_x),a
     ld   a,$40
     ld   (enemy_1_y),a
-    ld   a,$1D
+    ld   a,fr_rock_1
     ld   (enemy_1_frame),a
-    ld   a,$15
+    ld   a,pal_purple
     ld   (enemy_1_col),a
     ld   a,$01
     ld   (enemy_1_active),a
@@ -6159,7 +6166,7 @@ set_bird_left_y_c4:
     ld   (enemy_2_y),a
     ld   a,fr_bird_1
     ld   (enemy_2_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_2_col),a
     ld   a,$01
     ld   (enemy_2_active),a
@@ -6225,7 +6232,7 @@ set_blue_meanie_a0_d0:
     ld   (enemy_1_x),a
     ld   a,$D0
     ld   (enemy_1_y),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_1_col),a
     ld   a,fr_blue_1
     ld   (enemy_1_frame),a
@@ -6320,7 +6327,7 @@ set_bird_left_y_40:
     ld   (enemy_2_y),a
     ld   a,fr_bird_1
     ld   (enemy_2_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_2_col),a
     ld   a,$01
     ld   (enemy_2_active),a
@@ -6495,6 +6502,7 @@ _3497:
 
     dc   8, $FF
 
+    ;; blue meanie 1
 _34A8:
     ld   a,fr_blue_1
     ld   (enemy_1_frame),a
@@ -6502,7 +6510,7 @@ _34A8:
     ld   (enemy_1_x),a
     ld   a,$AC
     ld   (enemy_1_y),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_1_col),a
     ld   a,$01
     ld   (enemy_3_active),a ; Why set enemy_3?
@@ -6510,6 +6518,7 @@ _34A8:
 
     dc   6, $FF
 
+    ;; blue meanie 2
 _34C8:
     ld   a,$80
     ld   (enemy_2_x),a
@@ -6517,7 +6526,7 @@ _34C8:
     ld   (enemy_2_y),a
     ld   a,fr_blue_1
     ld   (enemy_2_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_2_col),a
     ld   a,$01
     ld   (enemy_4_active),a
@@ -6580,9 +6589,9 @@ _3538:
 set_rock_x_60:
     ld   a,$60
     ld   (enemy_3_x),a
-    ld   a,$1D
+    ld   a,fr_rock_1
     ld   (enemy_3_frame),a
-    ld   a,$15
+    ld   a,pal_purple
     ld   (enemy_3_col),a
     ld   a,$40
     ld   (enemy_3_y),a
@@ -6649,7 +6658,7 @@ set_bird_right_y_bc:
     ld   (enemy_3_x),a
     ld   a,$A3
     ld   (enemy_3_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_3_col),a
     ld   a,$BC
     ld   (enemy_3_y),a
@@ -6740,18 +6749,19 @@ _3670:
     call _3418
     call update_stairdown_blue_right_timer
     call update_stairdown_blue_left_timer
-    call _36A8
+    call update_bird_something
     call move_animate_bird_right
     ret
 
     dc   5, $FF
 
+;; what's this bird thing? Frame $A3. flipped $23? (bird_1 + $80)
 _3688:
     ld   a,$10
     ld   (enemy_3_x),a
-    ld   a,$A3
+    ld   a,fr_bird_1 + flip_x_offset
     ld   (enemy_3_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_3_col),a
     ld   a,$98
     ld   (enemy_3_y),a
@@ -6761,7 +6771,8 @@ _3688:
 
     dc   6, $FF
 
-_36A8:
+;; i think it's bird right - flipped sprite.
+update_bird_something:
     ld   a,(enemy_3_x)
     and  a
     jr   z,_36BD
@@ -6797,7 +6808,7 @@ set_spear_left_y_94:
     ld   (enemy_3_x),a
     ld   a,fr_spear
     ld   (enemy_3_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_3_col),a
     ld   a,$94
     ld   (enemy_3_y),a
@@ -6856,7 +6867,7 @@ _3778:
     ld   (enemy_2_x),a
     ld   a,fr_spear
     ld   (enemy_2_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_2_col),a
     ld   a,$50
     ld   (enemy_2_y),a
@@ -6927,7 +6938,7 @@ set_bird_right_y_60:
     ld   (enemy_3_x),a
     ld   a,fr_bird_1
     ld   (enemy_3_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_3_col),a
     ld   a,$60
     ld   (enemy_3_y),a
@@ -6960,7 +6971,7 @@ _wrap_bird_2:
 _3868:
     call update_stairdown_blue_right_timer
     call _33B8
-    call _36A8
+    call update_bird_something  ; left bird? Flipped sprite
     call move_animate_bird_right
     call wrap_bird_left_y_c4
     call move_animate_bird_left
@@ -6984,7 +6995,7 @@ _38A0:
     ld   (enemy_1_y),a
     ld   a,$A3
     ld   (enemy_1_frame),a
-    ld   a,$16
+    ld   a,pal_blue
     ld   (enemy_1_col),a
     ld   a,$01
     ld   (enemy_3_active),a
@@ -7048,7 +7059,7 @@ set_spear_left_bottom:
     ld   (enemy_1_x),a
     ld   a,fr_spear
     ld   (enemy_1_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_1_col),a
     ld   a,$C8
     ld   (enemy_1_y),a
@@ -7068,7 +7079,7 @@ set_spear_left_middle:
     ld   (enemy_2_x),a
     ld   a,fr_spear
     ld   (enemy_2_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_2_col),a
     ld   a,$98
     ld   (enemy_2_y),a
@@ -7086,7 +7097,7 @@ set_spear_left_top:
     ld   (enemy_3_x),a
     ld   a,fr_spear
     ld   (enemy_3_frame),a
-    ld   a,$17
+    ld   a,pal_blue_2
     ld   (enemy_3_col),a
     ld   a,$68
     ld   (enemy_3_y),a
@@ -7294,7 +7305,7 @@ activate_flame_1:
     inc  hl
     ld   (hl),fr_flame_1 ; frame
     inc  hl
-    ld   (hl),$17 ; color
+    ld   (hl),pal_blue_2 ; color
     inc  hl
     ld   (hl),$C0 ; y
     inc  hl
@@ -7311,7 +7322,7 @@ activate_flame_2:
     inc  hl
     ld   (hl),fr_flame_1 ; frame
     inc  hl
-    ld   (hl),$17 ; color
+    ld   (hl),pal_blue_2 ; color
     inc  hl
     ld   (hl),$C0 ; y
     inc  hl
@@ -7328,7 +7339,7 @@ activate_flame_3:
     inc  hl
     ld   (hl),fr_flame_1 ; frame
     inc  hl
-    ld   (hl),$17 ; color
+    ld   (hl),pal_blue_2 ; color
     inc  hl
     ld   (hl),$C0 ; y
     inc  hl
@@ -7589,14 +7600,14 @@ bubble_lava_var_3:
 ;;; ==========================================
 ;; x, frame, color, y
 cutscene_data:
-    db   $80,$3A,$11,$70 ;  player
-    db   $80,$3B,$11,$80 ;  player legs
-    db   $94,$05,$12,$80 ;  bongo
-    db   $00,$00,$12,$80 ;  dino (offscreen)
-    db   $00,$00,$12,$80 ;  dino legs
-    db   $6C,$00,$12,$80 ;  bambongo 1
-    db   $A8,$00,$12,$80 ;  bambongo 2
-    db   $00,$00,$12,$80 ;  unused?
+    db   $80,$3A,pal_yellow,$70 ;  player
+    db   $80,$3B,pal_yellow,$80 ;  player legs
+    db   $94,$05,pal_orange,$80 ;  bongo
+    db   $00,$00,pal_orange,$80 ;  dino (offscreen)
+    db   $00,$00,pal_orange,$80 ;  dino legs
+    db   $6C,$00,pal_orange,$80 ;  bambongo 1
+    db   $A8,$00,pal_orange,$80 ;  bambongo 2
+    db   $00,$00,pal_orange,$80 ;  unused?
 
 ;; CUTSCENE something
 wait_vblank_8:
@@ -7812,7 +7823,7 @@ end_cutscene:
     inc  hl
     ld   (hl),$2E ; frame
     inc  hl
-    ld   (hl),$12 ; color
+    ld   (hl),pal_orange ; color
     inc  hl
     ld   (hl),$70 ; y
     ld   hl,enemy_3_x ; and 815c
@@ -7820,7 +7831,7 @@ end_cutscene:
     inc  hl
     ld   (hl),$30 ; frame
     inc  hl
-    ld   (hl),$12 ; color
+    ld   (hl),pal_orange ; color
     inc  hl
     ld   (hl),$80 ; y
     call wait_vblank_8
@@ -9587,7 +9598,7 @@ your_being_chased_dino_sprite:
     inc  hl
     ld   (hl),$2C ; frame
     inc  hl
-    ld   (hl),$12 ; color
+    ld   (hl),pal_orange ; color
     inc  hl
     ld   (hl),$90 ; y
     inc  hl
@@ -9595,7 +9606,7 @@ your_being_chased_dino_sprite:
     inc  hl
     ld   (hl),$30 ; frame legs
     inc  hl
-    ld   (hl),$12 ; color legs
+    ld   (hl),pal_orange ; color legs
     inc  hl
     ld   (hl),$A0 ; y legs
     inc  hl
@@ -9916,7 +9927,7 @@ _loop__cage_dino:
     ld   (dino_x),a
     ld   a,$38
     ld   (dino_frame),a
-    ld   a,$12
+    ld   a,pal_orange
     ld   (dino_col),a
     ld   a,$D7
     ld   (dino_y),a
@@ -9924,7 +9935,7 @@ _loop__cage_dino:
     ld   (dino_x_legs),a
     ld   a,$39
     ld   (dino_frame_legs),a
-    ld   a,$12
+    ld   a,pal_orange
     ld   (dino_col_legs),a
     ld   a,$E7
     ld   (dino_y_legs),a
@@ -10598,7 +10609,7 @@ attract_animate_player_up_stairs:
     inc  hl
     ld   (hl),$8D ; frame
     inc  hl
-    ld   (hl),$11 ; color
+    ld   (hl),pal_yellow ; color
     inc  hl
     ld   (hl),$E0 ; y (bottom of screen)
     inc  hl
@@ -10606,7 +10617,7 @@ attract_animate_player_up_stairs:
     inc  hl
     ld   (hl),$8D ; frame legs
     inc  hl
-    ld   (hl),$11 ; color legs
+    ld   (hl),pal_yellow ; color legs
     inc  hl
     ld   (hl),$F0 ; y legs
     ld   e,$06
@@ -10619,7 +10630,7 @@ _jump_up_stair:
     inc  hl
     ld   (hl),$2D ; frame
     inc  hl
-    ld   (hl),$12 ; color
+    ld   (hl),pal_orange ; color
     inc  hl
     ld   (hl),$28 ; y (top of screen)
     inc  hl
@@ -10627,7 +10638,7 @@ _jump_up_stair:
     inc  hl
     ld   (hl),$30 ; frame legs
     inc  hl
-    ld   (hl),$12 ; color legs
+    ld   (hl),pal_orange ; color legs
     inc  hl
     ld   (hl),$38 ; y legs
     call attract_jump_down_stairs
