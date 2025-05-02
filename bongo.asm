@@ -239,7 +239,7 @@
     round2_speed      = $10
     round3_speed      = $0D
 
-    flip_x_offset     = $80 ; sprite frames. Add $80 to flip
+    ;; Sprite frames
     fr_rock_1         = $1D
     fr_spear          = $22
     fr_bird_1         = $23
@@ -248,7 +248,11 @@
     fr_blue_2         = $35
     fr_flame_1        = $36
     fr_flame_2        = $37
+    fr_dino_cage_top  = $38
+    fr_dino_cage_bot  = $39
+    flip_x_offset     = $80 ; sprite frames. Add $80 to flip
 
+    ;; Color palettes
     pal_yellow        = $11 ; main player
     pal_orange        = $12 ; dino
     pal_purple        = $15 ; rocks
@@ -9923,17 +9927,17 @@ _loop__cage_dino:
     ld   a,$DC
     cp   l
     jr   nz,_loop__cage_dino
-    ld   a,$91
+    ld   a,$91 ; Note! $91-$8A = Only 7 pixels off bottom, not 8.
     ld   (dino_x),a
-    ld   a,$38
+    ld   a,fr_dino_cage_top
     ld   (dino_frame),a
     ld   a,pal_orange
     ld   (dino_col),a
     ld   a,$D7
     ld   (dino_y),a
-    ld   a,$8A
+    ld   a,$8A ; legs X pos.
     ld   (dino_x_legs),a
-    ld   a,$39
+    ld   a,fr_dino_cage_bot
     ld   (dino_frame_legs),a
     ld   a,pal_orange
     ld   (dino_col_legs),a
@@ -10798,7 +10802,7 @@ _lp_5433:
     ld   a,$39 ; check if cage hit ground
     cp   l
     jr   nz,_lp_5433
-    ld   a,$38 ; caged dino sprite
+    ld   a,fr_dino_cage_top ; caged dino sprite
     ld   (player_frame),a
     inc  a
     ld   (player_frame_legs),a
@@ -10844,7 +10848,7 @@ _548B:
 
 attract_catch_dino:
     ld   hl,player_x ; oi! You made the player a dinosaur!
-    ld   (hl),$07 ; x
+    ld   (hl),$07 ; x head: 7px offset from legs!
     inc  hl
     ld   (hl),$2D ; frame : 2d is dino?
     inc  hl
