@@ -29,7 +29,7 @@ const chunk = (arr, size) => {
 
 (async () => {
     const getRomBytes = (rom) =>
-        fetch(`./dump/romgo/${rom}`)
+        fetch(`./dump/bongo/${rom}`)
             .then((r) => r.arrayBuffer())
             .then((buf) => [...new Uint8Array(buf)]);
 

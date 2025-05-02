@@ -19,37 +19,37 @@ zmac -j -c -n src.asm
 split -b4k zout/src.cim zout/b_
 
 a=`shasum zout/b_aa | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg1.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg1.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo
 
 a=`shasum zout/b_ab | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg2.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg2.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo
 
 a=`shasum zout/b_ac | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg3.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg3.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo
 
 a=`shasum zout/b_ad | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg4.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg4.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo
 
 a=`shasum zout/b_ae | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg5.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg5.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo
 
 a=`shasum zout/b_af | sed 's/.*=.//g'`
-b=`shasum ../dump/romgo/bg6.bin | sed 's/.*=.//g'`
+b=`shasum ../dump/bongo/bg6.bin | sed 's/.*=.//g'`
 echo $a | cut -c 33-
 echo $b | cut -c 33-
 echo

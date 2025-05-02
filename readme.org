@@ -6,7 +6,7 @@ Welcom to Bongo x Bongo by [[https://www.mrspeaker.net][Mr Speaker]].
 - =bongo.lua= : trainer and new game mode for MAME Bongo.
 - =dump/= : original ROM bin files
    - =bongoa/= : the new "Set 2" ROMs
-   - =romgo/= :  the original and best Bongo ROMs.
+   - =bongo/= :  the original and best Bongo ROMs.
 - =old/= : my original attempts at reversing Bongo
 - =readme.org= : these words you're reading right now
 - =tools/= :  extra bits (zmac and a gfx dumper)

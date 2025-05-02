@@ -28,7 +28,7 @@ split -b4k -d -a 1 zout/bongo.cim zout/bg
 
 # check the checksums match to real ROM dumps
 obj=(`echo zout/bg*`)
-rom=(`echo dump/romgo/bg*.bin`)
+rom=(`echo dump/bongo/bg*.bin`)
 
 if [ ${#obj[@]} -eq "6" ]; then
     echo "go."
@@ -63,7 +63,7 @@ mv bg4 bg5.bin
 mv bg5 bg6.bin
 rm bongo.cim
 # copy over color and gfx ROMs
-cp ../dump/romgo/b-*.bin .
+cp ../dump/bongo/b-*.bin .
 zip -j -q bongo.zip *.bin
 cd ..
 
