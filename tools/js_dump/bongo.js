@@ -1,3 +1,5 @@
+import { play_notes } from "./play_notes.js";
+
 const pal = [
     ["#3ea202", "#e01d01", "#e0e0d9"],
     ["#c3c344", "#e00700", "#0b01d9"],
@@ -312,3 +314,46 @@ const chunk = (arr, size) => {
     ctx.putImageData(pix, 0, 0);
     ctx_dst.putImageData(pix_dst, 0, 0);
 })();
+
+const getRomBytes = (rom) =>
+    fetch(`./dump/bongo/${rom}`)
+        .then((r) => r.arrayBuffer())
+        .then((buf) => [...new Uint8Array(buf)]);
+
+const tunes_5 = [0xb0c, 0xa80, 0x4c0, 0xa20];
+const tunes_6 = [
+    0xc86, 0xf38, 0x132, 0x6f8, 0xdf4, 0xc86, 0xd30, 0xd64, 0xe4c, 0xea0,
+];
+
+async function handle_tunes() {
+    const bytes = await getRomBytes("bg6.bin");
+    const val = parseInt(document.getElementById("notes").value) ?? 0;
+
+    const start = tunes_6[0];
+    const notes = [];
+    let idx = 0;
+    let min = 9999;
+    let max = 0;
+    while (bytes[start + idx] != 0xff) {
+        const note = bytes[start + idx++];
+        const duration = bytes[start + idx++];
+        if (duration < min) min = duration;
+        if (duration > max) max = duration;
+
+        const freq = 440 * Math.pow(2, (note - 16) / 12);
+        notes.push(freq);
+        notes.push(duration / 3);
+    }
+
+    console.log("Notes: ", notes.length / 2, min, max);
+
+    document.getElementById("play").addEventListener(
+        "click",
+        () => {
+            play_notes(notes, 150);
+        },
+        false,
+    );
+}
+
+handle_tunes();
