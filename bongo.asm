@@ -2832,10 +2832,10 @@ tick_ticks:                     ;
 
 ;;; ==========================================
 ;;; resets any current sfx notes to 0
-;;; I think this function did more originally... whatever the important
-;;; part was (masking and bit-twiddling), the store was nopped out
-;;; at the end of the sub.
-;;; (If this does stuff - I think it's not reset.)
+;;; Kind of looks like it does nothing. NOPing it out has no audible effect.
+;;; There's a bunch of masking and bit-twiddling, but maybe the "store"
+;;; at then end has been nop-ed out.
+;;; (Also, I don't think this was about resetting things)
 reset_sfx_ids:
     push af
     push hl
@@ -8532,11 +8532,12 @@ blank_out_1up_text:
 
     dc   5, $FF
 
+;; _4320:
 sfx_something_ch_1:
-    ld   l,(ix+$07)
+    ld   l,(ix+$07) ; Get the musical note to play
     ld   h,(ix+$08)
     ld   a,(hl)
-    cp   $FF
+    cp   $FF     ; Is next note $FF? Terminate tune.
     ret  z
     add  a,(ix+$11)
     ld   iy,synth1
@@ -8563,6 +8564,7 @@ _4340:
 
     dc   10, $FF
 
+;;; _4360
 sfx_something_ch_2:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
@@ -8600,8 +8602,8 @@ _4380:
 
     dc   1, $FF
 
-;;
-sfx_what_1:
+;; channel 3 i think
+sfx_what_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
@@ -8749,22 +8751,22 @@ sfx_02:;
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $FF
+    cp   $FF                    ; end of tune maybe?
     jr   z,sfx_03
     ld   (ix+$07),l
     ld   (ix+$08),h
     call sfx_something_ch_1
     ret
 
-sfx_03:;
+sfx_03:
     ld   l,(ix+$01)
     ld   h,(ix+$02)
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE
-    jr   nz,_4552
-    inc  hl
+    cp   $EE                    ; hmm, some kind of escape
+    jr   nz,ret_if_end_tune_ch1 ; otherwise just look for $FF
+    inc  hl                     ;
     ld   a,(hl)
     ld   c,a
     ld   b,$00
@@ -8784,11 +8786,12 @@ sfx_03:;
     call sfx_something_ch_1
     ret
 
-_4552:
+;;; _4552:
+ret_if_end_tune_ch1:
     cp   $FF
     ret  z
 
-;;  not sfx routine?
+;;  not sfx routine? looks like one to me
     ld   (ix+$01),l
     ld   (ix+$02),h
     ld   (ix+$07),a
@@ -8801,7 +8804,7 @@ _4552:
     dc   1, $FF
 
 add_pickup_pat_3:
-    ld   a,$8D
+    ld   a,tile_pik_crossa
     ld   (_911A),a
     ret
 
@@ -8815,7 +8818,7 @@ add_pickup_pat_4:
     dc   1, $FF
 
 add_pickup_pat_7:
-    ld   a,$8E
+    ld   a,tile_pik_ringa
     ld   (scr_pik_r_W),a
     call add_pickup_pat_5
     ret
@@ -8911,7 +8914,7 @@ _460B:
     jr   z,_4622
     ld   (ix+$0b),l
     ld   (ix+$0c),h
-    call sfx_what_1
+    call sfx_what_3
     ret
 
 ;; sfxsomething #8
@@ -8940,7 +8943,7 @@ _4622:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
-    call sfx_what_1
+    call sfx_what_3
     ret
 
 ;; sfxsomething #9
@@ -8953,7 +8956,7 @@ _4652:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a
-    call sfx_what_1
+    call sfx_what_3
     ret
 
     dc   25, $FF
@@ -9176,7 +9179,7 @@ _here:
     dec  a
     dec  a
     ret  z
-    call sfx_what_1
+    call sfx_what_3
     ret
 
     dc   27, $FF
@@ -11801,66 +11804,23 @@ jmp_hl:
 
     dc   1, $FF
 
-;; Yet more note-looking data
-    db   $06,$01
-    db   $06,$01
-    db   $06,$01
-    db   $0E,$01
-    db   $09
-    db   $01,$12,$01
-    db   $10,$01
-    db   $0E,$01
-    db   $06,$01
-    db   $06,$01
-    db   $06,$01
-    db   $0E,$01
-    db   $09
-    db   $01,$12,$01
-    db   $10,$01
-    db   $0E,$01
-    db   $06,$01
-    db   $06,$01
-    db   $06,$01
-    db   $0E,$01
-    db   $09
-    db   $01,$12,$01
-    db   $10,$01
-    db   $0E,$01
-    db   $12
-    db   $01,$12,$01
-    db   $12
-    db   $01,$10,$01
-    db   $10,$01
-    db   $0D
-    db   $01,$07,$02
-    db   $07
-    db   $01,$07,$01
-    db   $07
-    db   $01,$0D,$01
-    db   $0D
-    db   $01,$10,$01
-    db   $10,$02
-    db   $07
-    db   $01,$07,$01
-    db   $07
-    db   $01,$0D,$01
-    db   $0D
-    db   $01,$10,$01
-    db   $10,$02
-    db   $07
-    db   $01,$07,$01
-    db   $07
-    db   $01,$09,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $15
-    db   $01,$15,$01
-    db   $13
-    db   $02
-    db   $12
-    db   $01,$10,$02
-    db   $0E,$02
+;;; Yet more notes. Fast weird ditty
+_5C86:
+    db   $06,$01,$06,$01,$06,$01,$0E,$01
+    db   $09,$01,$12,$01,$10,$01,$0E,$01
+    db   $06,$01,$06,$01,$06,$01,$0E,$01
+    db   $09,$01,$12,$01,$10,$01,$0E,$01
+    db   $06,$01,$06,$01,$06,$01,$0E,$01
+    db   $09,$01,$12,$01,$10,$01,$0E,$01
+    db   $12,$01,$12,$01,$12,$01,$10,$01
+    db   $10,$01,$0D,$01,$07,$02,$07,$01
+    db   $07,$01,$07,$01,$0D,$01,$0D,$01
+    db   $10,$01,$10,$02,$07,$01,$07,$01
+    db   $07,$01,$0D,$01,$0D,$01,$10,$01
+    db   $10,$02,$07,$01,$07,$01,$07,$01
+    db   $09,$01,$10,$01,$10,$01,$10,$01
+    db   $15,$01,$15,$01,$13,$02,$12,$01
+    db   $10,$02,$0E,$02
     dc   6, $FF
 
 sfx_1_data:
@@ -11870,7 +11830,9 @@ sfx_1_data:
     dw   _5D14
     db   $FF
 _5D08:
-    db   $01,$08,$0E,$00,$86,$5C,$EE,$03
+    db   $01,$08,$0E,$00
+    db   $86,$5C
+    db   $EE,$03
     dc   4, $FF
 _5D14:
     db   $00,$5C
@@ -11891,126 +11853,50 @@ _5D14:
     db   $D3,$03
     db   $FF
     db   $FF
-    db   $19
-    db   $01,$1A,$01
-    db   $1B
-    db   $01,$1C,$01
-    db   $21,$02,$1C
-    db   $01,$21,$02
-    db   $1C
-    db   $02
-    db   $1B
-    db   $01,$21,$02
-    db   $1B
-    db   $01,$21,$02
-    db   $1B
-    db   $02
-    db   $1A
-    db   $01,$21,$02
-    db   $1A
-    db   $01,$21,$02
-    db   $1A
-    db   $02
-    db   $19
-    db   $01,$1A,$01
-    db   $1B
-    db   $01,$1C,$02
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $19
-    db   $20,$FF
-    db   $FF
-    db   $1A
-    db   $01,$19,$01
-    db   $17
-    db   $01,$15,$03
-    db   $15
-    db   $01,$1C,$03
-    db   $1C
-    db   $01,$1E,$02
-    db   $1A
-    db   $02
-    db   $15
-    db   $02
-    db   $1E,$02
-    db   $1C
-    db   $03
-    db   $19
-    db   $01,$19,$01
-    db   $17
-    db   $01,$15,$02
-    db   $17
-    db   $06,$19
-    db   $01,$17,$01
-    db   $15
-    db   $03
-    db   $15
-    db   $01,$1C,$03
-    db   $1C
-    db   $01,$1E,$01
-    db   $1C
-    db   $01,$1A,$02
-    db   $1E,$02
-    db   $21,$02,$25
-    db   $02
-    db   $25
-    db   $02
-    db   $26,$01
-    db   $25
-    db   $01,$23,$02
-    db   $21,$05,$FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $10,$03
-    db   $10,$04
-    db   $10,$04
-    db   $12
-    db   $04
-    db   $12
-    db   $04
-    db   $10,$04
-    db   $10,$04
-    db   $0B
-    db   $04
-    db   $0B
-    db   $04
-    db   $10,$04
-    db   $10,$04
-    db   $12
-    db   $04
-    db   $12
-    db   $04
-    db   $10,$04
-    db   $09
-    db   $04
-    db   $09
-    db   $05
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+;;; _5D30: notes
+    db   $19,$01,$1A,$01,$1B,$01,$1C,$01
+    db   $21,$02,$1C,$01,$21,$02,$1C,$02
+    db   $1B,$01,$21,$02,$1B,$01,$21,$02
+    db   $1B,$02,$1A,$01,$21,$02,$1A,$01
+    db   $21,$02,$1A,$02,$19,$01,$1A,$01
+    db   $1B,$01,$1C,$02
+    dc   4, $FF
+
+;;; _5d60: sfx data
+    db   $19,$20
+    db   $FF,$FF
+_5d64:   ; notes
+    db   $1A,$01,$19,$01,$17,$01,$15,$03
+    db   $15,$01,$1C,$03,$1C,$01,$1E,$02
+    db   $1A,$02,$15,$02,$1E,$02,$1C,$03
+    db   $19,$01,$19,$01,$17,$01,$15,$02
+    db   $17,$06,$19,$01,$17,$01,$15,$03
+    db   $15,$01,$1C,$03,$1C,$01,$1E,$01
+    db   $1C,$01,$1A,$02,$1E,$02,$21,$02
+    db   $25,$02,$25,$02,$26,$01,$25,$01
+    db   $23,$02,$21,$05
+
+    dc   4, $FF
+
+;;; _5dac: notes
+    db   $10,$03,$10,$04,$10,$04,$12,$04
+    db   $12,$04,$10,$04,$10,$04,$0B,$04
+    db   $0B,$04,$10,$04,$10,$04,$12,$04
+    db   $12,$04,$10,$04,$09,$04,$09,$05
+    dc   4, $FF
+
 _5DD0:
-    db   $01,$05,$0F
-    db   $00
-    db   $60
-    db   $5D
-    db   $AC
-    db   $5D
-    db   $AC
-    db   $5D
+    db   $01,$05,$0F,$00
+    db   $60,$5D  ; 5d60 is two values: $19,$20 (then $FF..)
+    db   $AC,$5D  ; 5dac is a bunch of notes
+    db   $AC,$5D  ; same
     db   $EE,$07
 _5DDC:
-    db   $CC,$1D,$FF
-    db   $FF
+    db   $CC,$1D,$FF,$FF
 _5DE0:
-    db   $30,$5D
-    db   $64
-    db   $5D
-    db   $64
-    db   $5D
+    db   $30,$5D ; This addr ($5d30) is note data
+    dw   _5D64 ; $5d64 note data
+    dw   _5D64 ; same
     db   $EE,$07
     db   $FF
     db   $FF
@@ -12023,70 +11909,26 @@ sfx_11_data:
     db   $FF
     db   $FF
     db   $FF
-    db   $15
-    db   $01,$1A,$02
-    db   $1D
-    db   $01,$1C,$01
-    db   $1D
-    db   $01,$1C,$01
-    db   $1A
-    db   $02
-    db   $1D
-    db   $01,$1C,$02
-    db   $1D
-    db   $01,$1A,$01
-    db   $1C
-    db   $01,$1D,$01
-    db   $1C
-    db   $02
-    db   $1D
-    db   $01,$1A,$01
-    db   $15
-    db   $01,$11,$01
-    db   $0E,$03
+    db   $15,$01,$1A,$02,$1D,$01,$1C,$01
+    db   $1D,$01,$1C,$01,$1A,$02,$1D,$01
+    db   $1C,$02,$1D,$01,$1A,$01,$1C,$01
+    db   $1D,$01,$1C,$02,$1D,$01,$1A,$01
+    db   $15,$01,$11,$01,$0E,$03
     db   $FF
     db   $FF
-    db   $11,$01,$11
-    db   $01,$11,$01
-    db   $11,$01,$11
-    db   $01,$11,$01
-    db   $11,$01,$11
-    db   $01,$10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $10,$01
-    db   $0E,$02
-    db   $0E,$01
-    db   $10,$01
-    db   $11,$02,$0E
-    db   $02
-    db   $14
-    db   $04
-    db   $15
-    db   $04
+    db   $11,$01,$11,$01,$11,$01,$11,$01
+    db   $11,$01,$11,$01,$11,$01,$11,$01
+    db   $10,$01,$10,$01,$10,$01,$10,$01
+    db   $10,$01,$10,$01,$10,$01,$10,$01
+    db   $0E,$02,$0E,$01,$10,$01,$11,$02
+    db   $0E,$02,$14,$04,$15,$04
     db   $FF
     db   $FF
-    db   $0E,$02
-    db   $11,$01,$09
-    db   $01,$0B,$01
-    db   $0C
-    db   $01,$0E,$02
-    db   $11,$01,$09
-    db   $01,$0B,$01
-    db   $0C
-    db   $01,$0E,$02
-    db   $11,$01,$09
-    db   $01,$0B,$01
-    db   $0C
-    db   $01,$0E,$01
-    db   $09
-    db   $01,$05,$01
-    db   $02
-    db   $03
+    db   $0E,$02,$11,$01,$09,$01,$0B,$01
+    db   $0C,$01,$0E,$02,$11,$01,$09,$01
+    db   $0B,$01,$0C,$01,$0E,$02,$11,$01
+    db   $09,$01,$0B,$01,$0C,$01,$0E,$01
+    db   $09,$01,$05,$01,$02,$03
     db   $FF
     db   $FF
     db   $FF
@@ -12094,6 +11936,7 @@ sfx_11_data:
     db   $00
     db   $80
     db   $5E
+
     dc   13, $FF
 
 sfx_12_data:
@@ -12105,76 +11948,26 @@ sfx_12_data:
     db   $4C
     db   $5E
     db   $EE,$09
-    dc   6, $FF
-    db   $0E,$01
-    db   $10,$01
-    db   $13
-    db   $01,$17,$01
-    db   $16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $18,$01
-    db   $17
-    db   $01,$15,$01
-    db   $17
-    db   $01,$13,$01
-    db   $0E,$01
-    db   $13
-    db   $01,$17,$01
-    db   $1A
-    db   $01,$19,$01
-    db   $1A
-    db   $01,$19,$01
-    db   $1A
-    db   $01,$19,$01
-    db   $1A
-    db   $01,$19,$01
-    db   $1C
-    db   $01,$1A,$01
-    db   $19
-    db   $01,$1A,$01
-    db   $17
-    db   $01,$0E,$01
-    db   $10,$01
-    db   $13
-    db   $01,$17,$01
-    db   $16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $17
-    db   $01,$16,$01
-    db   $18,$01
-    db   $17
-    db   $01,$15,$01
-    db   $17
-    db   $01,$13,$01
-    db   $0E,$01
-    db   $10,$01
-    db   $13
-    db   $01,$17,$01
-    db   $15
-    db   $02
-    db   $0E,$01
-    db   $17
-    db   $01,$15,$02
-    db   $0E,$01
-    db   $13
-    db   $02
-    db   $0E,$02
-    db   $13
-    db   $01,$FF,$FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    dc   6,$FF
+
+;;; _5EA0:
+    db   $0E,$01,$10,$01,$13,$01,$17,$01
+    db   $16,$01,$17,$01,$16,$01,$17,$01
+    db   $16,$01,$17,$01,$16,$01,$18,$01
+    db   $17,$01,$15,$01,$17,$01,$13,$01
+    db   $0E,$01,$13,$01,$17,$01,$1A,$01
+    db   $19,$01,$1A,$01,$19,$01,$1A,$01
+    db   $19,$01,$1A,$01,$19,$01,$1C,$01
+    db   $1A,$01,$19,$01,$1A,$01,$17,$01
+    db   $0E,$01,$10,$01,$13,$01,$17,$01
+    db   $16,$01,$17,$01,$16,$01,$17,$01
+    db   $16,$01,$17,$01,$16,$01,$18,$01
+    db   $17,$01,$15,$01,$17,$01,$13,$01
+    db   $0E,$01,$10,$01,$13,$01,$17,$01
+    db   $15,$02,$0E,$01,$17,$01,$15,$02
+    db   $0E,$01,$13,$02,$0E,$02,$13,$01
+
+    dc   8,$FF
     db   $A0
     db   $5E
     db   $EE,$03
@@ -12186,54 +11979,19 @@ sfx_12_data:
 
 sfx_13_data:
     db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
+;;; _5F38:
 intro_riff_2: ; played after intro riff on channel B
-    db   $09,$01,$0E,$01,$10,$01
-    db   $12
-    db   $03
-    db   $13
-    db   $01,$13,$02
-    db   $17
-    db   $02
-    db   $15
-    db   $04
-    db   $12
-    db   $02
-    db   $15
-    db   $02
-    db   $13
-    db   $03
-    db   $12
-    db   $01,$13,$02
-    db   $10,$02
-    db   $12
-    db   $05
-    db   $09
-    db   $01,$0E,$01
-    db   $10,$01
-    db   $12
-    db   $03
-    db   $13
-    db   $01,$13,$02
-    db   $17
-    db   $02
-    db   $15
-    db   $04
-    db   $12
-    db   $02
-    db   $15
-    db   $02
-    db   $13
-    db   $03
-    db   $12
-    db   $01,$13,$02
-    db   $10,$02
-    db   $0E,$05
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    db   $09,$01,$0E,$01,$10,$01,$12,$03
+    db   $13,$01,$13,$02,$17,$02,$15,$04
+    db   $12,$02,$15,$02,$13,$03,$12,$01
+    db   $13,$02,$10,$02,$12,$05,$09,$01
+    db   $0E,$01,$10,$01,$12,$03,$13,$01
+    db   $13,$02,$17,$02,$15,$04,$12,$02
+    db   $15,$02,$13,$03,$12,$01,$13,$02
+    db   $10,$02,$0E,$05
+    dc   4,$FF
 
-sfx_14_data:
+sfx_14_data: ; (this looks different... no notes)
     db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
     db   $38,$5F
     db   $20,$4A
