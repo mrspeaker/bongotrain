@@ -9048,7 +9048,19 @@ _46FB:
     dec  c
     dc   14, $FF
 
-;;
+;;; Points HL to some music data.
+;;; sfx_X_data contains:
+;;; 1. Number - either 2 or 3
+;;; 2. Address either note_ptr or:
+;;; [[had a note that said: len/vel/vol/trans for the 4 vals]]
+;;;    1 (2): 01,08,0e,00, note_ptr, ee,03 ff
+;;;    2 (3): 01,04,0f,00, note_ptr, ff
+;;;    3 (3): 02,02,0f,10, note_ptr, ff
+;;;    4 (3): 01,01,0f,00, note_ptr, ff
+;;;    6 (2): 01,08,0f,00, note_ptr x 8!, ff
+;;; 3. Address -
+;;; 4. Address -
+;;; 5. $FF
 point_hl_to_sfx_data:
     sla  a ; sfx id * 4
     sla  a
@@ -9100,7 +9112,7 @@ _sfx_data_lookup:
     dc   9, $FF
 
 ;; hl = sfx data
-;; ix = ... 82d0, 82e8, or 82b8
+;; ix = ... 82d0, 82e8, or 82b8 (channel a/b/c something)
 do_something_with_sfx_data:
     nop
     nop
@@ -10242,11 +10254,8 @@ sfx_3_data:
     db   $FF
     db   $FF
 _5084:
-    db   $02
-    db   $02
-    db   $0F
-    db   $10,$60
-    db   $50
+    db   $02,$02,$0F,$10
+    db   $60,$50
     db   $FF
     db   $FF
 _508C:
@@ -10281,7 +10290,7 @@ sfx_4_data:
     dw   _50C8
     dc   5, $FF
 _50C8:
-    dw   _50AC  ; really? Middle of $ff's
+    dw   _50AC  ; really? Middle of $ff's (should be _50CA? Yea, typo i reckon)
     dc   2, $FF
 ;; notes
     db   $18,$01
@@ -10304,9 +10313,11 @@ _50C8:
 
 sfx_5_data:
     db   $03
-    db   $F4,$50,$F4
-    db   $51
-    db   $F4,$51,$FF
+    db   $F4,$50
+    db   $F4,$51
+    db   $F4,$51
+    db   $FF
+
     db   $03
     db   $03
     db   $0F
@@ -10314,6 +10325,8 @@ sfx_5_data:
     db   $50
     db   $FF
     db   $FF
+
+    ;; notes
     db   $2B
     db   $02
     db   $34
@@ -10337,6 +10350,7 @@ sfx_5_data:
     db   $01,$26,$02
     db   $FF
     db   $FF
+
     db   $37
     db   $02
     db   $2F
@@ -10396,16 +10410,15 @@ sfx_5_data:
     db   $FF
     db   $FF
 _5182:
-    db   $01,$08,$0F
-    db   $00
-    db   $32,$51,$1E
-    db   $51
-    db   $FC,$50,$26
-    db   $51
-    db   $FC,$50,$1E
-    db   $51
-    db   $FC,$50,$26
-    db   $51
+    db   $01,$08,$0F,$00
+    db   $32,$51
+    db   $1E,$51
+    db   $FC,$50
+    db   $26,$51
+    db   $FC,$50
+    db   $1E,$51
+    db   $FC,$50
+    db   $26,$51
     db   $FF
     db   $FF
     db   $FF
@@ -10418,8 +10431,7 @@ sfx_6_data:
     dw   _51A8
     dc   2, $FF
     db   $98,$11
-    dc   2, $FF
-    db   $FF
+    dc   3, $FF
 _51A8:
     db   $FC,$50,$64
     db   $51
@@ -10471,9 +10483,11 @@ _51A8:
     db   $FF
 
 sfx_7_data:
-    db   $03,$DA,$51,$E6,$51,$F4,$51,$FF
-    db   $FF
-    db   $FF
+    db   $03
+    db   $DA,$51
+    db   $E6,$51
+    db   $F4,$51
+    dc   3,$FF
     dw   _51F8
     dc   2, $FF
 _51F8:
@@ -10939,10 +10953,12 @@ _54DA:
     db   $FF
 
 sfx_8_data:
-    db   $03,$04,$55,$08,$55,$08,$55,$FF
-    db   $FF,$FF,$FF,$FF
+    db   $03
+    db   $04,$55
+    db   $08,$55
+    db   $08,$55
+    dc   5, $FF
 
-;; mabye sfx?
 reset_sfx_something_1:
     xor  a
     ld   (_8046),a
@@ -10983,8 +10999,13 @@ _5545:
     db   $04,$04,$0F,$10,$50,$55,$FF,$FF
 
 sfx_10_data:
-    db   $03,$58,$55,$5C,$55,$5C,$55,$FF
-    db   $6A,$55,$FF,$FF
+    db   $03
+    db   $58,$55
+    db   $5C,$55
+    db   $5C,$55
+    db   $FF
+    db   $6A,$55
+    db   $FF,$FF
 _556C:
     db   $FF,$FF,$FF,$FF
 
@@ -11823,7 +11844,11 @@ _5E4C:         ; notes
     dc   13, $FF
 
 sfx_12_data:
-    db   $03,$75,$5E,$90,$5E,$79,$5E,$FF
+    db   $03
+    db   $75,$5E
+    db   $90,$5E
+    db   $79,$5E
+    db   $FF
     db   $F4,$5D,$1C
     dw   _4C5E ; Another typo?! bytes are switched!
     dw   _4C5E ; Should be 5E4C. (hmm, but those notes ARE played?)
