@@ -9487,12 +9487,16 @@ get_screen_tune_sfx_id:
     nop
     rst  $38
 
-;; notes for haapy intro tune
+;;; notes for haapy intro tune
+_4A20:
     db   $15,$01,$17,$01,$19,$01,$1A,$02
     db   $1A,$02,$18,$02,$18,$02,$17,$02
     db   $17,$02,$16,$02,$16,$02,$15,$02
     db   $15,$02,$13,$02,$13,$02,$12,$01
-    db   $0E,$01,$10,$01,$0E,$02,$FF,$FF
+    db   $0E,$01,$10,$01,$0E,$02
+    db   $FF,$FF
+
+_4A48:
     db   $15,$01,$17,$01,$19,$01,$21,$01
     db   $26,$02,$21,$01,$26,$02,$21,$02
     db   $20,$01,$26,$02,$20,$01,$26,$02
@@ -9500,38 +9504,21 @@ get_screen_tune_sfx_id:
     db   $26,$02,$1F,$02,$1E,$01,$1F,$01
     db   $20,$01,$21,$02
     dc   12, $FF
+
+_4A80:
     db   $13,$04,$1A,$04,$1A,$04,$18,$02
     db   $17,$02,$18,$02,$1A,$02,$1C,$02
-    db   $1A,$0A,$FF,$FF,$1F,$02,$1E,$02
-    db   $1C
-    db   $04
-    db   $1A
-    db   $02
-    db   $18,$02
-    db   $17
-    db   $04
-    db   $15
-    db   $02
-    db   $13
-    db   $02
-    db   $15
-    db   $02
-    db   $17
-    db   $0A
+    db   $1A,$0A
+    db   $FF,$FF
+
+    db   $1F,$02,$1E,$02,$1C,$04,$1A,$02
+    db   $18,$02,$17,$04,$15,$02,$13,$02
+    db   $15,$02,$17,$0A
     db   $FF
     db   $FF
-    db   $23
-    db   $02
-    db   $21,$02,$1F
-    db   $02
-    db   $1E,$02
-    db   $1C
-    db   $02
-    db   $1A
-    db   $02
-    db   $18,$02
-    db   $17
-    db   $02
+
+    db   $23,$02,$21,$02,$1F,$02,$1E,$02
+    db   $1C,$02,$1A,$02,$18,$02,$17,$02
     db   $15
     db   $02
     db   $13
@@ -9660,38 +9647,26 @@ _4BE0:
     db   $0C,$02,$0E,$10
     dc   2, $FF
 
-    db   $09
-    db   $04
-    db   $07
-    db   $02
-    db   $09
-    db   $04
-    db   $1A
-    db   $02
-    db   $18,$02
-    db   $18,$02
-    db   $09
-    db   $02
-    db   $09
-    db   $02
-    db   $07
-    db   $02
-    db   $09
-    db   $04
+_4BF6:
+    db   $09,$04,$07,$02,$09,$04,$1A,$02
+    db   $18,$02,$18,$02,$09,$02,$09,$02
+    db   $07,$02,$09,$04
     dc   38, $FF
+
 _4C30:
-    db   $32,$4C,$FF
+    dw   _4C32 ; interesting... points to next byte
+_4C32:
+    db   $FF
     db   $FF
     db   $FF
     db   $FF
 _4C36:
-    db   $01,$04,$0F
-    db   $00
+    db   $01,$04,$0F,$00
     dw   _4BE0  ; point at notes
     db   $FF
     db   $FF
 _4C3E:
-    db   $F6,$4B
+    dw   _4BF6 ; pointn at notes
     db   $FF
     db   $FF
     db   $0C
@@ -9701,9 +9676,9 @@ _4C3E:
 
 sfx_2_data:
     db   $03
-    dw   _4C36
-    dw   _4C3E
-    dw   _4C30
+    dw   _4C36 ; non-note that points to note
+    dw   _4C3E ; insta point at note
+    dw   _4C30 ; weird, points to FF after addr
 
     dc   3, $FF
 
@@ -11290,83 +11265,34 @@ sfx_reset_a_bunch:
 
     dc   3, $FF
 
-;; notes
-    db   $12
-    db   $01,$0E,$01
-    db   $12
-    db   $01,$0E,$01
-    db   $10,$01
-    db   $0D
-    db   $01,$10,$01
-    db   $0D
-    db   $01,$0E,$01
-    db   $0B
-    db   $01,$0E,$01
-    db   $0B
-    db   $01,$0D,$01
-    db   $09
-    db   $01,$0D,$01
-    db   $09
-    db   $01,$04,$01
-    db   $06,$01
-    db   $07
-    db   $01,$09,$01
-    db   $0B
-    db   $01,$0D,$01
-    db   $0E,$01
-    db   $10,$01
-    db   $0E,$02
-    db   $09
-    db   $02
-    db   $0E,$04
-    db   $FF
-    db   $FF
-    db   $A1
-    db   $02
-    db   $C3,$02,$A1
-    db   $02
-    db   $C3,$02,$A1
-    db   $02
-    db   $C3,$02,$A1
-    db   $02
-    db   $C3,$02,$A1
-    db   $02
-    db   $C3,$01,$C3
-    db   $01,$A0,$02
-    db   $A0
-    db   $02
-    db   $D3,$01
-    db   $D3,$01
-    db   $D3,$01
-    db   $D3,$01
-    db   $C0
-    db   $02
-    db   $C1
-    db   $02
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+_56F8:    ;; notes
+    db   $12,$01,$0E,$01,$12,$01,$0E,$01
+    db   $10,$01,$0D,$01,$10,$01,$0D,$01
+    db   $0E,$01,$0B,$01,$0E,$01,$0B,$01
+    db   $0D,$01,$09,$01,$0D,$01,$09,$01
+    db   $04,$01,$06,$01,$07,$01,$09,$01
+    db   $0B,$01,$0D,$01,$0E,$01,$10,$01
+    db   $0E,$02,$09,$02,$0E,$04
+    dc   2, $FF
+
+    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+    db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
+    db   $A1,$02,$C3,$01,$C3,$01,$A0,$02
+    db   $A0,$02,$D3,$01,$D3,$01,$D3,$01
+    db   $D3,$01,$C0,$02,$C1,$02
+    dc   10, $FF
 _5760:
-    db   $01,$08,$0F
-    db   $10,$F8
-    db   $56
+    db   $01,$08,$0F,$10
+    dw   _56F8    ; notes
     db   $FF
     db   $FF
 _5768:
-    db   $80
-    db   $57
+    dw   _5780 ; notes
     db   $FF
     db   $FF
 _576C:
-    db   $6E
-    db   $57
+    dw   _576E ; next byte $ff
+_576E:
     db   $FF
     db   $FF
 
@@ -11376,34 +11302,14 @@ sfx_9_data:
     dw   _5768
     dw   _576C
     dc   9, $FF
-    db   $15
-    db   $01,$0E,$01
-    db   $15
-    db   $01,$0E,$01
-    db   $15
-    db   $01,$10,$01
-    db   $15
-    db   $01,$10,$01
-    db   $13
-    db   $01,$0E,$01
-    db   $13
-    db   $01,$0E,$01
-    db   $10,$01
-    db   $09
-    db   $01,$10,$01
-    db   $09
-    db   $01,$09,$01
-    db   $0B
-    db   $01,$09,$01
-    db   $07
-    db   $01,$06,$01
-    db   $04
-    db   $01,$02,$01
-    db   $04
-    db   $01,$02,$02
-    db   $06,$02
-    db   $02
-    db   $04
+_5780:                          ; notes
+    db   $15,$01,$0E,$01,$15,$01,$0E,$01
+    db   $15,$01,$10,$01,$15,$01,$10,$01
+    db   $13,$01,$0E,$01,$13,$01,$0E,$01
+    db   $10,$01,$09,$01,$10,$01,$09,$01
+    db   $09,$01,$0B,$01,$09,$01,$07,$01
+    db   $06,$01,$04,$01,$02,$01,$04,$01
+    db   $02,$02,$06,$02,$02,$04
     dc   10, $FF
 
 call_draw_extra_bonus_screen:
@@ -11451,19 +11357,22 @@ call_draw_extra_bonus_screen:
     call wait_60_for_start_button
     ret
 
-    ;; notes
+_5870:   ;; notes (no! Way too high?!)
     db   $A2,$01,$A2,$01,$A2,$01,$A2,$01
     db   $B2,$01,$B2,$01,$B2,$01,$B2,$01
     db   $C2,$01,$C2,$01,$C2,$01,$C2,$01
     db   $D2,$01,$D2,$01,$D2,$01,$D2,$01
-    db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
-    db   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+    dc   16, $FF
+_58A0:
     db   $0C,$16,$78,$16,$78,$16,$96,$16
-    db   $96,$16,$EE,$09,$FF,$FF,$FF,$FF
+    db   $96,$16,$EE,$09
+    dc   4, $FF
+_58B0:
     db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
     db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
     db   $A0,$02,$D3,$01,$D3,$01,$D3,$01
-    db   $D3,$01,$FF,$FF,$FF,$FF,$FF,$FF
+    db   $D3,$01
+    dc   6, $FF
 
 ;; bytes after the call are:
 ;; start_x, start_y, tile 1, ...tile id, 0xFF
@@ -11749,56 +11658,26 @@ attract_10000_bonus:
     dc   1, $FF
 
 ;; notes
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$1A,$03
-    db   $1E,$02
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$1A,$03
-    db   $1E,$02
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$1A,$01
-    db   $21,$01,$21
-    db   $01,$21,$01
-    db   $21,$03,$23
-    db   $01,$1E,$01
-    db   $1C
-    db   $04
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$19,$03
-    db   $1C
-    db   $02
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$19,$03
-    db   $1C
-    db   $02
-    db   $15
-    db   $01,$15,$01
-    db   $15
-    db   $01,$15,$01
-    db   $21,$01,$21
-    db   $01,$21,$01
-    db   $21,$02,$23
-    db   $01,$1E,$02
-    db   $1A
-    db   $04
+_5C00:
+    db   $15,$01,$15,$01,$15,$01,$1A,$03
+    db   $1E,$02,$15,$01,$15,$01,$15,$01
+    db   $1A,$03,$1E,$02,$15,$01,$15,$01
+    db   $15,$01,$1A,$01,$21,$01,$21,$01
+    db   $21,$01,$21,$03,$23,$01,$1E,$01
+    db   $1C,$04,$15,$01,$15,$01,$15,$01
+    db   $19,$03,$1C,$02,$15,$01,$15,$01
+    db   $15,$01,$19,$03,$1C,$02,$15,$01
+    db   $15,$01,$15,$01,$15,$01,$21,$01
+    db   $21,$01,$21,$01,$21,$02,$23,$01
+    db   $1E,$02,$1A,$04
     dc   12, $FF
-    dw   _5C62
+    dw   _5C62  ;points at next $FF
 _5C62:
     dc   31, $FF
 
 jmp_hl:
     jp   (hl)
-    ld   b,b
+    ld   b,b  ; what. how get here? sure this isn't just data?
     ld   b,c
     ret
 
@@ -11825,17 +11704,17 @@ _5C86:
 
 sfx_1_data:
     db   $02
-    dw   _5D08
-    dw   _5D14
-    dw   _5D14
+    dw   _5D08 ; non-note that points to note
+    dw   _5D14 ; non-note, insta point at note
+    dw   _5D14 ; same
     db   $FF
 _5D08:
     db   $01,$08,$0E,$00
-    db   $86,$5C
+    dw   _5C86 ; note data "fast weird ditty"
     db   $EE,$03
     dc   4, $FF
 _5D14:
-    db   $00,$5C
+    dw   _5C00 ; note dump
     db   $EE,$03
     db   $FF
     db   $FF
@@ -11853,7 +11732,7 @@ _5D14:
     db   $D3,$03
     db   $FF
     db   $FF
-;;; _5D30: notes
+_5D30: ; notes
     db   $19,$01,$1A,$01,$1B,$01,$1C,$01
     db   $21,$02,$1C,$01,$21,$02,$1C,$02
     db   $1B,$01,$21,$02,$1B,$01,$21,$02
@@ -11862,7 +11741,7 @@ _5D14:
     db   $1B,$01,$1C,$02
     dc   4, $FF
 
-;;; _5d60: sfx data
+_5d60: ; non-note
     db   $19,$20
     db   $FF,$FF
 _5d64:   ; notes
@@ -11879,6 +11758,7 @@ _5d64:   ; notes
     dc   4, $FF
 
 ;;; _5dac: notes
+_5DAC:
     db   $10,$03,$10,$04,$10,$04,$12,$04
     db   $12,$04,$10,$04,$10,$04,$0B,$04
     db   $0B,$04,$10,$04,$10,$04,$12,$04
@@ -11887,15 +11767,15 @@ _5d64:   ; notes
 
 _5DD0:
     db   $01,$05,$0F,$00
-    db   $60,$5D  ; 5d60 is two values: $19,$20 (then $FF..)
-    db   $AC,$5D  ; 5dac is a bunch of notes
-    db   $AC,$5D  ; same
+    dw   _5D60    ; two values: $19,$20 (then $FF..)
+    dw   _5DAC    ; note data
+    dw   _5DAC    ; same
     db   $EE,$07
 _5DDC:
     db   $CC,$1D,$FF,$FF
 _5DE0:
-    db   $30,$5D ; This addr ($5d30) is note data
-    dw   _5D64 ; $5d64 note data
+    dw   _5D30 ; note data
+    dw   _5D64 ; note data
     dw   _5D64 ; same
     db   $EE,$07
     db   $FF
@@ -11909,6 +11789,7 @@ sfx_11_data:
     db   $FF
     db   $FF
     db   $FF
+;;; _5DF4:
     db   $15,$01,$1A,$02,$1D,$01,$1C,$01
     db   $1D,$01,$1C,$01,$1A,$02,$1D,$01
     db   $1C,$02,$1D,$01,$1A,$01,$1C,$01
@@ -11916,6 +11797,7 @@ sfx_11_data:
     db   $15,$01,$11,$01,$0E,$03
     db   $FF
     db   $FF
+;;; _5E1C:
     db   $11,$01,$11,$01,$11,$01,$11,$01
     db   $11,$01,$11,$01,$11,$01,$11,$01
     db   $10,$01,$10,$01,$10,$01,$10,$01
@@ -11924,6 +11806,7 @@ sfx_11_data:
     db   $0E,$02,$14,$04,$15,$04
     db   $FF
     db   $FF
+_5E4C:         ; notes
     db   $0E,$02,$11,$01,$09,$01,$0B,$01
     db   $0C,$01,$0E,$02,$11,$01,$09,$01
     db   $0B,$01,$0C,$01,$0E,$02,$11,$01
@@ -11942,15 +11825,13 @@ sfx_11_data:
 sfx_12_data:
     db   $03,$75,$5E,$90,$5E,$79,$5E,$FF
     db   $F4,$5D,$1C
-    db   $5E
-    db   $4C
-    db   $5E
-    db   $4C
+    dw   _4C5E ; Another typo?! bytes are switched!
+    dw   _4C5E ; Should be 5E4C. (hmm, but those notes ARE played?)
     db   $5E
     db   $EE,$09
     dc   6,$FF
 
-;;; _5EA0:
+_5EA0:
     db   $0E,$01,$10,$01,$13,$01,$17,$01
     db   $16,$01,$17,$01,$16,$01,$17,$01
     db   $16,$01,$17,$01,$16,$01,$18,$01
@@ -11966,10 +11847,9 @@ sfx_12_data:
     db   $0E,$01,$10,$01,$13,$01,$17,$01
     db   $15,$02,$0E,$01,$17,$01,$15,$02
     db   $0E,$01,$13,$02,$0E,$02,$13,$01
-
     dc   8,$FF
-    db   $A0
-    db   $5E
+
+    dw   _5EA0 ; notes
     db   $EE,$03
     db   $03
     db   $06,$0F
@@ -11991,15 +11871,13 @@ intro_riff_2: ; played after intro riff on channel B
     db   $10,$02,$0E,$05
     dc   4,$FF
 
-sfx_14_data: ; (this looks different... no notes)
+sfx_14_data: ;
     db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
-    db   $38,$5F
-    db   $20,$4A
-    db   $20,$4A
-    db   $48
-    db   $4A
-    db   $48
-    db   $4A
+    dw   intro_riff_2
+    dw   _4A20 ; points at notes
+    dw   _4A20 ; points at notes
+    dw   _4A48 ; points at notes
+    dw   _4A48 ; points at notes
     db   $EE,$0B
     db   $FF
     db   $FF
