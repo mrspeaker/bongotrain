@@ -120,9 +120,9 @@
 
     splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
     sfx_prev          = $8065  ; prevent retrigger effect?
-    ch1_cur_id        = $8066  ; sfx id (?) OE when alive, 02 when dead etc
-    ch2_cur_id        = $8067  ;
-    ch3_cur_id        = $8068  ;
+    ch1_cur_note      = $8066  ; chA current not to play for sfx/tunes
+    ch2_cur_note      = $8067  ; chB
+    ch3_cur_note      = $8068  ; chC
 
     extra_got_p1      = $8070  ; P1 Earned extra life
     extra_got_p2      = $8071  ; P2 Earned extra life
@@ -206,7 +206,7 @@
 
     stack_location    = $83F0  ; I think?
     input_buttons     = $83F1  ; copied to 800C and 800D
-    input_buttons_2   = $83F2  ; dunno what buttons
+    dsw_flags         = $83F2  ; dsw copied here
 
 
 ;;; ============ Bongo World Map  =============
@@ -450,7 +450,7 @@
     sprites           = $9840 ; 0x9840 - 0x98ff is spriteram
     port_in0          = $A000 ;
     port_in1          = $A800 ;
-    dsw_0             = $B000 ; DSW0. Unused
+    dsw_0             = $B000 ; DSW0. 2: lives. 8: infinite lives (8 = true).
     int_enable        = $B001 ; interrupt enable. irq_enable_w
     stars_enable      = $B004 ; "galaxian stars enable"
     flip_scr_x        = $B006 ; galaxold_flip_screen_x_w
@@ -718,7 +718,7 @@ copy_ports_to_buttons:
     ld   (controls),a
     ld   a,(input_buttons)
     ld   (buttons_1),a
-    ld   a,(input_buttons_2)
+    ld   a,(dsw_flags)
     ld   (buttons_2),a
     ret
 
@@ -740,10 +740,10 @@ start_game:
     ld   (speed_delay_p1),a
     ld   (speed_delay_p2),a
     nop
-    ld   a,(input_buttons_2) ; "num lives" from dip-switch settings
-    and  0110b
+    ld   a,(dsw_flags) ; "num lives" from dip-switch settings
+    and  00000110b     ; 6 = set lives
     sra  a
-    add  a,$02
+    add  a,$02         ;
     ld   (lives),a              ; set beginning lives
     ld   (lives_p2),a
     ld   a,(num_players)
@@ -802,7 +802,7 @@ _0260:
     ld   (flip_scr_x),a
     ld   (flip_scr_y),a
 _0267:
-    ld   a,(input_buttons_2)
+    ld   a,(dsw_flags)
     bit  3,a ; Infinite Lives DIP setting? resets lives on death
     jr   z,_done__ml
     ld   a,$03 ; set 3 lives
@@ -2831,21 +2831,22 @@ tick_ticks:                     ;
 
 
 ;;; ==========================================
-;;; resets any current sfx id to 0
+;;; resets any current sfx notes to 0
 ;;; I think this function did more originally... whatever the important
 ;;; part was (masking and bit-twiddling), the store was nopped out
 ;;; at the end of the sub.
+;;; (If this does stuff - I think it's not reset.)
 reset_sfx_ids:
     push af
     push hl
-    ld   hl,ch1_cur_id          ; sfx id
+    ld   hl,ch1_cur_note        ; music note
     xor  a                      ; cp: If A == N, then Z flag is set
     cp   (hl)                   ; state == 0?
     jr   nz,_has_sfx_id         ; no, off to ADD
-    inc  hl                     ; yep, what about $8067 (ch2_cur_id)
+    inc  hl                     ; yep, what about $8067 (ch2_cur_note)
     cp   (hl)                   ; == 0?
     jr   nz,_has_sfx_id
-    inc  hl                     ; yep, what about $8068 (ch3_cur_id)
+    inc  hl                     ; yep, what about $8068 (ch3_cur_note)
     cp   (hl)                   ; == 0?
     jr   z,_done__msf           ; no, all zero - don't clear
 _has_sfx_id:
@@ -4703,7 +4704,7 @@ copy_inp_to_buttons_and_check_buttons:
     ld   a,(port_in1)
     ld   (input_buttons),a
     ld   a,(dsw_0)
-    ld   (input_buttons_2),a
+    ld   (dsw_flags),a
     call check_buttons_for_something
     ret
 
@@ -6748,19 +6749,19 @@ _3637:
 ;;; ==========================================
 ;;; seems odd: read input, write to sound
 ;;; then read from sound and update input?
-;;; Happens every from from NMI
+;;; Happens every frame from from NMI
 check_buttons_for_something:
     push bc
-    ld   a,(input_buttons)
-    and  $3F ; 0011 1111
-    ld   c,a
-    ld   a,ay_port_a
-    out  (aysnd_write_0),a
-    in   a,(aysnd_read)
-    ld   (input_buttons_2),a
-    and  $C0
-    add  a,c
-    ld   (input_buttons),a
+    ld   a,(input_buttons) ; check button inputs
+    and  00111111b         ; keeps up/down/jump
+    ld   c,a               ;
+    ld   a,ay_port_a       ; value from data port A read
+    out  (aysnd_write_0),a ; select reg?
+    in   a,(aysnd_read)    ; read from sound?
+    ld   (dsw_flags),a     ; set result as DSW?!
+    and  11000000b         ; but only coinage+cabinet?!
+    add  a,c               ; add?!
+    ld   (input_buttons),a ; and save?! Crazy.
     pop  bc
     ret
 
@@ -8228,26 +8229,26 @@ add_pickup_pat_10:
 
     dc   8, $FF
 
-;;; sfx channel A
+;;; sfx channel A. Play current note
 set_synth_ch_a:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch1_cur_id),a         ; sfx_id?
+    ld   (ch1_cur_note),a
     sla  a
-    ld   hl,sfx_synth_data
+    ld   hl,sfx_note_lookup
     add  a,l
-    ld   l,a                    ; ?  1 3 5 (ch 1,2,3)
+    ld   l,a
     ld   a,ay_chA_tone
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
     inc  hl
-    ld   a,ay_chA_tone_fine     ; ?  0 2 4 (ch 1,2,3)
+    ld   a,ay_chA_tone_fine
     out  (aysnd_write_0),a
     ld   a,(hl)
     out  (aysnd_write_1),a
-    ld   a,ay_chA_env_vol       ; ?  8 9 A (ch 1,2,3)
+    ld   a,ay_chA_env_vol
     out  (aysnd_write_0),a
     ld   a,(ix+$02)
     add  a,$00
@@ -8264,14 +8265,14 @@ _4170:
 
     dc   7, $FF
 
-;;; sfx channel b
+;;; _4180. sfx channel b.
 set_synth_ch_b:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch2_cur_id),a         ; sfx_id
+    ld   (ch2_cur_note),a         ; current note
     sla  a
-    ld   hl,sfx_synth_data
+    ld   hl,sfx_note_lookup
     add  a,l
     ld   l,a
     ld   a,ay_chB_tone
@@ -8292,8 +8293,7 @@ set_synth_ch_b:
     ld   (ix+$05),a
     ret
 
-;; I reckon this is the tiles that say the points
-;; Changes the tiles, then calls $HIT_BONUS
+;; _41b0. Changes the tiles, then calls $HIT_BONUS
 hit_bonus_draw_points:
     ld   b,a ; adds bonus score
     ld   a,(score_to_add)
@@ -8470,9 +8470,9 @@ set_synth_ch_c:
     ld   a,(ix+$00)
     and  a
     ret  z
-    ld   (ch3_cur_id),a
+    ld   (ch3_cur_note),a
     sla  a
-    ld   hl,sfx_synth_data
+    ld   hl,sfx_note_lookup
     add  a,l
     ld   l,a
     ld   a,ay_chC_tone
@@ -8650,25 +8650,32 @@ _43C0:
 
     dc   4, $FF
 
-;;; SFX synth settings data
-sfx_synth_data:
-    db   $03,$24,$03,$F6,$02,$CC,$02,$A4
-    db   $02,$7E,$02,$5A,$02,$38,$02,$18
-    db   $02,$FA,$01,$DE,$01,$C3,$01,$AA
-    db   $01,$92,$01,$7B,$01,$66,$01,$52
-    db   $01,$3F,$01,$2D,$01,$1C,$01,$0C
-    db   $01,$00,$00
+;;; _4400. music note lookup table
+;;; Each note is two values: "course, fine" each semi tone to send to AY-3-8910
+;;; Looks like note 0 is C4, but does not play any sound for some reason
+;;; First audible note is 1: F#2? Then C3, then it seems to go normally...
+;;; ...except B2 instead of F#3! Even these tables were just done by hand!
+;;; (Woah: maybe B2 and the F#3 swapped places, then F#2 went down an octave?)
+;;; Note: just did these by ear, so might be wrong.
+sfx_note_lookup:
+    db   $03,$24, $03,$F6, $02,$CC, $02,$A4 ; 00: xx  F#2? C3  C#3
+    db   $02,$7E, $02,$5A, $02,$38, $02,$18 ; 04: D3  D#3 E#3 F3
+    db   $02,$FA, $01,$DE, $01,$C3, $01,$AA ; 08: B2? G3  G#3 A3
+    db   $01,$92, $01,$7B, $01,$66, $01,$52 ; 0c: A#3 B3  C4  C#4
+    db   $01,$3F, $01,$2D, $01,$1C, $01,$0C ; 10: D4  D#4 E4  F4
+    db   $01,$00, $00,$EF, $00,$E2, $00,$D5 ; 14: F#4 G4  G#4 A4
+    db   $00,$C9, $00,$BE, $00,$B3, $00,$A9 ; 18: A#4 B4  C5  C#5
+    db   $00,$A0, $00,$96, $00,$8E, $00,$86 ; 1c: D5  D#5 F5  F#5
+    db   $00,$7F, $00,$78, $00,$71, $00,$6B ; 20: G5  G#5 A5  A#5
+    db   $00,$64, $00,$5F, $00,$59, $00,$54 ;
+    db   $00,$50, $00,$4B, $00,$47, $00,$43 ;
+    db   $00,$3F, $00,$3C, $00,$38, $00,$35 ;
+    db   $00,$32, $00,$2F, $00,$2C, $00,$2A ;
+    db   $00,$28, $00,$25, $00,$23, $00,$21 ;
 
-    db   $EF,$00,$E2,$00,$D5,$00,$C9,$00
-    db   $BE,$00,$B3,$00,$A9,$00,$A0,$00
-    db   $96,$00,$8E,$00,$86,$00,$7F,$00
-    db   $78,$00,$71,$00,$6B,$00,$64,$00
-    db   $5F,$00,$59,$00,$54,$00,$50,$00
-    db   $4B,$00,$47,$00,$43,$00,$3F,$00
-    db   $3C,$00,$38,$00,$35,$00,$32,$00
-    db   $2F,$00,$2C,$00,$2A,$00,$28,$00
-    db   $25,$00,$23,$00,$21,$00,$1F,$00
-    db   $1E,$00,$00,$01,$04,$01,$07,$01
+    db   $00,$1F, $00,$1E       ; not sure after here
+    db   $00,$00                ; hmm
+    db   $01,$04,$01,$07,$01
 
     dc   9, $FF
 
@@ -8728,7 +8735,7 @@ _more_cage:
 ;; sfx/tune player
 ;; plays a few samples of sfx each tick
 
-sfx_01:; La Cucaracha
+sfx_01:;
     ld   a,(ix+$12)
     and  a
     jr   z,sfx_02
@@ -8736,7 +8743,7 @@ sfx_01:; La Cucaracha
     ld   (ix+$12),a
     ret
 
-sfx_02:; Minor-key death ditti
+sfx_02:;
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     inc  hl
@@ -8749,7 +8756,7 @@ sfx_02:; Minor-key death ditti
     call sfx_something_ch_1
     ret
 
-sfx_03:; Pickup bling
+sfx_03:;
     ld   l,(ix+$01)
     ld   h,(ix+$02)
     inc  hl
@@ -9594,19 +9601,18 @@ get_screen_tune_sfx_id:
     db   $20
     dc   4, $FF
 
-;; sfx 15 notes/len
-_4B0C:
+;; sfx 18 notes/len
+intro_jingle:
     db   $15,$01,$1A,$02,$15,$01,$1A,$02
     db   $15,$02,$14,$01,$1A,$02,$14,$01
     db   $1A,$02,$14,$02,$13,$01,$1A,$02
     db   $13,$01,$1A,$02,$13,$02,$12,$02
-    db   $09,$02,$0E
-    db   0x2
+    db   $09,$02,$0E,$02
     dc   2, $FF
 _4B32:
     db   $01,$05,$0F,$00 ; len/vel/vol/trans
 _4B36:
-    dw   _4B0C  ; notes
+    dw   intro_jingle  ; notes
     dc   4, $FF
     dw   _4B48
     dc   2, $FF
@@ -11442,7 +11448,7 @@ call_draw_extra_bonus_screen:
     call wait_60_for_start_button
     ret
 
-;; notes
+    ;; notes
     db   $A2,$01,$A2,$01,$A2,$01,$A2,$01
     db   $B2,$01,$B2,$01,$B2,$01,$B2,$01
     db   $C2,$01,$C2,$01,$C2,$01,$C2,$01
@@ -12180,9 +12186,8 @@ sfx_12_data:
 
 sfx_13_data:
     db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
-    db   $09
-    db   $01,$0E,$01
-    db   $10,$01
+intro_riff_2: ; played after intro riff on channel B
+    db   $09,$01,$0E,$01,$10,$01
     db   $12
     db   $03
     db   $13
