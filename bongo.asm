@@ -186,9 +186,14 @@
     synthy_um_2       = $82AD  ; no idea. Read once... written where?
     synth3            = $82B0  ; bunch of bytes for sfx
     synthy_um_3       = $82B5  ; ?
-    synth1_um_b       = $82B8  ; ?
-    synth2_um_b       = $82D0  ; ?
-    synth3_um_b       = $82E8  ; ?
+    chA_tune_base     = $82B8  ; base of current sfx bytes for ch1
+    chB_tune_base     = $82D0  ; base of current sfx bytes for ch1
+    chC_tune_base     = $82E8  ; base of current sfx bytes for ch1
+    ;; ix+01, ix+02 = pointer to pattern info
+    ;; ix+07, ix+08 = pointer to pattern note data
+    ;; ix+0D =
+    ;; ix+11 = ?
+    ;; ix+12 = note tick counter
 
     hiscore           = $8300  ;
     hiscore_1         = $8301  ;
@@ -8534,7 +8539,7 @@ blank_out_1up_text:
 
 ;; _4320:
 sfx_something_ch_1:
-    ld   l,(ix+$07) ; Get the musical note to play
+    ld   l,(ix+$07) ; ptr to pattern note data
     ld   h,(ix+$08)
     ld   a,(hl)
     cp   $FF     ; Is next note $FF? Terminate tune.
@@ -8553,7 +8558,7 @@ _433A:
     jr   _433A
 _4340:
     dec  a
-    ld   (ix+$12),a
+    ld   (ix+$12),a ; current note timer
     call play_sfx_chunk_ch_1
     ld   (iy+$02),a
     ld   a,(ix+$0e)
@@ -8602,8 +8607,8 @@ _4380:
 
     dc   1, $FF
 
-;; channel 3 i think
-sfx_what_3:
+;;
+sfx_something_ch_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
@@ -8734,39 +8739,38 @@ _more_cage:
 
     dc   19, $FF
 
-;; sfx/tune player
-;; plays a few samples of sfx each tick
 
-sfx_01:;
+;;; timer/sequencer: update current song
+sfx_tick_note:;
     ld   a,(ix+$12)
     and  a
-    jr   z,sfx_02
+    jr   z,sfx_next_note      ; first timer = 0
     dec  a
     ld   (ix+$12),a
     ret
 
-sfx_02:;
+sfx_next_note:;
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF                    ; end of tune maybe?
-    jr   z,sfx_03
+    jr   z,sfx_pattern_done
     ld   (ix+$07),l
     ld   (ix+$08),h
     call sfx_something_ch_1
     ret
 
-sfx_03:
+sfx_pattern_done:
     ld   l,(ix+$01)
     ld   h,(ix+$02)
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE                    ; hmm, some kind of escape
+    cp   $EE                    ; Is end of pattern sequence?
     jr   nz,ret_if_end_tune_ch1 ; otherwise just look for $FF
-    inc  hl                     ;
+    inc  hl                     ; Next pattern!
     ld   a,(hl)
     ld   c,a
     ld   b,$00
@@ -8914,7 +8918,7 @@ _460B:
     jr   z,_4622
     ld   (ix+$0b),l
     ld   (ix+$0c),h
-    call sfx_what_3
+    call sfx_something_ch_3
     ret
 
 ;; sfxsomething #8
@@ -8943,7 +8947,7 @@ _4622:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
-    call sfx_what_3
+    call sfx_something_ch_3
     ret
 
 ;; sfxsomething #9
@@ -8956,29 +8960,29 @@ _4652:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a
-    call sfx_what_3
+    call sfx_something_ch_3
     ret
 
     dc   25, $FF
 
-;;; sfx something #10
+;;; channel A not playing maybe?
 _4680:
-    ld   ix,synth1_um_b
-    ld   a,(ix+$0d)
+    ld   ix,chA_tune_base
+    ld   a,(ix+$0d)             ; length?
     and  a
-    jr   z,_46A1
-    call sfx_01
+    jr   z,_done_46A1
+    call sfx_tick_note
     ld   a,(ix+$0d)
     dec  a
-    jr   z,_46A1
+    jr   z,_done_46A1
     call sfx_06
     ld   a,(ix+$0d)
     dec  a
     dec  a
-    jr   z,_46A1
+    jr   z,_done_46A1
     call _4600
     ret
-_46A1:
+_done_46A1:
     ret
 
     dc   14, $FF
@@ -8993,8 +8997,9 @@ add_a_to_ret_addr:
 
     dc   9, $FF
 
-zero_out_some_sfx:
-    ld   hl,synth1_um_b
+;;; Resets $18 bytes of sfx RAM for channel A
+reset_chA_cur_sfx:
+    ld   hl,chA_tune_base
     ld   b,$18
 _46C5:
     ld   (hl),$00
@@ -9004,13 +9009,12 @@ _46C5:
 
     dc   5, $FF
 
-;; gets here on death and re-spawn
-clear_sfx_1:
-    call zero_out_some_sfx
+play_sfx_chA:
+    call reset_chA_cur_sfx
     ld   a,(ch1_sfx)
     call point_hl_to_sfx_data
-    ld   ix,synth1_um_b
-    call do_something_with_sfx_data
+    ld   ix,chA_tune_base
+    call copy_cur_sfx_data_to_RAM
     xor  a
     ld   (ch1_sfx),a
     ret
@@ -9049,9 +9053,10 @@ _46FB:
     dc   14, $FF
 
 ;;; Points HL to some music data.
+;;; a: ptr to current note to data (eg sfx_1_data)
 ;;; sfx_X_data contains:
 ;;; 1. Number - either 2 or 3
-;;; 2. Address either note_ptr or:
+;;; 2. Address to:
 ;;; [[had a note that said: len/vel/vol/trans for the 4 vals]]
 ;;;    1 (2): 01,08,0e,00, note_ptr, ee,03 ff
 ;;;    2 (3): 01,04,0f,00, note_ptr, ff
@@ -9111,15 +9116,15 @@ _sfx_data_lookup:
 
     dc   9, $FF
 
-;; hl = sfx data
-;; ix = ... 82d0, 82e8, or 82b8 (channel a/b/c something)
-do_something_with_sfx_data:
+;; hl = sfx data (eg sfx_1_data. See 'point_hl_to_sfx_data')
+;; ix = base of channel a/b/c RAM bytes
+copy_cur_sfx_data_to_RAM:
     nop
     nop
     nop
     nop
     ld   a,(hl) ; 1. points at sfx data
-    ld   (ix+$0d),a
+    ld   (ix+$0d),a ;
     ld   b,a
     inc  hl
     ld   a,(hl) ; 2
@@ -9191,43 +9196,45 @@ _here:
     dec  a
     dec  a
     ret  z
-    call sfx_what_3
+    call sfx_something_ch_3
     ret
 
     dc   27, $FF
 
+;;; Checks each channel and plays if there is currently
+;;; a sfx assigned to it
 sfx_queuer:
     ld   a,(ch1_sfx)
     and  a
-    jr   nz,_484B
-    call _4680 ; play in ch1
-    jr   _484E
-_484B:
-    call clear_sfx_1 ; ... kill ch1?
-_484E:
+    jr   nz,_play_chA
+    call _4680 ; not ch1_sfx
+    jr   _checkB
+_play_chA:
+    call play_sfx_chA ;
+_checkB:
     ld   a,(ch2_sfx) ; and try ch2?
     and  a
-    jr   nz,_4859
-    call _48E0 ; play in ch2?
-    jr   _485C
-_4859:
-    call clear_sfx_2
-_485C:
+    jr   nz,_play_chB
+    call _48E0 ; not ch2_sfx
+    jr   _checkC
+_play_chB:
+    call play_sfx_chB
+_checkC:
     ld   a,(sfx_id)
     and  a
-    jr   nz,_4867
+    jr   nz,_play_chC
     call more_sfx_something
     jr   _done_486A
-_4867:
-    call play_sfx
+_play_chC:
+    call play_sfx_chC
 _done_486A:
     ret
 
     dc   5, $FF
 
-;;; called from PLAY_SFX...
-zero_out_some_sfx_2:
-    ld   hl,synth3_um_b
+;;; Resets $18 bytes of sfx RAM for channel C
+reset_chC_cur_sfx:
+    ld   hl,chC_tune_base
     ld   b,$18
 _4875:
     ld   (hl),$00
@@ -9238,8 +9245,10 @@ _4875:
     dc   1, $FF
 
 ;;; more sfx something
+;;; this is some routine, but for chC
+;;; (_4680 = chA,
 more_sfx_something:
-    ld   ix,synth3_um_b
+    ld   ix,chC_tune_base
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -9247,7 +9256,7 @@ more_sfx_something:
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call sfx_01
+    call sfx_tick_note
     ld   a,(ix+$0d)
     dec  a
     dec  a
@@ -9257,12 +9266,12 @@ more_sfx_something:
 
     dc   2, $FF
 
-play_sfx:
-    call zero_out_some_sfx_2
+play_sfx_chC:
+    call reset_chC_cur_sfx
     ld   a,(sfx_id)
     call point_hl_to_sfx_data
-    ld   ix,synth3_um_b
-    call do_something_with_sfx_data
+    ld   ix,chC_tune_base
+    call copy_cur_sfx_data_to_RAM
     xor  a
     ld   (sfx_id),a
     ret
@@ -9284,7 +9293,7 @@ attract_your_being_chased_flash:
 
 ;;; Even more sfx something
 _48E0:
-    ld   ix,synth2_um_b
+    ld   ix,chB_tune_base
     ld   a,(ix+$0d)
     and  a
     ret  z
@@ -9297,7 +9306,7 @@ _48E0:
     dec  a
     dec  a
     ret  z
-    call sfx_01
+    call sfx_tick_note
     ret
 
     dc   2, $FF
@@ -9314,8 +9323,9 @@ jump_rel_a_copy:  ; duplicate routine
 
     dc   7, $FF
 
-zero_out_some_sfx_3:
-    ld   hl,synth2_um_b
+;;; Resets $18 bytes of sfx RAM for channel B
+reset_chB_cur_sfx:
+    ld   hl,chB_tune_base
     ld   b,$18
 _4915:
     ld   (hl),$00
@@ -9325,12 +9335,12 @@ _4915:
 
     dc   5, $FF
 
-clear_sfx_2:
-    call zero_out_some_sfx_3
+play_sfx_chB:
+    call reset_chB_cur_sfx
     ld   a,(ch2_sfx)
     call point_hl_to_sfx_data
-    ld   ix,synth2_um_b
-    call do_something_with_sfx_data
+    ld   ix,chB_tune_base
+    call copy_cur_sfx_data_to_RAM
     xor  a
     ld   (ch2_sfx),a
     ret
@@ -11278,9 +11288,9 @@ draw_buggy_border:
 
 ;;
 sfx_reset_a_bunch:
-    call zero_out_some_sfx
-    call zero_out_some_sfx_2
-    call zero_out_some_sfx_3
+    call reset_chA_cur_sfx
+    call reset_chC_cur_sfx
+    call reset_chB_cur_sfx
     call reset_sfx_something_1
     ret
 
