@@ -9636,7 +9636,7 @@ intro_jingle:
     db   $13,$01,$1A,$02,$13,$02,$12,$02
     db   $09,$02,$0E,$02
     dc   2, $FF
-_4B32:
+_sfx_15_meta:
     db   $01,$05,$0F,$00 ; len/vel/vol/trans
 _4B36:
     dw   intro_jingle  ; notes
@@ -9646,7 +9646,7 @@ _4B36:
 
 sfx_15_data:
     db   $03
-    dw   _4B32
+    dw   _sfx_15_meta
     dw   _4B36
     dw   _4B36
     db   $FF
@@ -9691,13 +9691,13 @@ _4BF6:
     dc   38, $FF
 
 _4C30:
-    dw   _4C32 ; interesting... points to next byte
+    dw   _4C32 ; points to next byte
 _4C32:
     db   $FF
     db   $FF
     db   $FF
     db   $FF
-_4C36:
+_meta_sfx_2:
     db   $01,$04,$0F,$00
     dw   _4BE0  ; point at notes
     db   $FF
@@ -9713,7 +9713,7 @@ _4C3E:
 
 sfx_2_data:
     db   $03
-    dw   _4C36 ; non-note that points to note
+    dw   _meta_sfx_2
     dw   _4C3E ; insta point at note
     dw   _4C30 ; weird, points to FF after addr
 
@@ -10251,34 +10251,24 @@ _5037:
 
 sfx_3_data:
     db   $03
-    dw   _5084
+    dw   _meta_sfx_3
     dw   _5090
     dw   _508C
     dc   6, $FF
 ;; notes
-    db   $0C
-    db   $01,$0E,$01
-    db   $10,$01
-    db   $11,$01,$13
-    db   $03
-    db   $FF
-    db   $FF
-    db   $13
-    db   $01,$15,$01
-    db   $17
-    db   $01,$18,$01
-    db   $1A
-    db   $03
-    db   $FF
-    db   $FF
-    db   $18,$01
-    db   $1A
-    db   $01,$1C,$01
-    db   $1D
-    db   $01,$1F,$03
-    db   $FF
-    db   $FF
-_5084:
+    db   $0C,$01,$0E,$01,$10,$01,$11,$01
+    db   $13,$03
+    dc   2, $FF
+
+    db   $13,$01,$15,$01,$17,$01,$18,$01
+    db   $1A,$03
+    dc   2, $FF
+
+    db   $18,$01,$1A,$01,$1C,$01,$1D,$01
+    db   $1F,$03
+    dc   2, $FF
+
+_meta_sfx_3:
     db   $02,$02,$0F,$10
     db   $60,$50
     db   $FF
@@ -10346,94 +10336,41 @@ sfx_5_data:
     db   $03
     db   $03
     db   $0F
-    db   $10,$CC
-    db   $50
+    db   $10
+    db   $CC,$50
     db   $FF
     db   $FF
 
     ;; notes
-    db   $2B
-    db   $02
-    db   $34
-    db   $02
-    db   $34
-    db   $02
-    db   $34
-    db   $02
-    db   $32,$01,$34
-    db   $01,$32,$01
-    db   $30,$01
-    db   $2F
-    db   $01,$2D,$01
-    db   $2B
-    db   $02
-    db   $2D
-    db   $02
-    db   $2D
-    db   $02
-    db   $32,$01,$34
-    db   $01,$26,$02
-    db   $FF
-    db   $FF
+    db   $2B,$02,$34,$02,$34,$02,$34,$02
+    db   $32,$01,$34,$01,$32,$01,$30,$01
+    db   $2F,$01,$2D,$01,$2B,$02,$2D,$02
+    db   $2D,$02,$32,$01,$34,$01,$26,$02
+    dc   2, $FF
 
-    db   $37
-    db   $02
-    db   $2F
-    db   $02
-    db   $32,$04,$FF
-    db   $FF
-    db   $2B
-    db   $01,$26,$01
-    db   $23
-    db   $01,$26,$01
-    db   $1F
-    db   $04
-    db   $FF
-    db   $FF
-    db   $0C
-    db   $01,$10,$01
-    db   $13
-    db   $01,$10,$01
-    db   $0C
-    db   $01,$0C,$01
-    db   $0E,$01
-    db   $10,$01
-    db   $0B
-    db   $01,$0C,$01
-    db   $0B
-    db   $01,$09,$01
-    db   $07
-    db   $01,$07,$01
-    db   $09
-    db   $01,$0B,$01
-    db   $09
-    db   $01,$0B,$01
-    db   $09
-    db   $01,$07,$01
-    db   $06,$01
-    db   $06,$01
-    db   $07
-    db   $01,$09,$01
-    db   $FF
-    db   $FF
-    db   $07
-    db   $01,$07,$01
-    db   $0B
-    db   $01,$0C,$01
-    db   $0E,$01
-    db   $07
-    db   $01,$0B,$01
-    db   $0E,$01
-    db   $FF
-    db   $FF
-    db   $07
-    db   $01,$0C,$01
-    db   $0B
-    db   $01,$09,$01
-    db   $07
-    db   $04
-    db   $FF
-    db   $FF
+    db   $37,$02,$2F,$02,$32,$04
+    dc   2, $FF
+
+    db   $2B,$01,$26,$01,$23,$01,$26,$01
+    db   $1F,$04
+    dc   2, $FF
+
+    db   $0C,$01,$10,$01,$13,$01,$10,$01
+    db   $0C,$01,$0C,$01,$0E,$01,$10,$01
+    db   $0B,$01,$0C,$01,$0B,$01,$09,$01
+    db   $07,$01,$07,$01,$09,$01,$0B,$01
+    db   $09,$01,$0B,$01,$09,$01,$07,$01
+    db   $06,$01,$06,$01,$07,$01,$09,$01
+    dc   2, $FF
+
+    db   $07,$01,$07,$01,$0B,$01,$0C,$01
+    db   $0E,$01,$07,$01,$0B,$01,$0E,$01
+    dc   2, $FF
+
+    db   $07,$01,$0C,$01,$0B,$01,$09,$01
+    db   $07,$04
+    dc   2, $FF
+
 _5182:
     db   $01,$08,$0F,$00
     db   $32,$51
@@ -11659,12 +11596,12 @@ _5C86:
 
 sfx_1_data:
     db   $02
-    dw   _5D08 ; non-note that points to note
-    dw   _5D14 ; non-note, insta point at note
+    dw   _meta_sfx_1
+    dw   _5D14 ; ptr->notes
     dw   _5D14 ; same
     db   $FF
-_5D08:
-    db   $01,$08,$0E,$00
+_meta_sfx_1:
+    db   $01,$08,$0E,$00  ; len?/speed/volume/transpose
     dw   _5C86 ; note data "fast weird ditty"
     db   $EE,$03
     dc   4, $FF
