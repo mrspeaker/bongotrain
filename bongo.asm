@@ -104,8 +104,8 @@
     1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
     is_hit_cage       = $8051  ; did player trigger cage?
 
-    sfx_val_1         = $8052  ; All used in similar looking sfx subs
-    sfx_val_2         = $8053  ;
+    sfx_val_1         = $8052  ; All used in configure_sfx_chunk_ch routines
+    sfx_val_2         = $8053  ; Only used internally (no other refs)
     sfx_val_3         = $8054  ;
     sfx_val_4         = $8055  ;
     sfx_val_5         = $8056  ;
@@ -193,6 +193,7 @@
     ;; ix+01, ix+02 = ptr 1 to pattern info (or maybe ptr->ptr of note data)
     ;; ix+03, ix+04 = ptr 2 to pattern info (or maybe ptr->ptr of note data)
     ;; ix+05, ix+06 = ptr 3 to pattern info (or maybe ptr->ptr of note data)
+
     ;; ix+07, ix+08 = notes1: pointer to pattern note data
     ;; ix+09, ix+0a = notes2: pointer to pattern note data
     ;; ix+0b, ix+0c = notes3: pointer to pattern note data
@@ -206,6 +207,10 @@
     ;; ix+12 = note tick counter
     ;; ix+13 = another timer
     ;; ix+14 = another timer
+
+    ;; iy
+    ;; iy+00 = current note
+    ;; iy+0f = ?
 
     hiscore           = $8300  ;
     hiscore_1         = $8301  ;
@@ -5136,7 +5141,7 @@ player_all_sfx_chunks:
     ld   hl,sfx_sumfin_ch_c - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
-    ld   hl,sfx_queuer - JMP_HL_OFFSET
+    ld   hl,sfx_play_or_queue - JMP_HL_OFFSET
     jr   call_sfx_queuer_and_reset_sfx_ids
 
     dc   2, $FF
@@ -5165,7 +5170,7 @@ _2931:
 ;;; ==========================================
 
 call_sfx_queuer_and_reset_sfx_ids:
-    call jmp_hl_plus_4k ; hl+4k = sfx_queuer
+    call jmp_hl_plus_4k ; hl+4k = sfx_play_or_queue
     call reset_sfx_ids
     ret
 
@@ -8550,28 +8555,29 @@ blank_out_1up_text:
     dc   5, $FF
 
 ;; _4320:
-sfx_something_ch_1:
+configure_sfx_ch_1:
     ld   l,(ix+$07) ; ptr to pattern note data
     ld   h,(ix+$08)
     ld   a,(hl)
-    cp   $FF     ; Is next note $FF? Terminate tune.
-    ret  z
-    add  a,(ix+$11)
+    cp   $FF     ; is note a $FF?
+    ret  z       ; ...we are done with this tune, leave.
+    add  a,(ix+$11) ; add any transpose to the current note
     ld   iy,synth1
-    ld   (iy+$00),a
-    inc  hl
-    ld   b,(hl)
-    ld   a,(ix+$0f)
-    ld   c,a
+    ld   (iy+$00),a ; move current note to synth1
+;;; Set the synth note duration
+    inc  hl         ;
+    ld   b,(hl)     ; note duration in b
+    ld   a,(ix+$0f) ; ? what is starting value of a?
+    ld   c,a        ; c = init value of a
 _433A:
-    dec  b
-    jr   z,_4340
-    add  a,c
+    dec  b          ; for b to 0:
+    jr   z,_4340    ;
+    add  a,c        ;   a += init_a
     jr   _433A
-_4340:
-    dec  a
+_4340:              ; (now a = ix+$0f * b)
+    dec  a          ; a -= 1
     ld   (ix+$12),a ; current note timer
-    call play_sfx_chunk_ch_1
+    call configure_sfx_chunk_ch_1
     ld   (iy+$02),a
     ld   a,(ix+$0e)
     ld   (iy+$03),a
@@ -8582,7 +8588,7 @@ _4340:
     dc   10, $FF
 
 ;;; _4360
-sfx_something_ch_2:
+configure_sfx_ch_2:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
     ld   a,(hl)
@@ -8603,7 +8609,7 @@ _437A:
 _4380:
     dec  a
     ld   (ix+$13),a  ; note tick chB
-    call play_sfx_chunk_ch_2
+    call configure_sfx_chunk_ch_2
     ld   (iy+$02),a
     ld   a,(ix+$0e)
     ld   (iy+$03),a
@@ -8620,7 +8626,7 @@ _4380:
     dc   1, $FF
 
 ;;
-sfx_something_ch_3:
+configure_sfx_ch_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
@@ -8641,7 +8647,7 @@ _43BA:
 _43C0:
     dec  a
     ld   (ix+$14),a
-    call sfx_sub_what_1
+    call configure_sfx_chunk_ch_3
     ld   (iy+$02),a
     ld   a,(ix+$0e)
     ld   (iy+$03),a
@@ -8753,15 +8759,15 @@ _more_cage:
 
 
 ;;; timer/sequencer: update current song
-sfx_tick_note:;
+sfx_tick_note_ch1:
     ld   a,(ix+$12)
     and  a
-    jr   z,sfx_next_note      ; first timer = 0
+    jr   z,sfx_next_note_ch1   ; first timer = 0
     dec  a
     ld   (ix+$12),a
     ret
 
-sfx_next_note:;
+sfx_next_note_ch1:;
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     inc  hl
@@ -8771,7 +8777,7 @@ sfx_next_note:;
     jr   z,sfx_pattern_done
     ld   (ix+$07),l
     ld   (ix+$08),h
-    call sfx_something_ch_1
+    call configure_sfx_ch_1
     ret
 
 sfx_pattern_done:
@@ -8799,7 +8805,7 @@ sfx_pattern_done:
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     ld   a,(hl)
-    call sfx_something_ch_1
+    call configure_sfx_ch_1
     ret
 
 ;;; _4552:
@@ -8814,7 +8820,7 @@ ret_if_end_tune_ch1:
     inc  hl
     ld   a,(hl)
     ld   (ix+$08),a
-    call sfx_something_ch_1
+    call configure_sfx_ch_1
     ret
 
     dc   1, $FF
@@ -8839,16 +8845,17 @@ add_pickup_pat_7:
     call add_pickup_pat_5
     ret
 
-sfx_06:                         ;
+sfx_tick_note_ch2:
     ld   a,(ix+$13)
     and  a
-    jr   z,_458B
+    jr   z,sfx_next_note_ch2
     dec  a
     ld   (ix+$13),a
     ret
-;; sfxsomething #4
-_458B:
-    ld   l,(ix+$09)
+
+;;
+sfx_next_note_ch2:
+    ld   l,(ix+$09) ;
     ld   h,(ix+$0a)
     inc  hl
     inc  hl
@@ -8857,7 +8864,7 @@ _458B:
     jr   z,_45A2
     ld   (ix+$09),l
     ld   (ix+$0a),h
-    call sfx_something_ch_2
+    call configure_sfx_ch_2
     ret
 
 ;; sfxsomething #5
@@ -8886,7 +8893,7 @@ _45A2:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
     ld   a,(hl)
-    call sfx_something_ch_2
+    call configure_sfx_ch_2
     ret
 
 ;; sfxsomething #6
@@ -8899,7 +8906,7 @@ _45D2:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0a),a
-    call sfx_something_ch_2
+    call configure_sfx_ch_2
     ret
 
     dc   1, $FF
@@ -8913,14 +8920,15 @@ add_pickup_pat_2:
     dc   18, $FF
 
 ;; sfxsomething #7
-_4600_chC:
+sfx_tick_note_ch3:
     ld   a,(ix+$14)
     and  a
-    jr   z,_460B
+    jr   z,sfx_next_note_ch3
     dec  a
     ld   (ix+$14),a
     ret
-_460B:
+
+sfx_next_note_ch3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     inc  hl
@@ -8930,7 +8938,7 @@ _460B:
     jr   z,_4622_ch_3
     ld   (ix+$0b),l
     ld   (ix+$0c),h
-    call sfx_something_ch_3
+    call configure_sfx_ch_3
     ret
 
 ;; sfxsomething #8
@@ -8959,7 +8967,7 @@ _4622_ch_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
-    call sfx_something_ch_3
+    call configure_sfx_ch_3
     ret
 
 ;; sfxsomething #9
@@ -8972,27 +8980,30 @@ _4652:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a
-    call sfx_something_ch_3
+    call configure_sfx_ch_3
     ret
 
     dc   25, $FF
 
-;;; channel A not playing maybe?
-_4680:
+;;; ticks the things. weirdly. Ticks each channel, but
+;;; 3 versions, all 3 times... I dunno.
+;;; dont think this really queuing - but it's doing something!
+;;; Gets here when there's no ch1_sfx
+sfx_queuer_1:
     ld   ix,chA_tune_base
-    ld   a,(ix+$0d)             ; length?
+    ld   a,(ix+$0d) ; length? maybe "repeat"?
     and  a
-    jr   z,_done_46A1
-    call sfx_tick_note
+    jr   z,_done_46A1 ; Repeats all done.
+    call sfx_tick_note_ch1
     ld   a,(ix+$0d)
     dec  a
     jr   z,_done_46A1
-    call sfx_06
+    call sfx_tick_note_ch2
     ld   a,(ix+$0d)
     dec  a
     dec  a
     jr   z,_done_46A1
-    call _4600_chC
+    call sfx_tick_note_ch3
     ret
 _done_46A1:
     ret
@@ -9202,27 +9213,27 @@ _here:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a  ; lo byte of note data
-    call sfx_something_ch_1
+    call configure_sfx_ch_1
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call sfx_something_ch_2
+    call configure_sfx_ch_2
     ld   a,(ix+$0d)
     dec  a
     dec  a
     ret  z
-    call sfx_something_ch_3
+    call configure_sfx_ch_3
     ret
 
     dc   27, $FF
 
 ;;; _4840: Checks each channel and plays if there is currently
-;;; a sfx assigned to it
-sfx_queuer:
+;;; a sfx assigned to it... or something
+sfx_play_or_queue:
     ld   a,(ch1_sfx)
     and  a
     jr   nz,_play_chA
-    call _4680 ; not ch1_sfx
+    call sfx_queuer_1 ; no sfx on ch1
     jr   _checkB
 _play_chA:
     call play_sfx_chA ;
@@ -9230,7 +9241,7 @@ _checkB:
     ld   a,(ch2_sfx) ; and try ch2?
     and  a
     jr   nz,_play_chB
-    call _48E0 ; not ch2_sfx
+    call sfx_queuer_2 ; no sfx on ch2
     jr   _checkC
 _play_chB:
     call play_sfx_chB
@@ -9238,7 +9249,7 @@ _checkC:
     ld   a,(ch3_sfx)
     and  a
     jr   nz,_play_chC
-    call more_sfx_something
+    call sfx_queuer_3 ; no sfx on ch3
     jr   _done_486A
 _play_chC:
     call play_sfx_chC
@@ -9259,24 +9270,24 @@ _4875:
 
     dc   1, $FF
 
-;;; more sfx something
 ;;; this is some routine, but for chC
-;;; (_4680 = chA,
-more_sfx_something:
+;;; see sfx_queuer_1
+;;; Gets here when there's no ch3_sfx    
+sfx_queuer_3:
     ld   ix,chC_tune_base
     ld   a,(ix+$0d)
     and  a
     ret  z
-    call _4600_chC
+    call sfx_tick_note_ch3
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call sfx_tick_note
+    call sfx_tick_note_ch1
     ld   a,(ix+$0d)
     dec  a
     dec  a
     ret  z
-    call sfx_06
+    call sfx_tick_note_ch2
     ret
 
     dc   2, $FF
@@ -9306,22 +9317,23 @@ attract_your_being_chased_flash:
 
     dc   21, $FF
 
-;;; Even more sfx something
-_48E0:
+;;; see sfx_queuer_1
+;;; Gets here when there's no ch2_sfx    
+sfx_queuer_2:
     ld   ix,chB_tune_base
     ld   a,(ix+$0d)
     and  a
     ret  z
-    call sfx_06
+    call sfx_tick_note_ch2
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call _4600_chC
+    call sfx_tick_note_ch3
     ld   a,(ix+$0d)
     dec  a
     dec  a
     ret  z
-    call sfx_tick_note
+    call sfx_tick_note_ch1
     ret
 
     dc   2, $FF
@@ -9637,7 +9649,7 @@ intro_jingle:
     db   $09,$02,$0E,$02
     dc   2, $FF
 _sfx_15_meta:
-    db   $01,$05,$0F,$00 ; len/vel/vol/trans
+    db   $01,$05,$0F,$00 ; len(rep?)/vel/vol/trans
 _4B36:
     dw   intro_jingle  ; notes
     dc   4, $FF
@@ -10291,7 +10303,7 @@ _5094:
 _50AC:
     dc   4, $FF
 _50B0:
-    db   $01,$01,$0F,$00 ; len/vel/vol/trans
+    db   $01,$01,$0F,$00 ; len(rep?)/vel/vol/trans
     dw   _5094
     dc   2, $FF
     db   $94
@@ -10440,16 +10452,29 @@ sfx_7_data:
 _51F8:
     dc   8, $FF
 
-play_sfx_chunk_ch_1:
+
+;;; not sure what this does yet. COpying some data to send to the synth?
+;;; configure_sfx_chunk_ch_1, 2, and 3 are identical except for the
+;;; RAM locations (not used anywhere else!) :
+;;; sfx_val_1 and sfx_val_4 for "ch_1".
+;;; sfx_val_2 and sfx_val_5 for "ch_2"
+;;; sfx_val_3 and sfx_val_6 for "ch_3"
+;;; It seems like they are the synth values for each channel,
+;;; but then they are each looking at all chA_tune_base, chB_tune_base,
+;;; and chC_tune_base (by checking the low byte of HL). Not sure how this works...
+;;; why is there 3 of these routines, all checking 3 channels?
+;;; [triggers every few frames]
+;;; The last instruction sets volume maybe... is this a sound mixer system?
+configure_sfx_chunk_ch_1:
     push ix
     pop  hl
     ld   a,l
-    cp   $E8
+    cp   $E8                    ; is chC_tune_base?
     jr   nz,_520F
-    ld   a,$02
-    ld   (sfx_val_4),a
+    ld   a,$02                  ; yes, chC...
+    ld   (sfx_val_4),a          ; what is 2 for?
     jr   _5225
-_520F:
+_520F:                          ; ch A and B
     ld   a,(sfx_val_4)
     and  a
     jr   z,_5225
@@ -10465,13 +10490,13 @@ _5223:
     ret
 _5225:
     ld   a,l
-    cp   $D0
+    cp   $D0                    ; is chB_tune_base?
     jr   nz,_5231
-    ld   a,$02
-    ld   (sfx_val_1),a
+    ld   a,$02                  ; yes chB
+    ld   (sfx_val_1),a          ; what is 2 for?
     jr   _523D
 _5231:
-    ld   a,(sfx_val_1)
+    ld   a,(sfx_val_1)          ; chA and C
     and  a
     jr   z,_523D
     dec  a
@@ -10479,15 +10504,14 @@ _5231:
     pop  hl
     ret
 _523D:
-    ld   a,(ix+$10)
+    ld   a,(ix+$10)             ; (volume?)
     ret
 
     dc   15, $FF
 
 ;; triggers every few frames.
-;; Maybe play current chunk of tune?
-;; looks the same as above funk (ch1?)
-play_sfx_chunk_ch_2:
+;; See note on configure_sfx_chunk_c1
+configure_sfx_chunk_ch_2:
     push ix
     pop  hl
     ld   a,l
@@ -10531,8 +10555,9 @@ _528D:
 
     dc   15, $FF
 
-;;??
-sfx_sub_what_1:
+;; triggers every few frames.
+;; See note on configure_sfx_chunk_c1
+configure_sfx_chunk_ch_3:
     push ix
     pop  hl
     ld   a,l
@@ -11601,7 +11626,7 @@ sfx_1_data:
     dw   _5D14 ; same
     db   $FF
 _meta_sfx_1:
-    db   $01,$08,$0E,$00  ; len?/speed/volume/transpose
+    db   $01,$08,$0E,$00  ; len(rep?)/speed/volume/transpose
     dw   _5C86 ; note data "fast weird ditty"
     db   $EE,$03
     dc   4, $FF
