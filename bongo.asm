@@ -180,12 +180,16 @@
 
     platform_xoffs    = $8180  ; maybe
 
+;;; Channel synth settings
+;;; ix+0 = ?
+;;; ix+4 = ?
     synth1            = $82A0  ; bunch of bytes for sfx
-    synthy_um_1       = $82A5  ; ?
+    synth_cur_note       = $82A5  ; ? ix+4
     synth2            = $82A8  ; bunch of bytes for sfx
     synthy_um_2       = $82AD  ; no idea. Read once... written where?
     synth3            = $82B0  ; bunch of bytes for sfx
     synthy_um_3       = $82B5  ; ?
+
     chA_tune_base     = $82B8  ; base of current sfx bytes for ch1
     chB_tune_base     = $82D0  ; base of current sfx bytes for ch1
     chC_tune_base     = $82E8  ; base of current sfx bytes for ch1
@@ -5133,15 +5137,15 @@ move_dino_x:
 ;;; Called from NMI: so maybe this is the bit that
 ;;; plays the current samples of sfx
 player_all_sfx_chunks:
-    ld   hl,sfx_sumfin_ch_a - JMP_HL_OFFSET
+    ld   hl,set_note_and_write_ch_a - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
-    ld   hl,sfx_sumfin_ch_b - JMP_HL_OFFSET
+    ld   hl,set_note_and_write_ch_b - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    ld   hl,sfx_sumfin_ch_c - JMP_HL_OFFSET
+    ld   hl,set_note_and_write_ch_c - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
-    ld   hl,sfx_play_or_queue - JMP_HL_OFFSET
+    ld   hl,sfx_queue_and_copy_data - JMP_HL_OFFSET
     jr   call_sfx_queuer_and_reset_sfx_ids
 
     dc   2, $FF
@@ -5170,7 +5174,7 @@ _2931:
 ;;; ==========================================
 
 call_sfx_queuer_and_reset_sfx_ids:
-    call jmp_hl_plus_4k ; hl+4k = sfx_play_or_queue
+    call jmp_hl_plus_4k ; hl+4k = sfx_queue_and_copy_data
     call reset_sfx_ids
     ret
 
@@ -8254,7 +8258,7 @@ add_pickup_pat_10:
     dc   8, $FF
 
 ;;; sfx channel A. Play current note
-set_synth_ch_a:
+write_aysnd_ch_a:
     ld   a,(ix+$00)
     and  a
     ret  z
@@ -8290,7 +8294,7 @@ _4170:
     dc   7, $FF
 
 ;;; _4180. sfx channel b.
-set_synth_ch_b:
+write_aysnd_ch_b:
     ld   a,(ix+$00)
     and  a
     ret  z
@@ -8377,13 +8381,13 @@ draw_pikup_cross_bot_r:
     dc   2, $FF
 
 ;;; Channel A
-sfx_sumfin_ch_a:
+set_note_and_write_ch_a:
     ld   ix,synth1
-    ld   a,(ix+$04)
+    ld   a,(ix+$04) ; synth1_cur_note
     and  a
     jr   z,_i_2
-    call set_synth_ch_a
-    ld   (ix+$04),$00
+    call write_aysnd_ch_a
+    ld   (ix+$04),$00 ; synth1_cur_note
     ret
 _i_2:
     call sfx_write_ch_a_env_vol
@@ -8397,14 +8401,14 @@ _4216:
 
     dc   4, $FF
 
-;;; Channel B
-sfx_sumfin_ch_b:
+                                                                                ;;; Channel B
+set_note_and_write_ch_b:
     ld   ix,synth2
-    ld   a,(ix+$04)
+    ld   a,(ix+$04)   ; synth2_cur_note
     and  a
     jr   z,_i_3
-    call set_synth_ch_b
-    ld   (ix+$04),$00
+    call write_aysnd_ch_b
+    ld   (ix+$04),$00 ; synth2_cur_note
     ret
 _i_3:
     call sfx_write_ch_b_env_vol
@@ -8419,13 +8423,13 @@ _4236:
     dc   4, $FF
 
 ;;; Channel C
-sfx_sumfin_ch_c:
+set_note_and_write_ch_c:
     ld   ix,synth3
-    ld   a,(ix+$04)
+    ld   a,(ix+$04)             ; synth3_cur_note
     and  a
     jr   z,_i_4
-    call set_synth_ch_c
-    ld   (ix+$04),$00
+    call write_aysnd_ch_c
+    ld   (ix+$04),$00           ; synth3_cur_note
     ret
 _i_4:
     call sfx_write_ch_c_env_vol
@@ -8490,7 +8494,7 @@ funky_looking_set_ring:
     dc   7, $FF
 
 ;;; sfx channel C
-set_synth_ch_c:
+write_aysnd_ch_c:
     ld   a,(ix+$00)
     and  a
     ret  z
@@ -9035,14 +9039,14 @@ _46C5:
 
     dc   5, $FF
 
-play_sfx_chA:
+copy_sfx_data_chA:
     call reset_chA_cur_sfx
     ld   a,(ch1_sfx)
     call point_hl_to_sfx_data
     ld   ix,chA_tune_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (ch1_sfx),a
+    ld   (ch1_sfx),a ; clear sfx
     ret
 
     dc   3, $FF
@@ -9235,15 +9239,16 @@ _here:
     dc   27, $FF
 
 ;;; _4840: Checks each channel and plays if there is currently
-;;; a sfx assigned to it... or something
-sfx_play_or_queue:
+;;; a sfx assigned to it...
+;;; Note: The copy_sfx_data_chX routine also clear chX_sfx when done
+sfx_queue_and_copy_data:
     ld   a,(ch1_sfx)
     and  a
     jr   nz,_play_chA
     call sfx_queuer_1 ; no sfx on ch1
     jr   _checkB
 _play_chA:
-    call play_sfx_chA ;
+    call copy_sfx_data_chA ;
 _checkB:
     ld   a,(ch2_sfx) ; and try ch2?
     and  a
@@ -9251,7 +9256,7 @@ _checkB:
     call sfx_queuer_2 ; no sfx on ch2
     jr   _checkC
 _play_chB:
-    call play_sfx_chB
+    call copy_sfx_data_chB
 _checkC:
     ld   a,(ch3_sfx)
     and  a
@@ -9259,7 +9264,7 @@ _checkC:
     call sfx_queuer_3 ; no sfx on ch3
     jr   _done_486A
 _play_chC:
-    call play_sfx_chC
+    call copy_sfx_data_chC
 _done_486A:
     ret
 
@@ -9299,7 +9304,7 @@ sfx_queuer_3:
 
     dc   2, $FF
 
-play_sfx_chC:
+copy_sfx_data_chC:
     call reset_chC_cur_sfx
     ld   a,(ch3_sfx)
     call point_hl_to_sfx_data
@@ -9369,7 +9374,7 @@ _4915:
 
     dc   5, $FF
 
-play_sfx_chB:
+copy_sfx_data_chB:
     call reset_chB_cur_sfx
     ld   a,(ch2_sfx)
     call point_hl_to_sfx_data
@@ -9709,9 +9714,9 @@ _4BF6:
     db   $07,$02,$09,$04
     dc   38, $FF
 
-_4C30:
-    dw   _4C32 ; points to next byte
-_4C32:
+_sfx_2_done_ptr:
+    dw   _sfx_2_done ; points to next byte
+_sfx_2_done:
     db   $FF
     db   $FF
     db   $FF
@@ -9730,11 +9735,12 @@ _4C3E:
     db   $FF
     db   $FF
 
+;;; SFX2: Death ditty
 sfx_2_data:
     db   $03
     dw   _meta_sfx_2
-    dw   _4C3E ; insta point at note
-    dw   _4C30 ; weird, points to FF after addr
+    dw   _4C3E ; ptr->notes
+    dw   _sfx_2_done_ptr
 
     dc   3, $FF
 
@@ -10933,7 +10939,7 @@ sfx_8_data:
 reset_sfx_something_1:
     xor  a
     ld   (_8046),a
-    ld   a,(synthy_um_1)
+    ld   a,(synth_cur_note)
     and  a
     jr   nz,_552F
     ld   a,$F9
@@ -11666,7 +11672,7 @@ _5D30: ; notes
     dc   4, $FF
 
 _5d60: ; non-note
-    db   $19,$20
+    db   $19,$20  ;hmm, should be a ptr->note
     db   $FF,$FF
 _5d64:   ; notes
     db   $1A,$01,$19,$01,$17,$01,$15,$03
@@ -11689,9 +11695,9 @@ _5DAC:
     db   $12,$04,$10,$04,$09,$04,$09,$05
     dc   4, $FF
 
-_5DD0:
+_sfx_11_meta:
     db   $01,$05,$0F,$00
-    dw   _5D60    ; two values: $19,$20 (then $FF..)
+    dw   _5D60    ; ptr->$19,$20 not ptr->note?!
     dw   _5DAC    ; note data
     dw   _5DAC    ; same
     db   $EE,$07
@@ -11707,7 +11713,7 @@ _5DE0:
 
 sfx_11_data:
     db   $03
-    dw   _5DD0
+    dw   _sfx_11_meta
     dw   _5DE0
     dw   _5DDC
     db   $FF
