@@ -119,7 +119,7 @@
     bonus_mult        = $8062  ; Bonus multiplier.
 
     splash_anim_fr    = $8064  ; cycles 0-2 maybe... splash anim counter
-    sfx_prev          = $8065  ; prevent retrigger effect?
+    sfx_prev          = $8065  ; prevent retrigger song
     ch1_cur_note      = $8066  ; chA current not to play for sfx/tunes
     ch2_cur_note      = $8067  ; chB
     ch3_cur_note      = $8068  ; chC
@@ -6772,6 +6772,8 @@ _3637:
 ;;; seems odd: read input, write to sound
 ;;; then read from sound and update input?
 ;;; Happens every frame from from NMI
+;;; Hmm, if there was some kind of hardware
+;;; easter egg/cheat it would be here...
 check_buttons_for_something:
     push bc
     ld   a,(input_buttons) ; check button inputs
@@ -8119,7 +8121,7 @@ add_pickup_pat_6:
     dc   2, $FF
 
 ;;
-sfx_ch_a_env_vol:
+sfx_write_ch_a_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_408B
@@ -8169,7 +8171,7 @@ get_tile_scr_pos:
 
     dc   1, $FF
 
-sfx_ch_b_env_vol:
+sfx_write_ch_b_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_40CB
@@ -8214,7 +8216,7 @@ hit_bonus:
 
     ;;
 _4100: ; address is referenced in weird jump
-sfx_ch_c_env_vol:
+sfx_write_ch_c_env_vol:
     ld   a,(ix+$05)
     and  a
     jr   z,_410B
@@ -8384,7 +8386,7 @@ sfx_sumfin_ch_a:
     ld   (ix+$04),$00
     ret
 _i_2:
-    call sfx_ch_a_env_vol
+    call sfx_write_ch_a_env_vol
     ret
 
 ;;; uncalled?
@@ -8405,7 +8407,7 @@ sfx_sumfin_ch_b:
     ld   (ix+$04),$00
     ret
 _i_3:
-    call sfx_ch_b_env_vol
+    call sfx_write_ch_b_env_vol
     ret
 
 ;;; uncalled?
@@ -8426,7 +8428,7 @@ sfx_sumfin_ch_c:
     ld   (ix+$04),$00
     ret
 _i_4:
-    call sfx_ch_c_env_vol
+    call sfx_write_ch_c_env_vol
     ret
 
     dc   2, $FF
@@ -9045,6 +9047,11 @@ play_sfx_chA:
 
     dc   3, $FF
 
+;;; Selects the tune to play for the current screen.
+;;; If it's already playing this tune it skips setting it.
+;;; I think the reason it avoids setting it again is that
+;;; ch1_sfx can be 0, but the tune is still playing (I think
+;;; it's the "REPEAT" (or whatever ix+$0D is).
 play_tune_for_cur_screen:
     ld   a,(num_players)
     and  a
@@ -9064,9 +9071,9 @@ _46FB:
     ld   b,a
     ld   a,(sfx_prev)
     cp   b
-    ret  z
+    ret  z ; already playing this one
     ld   a,b
-    ld   (ch1_sfx),a ; wat sfx is this?
+    ld   (ch1_sfx),a ; set new sfx id
     ld   (sfx_prev),a
     ret
 
