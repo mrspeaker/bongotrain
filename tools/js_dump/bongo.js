@@ -322,7 +322,7 @@ const getRomBytes = (rom) =>
 
 const tunes_5 = [0xb0c, 0xa80, 0x4c0, 0xa20];
 const tunes_6 = [
-    0xc86, 0xf38, 0x132, 0x6f8, 0xdf4, 0xc86, 0xd30, 0xd64, 0xe4c, 0xea0,
+    0xf38, 0x132, 0x550, 0x6f8, 0xdf4, 0xc86, 0xd30, 0xd64, 0xe4c, 0xea0,
 ];
 
 async function handle_tunes() {
@@ -339,7 +339,6 @@ async function handle_tunes() {
         const duration = bytes[start + idx++];
         if (duration < min) min = duration;
         if (duration > max) max = duration;
-
         const freq = 440 * Math.pow(2, (note - 16) / 12);
         notes.push(freq);
         notes.push(duration / 3);
@@ -350,7 +349,7 @@ async function handle_tunes() {
     document.getElementById("play").addEventListener(
         "click",
         () => {
-            play_notes(notes, 150);
+            play_notes(notes, 250);
         },
         false,
     );

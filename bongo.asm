@@ -90,7 +90,7 @@
 
     ch1_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
     ch2_sfx           = $8043  ; SFX channel 2
-    sfx_id            = $8044  ; queued sound effect ID to play
+    ch3_sfx           = $8044  ; sfx channel 3
     _8046             = $8046  ; ?
     _8049             = $8049  ; ?
     _804A             = $804A  ; ?
@@ -189,11 +189,23 @@
     chA_tune_base     = $82B8  ; base of current sfx bytes for ch1
     chB_tune_base     = $82D0  ; base of current sfx bytes for ch1
     chC_tune_base     = $82E8  ; base of current sfx bytes for ch1
-    ;; ix+01, ix+02 = pointer to pattern info
-    ;; ix+07, ix+08 = pointer to pattern note data
+    ;; ix+00 = ?
+    ;; ix+01, ix+02 = ptr 1 to pattern info (or maybe ptr->ptr of note data)
+    ;; ix+03, ix+04 = ptr 2 to pattern info (or maybe ptr->ptr of note data)
+    ;; ix+05, ix+06 = ptr 3 to pattern info (or maybe ptr->ptr of note data)
+    ;; ix+07, ix+08 = notes1: pointer to pattern note data
+    ;; ix+09, ix+0a = notes2: pointer to pattern note data
+    ;; ix+0b, ix+0c = notes3: pointer to pattern note data
+
     ;; ix+0D =
-    ;; ix+11 = ?
+    ;; ix+0e = ptr1.len
+    ;; ix+0f = ptr1.velocity
+    ;; ix+10 = ptr1.volume
+    ;; ix+11 = ptr1.transpose
+
     ;; ix+12 = note tick counter
+    ;; ix+13 = another timer
+    ;; ix+14 = another timer
 
     hiscore           = $8300  ;
     hiscore_1         = $8301  ;
@@ -2770,7 +2782,7 @@ _p1_extra_life:
     ld   (lives),a
     call draw_lives
     ld   a,$08
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ret
 
     dc   6, $FF
@@ -2792,7 +2804,7 @@ _p2_extra_life:
     ld   (lives_p2),a
     call draw_lives
     ld   a,$08
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ret
 
     dc   22, $FF
@@ -4277,7 +4289,7 @@ dino_caught_player_right:
 
 play_intro_jingle:
     ld   a,$0F ; intro jingle
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     xor  a
     ld   (ch1_sfx),a
     call delay_60_vblanks
@@ -4686,7 +4698,7 @@ _23E0:
     cp   $18
     ret  nz
     ld   a,$07
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ret
 
     dc   20, $FF
@@ -4813,7 +4825,7 @@ _24EF:
     djnz _24EF
     pop  bc
     ld   a,$0A
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ret
 
     dc   3, $FF
@@ -8190,7 +8202,7 @@ add_pickup_pat_9:
 ;;; ; hit bonus
 hit_bonus:
     ld   a,$03
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ld   hl,got_a_bonus
     call jmp_hl
     ret
@@ -8590,7 +8602,7 @@ _437A:
     jr   _437A
 _4380:
     dec  a
-    ld   (ix+$13),a
+    ld   (ix+$13),a  ; note tick chB
     call play_sfx_chunk_ch_2
     ld   (iy+$02),a
     ld   a,(ix+$0e)
@@ -8827,7 +8839,7 @@ add_pickup_pat_7:
     call add_pickup_pat_5
     ret
 
-sfx_06:; cutscene dance start (also intro tune?)
+sfx_06:                         ;
     ld   a,(ix+$13)
     and  a
     jr   z,_458B
@@ -8901,7 +8913,7 @@ add_pickup_pat_2:
     dc   18, $FF
 
 ;; sfxsomething #7
-_4600:
+_4600_chC:
     ld   a,(ix+$14)
     and  a
     jr   z,_460B
@@ -8915,14 +8927,14 @@ _460B:
     inc  hl
     ld   a,(hl)
     cp   $FF
-    jr   z,_4622
+    jr   z,_4622_ch_3
     ld   (ix+$0b),l
     ld   (ix+$0c),h
     call sfx_something_ch_3
     ret
 
 ;; sfxsomething #8
-_4622:
+_4622_ch_3:
     ld   l,(ix+$05)
     ld   h,(ix+$06)
     inc  hl
@@ -8980,7 +8992,7 @@ _4680:
     dec  a
     dec  a
     jr   z,_done_46A1
-    call _4600
+    call _4600_chC
     ret
 _done_46A1:
     ret
@@ -8997,14 +9009,15 @@ add_a_to_ret_addr:
 
     dc   9, $FF
 
-;;; Resets $18 bytes of sfx RAM for channel A
+;;; Resets 24 bytes of sfx RAM for channel A
+;;; _46C0:
 reset_chA_cur_sfx:
     ld   hl,chA_tune_base
     ld   b,$18
 _46C5:
     ld   (hl),$00
     inc  hl
-    djnz _46C5
+    djnz _46C5 ; decrements B
     ret
 
     dc   5, $FF
@@ -9058,6 +9071,7 @@ _46FB:
 ;;; 1. Number - either 2 or 3
 ;;; 2. Address to:
 ;;; [[had a note that said: len/vel/vol/trans for the 4 vals]]
+;;; [[Yes for velocity and volume and transpose. Not sure on len[[
 ;;;    1 (2): 01,08,0e,00, note_ptr, ee,03 ff
 ;;;    2 (3): 01,04,0f,00, note_ptr, ff
 ;;;    3 (3): 02,02,0f,10, note_ptr, ff
@@ -9075,35 +9089,35 @@ _sfx_data_lookup:
     nop
     nop
     ret
-    ld   hl,sfx_1_data
+    ld   hl,sfx_1_data  ; lil tune.
     ret
-    ld   hl,sfx_2_data
+    ld   hl,sfx_2_data  ; death ditty
     ret
-    ld   hl,sfx_3_data
+    ld   hl,sfx_3_data  ; pickup sound
     ret
-    ld   hl,sfx_4_data
+    ld   hl,sfx_4_data  ; jump sfx
     ret
-    ld   hl,sfx_5_data
+    ld   hl,sfx_5_data  ; falling sound. used?
     ret
-    ld   hl,sfx_6_data
+    ld   hl,sfx_6_data  ; fast low 1/8note tune
     ret
-    ld   hl,sfx_7_data
+    ld   hl,sfx_7_data  ; dino start sound
     ret
-    ld   hl,sfx_8_data
+    ld   hl,sfx_8_data  ; high-pitch win sound (I forget where this is)
     ret
-    ld   hl,sfx_9_data
+    ld   hl,sfx_9_data  ; game over song
     ret
-    ld   hl,sfx_10_data
+    ld   hl,sfx_10_data ; a few notes, would be a good "inserted credit", but not sure where this is
     ret
-    ld   hl,sfx_11_data
+    ld   hl,sfx_11_data ; banjo intro to standard good time tune
     ret
-    ld   hl,sfx_12_data
+    ld   hl,sfx_12_data ; best one scary woods today song
     ret
-    ld   hl,sfx_13_data
+    ld   hl,sfx_13_data ; high pitched fast faced post-bonus tune
     ret
-    ld   hl,sfx_14_data
+    ld   hl,sfx_14_data ; the main tune from level 1
     ret
-    ld   hl,sfx_15_data
+    ld   hl,sfx_15_data ; first-sound-you-hear, fun-time intro riff.
     ret
     ld   hl,hard_reset
     ret
@@ -9118,75 +9132,76 @@ _sfx_data_lookup:
 
 ;; hl = sfx data (eg sfx_1_data. See 'point_hl_to_sfx_data')
 ;; ix = base of channel a/b/c RAM bytes
+;;; _4790:
 copy_cur_sfx_data_to_RAM:
     nop
     nop
     nop
     nop
     ld   a,(hl) ; 1. points at sfx data
-    ld   (ix+$0d),a ;
+    ld   (ix+$0d),a ; number of ptrs? dunno. 2 or 3 usually
     ld   b,a
     inc  hl
-    ld   a,(hl) ; 2
-    ld   (ix+$01),a
+    ld   a,(hl) ; 2 ; sfx struct ptr lo
+    ld   (ix+$01),a ;
     inc  hl
     ld   a,(hl) ; 3
-    ld   (ix+$02),a
-    dec  b
+    ld   (ix+$02),a ; sfx struct ptr hi
+    dec  b          ; don't think there's a 1, so never branch?
     jr   z,_here ; branch...
     inc  hl
-    ld   a,(hl) ; 4
+    ld   a,(hl) ; 4 ; ptr 2 lo
     ld   (ix+$03),a
     inc  hl
-    ld   a,(hl) ; 5
+    ld   a,(hl) ; 5 ; ptr 2 hi
     ld   (ix+$04),a
-    dec  b
+    dec  b                      ; could be 0
     jr   z,_here
     inc  hl
-    ld   a,(hl) ; 6
+    ld   a,(hl) ; 6 ptr 3 lo
     ld   (ix+$05),a
     inc  hl
-    ld   a,(hl) ; 7
+    ld   a,(hl) ; 7 ptr 3 hi
     ld   (ix+$06),a
 _here:
     ld   h,(ix+$02)
     ld   l,(ix+$01)
-    ld   a,(hl)
-    ld   (ix+$0e),a
+    ld   a,(hl)       ; first ptr to pat struct
+    ld   (ix+$0e),a   ; len? 1 or 2
     inc  hl
     ld   a,(hl)
-    ld   (ix+$0f),a
+    ld   (ix+$0f),a   ; velocity
     inc  hl
     ld   a,(hl)
-    ld   (ix+$10),a
+    ld   (ix+$10),a   ; volume
     inc  hl
     ld   a,(hl)
-    ld   (ix+$11),a
-    ld   (ix+$12),$00
+    ld   (ix+$11),a   ; transpose
+    ld   (ix+$12),$00 ; reset sfx timers
     ld   (ix+$13),$00
     ld   (ix+$14),$00
     inc  hl
-    ld   (ix+$01),l
-    ld   (ix+$02),h
-    ld   a,(hl)
-    ld   (ix+$07),a
+    ld   (ix+$01),l  ; second ptr (ptr -> ptr of notes)
+    ld   (ix+$02),h  ;
+    ld   a,(hl)      ;
+    ld   (ix+$07),a  ; lo byte of note data
     inc  hl
     ld   a,(hl)
-    ld   (ix+$08),a
-    ld   l,(ix+$03)
+    ld   (ix+$08),a  ; hi byte of note data
+    ld   l,(ix+$03)  ; third ptr (ptr -> ptr of notes)
     ld   h,(ix+$04)
     ld   a,(hl)
-    ld   (ix+$09),a
+    ld   (ix+$09),a  ; lo byte of ptr
     inc  hl
     ld   a,(hl)
-    ld   (ix+$0a),a
+    ld   (ix+$0a),a  ; hi byte of ptr
     ld   l,(ix+$05)
     ld   h,(ix+$04)
     ld   a,(hl)
-    ld   (ix+$0b),a
+    ld   (ix+$0b),a  ; hi byte of note data
     inc  hl
     ld   a,(hl)
-    ld   (ix+$0c),a
+    ld   (ix+$0c),a  ; lo byte of note data
     call sfx_something_ch_1
     ld   a,(ix+$0d)
     dec  a
@@ -9201,7 +9216,7 @@ _here:
 
     dc   27, $FF
 
-;;; Checks each channel and plays if there is currently
+;;; _4840: Checks each channel and plays if there is currently
 ;;; a sfx assigned to it
 sfx_queuer:
     ld   a,(ch1_sfx)
@@ -9220,7 +9235,7 @@ _checkB:
 _play_chB:
     call play_sfx_chB
 _checkC:
-    ld   a,(sfx_id)
+    ld   a,(ch3_sfx)
     and  a
     jr   nz,_play_chC
     call more_sfx_something
@@ -9232,14 +9247,14 @@ _done_486A:
 
     dc   5, $FF
 
-;;; Resets $18 bytes of sfx RAM for channel C
+;;; Resets 24 bytes of sfx RAM for channel C
 reset_chC_cur_sfx:
     ld   hl,chC_tune_base
     ld   b,$18
 _4875:
     ld   (hl),$00
     inc  hl
-    djnz _4875
+    djnz _4875 ; decs B
     ret
 
     dc   1, $FF
@@ -9252,7 +9267,7 @@ more_sfx_something:
     ld   a,(ix+$0d)
     and  a
     ret  z
-    call _4600
+    call _4600_chC
     ld   a,(ix+$0d)
     dec  a
     ret  z
@@ -9268,12 +9283,12 @@ more_sfx_something:
 
 play_sfx_chC:
     call reset_chC_cur_sfx
-    ld   a,(sfx_id)
+    ld   a,(ch3_sfx)
     call point_hl_to_sfx_data
     ld   ix,chC_tune_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     ret
 
     dc   1, $FF
@@ -9301,7 +9316,7 @@ _48E0:
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call _4600
+    call _4600_chC
     ld   a,(ix+$0d)
     dec  a
     dec  a
@@ -9323,14 +9338,14 @@ jump_rel_a_copy:  ; duplicate routine
 
     dc   7, $FF
 
-;;; Resets $18 bytes of sfx RAM for channel B
+;;; Resets 24 bytes of sfx RAM for channel B
 reset_chB_cur_sfx:
     ld   hl,chB_tune_base
     ld   b,$18
 _4915:
     ld   (hl),$00
     inc  hl
-    djnz _4915
+    djnz _4915   ; decrements B
     ret
 
     dc   5, $FF
@@ -9613,7 +9628,7 @@ _4A80:
     db   $20
     dc   4, $FF
 
-;; sfx 18 notes/len
+;; _4B0C: sfx_15_note_data. sfx 15 notes/len
 intro_jingle:
     db   $15,$01,$1A,$02,$15,$01,$1A,$02
     db   $15,$02,$14,$01,$1A,$02,$14,$01
@@ -10030,7 +10045,7 @@ _loop_4E53:
 setup_cage_sfx_and_screen:
     push af
     ld   a,$05
-    ld   (sfx_id),a
+    ld   (ch3_sfx),a
     pop  af
     ld   hl,_91C9
     ret
@@ -10443,41 +10458,25 @@ sfx_6_data:
     db   $98,$11
     dc   3, $FF
 _51A8:
-    db   $FC,$50,$64
-    db   $51
-    db   $32,$51,$76
-    db   $51
-    db   $32,$51,$64
-    db   $51
-    db   $32,$51,$76
-    db   $51
+    db   $FC,$50
+    db   $64,$51
+    db   $32,$51
+    db   $76,$51
+    db   $32,$51
+    db   $64,$51
+    db   $32,$51
+    db   $76,$51
     db   $FF
     db   $FF
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
-    db   $0C
-    db   $02
-    db   $18,$02
+    db   $0C,$02,$18,$02,$0C,$02,$18,$02
+    db   $0C,$02,$18,$02,$0C,$02,$18,$02
+    db   $0C,$02,$18,$02,$0C,$02,$18,$02
+    db   $0C,$02,$18,$02
     db   $FF
     db   $FF
     db   $FF
     db   $FF
+
     db   $03
     db   $03
     db   $0F
@@ -10485,7 +10484,8 @@ _51A8:
     db   $51
     db   $FF
     db   $FF
-    db   $CA,$11,$FF
+    db   $CA,$11
+    db   $FF
     db   $FF
     db   $F8
     db   $51
@@ -10934,29 +10934,21 @@ _54DA:
     rst  $38
 
 ;; notes
-    db   $2D
-    db   $02
-    db   $2D
-    db   $01,$2D,$01
-    db   $2D
-    db   $02
-    db   $2A,$02,$2D
-    db   $02
-    db   $32,$04,$FF
-    db   $FF
-    db   $21,$02,$21
-    db   $01,$21,$01
-    db   $21,$02,$1E
-    db   $02
-    db   $21,$02,$26
-    db   $04
+    db   $2D,$02,$2D,$01,$2D,$01,$2D,$02
+    db   $2A,$02,$2D,$02,$32,$04
     db   $FF
     db   $FF
-    db   $01,$03,$0F
-    db   $00
-    db   $E4,$54,$FF
+    db   $21,$02,$21,$01,$21,$01,$21,$02
+    db   $1E,$02,$21,$02,$26,$04
     db   $FF
-    db   $F4,$54,$FF
+    db   $FF
+    ;;  sfx meta?
+    db   $01,$03,$0F,$00
+    db   $E4,$54
+    db   $FF
+    db   $FF
+    db   $F4,$54
+    db   $FF
     db   $FF
     dw   _556C
     db   $FF
@@ -11004,20 +10996,26 @@ _5545:
 
     dc   5, $FF
 
-;; sfx notes + data
+;; sfx 10 notes + data
+_5550:
     db   $10,$01,$0B,$01,$08,$01,$FF,$FF
-    db   $04,$04,$0F,$10,$50,$55,$FF,$FF
+_5558:
+    db   $04,$04,$0F,$10
+_555C:
+    dw   _5550
+    db   $FF,$FF
 
 sfx_10_data:
     db   $03
-    db   $58,$55
-    db   $5C,$55
-    db   $5C,$55
+    dw   _5558
+    dw   _555C
+    dw   _555C
     db   $FF
-    db   $6A,$55
+    dw   _556A
+_556A:
     db   $FF,$FF
 _556C:
-    db   $FF,$FF,$FF,$FF
+    dc   4, $FF
 
 ;; bytes after the call are
 ;; start_y, start_x, tile 1, ...tile x, 0xFF
@@ -11086,18 +11084,14 @@ chased_by_a_dino_screen:
 
     dc   2, $FF
 
-;;  notes
+;;  notes... and stuff?
     db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
     db   $A1,$02,$C3,$02,$A1,$02,$C3,$02
-    db   $FF,$FF,$FF,$FF
+    dc   4, $FF
     db   $00
     db   $02
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    dc   6, $FF
+
     db   $0E,$0E
     db   $FF
     db   $FF
@@ -11156,101 +11150,31 @@ chased_by_a_dino_screen:
     db   $FF
     db   $FF
     db   $FF
-    db   $13
-    db   $02
-    db   $17
-    db   $02
-    db   $18,$02
-    db   $1A
-    db   $02
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $06,$1A
-    db   $02
-    db   $18,$06
-    db   $18,$04
-    db   $18,$02
-    db   $18,$02
-    db   $18,$02
-    db   $17
-    db   $02
-    db   $17
-    db   $02
-    db   $13
-    db   $04
-    db   $17
-    db   $04
-    db   $18,$02
-    db   $0E,$02
+    db   $13,$02,$17,$02,$18,$02,$1A,$02
+    db   $1A,$04,$1A,$04,$1A,$06,$1A,$02
+    db   $18,$06,$18,$04,$18,$02,$18,$02
+    db   $18,$02,$17,$02,$17,$02,$13,$04
+    db   $17,$04,$18,$02,$0E,$02
     db   $FF
     db   $FF
-    db   $09
-    db   $02
-    db   $0B
-    db   $04
-    db   $0B
-    db   $04
-    db   $0B
-    db   $02
-    db   $0C
-    db   $06,$15
-    db   $04
-    db   $15
-    db   $04
-    db   $15
-    db   $02
-    db   $1A
-    db   $06,$18
-    db   $04
-    db   $1A
-    db   $02
-    db   $18,$02
-    db   $15
-    db   $06,$13
-    db   $04
+
+    db   $09,$02,$0B,$04,$0B,$04,$0B,$02
+    db   $0C,$06,$15,$04,$15,$04,$15,$02
+    db   $1A,$06,$18,$04,$1A,$02,$18,$02
+    db   $15,$06,$13,$04
     db   $FF
     db   $FF
-    db   $0E,$02
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $15
-    db   $02
-    db   $15
-    db   $04
-    db   $15
-    db   $04
-    db   $15
-    db   $06,$15
-    db   $02
-    db   $13
-    db   $06,$13
-    db   $04
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $0E,$04
-    db   $13
-    db   $04
-    db   $13
-    db   $02
-    db   $15
-    db   $02
+
+    db   $0E,$02,$13,$02,$13,$02,$15,$02
+    db   $15,$04,$15,$04,$15,$06,$15,$02
+    db   $13,$06,$13,$04,$13,$02,$13,$02
+    db   $13,$02,$13,$02,$13,$02,$0E,$04
+    db   $13,$04,$13,$02,$15,$02
     db   $FF
     db   $FF
     db   $FF
     db   $FF
+
     db   $05
     db   $05
     db   $0C
@@ -11820,7 +11744,7 @@ sfx_11_data:
     db   $FF
     db   $FF
     db   $FF
-;;; _5DF4:
+_5DF4:
     db   $15,$01,$1A,$02,$1D,$01,$1C,$01
     db   $1D,$01,$1C,$01,$1A,$02,$1D,$01
     db   $1C,$02,$1D,$01,$1A,$01,$1C,$01
@@ -11828,7 +11752,7 @@ sfx_11_data:
     db   $15,$01,$11,$01,$0E,$03
     db   $FF
     db   $FF
-;;; _5E1C:
+_5E1C:
     db   $11,$01,$11,$01,$11,$01,$11,$01
     db   $11,$01,$11,$01,$11,$01,$11,$01
     db   $10,$01,$10,$01,$10,$01,$10,$01
@@ -11846,23 +11770,25 @@ _5E4C:         ; notes
     db   $FF
     db   $FF
     db   $FF
-    db   $01,$06,$0F
-    db   $00
-    db   $80
-    db   $5E
+
+_meta_sfx12 ; sfx meta:
+    db   $01,$06,$0F,$00
+_5E79
+    db   $80,$5E
 
     dc   13, $FF
 
 sfx_12_data:
     db   $03
-    db   $75,$5E
-    db   $90,$5E
-    db   $79,$5E
+    dw   _meta_sfx12
+    dw   _5E90
+    dw   _5E79
     db   $FF
-    db   $F4,$5D,$1C
-    dw   _4C5E ; Another typo?! bytes are switched!
-    dw   _4C5E ; Should be 5E4C. (hmm, but those notes ARE played?)
-    db   $5E
+_5E90:
+    dw   _5DF4
+    dw   _5E1C
+    dw   _5E4C
+    dw   _5E4C
     db   $EE,$09
     dc   6,$FF
 
@@ -11893,9 +11819,14 @@ _5EA0:
     dc   6, $FF
 
 sfx_13_data:
-    db   $03,$24,$5F,$20,$5F,$28,$5F,$FF
+    db   $03
+    db   $24,$5F
+    db   $20,$5F
+    db   $28,$5F
+    db   $FF
+
 ;;; _5F38:
-intro_riff_2: ; played after intro riff on channel B
+notes_main_tune_part: ; part of played after intro riff on channel B
     db   $09,$01,$0E,$01,$10,$01,$12,$03
     db   $13,$01,$13,$02,$17,$02,$15,$04
     db   $12,$02,$15,$02,$13,$03,$12,$01
@@ -11906,31 +11837,37 @@ intro_riff_2: ; played after intro riff on channel B
     db   $10,$02,$0E,$05
     dc   4,$FF
 
-sfx_14_data: ;
-    db   $03,$90,$5F,$80,$5F,$98,$5F,$FF
-    dw   intro_riff_2
+;;; SFX 14: the main tune from level 1
+sfx_14_data:
+    db   $03
+    dw   _meta_sfx_14
+    dw   _5F80
+    dw   _5F98
+    db   $FF
+_5F80:
+    dw   notes_main_tune_part
     dw   _4A20 ; points at notes
-    dw   _4A20 ; points at notes
-    dw   _4A48 ; points at notes
-    dw   _4A48 ; points at notes
+    dw   _4A20 ;
+    dw   _4A48 ;
+    dw   _4A48 ;
     db   $EE,$0B
+_sfx_14_done:
+    dc   4, $FF
+_meta_sfx_14:
+    db   $01,$05,$0F,$00
+    dw   _sfx_14_done
     db   $FF
     db   $FF
-    db   $FF
-    db   $FF
-    db   $01,$05,$0F
-    db   $00
-    db   $8C
-    db   $5F
-    db   $FF
-    db   $FF
-    db   $C4,$4A,$E4
-    db   $4A
-    db   $E4,$4A,$06
-    db   $4B
+_5F98: ; more addresses
+    db   $C4,$4A
+    db   $E4,$4A
+    db   $E4,$4A
     db   $06,$4B
-    db   $EE,$0B
+    db   $06,$4B
+    db   $EE
+    db   $0B
 
+    ;; 92 bytes to play with!
     dc   92, $FF ; to 0x5fff
 
 ;;; ======= END OF BG6.BIN ======
