@@ -88,13 +88,13 @@
     _8040             = $8040  ; ?
     enemy_6_active    = $8041  ;
 
-;;; I'm starting to think it's not about channels, but about "sounds"
-;;; System allows up to 3 sfx (just happens to be 3) to be defined at the same time.
-;;; Each sfx is allowed to (try to) play on all three channels
+;;; I'm starting to think it's not about channels, but about "songs" (tunes or sfx)
+;;; System allows up to 3 songs (just happens to be 3) to be defined at the same time.
+;;; Each song is allowed to (try to) play on all three channels
 ;;; That's why sometimes song notes get cut off by sfx
-    snd1_id           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
-    snd2_id           = $8043  ; SFX channel 2
-    snd3_id           = $8044  ; sfx channel 3
+    sng1_id           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene,
+    sng2_id           = $8043  ; 7 = cutscene end dance, 9 = ?...
+    sng3_id           = $8044  ;
 
     _8046             = $8046  ; dbg?
     _8049             = $8049  ; ?
@@ -109,12 +109,12 @@
     1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
     is_hit_cage       = $8051  ; did player trigger cage?
 
-    sfx_tmp_1         = $8052  ; All used in calc_mixed_note_vol_ch routines
-    sfx_tmp_2         = $8053  ; Only used internally (no other refs)
-    sfx_tmp_3         = $8054  ;
-    sfx_tmp_4         = $8055  ;
-    sfx_tmp_5         = $8056  ;
-    sfx_tmp_6         = $8057  ;
+    chA_tmp1         = $8052  ; All used in calc_mixed_note_vol_ch routines
+    chB_tmp1         = $8053  ; Only used internally (no other refs)
+    chC_tmp1         = $8054  ; TODO: not tmp, figure out what they are
+    chA_tmp2         = $8055  ;
+    chB_tmp2         = $8056  ;
+    chC_tmp2         = $8057  ;
 
     speed_delay_p1    = $805B  ; speed for dino/rocks, start=1f, 10, d, then dec 2...
     speed_delay_p2    = $805C  ; ...until dead. Smaller delay = faster dino/rock fall
@@ -187,24 +187,24 @@
 
     platform_xoffs    = $8180  ; maybe
 
-;;; Channel synth settings
-    snd1_data         = $82A0  ; base for sound 1 data
-;;; ix+0 = current note
-;;; ix+1 = ?
-;;; ix+2 = current volume
-;;; ix+3 = "len" from sfx data meta
-;;; ix+4 = new note flag
-;;; ix+5 = envelope tick timer
-    snd1_new_note_flag= $82A5  ; ix+4... only used directly in dbg func
+;;; Channel data structure:
+    ;;; iy+0 = current note
+    ;;; iy+1 = ?
+    ;;; iy+2 = current volume
+    ;;; iy+3 = "len" from sfx data meta
+    ;;; iy+4 = new note flag
+    ;;; iy+5 = envelope tick timer
+    chA_data          = $82A0  ; base for sound 1 data
+    chA_new_note_flag = $82A5  ; ix+4... only used directly in dbg func
+    chB_data          = $82A8  ; base for sound 2 data
+    chB_new_note_flag = $82AD  ; ix+4
+    chC_data          = $82B0  ; base for sound 3 data
+    chC_new_note_flag = $82B5  ; ix+4
 
-    snd2_data         = $82A8  ; base for sound 2 data
-    snd2_new_note_flag= $82AD  ; ix+4
-    snd3_data         = $82B0  ; base for sound 3 data
-    snd3_new_note_flag= $82B5  ; ix+4
-
-    snd1_tune_base    = $82B8  ; base of current sfx bytes for sfx1
-    snd2_tune_base    = $82D0  ; base of current sfx bytes for sfx2
-    snd3_tune_base    = $82E8  ; base of current sfx bytes for sfx3
+    sng1_base         = $82B8  ; base of current struct for song1
+    sng2_base         = $82D0  ; base of current struct for song2
+    sng3_base         = $82E8  ; base of current struct for song3
+;; Song data structure:
     ;; ix+00 = ?
     ;; ix+01, ix+02 = ptr 1 to pattern meta info
     ;; ix+03, ix+04 = ptr 2 to ptr->ptr of note data
@@ -220,13 +220,9 @@
     ;; ix+$10 = ptr1.volume
     ;; ix+$11 = ptr1.transpose
 
-    ;; ix+$12 = note tick counter chA
-    ;; ix+$13 = note tick counter chB
+    ;; ix+$12 = note tick counter chA <- see, each song has counter for ALL channels
+    ;; ix+$13 = note tick counter chB    (though, no other data? dunno)
     ;; ix+$14 = note tick counter chC
-
-    ;; iy
-    ;; iy+00 = current note
-    ;; iy+0f = ?
 
     hiscore           = $8300  ;
     hiscore_1         = $8301  ;
@@ -1698,7 +1694,7 @@ _07EB:
 play_jump_sfx:
     ld   (player_frame_legs),a
     ld   a,$04 ; jump sfx
-    ld   (snd2_id),a
+    ld   (sng2_id),a
     ret
 
     dc   3, $FF
@@ -1907,7 +1903,7 @@ face_backwards_and_play_jump_sfx:
     ld   a,$18
     ld   (player_frame_legs),a
     ld   a,$04
-    ld   (snd2_id),a
+    ld   (sng2_id),a
     ret
 
     dc   13, $FF
@@ -2371,7 +2367,7 @@ _0CB2:
 
 do_death_sequence:
     ld   a,sfx2_death_ditty
-    ld   (snd1_id),a
+    ld   (sng1_id),a
     ld   (sfx_prev),a
     call reset_dino_counter
     call _done_if_zero
@@ -2809,7 +2805,7 @@ _p1_extra_life:
     ld   (lives),a
     call draw_lives
     ld   a,$08
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ret
 
     dc   6, $FF
@@ -2831,7 +2827,7 @@ _p2_extra_life:
     ld   (lives_p2),a
     call draw_lives
     ld   a,$08
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ret
 
     dc   22, $FF
@@ -4315,9 +4311,9 @@ dino_caught_player_right:
 
 play_intro_jingle:
     ld   a,$0F ; intro jingle
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     xor  a
-    ld   (snd1_id),a
+    ld   (sng1_id),a
     call delay_60_vblanks
     ret
 
@@ -4724,7 +4720,7 @@ _23E0:
     cp   $18
     ret  nz
     ld   a,$07
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ret
 
     dc   20, $FF
@@ -4851,7 +4847,7 @@ _24EF:
     djnz _24EF
     pop  bc
     ld   a,$0A
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ret
 
     dc   3, $FF
@@ -5155,18 +5151,27 @@ move_dino_x:
 ;;;
 ;;; == Overview ==
 ;;; 1. Write any sfx data to the AY-3-8910 chip
-;;;   snd1_new_note_flag
+;;;   chA_new_note_flag
 ;;;     ? write_aysnd_chA_all
 ;;;     : write_aysnd_chA_vol_fade
 ;;;
 ;;; 2. Queue and setup sfx data:
-;;;     if snd1_id != 0:
-;;;        sfx_queuer_1
+;;;     if sng1_id != 0:
+;;;        sng1_tick
 ;;;     copy_sfx_data_chA:
 ;;;        reset_snd1
 ;;;        point_hl_to_sfx_data
 ;;;        copy_cur_sfx_data_to_RAM
-;;;        snd1_id = 0
+;;;        sng1_id = 0
+
+;;; I have not figured this out yet. I THINK the idea is that there
+;;; can be up to 3 "songs" set at any one time (A song can be a
+;;; sound effect, so more likely it's 1 song and 1 sound effect at a time).
+;;; The AY-3-8910 has 3 channels, and each song can try and play
+;;; on all three - if two songs try to play notes on the same channel,
+;;; then someone gets cut off.
+
+;;; Not sure this theory is correct though!
 
 audio_system:
     ld   hl,write_aysnd_data_chA - JMP_HL_OFFSET
@@ -5727,7 +5732,7 @@ enter_hiscore_screen:
     ld   hl,reset_sounds - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     ld   a,sfx9_extra_life ; extra life /hiscore sfx
-    ld   (snd1_id),a
+    ld   (sng1_id),a
     nop
     call reset_xoff_sprites_and_clear_screen
     call _37B8
@@ -7756,7 +7761,7 @@ update_dance_frames:
 ;;; Cut sceen
 do_cutscene:
     ld   a,sfx6_dance_scene
-    ld   (snd1_id),a
+    ld   (sng1_id),a
     ld   (sfx_prev),a
     call reset_xoff_sprites_and_clear_screen
     ld   hl,header_text_data
@@ -7908,7 +7913,7 @@ _lp_3E7A:
 
 end_cutscene:
     ld   a,sfx7_post_dance ; end of dance in cutscene
-    ld   (snd1_id),a
+    ld   (sng1_id),a
     ld   hl,dino_x_legs ; set a bunch of bytes at 8150
     ld   (hl),$18 ; x
     inc  hl
@@ -8246,7 +8251,7 @@ add_pickup_pat_9:
 ;;; ; hit bonus
 hit_bonus:
     ld   a,$03
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ld   hl,got_a_bonus
     call jmp_hl
     ret
@@ -8419,7 +8424,7 @@ draw_pikup_cross_bot_r:
 ;;; If there's new note data, update the pitch,
 ;;; otherwise just fade out current notes
 write_aysnd_data_chA:
-    ld   ix,snd1_data
+    ld   ix,chA_data
     ld   a,(ix+$04) ; new note data?
     and  a
     jr   z,_i_2
@@ -8443,7 +8448,7 @@ _4216:
 ;;; If there's new note data, update the pitch,
 ;;; otherwise just fade out current notes
 write_aysnd_data_chB:
-    ld   ix,snd2_data
+    ld   ix,chB_data
     ld   a,(ix+$04)   ; new note?
     and  a
     jr   z,_i_3
@@ -8466,7 +8471,7 @@ _4236:
 ;;; If there's new note data, update the pitch,
 ;;; otherwise just fade out current notes
 write_aysnd_data_chC:
-    ld   ix,snd3_data
+    ld   ix,chC_data
     ld   a,(ix+$04)             ; new note?
     and  a
     jr   z,_i_4
@@ -8606,18 +8611,18 @@ blank_out_1up_text:
 ;;; ...Add transpose values and set note lengths based on velocity
 ;;; ...Also sets the new_note flag
 ;;; Called from:
-;;;     sfx_next_note_chA
+;;;     chA_set_next_note
 ;;;     sfx_pattern_done
 ;;;     copy_cur_sfx_data_to_RAM
 ;;; _4320:
-configure_snd1:
+configure_chA:
     ld   l,(ix+$07) ; ptr to pattern note data
     ld   h,(ix+$08)
     ld   a,(hl)
     cp   $FF     ; is note a $FF?
     ret  z       ; ...we are done with this tune, leave.
     add  a,(ix+$11) ; add any transpose to the current note
-    ld   iy,snd1_data
+    ld   iy,chA_data
     ld   (iy+$00),a ; current note
 ;;; Set the note duration
     inc  hl         ;
@@ -8643,14 +8648,14 @@ _4340:              ; (now a = velocity * duration)
     dc   10, $FF
 
 ;;; _4360
-configure_snd2:
+configure_chB:
     ld   l,(ix+$09) ; ptr to pattern note data
     ld   h,(ix+$0a)
     ld   a,(hl)
     cp   $FF
     ret  z
     add  a,(ix+$11) ; add any transpose to the current note
-    ld   iy,snd2_data
+    ld   iy,chB_data
     ld   (iy+$00),a
 ;;; Set the note duration
     inc  hl
@@ -8682,8 +8687,8 @@ _4380:              ; (now a = ix+$0f * b)
     dc   1, $FF
 
 ;;; Calculate note data based on the song pattern meta data
-;;; See configure_snd1.
-configure_snd3:
+;;; See configure_chA.
+configure_chC:
     ld   l,(ix+$0b) ; ptr to pattern note data
     ld   h,(ix+$0c)
     ld   a,(hl)
@@ -8692,7 +8697,7 @@ configure_snd3:
     add  a,(ix+$11)
 ;;; Set the note duration
     inc  hl
-    ld   iy,snd3_data
+    ld   iy,chC_data
     ld   (iy+$00),a
     ld   b,(hl)
     ld   a,(ix+$0f)
@@ -8821,35 +8826,35 @@ _more_cage:
 
 
 ;;; timer/sequencer: update current song
-sfx_tick_note_chA :
+chA_tick_note:
     ld   a,(ix+$12)
     and  a
-    jr   z,sfx_next_note_chA   ; first timer = 0
+    jr   z,chA_set_next_note   ; first timer = 0
     dec  a
     ld   (ix+$12),a
     ret
 
-sfx_next_note_chA:
+chA_set_next_note:
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF                    ; end of tune maybe?
-    jr   z,sfx_pattern_done
+    jr   z,sfx_pattern_done_chA
     ld   (ix+$07),l
     ld   (ix+$08),h
-    call configure_snd1
+    call configure_chA
     ret
 
-sfx_pattern_done:
+sfx_pattern_done_chA:
     ld   l,(ix+$01)
     ld   h,(ix+$02)
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE                    ; Is end of pattern sequence?
-    jr   nz,ret_if_end_tune_chA ; otherwise just look for $FF
+    cp   $EE                    ; pattern continuation? (or something)
+    jr   nz,next_pattern_chA    ; no... check for more patterns
     inc  hl                     ; Next pattern!
     ld   a,(hl)
     ld   c,a
@@ -8867,22 +8872,21 @@ sfx_pattern_done:
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     ld   a,(hl)
-    call configure_snd1
+    call configure_chA
     ret
 
 ;;; _4552:
-ret_if_end_tune_chA:
-    cp   $FF
-    ret  z
-
-;;  not sfx routine? looks like one to me
-    ld   (ix+$01),l
+next_pattern_chA:
+    cp   $FF                    ; any more patterns?
+    ret  z                      ; no, leave.
+;;; _4555:
+    ld   (ix+$01),l             ; yep... next pattern
     ld   (ix+$02),h
     ld   (ix+$07),a
     inc  hl
     ld   a,(hl)
     ld   (ix+$08),a
-    call configure_snd1
+    call configure_chA
     ret
 
     dc   1, $FF
@@ -8907,37 +8911,37 @@ add_pickup_pat_7:
     call add_pickup_pat_5
     ret
 
-sfx_tick_note_chB:
+chB_tick_note:
     ld   a,(ix+$13)
     and  a
-    jr   z,sfx_next_note_chB
+    jr   z,chB_set_next_note
     dec  a
     ld   (ix+$13),a
     ret
 
 ;;
-sfx_next_note_chB:
+chB_set_next_note:
     ld   l,(ix+$09) ;
     ld   h,(ix+$0a)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF
-    jr   z,_45A2
+    jr   z,sfx_pattern_done_chB
     ld   (ix+$09),l
     ld   (ix+$0a),h
-    call configure_snd2
+    call configure_chB
     ret
 
 ;; sfxsomething #5
-_45A2:
+sfx_pattern_done_chB:
     ld   l,(ix+$03)
     ld   h,(ix+$04)
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE
-    jr   nz,_45D2
+    cp   $EE                    ;pattern continuation maybe
+    jr   nz,next_pattern_chB
     inc  hl
     ld   a,(hl)
     ld   c,a
@@ -8955,20 +8959,20 @@ _45A2:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
     ld   a,(hl)
-    call configure_snd2
+    call configure_chB
     ret
 
-;; sfxsomething #6
-_45D2:
-    cp   $FF
+;;
+next_pattern_chB:
+    cp   $FF                    ; end of patterns?
     ret  z
-    ld   (ix+$03),l
+    ld   (ix+$03),l             ; nope - more to come!
     ld   (ix+$04),h
     ld   (ix+$09),a
     inc  hl
     ld   a,(hl)
     ld   (ix+$0a),a
-    call configure_snd2
+    call configure_chB
     ret
 
     dc   1, $FF
@@ -8982,36 +8986,36 @@ add_pickup_pat_2:
     dc   18, $FF
 
 ;; sfxsomething #7
-sfx_tick_note_chC:
+chC_tick_note:
     ld   a,(ix+$14)
     and  a
-    jr   z,sfx_next_note_chC
+    jr   z,chC_set_next_note
     dec  a
     ld   (ix+$14),a
     ret
 
-sfx_next_note_chC:
+chC_set_next_note:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     inc  hl
     inc  hl
     ld   a,(hl)
     cp   $FF
-    jr   z,_4622_ch_3
+    jr   z,sfx_pattern_done_chC
     ld   (ix+$0b),l
     ld   (ix+$0c),h
-    call configure_snd3
+    call configure_chC
     ret
 
-;; sfxsomething #8
-_4622_ch_3:
+;;
+sfx_pattern_done_chC:
     ld   l,(ix+$05)
     ld   h,(ix+$06)
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE
-    jr   nz,_4652
+    cp   $EE                    ; pattern continuation
+    jr   nz,next_pattern_chC
     inc  hl
     ld   a,(hl)
     ld   c,a
@@ -9029,12 +9033,12 @@ _4622_ch_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
-    call configure_snd3
+    call configure_chC
     ret
 
-;; sfxsomething #9
-_4652:
-    cp   $FF
+;;
+next_pattern_chC:
+    cp   $FF                    ; out of patterns?
     ret  z
     ld   (ix+$05),l
     ld   (ix+$06),h
@@ -9042,31 +9046,27 @@ _4652:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a
-    call configure_snd3
+    call configure_chC
     ret
 
     dc   25, $FF
 
-;;; Gets here when there's no sfx1
-;;; ticks the things. weirdly. Ticks each channel, but
-;;; 3 versions, all 3 times... I dunno.
-;;; Why is chA ticking all channels?
-;;; dont think this really queuing - maybe a "priority system"?
-sfx_queuer_1:
-    ld   ix,snd1_tune_base
+;;; Gets here when sng1_tick = 0
+sng1_tick:
+    ld   ix,sng1_base
     ld   a,(ix+$0d) ; length? maybe "repeat"?
     and  a
-    jr   z,_done_46A1 ; Repeats all done.
-    call sfx_tick_note_chA
+    jr   z,_done_46A1 ; Repeats all done? maybe
+    call chA_tick_note
     ld   a,(ix+$0d)
     dec  a
     jr   z,_done_46A1
-    call sfx_tick_note_chB
+    call chB_tick_note
     ld   a,(ix+$0d)
     dec  a
     dec  a
     jr   z,_done_46A1
-    call sfx_tick_note_chC
+    call chC_tick_note
     ret
 _done_46A1:
     ret
@@ -9086,7 +9086,7 @@ add_a_to_ret_addr:
 ;;; Resets 24 bytes for sound 1
 ;;; _46C0:
 reset_snd1:
-    ld   hl,snd1_tune_base
+    ld   hl,sng1_base
     ld   b,$18
 _46C5:
     ld   (hl),$00
@@ -9098,19 +9098,19 @@ _46C5:
 
 copy_sfx_data_chA:
     call reset_snd1
-    ld   a,(snd1_id)
+    ld   a,(sng1_id)
     call point_hl_to_sfx_data
-    ld   ix,snd1_tune_base
+    ld   ix,sng1_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (snd1_id),a ; clear sfx
+    ld   (sng1_id),a ; clear sfx
     ret
 
     dc   3, $FF
 
 ;;; Selects the tune to play for the current screen.
 ;;; If it's already playing this tune it skips setting it.
-;;; snd1_id, B, C are set to 0 if new_note flag can be 0, but the tune is still playing (I think
+;;; sng1_id, B, C are set to 0 if new_note flag can be 0, but the tune is still playing (I think
 ;;; it's the "REPEAT" (or whatever ix+$0D is).
 play_tune_for_cur_screen:
     ld   a,(num_players)
@@ -9133,7 +9133,7 @@ _46FB:
     cp   b
     ret  z ; already playing this one
     ld   a,b
-    ld   (snd1_id),a ; set new sfx id
+    ld   (sng1_id),a ; set new sfx id
     ld   (sfx_prev),a
     ret
 
@@ -9284,16 +9284,16 @@ _here:
 ;;; This is a bit confusing. ix is based on a particular channel,
 ;;; but this "configures" all channels for each channel.
 ;;; maybe it's why sfx will cut off a tune.
-    call configure_snd1
+    call configure_chA
     ld   a,(ix+$0d)             ; +$0d > 1?
     dec  a
     ret  z
-    call configure_snd2         ; Yep, configure sound 2
+    call configure_chB         ; Yep, configure sound 2
     ld   a,(ix+$0d)             ; +$0d ? 2?
     dec  a
     dec  a
     ret  z
-    call configure_snd3        ; Yep, configur sound 3
+    call configure_chC        ; Yep, configur sound 3
     ret
 
     dc   27, $FF
@@ -9302,26 +9302,26 @@ _here:
 ;;; a sfx assigned to it...
 ;;; Note: The copy_sfx_data_chX routine also clear chX_sfx when done
 sfx_queue_and_copy_data:
-    ld   a,(snd1_id)
+    ld   a,(sng1_id)
     and  a
     jr   nz,_play_chA
-    call sfx_queuer_1 ; no sfx on chA
+    call sng1_tick ; no sfx on chA
     jr   _checkB
 _play_chA:
     call copy_sfx_data_chA ;
 _checkB:
-    ld   a,(snd2_id) ; and try chB?
+    ld   a,(sng2_id) ; and try chB?
     and  a
     jr   nz,_play_chB
-    call sfx_queuer_2 ; no sfx on chB
+    call sng2_tick ; no sfx on chB
     jr   _checkC
 _play_chB:
     call copy_sfx_data_chB
 _checkC:
-    ld   a,(snd3_id)
+    ld   a,(sng3_id)
     and  a
     jr   nz,_play_chC
-    call sfx_queuer_3 ; no sfx on chC
+    call sng3_tick ; no sfx on chC
     jr   _done_486A
 _play_chC:
     call copy_sfx_data_chC
@@ -9330,9 +9330,9 @@ _done_486A:
 
     dc   5, $FF
 
-;;; Resets 24 bytes of sfx RAM for channel C
+;;; Resets 24 bytes of sfx RAM for song 3
 reset_snd3:
-    ld   hl,snd3_tune_base
+    ld   hl,sng3_base
     ld   b,$18
 _4875:
     ld   (hl),$00
@@ -9342,36 +9342,36 @@ _4875:
 
     dc   1, $FF
 
-;;; this is some routine, but for chC
-;;; see sfx_queuer_1
-;;; Gets here when there's no snd3_id
-sfx_queuer_3:
-    ld   ix,snd3_tune_base
+;;; this is some routine, but for sng3
+;;; see sng1_tick
+;;; Gets here when there's no sng3_id
+sng3_tick:
+    ld   ix,sng3_base
     ld   a,(ix+$0d)
     and  a
     ret  z
-    call sfx_tick_note_chC
+    call chC_tick_note
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call sfx_tick_note_chA
+    call chA_tick_note
     ld   a,(ix+$0d)
     dec  a
     dec  a
     ret  z
-    call sfx_tick_note_chB
+    call chB_tick_note
     ret
 
     dc   2, $FF
 
 copy_sfx_data_chC:
     call reset_snd3
-    ld   a,(snd3_id)
+    ld   a,(sng3_id)
     call point_hl_to_sfx_data
-    ld   ix,snd3_tune_base
+    ld   ix,sng3_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     ret
 
     dc   1, $FF
@@ -9389,23 +9389,23 @@ attract_your_being_chased_flash:
 
     dc   21, $FF
 
-;;; see sfx_queuer_1
-;;; Gets here when there's no snd2_id
-sfx_queuer_2:
-    ld   ix,snd2_tune_base
+;;; see sng1_tick
+;;; Gets here when there's no sng2_id
+sng2_tick:
+    ld   ix,sng2_base
     ld   a,(ix+$0d)
     and  a
     ret  z
-    call sfx_tick_note_chB
+    call chB_tick_note
     ld   a,(ix+$0d)
     dec  a
     ret  z
-    call sfx_tick_note_chC
+    call chC_tick_note
     ld   a,(ix+$0d)
     dec  a
     dec  a
     ret  z
-    call sfx_tick_note_chA
+    call chA_tick_note
     ret
 
     dc   2, $FF
@@ -9424,7 +9424,7 @@ jump_rel_a_copy:  ; duplicate routine
 
 ;;; Resets 24 bytes of sfx RAM for channel B
 reset_snd2:
-    ld   hl,snd2_tune_base
+    ld   hl,sng2_base
     ld   b,$18
 _4915:
     ld   (hl),$00
@@ -9436,12 +9436,12 @@ _4915:
 
 copy_sfx_data_chB:
     call reset_snd2
-    ld   a,(snd2_id)
+    ld   a,(sng2_id)
     call point_hl_to_sfx_data
-    ld   ix,snd2_tune_base
+    ld   ix,sng2_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (snd2_id),a
+    ld   (sng2_id),a
     ret
 
     dc   11, $FF
@@ -10130,7 +10130,7 @@ _loop_4E53:
 setup_cage_sfx_and_screen:
     push af
     ld   a,$05
-    ld   (snd3_id),a
+    ld   (sng3_id),a
     pop  af
     ld   hl,_91C9
     ret
@@ -10529,51 +10529,48 @@ _51F8:
 ;;; (Maybe) calculating a "mixed" note volume depending on what is playing
 ;;; on all channels.
 ;;; calc_mixed_note_vol_chA/B/C are identical except for the RAM locations
-;;; sfx_tmp_1 and sfx_tmp_4 for "ch_1". (these are not used out of this func)
-;;; sfx_tmp_2 and sfx_tmp_5 for "ch_2"
-;;; sfx_tmp_3 and sfx_tmp_6 for "ch_3"
-;;; [triggers every few frames]
+;;; chX_tmpN vars not used outside of this func
 ;;; Maybe it normalizes the volume across all channels
 ;;; in:
 ;;;     ix ; sndX_tune_base
 ;;; out:
 ;;;      a ; volume for note
 calc_mixed_note_vol_chA:
-    push ix                     ; ix is snd2_tune_base
+    push ix                     ; ix is sng2_base
     pop  hl
     ld   a,l
-    cp   $E8                    ; is snd2_tune_base? (ie $82E8)
+    cp   $E8                    ; is sng2_base? (ie $82E8)
     jr   nz,_520F
     ld   a,$02                  ; yes, chC...
-    ld   (sfx_tmp_4),a          ; what is 2 for?
+    ld   (chA_tmp2),a          ; what is 2 for?
     jr   _5225
 _520F:                          ; ch A and B
-    ld   a,(sfx_tmp_4)
+    ld   a,(chA_tmp2)
     and  a
     jr   z,_5225
     dec  a
-    ld   (sfx_tmp_4),a
-    ld   a,(sfx_tmp_1)
+    ld   (chA_tmp2),a
+    ld   a,(chA_tmp1)
     and  a
     jr   z,_5223
     dec  a
-    ld   (sfx_tmp_1),a
+    ld   (chA_tmp1),a
 _5223:
     pop  hl
     ret
 _5225:
     ld   a,l
-    cp   $D0                    ; is snd2_tune_base? (ie $82D0)
+    cp   $D0                    ; is sng2_base? (ie $82D0)
     jr   nz,_5231
     ld   a,$02                  ; yes chB
-    ld   (sfx_tmp_1),a          ; what is 2 for?
+    ld   (chA_tmp1),a          ; what is 2 for?
     jr   _523D
 _5231:
-    ld   a,(sfx_tmp_1)          ; chA and C
+    ld   a,(chA_tmp1)          ; chA and C
     and  a
     jr   z,_523D
     dec  a
-    ld   (sfx_tmp_1),a
+    ld   (chA_tmp1),a
     pop  hl
     ret
 _523D:
@@ -10591,19 +10588,19 @@ calc_mixed_note_vol_chB:
     cp   $E8
     jr   nz,_525F
     ld   a,$02
-    ld   (sfx_tmp_5),a
+    ld   (chB_tmp2),a
     jr   _5275
 _525F:
-    ld   a,(sfx_tmp_5)
+    ld   a,(chB_tmp2)
     and  a
     jr   z,_5275
     dec  a
-    ld   (sfx_tmp_5),a
-    ld   a,(sfx_tmp_2)
+    ld   (chB_tmp2),a
+    ld   a,(chB_tmp1)
     and  a
     jr   z,_5273
     dec  a
-    ld   (sfx_tmp_2),a
+    ld   (chB_tmp1),a
 _5273:
     pop  hl
     ret
@@ -10612,14 +10609,14 @@ _5275:
     cp   $D0
     jr   nz,_5281
     ld   a,$02
-    ld   (sfx_tmp_2),a
+    ld   (chB_tmp1),a
     jr   _528D
 _5281:
-    ld   a,(sfx_tmp_2)
+    ld   a,(chB_tmp1)
     and  a
     jr   z,_528D
     dec  a
-    ld   (sfx_tmp_2),a
+    ld   (chB_tmp1),a
     pop  hl
     ret
 _528D:
@@ -10636,19 +10633,19 @@ calc_mixed_note_vol_chC:
     cp   $E8
     jr   nz,_52AF
     ld   a,$02
-    ld   (sfx_tmp_6),a
+    ld   (chC_tmp2),a
     jr   _52C5
 _52AF:
-    ld   a,(sfx_tmp_6)
+    ld   a,(chC_tmp2)
     and  a
     jr   z,_52C5
     dec  a
-    ld   (sfx_tmp_6),a
-    ld   a,(sfx_tmp_3)
+    ld   (chC_tmp2),a
+    ld   a,(chC_tmp1)
     and  a
     jr   z,_52C3
     dec  a
-    ld   (sfx_tmp_3),a
+    ld   (chC_tmp1),a
 _52C3:
     pop  hl
     ret
@@ -10657,14 +10654,14 @@ _52C5:
     cp   $D0
     jr   nz,_52D1
     ld   a,$02
-    ld   (sfx_tmp_3),a
+    ld   (chC_tmp1),a
     jr   _52DD
 _52D1:
-    ld   a,(sfx_tmp_3)
+    ld   a,(chC_tmp1)
     and  a
     jr   z,_52DD
     dec  a
-    ld   (sfx_tmp_3),a
+    ld   (chC_tmp1),a
     pop  hl
     ret
 _52DD:
@@ -11002,7 +10999,7 @@ sfx_8_data:
 check_for_new_sfx_notes:
     xor  a
     ld   (_8046),a            ; sets weird val to 0
-    ld   a,(snd1_new_note_flag)  ; new note in queue?
+    ld   a,(chA_new_note_flag)  ; new note in queue?
     and  a
     jr   nz,_552F
     ld   a,$F9 ; 11111001b
@@ -11010,7 +11007,7 @@ check_for_new_sfx_notes:
     nop
     nop
 _552F:
-    ld   a,(snd2_new_note_flag)
+    ld   a,(chB_new_note_flag)
     and  a
     jr   nz,_553A
     ld   a,$FD ; 11111101b
@@ -11018,7 +11015,7 @@ _552F:
     nop
     nop
 _553A:
-    ld   a,(snd3_new_note_flag)
+    ld   a,(chC_new_note_flag)
     and  a
     jr   nz,_5545
     ld   a,$FB ; 11111011b
