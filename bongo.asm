@@ -613,7 +613,7 @@ nmi_int_handler:
     exx
     call coinage_routine
     call copy_xoffs_and_cols_to_screen
-    call call_player_all_sfx_chunks
+    call call_audio_system
     call copy_ports_to_buttons
     exx
     ret
@@ -5138,9 +5138,32 @@ move_dino_x:
     ret
 
 ;;; ==========================================
-;;; Called from NMI: so maybe this is the bit that
-;;; plays the current samples of sfx
-player_all_sfx_chunks:
+;;; Play SFX and tunes. Called from NMI
+;;;
+;;; == Overview ==
+;;; 1. Write any sfx data to the AY-3-8910 chip
+;;;   chA_new_note_flag
+;;;     ? write_aysnd_chA_all
+;;;     : write_aysnd_chA_vol_fade
+;;;
+;;; 2. Queue and setup sfx data:
+;;;     if chA_sfx != 0:
+;;;        sfx_queuer_1
+;;;     copy_sfx_data_chA:
+;;;        reset_chA_cur_sfx
+;;;        point_hl_to_sfx_data
+;;;        copy_cur_sfx_data_to_RAM
+;;;        chA_sfx = 0
+
+;;; Starting to think things may have got convoluted in the audio
+;;; system: seems like it WAS using structs for each channel, but
+;;; somehow at the bottom levels (like in "configure_sfx_chunk_chX" funcs)
+;;; some channel-specific variables messed it all up, so everyone
+;;; is using (ix+$0d) indexing, but in the end that's not helpful because
+;;; have to copy/paste every routines anyway. (Biggest evidence of that
+;;; is it checks the low byte to see which chX_tune_base it's called from)
+
+audio_system:
     ld   hl,write_aysnd_data_chA - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids ; why reset after here, but not after next?
@@ -5184,9 +5207,10 @@ call_sfx_queuer_and_reset_sfx_ids:
 
     dc   25, $FF
 
-call_player_all_sfx_chunks:
+;;; indirect call to the audio handling
+call_audio_system:
     push ix
-    call player_all_sfx_chunks
+    call audio_system
     pop  ix
     ret
 
@@ -9004,10 +9028,11 @@ _4652:
 
     dc   25, $FF
 
+;;; Gets here when there's no chA_sfx
 ;;; ticks the things. weirdly. Ticks each channel, but
 ;;; 3 versions, all 3 times... I dunno.
-;;; dont think this really queuing - but it's doing something!
-;;; Gets here when there's no chA_sfx
+;;; Why is chA ticking all channels?
+;;; dont think this really queuing - maybe a "priority system"?
 sfx_queuer_1:
     ld   ix,chA_tune_base
     ld   a,(ix+$0d) ; length? maybe "repeat"?
