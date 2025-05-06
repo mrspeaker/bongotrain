@@ -8853,15 +8853,15 @@ sfx_pattern_done_chA:
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE                    ; pattern continuation? (or something)
+    cp   $EE                    ; pattern repeat marker
     jr   nz,next_pattern_chA    ; no... check for more patterns
-    inc  hl                     ; Next pattern!
-    ld   a,(hl)
-    ld   c,a
+    inc  hl                     ; Yes, was $EE, get next byte
+    ld   a,(hl)                 ; ...eg sfx_14 is $0B
+    ld   c,a                    ; c = bytes to jump back
     ld   b,$00
     scf
     ccf
-    sbc  hl,bc
+    sbc  hl,bc                  ; jump back! It's a repeat!
     ld   (ix+$01),l
     ld   (ix+$02),h
     ld   a,(hl)
@@ -9632,84 +9632,34 @@ _4A80:
     db   $1A,$0A
     db   $FF,$FF
 
+_4A94:
     db   $1F,$02,$1E,$02,$1C,$04,$1A,$02
     db   $18,$02,$17,$04,$15,$02,$13,$02
     db   $15,$02,$17,$0A
     db   $FF
     db   $FF
-
+_4AAA:
     db   $23,$02,$21,$02,$1F,$02,$1E,$02
     db   $1C,$02,$1A,$02,$18,$02,$17,$02
-    db   $15
-    db   $02
-    db   $13
-    db   $02
-    db   $12
-    db   $02
-    db   $13
-    db   $0A
+    db   $15,$02,$13,$02,$12,$02,$13,$0A
     db   $FF
     db   $FF
-    db   $15
-    db   $03
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $17
-    db   $04
-    db   $17
-    db   $04
-    db   $1A
-    db   $08
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $19
-    db   $04
-    db   $19
-    db   $04
-    db   $1A
-    db   $05
+_4AC4:
+    db   $15,$03,$1A,$04,$1A,$04,$1A,$04
+    db   $1A,$04,$17,$04,$17,$04,$1A,$08
+    db   $1A,$04,$1A,$04,$1A,$04,$1A,$04
+    db   $19,$04,$19,$04,$1A,$05
     db   $FF
     db   $FF
-    db   $15
-    db   $03
-    db   $15
-    db   $02
-    db   $15
-    db   $02
-    db   $15
-    db   $02
-    db   $15
-    db   $02
-    db   $13
-    db   $02
-    db   $13
-    db   $02
-    db   $10,$02
-    db   $10,$02
-    db   $10,$02
-    db   $10,$02
-    db   $0E,$02
-    db   $0E,$02
-    db   $09
-    db   $02
-    db   $09
-    db   $01,$09,$02
+_4AE4:
+    db   $15,$03,$15,$02,$15,$02,$15,$02
+    db   $15,$02,$13,$02,$13,$02,$10,$02
+    db   $10,$02,$10,$02,$10,$02,$0E,$02
+    db   $0E,$02,$09,$02,$09,$01,$09,$02
     db   $FF
     db   $FF
-    db   $15
-    db   $20
+_4B06:
+    db   $15,$20 ; what?! Not notes? Maybe long "rest"?
     dc   4, $FF
 
 ;; _4B0C: sfx_15_note_data. sfx 15 notes/len
@@ -9774,24 +9724,21 @@ _4BF6:
     db   $07,$02,$09,$04
     dc   38, $FF
 
-_sfx_2_done_ptr:
-    dw   _sfx_2_done ; points to next byte
+_sfx_2_voice2:
+    dw   _sfx_2_done
 _sfx_2_done:
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    dc   4, $FF
 _meta_sfx_2:
     db   $01,$04,$0F,$00
     dw   _4BE0  ; point at notes
     db   $FF
     db   $FF
-_4C3E:
+_sfx_2_voice1:
     dw   _4BF6 ; pointn at notes
     db   $FF
     db   $FF
-    db   $0C
-    db   $0C
+
+    db   $0C,$0C ; what??
     db   $FF
     db   $FF
 
@@ -9799,8 +9746,8 @@ _4C3E:
 sfx_2_data:
     db   $03
     dw   _meta_sfx_2
-    dw   _4C3E ; ptr->notes
-    dw   _sfx_2_done_ptr
+    dw   _sfx_2_voice1
+    dw   _sfx_2_voice2 ; just ->$FF
 
     dc   3, $FF
 
@@ -10337,8 +10284,8 @@ _5037:
 sfx_3_data:
     db   $03
     dw   _meta_sfx_3
-    dw   _5090
-    dw   _508C
+    dw   _sfx_3_voice1 ; _5090
+    dw   _sfx_3_voice2 ; _508C
     dc   6, $FF
 ;; notes
     db   $0C,$01,$0E,$01,$10,$01,$11,$01
@@ -10356,73 +10303,58 @@ sfx_3_data:
 _meta_sfx_3:
     db   $02,$02,$0F,$10
     db   $60,$50
-    db   $FF
-    db   $FF
-_508C:
-    db   $6E
-    db   $50
-    db   $FF
-    db   $FF
-_5090:
-    db   $6C
-    db   $50
-    db   $FF
-    db   $FF
-;; sfx 4 notes
+    dc   2, $FF
+_sfx_3_voice2: ; _508C:
+    db   $6E,$50
+    dc   2, $FF
+_sfx_3_voice1: ; _5090:
+    db   $6C,$50
+    dc   2, $FF
+
+    ;; sfx 4 notes
 _5094:
     db   $00,$01,$02,$01,$04,$01,$06,$01
     db   $08,$01,$0A,$01,$0C,$01,$0E,$01
     dc   8, $FF
 _50AC:
     dc   4, $FF
-_50B0:
+_sfx_4_meta: ; _50B0
     db   $01,$01,$0F,$00 ; len(rep?)/vel/vol/trans
     dw   _5094
     dc   2, $FF
-    db   $94
-    db   $10
+    db   $94,$10                ; wat bytes
     db   $FF,$FF
 
 sfx_4_data:
     db   $03
-    dw   _50B0
-    dw   _50C8
-    dw   _50C8
+    dw   _sfx_4_meta
+    dw   _50C8                  ; voice 1
+    dw   _50C8                  ; voice 2
     dc   5, $FF
 _50C8:
     dw   _50AC  ; really? Middle of $ff's (should be _50CA? Yea, typo i reckon)
     dc   2, $FF
-;; notes
-    db   $18,$01
-    db   $17
-    db   $01,$15,$01
-    db   $13
-    db   $01,$11,$01
-    db   $10,$01
-    db   $0E,$01
-    db   $0C
-    db   $01,$0B,$01
-    db   $09
-    db   $01,$07,$01
-    db   $05
-    db   $01,$04,$01
-    db   $02
-    db   $01,$00,$01
+
+;;; ==== SFX 5 town ====
+
+_50CC;; notes
+    db   $18,$01,$17,$01,$15,$01,$13,$01
+    db   $11,$01,$10,$01,$0E,$01,$0C,$01
+    db   $0B,$01,$09,$01,$07,$01,$05,$01
+    db   $04,$01,$02,$01,$00,$01
     db   $FF
     db   $FF
 
 sfx_5_data:
     db   $03
-    db   $F4,$50
-    db   $F4,$51
-    db   $F4,$51
+    dw  _sfx_5_meta
+    dw   _sfx_7_ptr_ff ; voice 1?!!!
+    dw   _sfx_7_ptr_ff ; voice 2?!!!
     db   $FF
+_sfx_5_meta:
+    db   $03,$03,$0F,$10 ; odd meta, odd voices.
 
-    db   $03
-    db   $03
-    db   $0F
-    db   $10
-    db   $CC,$50
+    dw   _50CC                ; who uses?
     db   $FF
     db   $FF
 
@@ -10455,6 +10387,8 @@ sfx_5_data:
     db   $07,$01,$0C,$01,$0B,$01,$09,$01
     db   $07,$04
     dc   2, $FF
+
+;;; ==== SFX 6 town ======
 
 _5182:
     db   $01,$08,$0F,$00
@@ -10499,27 +10433,25 @@ _51A8:
     db   $FF
     db   $FF
 
-    db   $03
-    db   $03
-    db   $0F
-    db   $10,$BA
-    db   $51
+_sfx_7_meta:                    ; _51DA
+    db   $03,$03,$0F,$10
+    db   $BA,$51
     db   $FF
     db   $FF
-    db   $CA,$11
+    db   $CA,$11                ; wat bytes
     db   $FF
     db   $FF
-    db   $F8
-    db   $51
+    db   $F8,$51                ; more wat bytes!
     db   $FF
     db   $FF
 
 sfx_7_data:
     db   $03
-    db   $DA,$51
-    db   $E6,$51
-    db   $F4,$51
+    dw   _sfx_7_meta
+    db   $E6,$51                ; voice 1
+    db   $F4,$51                ; voice 2
     dc   3,$FF
+_sfx_7_ptr_ff:
     dw   _51F8
     dc   2, $FF
 _51F8:
@@ -10973,7 +10905,8 @@ _54DA:
     db   $1E,$02,$21,$02,$26,$04
     db   $FF
     db   $FF
-    ;;  sfx meta?
+
+_sfx_8_meta:                    ; _5504
     db   $01,$03,$0F,$00
     db   $E4,$54
     db   $FF
@@ -10987,9 +10920,9 @@ _54DA:
 
 sfx_8_data:
     db   $03
-    db   $04,$55
-    db   $08,$55
-    db   $08,$55
+    dw   _sfx_8_meta
+    db   $08,$55                ; voice 1
+    db   $08,$55                ; voice 2
     dc   5, $FF
 
 ;;; This is weird. I think it must have been a debug function.
@@ -11034,7 +10967,7 @@ _5545:
 ;; sfx 10 notes + data
 _5550:
     db   $10,$01,$0B,$01,$08,$01,$FF,$FF
-_5558:
+_sfx_10_meta: ; _5558
     db   $04,$04,$0F,$10
 _555C:
     dw   _5550
@@ -11042,11 +10975,11 @@ _555C:
 
 sfx_10_data:
     db   $03
-    dw   _5558
-    dw   _555C
-    dw   _555C
+    dw   _sfx_10_meta
+    dw   _555C                  ; voice 1
+    dw   _555C                  ; voice 2
     db   $FF
-    dw   _556A
+    dw   _556A                  ; magic bytes
 _556A:
     db   $FF,$FF
 _556C:
@@ -11661,6 +11594,7 @@ _5C00:
     db   $21,$01,$21,$01,$21,$02,$23,$01
     db   $1E,$02,$1A,$04
     dc   12, $FF
+;; _5C60:
     dw   _5C62  ;points at next $FF
 _5C62:
     dc   31, $FF
@@ -11695,19 +11629,23 @@ _5C86:
 sfx_1_data:
     db   $02                    ; num channels to use.
     dw   _meta_sfx_1
-    dw   _5D14 ; ptr->notes
-    dw   _5D14 ; same
+    dw   _sfx_1_voice ;
+    dw   _sfx_1_voice ; also voice 2? maybe ignored cause num chan = 2?
     db   $FF
 _meta_sfx_1:
     db   $01,$08,$0E,$00  ; len(rep?)/speed/volume/transpose
     dw   _5C86 ; note data "fast weird ditty"
     db   $EE,$03
     dc   4, $FF
-_5D14:
+;_5D14:
+_sfx_1_voice:
     dw   _5C00 ; note dump
-    db   $EE,$03
+    db   $EE,$03 ; jump back 3 bytes
+
     db   $FF
     db   $FF
+
+;;; wass all this?
     db   $70
     db   $18,$30
     db   $17
@@ -11722,6 +11660,7 @@ _5D14:
     db   $D3,$03
     db   $FF
     db   $FF
+
 _5D30: ; notes
     db   $19,$01,$1A,$01,$1B,$01,$1C,$01
     db   $21,$02,$1C,$01,$21,$02,$1C,$02
@@ -11757,28 +11696,28 @@ _5DAC:
 
 _sfx_11_meta:
     db   $01,$05,$0F,$00
+_sfx_11_voice_1:
     dw   _5D60    ; ptr->$19,$20 not ptr->note?!
     dw   _5DAC    ; note data
     dw   _5DAC    ; same
-    db   $EE,$07
+    db   $EE,$07  ; jump back 7 bytes (_sfx_11_voice_1)
 _5DDC:
-    db   $CC,$1D,$FF,$FF
-_5DE0:
+    db   $CC,$1D  ; waaat
+    db   $FF,$FF
+_5DE0: ; voice 2
     dw   _5D30 ; note data
     dw   _5D64 ; note data
     dw   _5D64 ; same
-    db   $EE,$07
+    db   $EE,$07 ; jump back 7 bytes (_5DE0)
     db   $FF
     db   $FF
 
 sfx_11_data:
     db   $03
     dw   _sfx_11_meta
-    dw   _5DE0
-    dw   _5DDC
-    db   $FF
-    db   $FF
-    db   $FF
+    dw   _5DE0 ; voice 1
+    dw   _5DDC ; voice 2
+    dc   3, $FF
 _5DF4:
     db   $15,$01,$1A,$02,$1D,$01,$1C,$01
     db   $1D,$01,$1C,$01,$1A,$02,$1D,$01
@@ -11808,7 +11747,7 @@ _5E4C:         ; notes
 
 _meta_sfx12 ; sfx meta:
     db   $01,$06,$0F,$00
-_5E79
+_5E79 ; voice 2: just points at $FF.
     db   $80,$5E
 
     dc   13, $FF
@@ -11816,15 +11755,15 @@ _5E79
 sfx_12_data:
     db   $03
     dw   _meta_sfx12
-    dw   _5E90
-    dw   _5E79
+    dw   _5E90 ; voice 1
+    dw   _5E79 ; voice 2 (->$FF)
     db   $FF
 _5E90:
     dw   _5DF4
     dw   _5E1C
     dw   _5E4C
     dw   _5E4C
-    db   $EE,$09
+    db   $EE,$09 ; jump back 9 bytes (to _5e90)
     dc   6,$FF
 
 _5EA0:
@@ -11846,18 +11785,17 @@ _5EA0:
     dc   8,$FF
 
     dw   _5EA0 ; notes
-    db   $EE,$03
-    db   $03
-    db   $06,$0F
-    db   $10,$1C
-    db   $5F
+    db   $EE,$03 ; jumps back 3 bytes
+_sfx_13_meta:  ; 5F24
+    db   $03,$06,$0F,$10
+    db   $1C,$5F                ; magic addr. what
     dc   6, $FF
 
 sfx_13_data:
     db   $03
-    db   $24,$5F
-    db   $20,$5F
-    db   $28,$5F
+    dw   _sfx_13_meta
+    db   $20,$5F                ; voice 1
+    db   $28,$5F                ; voice 2
     db   $FF
 
 ;;; _5F38:
@@ -11876,16 +11814,17 @@ notes_main_tune_part: ; part of played after intro riff on channel B
 sfx_14_data:
     db   $03
     dw   _meta_sfx_14
-    dw   _5F80
-    dw   _5F98
+    dw   _sfx_14_voice1 ; notes for one channel
+    dw   _sfx_14_voice2 ; notes for the other channel
     db   $FF
-_5F80:
+;; _5F80:
+_sfx_14_voice1:
     dw   notes_main_tune_part
-    dw   _4A20 ; points at notes
+    dw   _4A20 ;
     dw   _4A20 ;
     dw   _4A48 ;
     dw   _4A48 ;
-    db   $EE,$0B
+    db   $EE,$0B ; jump back 11 bytes (to _5f80)
 _sfx_14_done:
     dc   4, $FF
 _meta_sfx_14:
@@ -11893,16 +11832,16 @@ _meta_sfx_14:
     dw   _sfx_14_done
     db   $FF
     db   $FF
-_5F98: ; more addresses
-    db   $C4,$4A
-    db   $E4,$4A
-    db   $E4,$4A
-    db   $06,$4B
-    db   $06,$4B
-    db   $EE
-    db   $0B
+_sfx_14_voice2: ; ch2 notes
+    dw   _4AC4
+    dw   _4AE4
+    dw   _4AE4
+    dw   _4B06  ; hmm, just $15,$20
+    dw   _4B06  ; hmm, just $15,$20
+    db   $EE,$0B ; jump back 11 bytes (to _sfx_14_voice2)
 
-    ;; 92 bytes to play with!
+
+    ;; Done. 92 bytes to play with!
     dc   92, $FF ; to 0x5fff
 
 ;;; ======= END OF BG6.BIN ======
