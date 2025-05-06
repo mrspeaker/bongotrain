@@ -88,7 +88,11 @@
     _8040             = $8040  ; ?
     enemy_6_active    = $8041  ;
 
-    chA_sfx           = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
+;;; I'm starting to thing it's not chA, chB, chC, it's sfx1, sfx2, sfx3.
+;;; System allows up to 3 sfx to be defined at the same time.
+;;; Each sfx is allowed to (try to) play on all three channels
+;;; That's why sometimes song notes get cut off by sfx
+    sfx_1             = $8042  ; 2 = dead, e = re/spawn, 6 = cutscene, 7 = cutscene end dance, 9 = ?...
     chB_sfx           = $8043  ; SFX channel 2
     chC_sfx           = $8044  ; sfx channel 3
     _8046             = $8046  ; dbg?
@@ -104,7 +108,7 @@
     1up_timer         = $8050  ; This is never read- but looks like was going to remove 1up text
     is_hit_cage       = $8051  ; did player trigger cage?
 
-    sfx_val_1         = $8052  ; All used in configure_sfx_chunk_ch routines
+    sfx_val_1         = $8052  ; All used in calc_mixed_note_vol_ch routines
     sfx_val_2         = $8053  ; Only used internally (no other refs)
     sfx_val_3         = $8054  ;
     sfx_val_4         = $8055  ;
@@ -199,23 +203,23 @@
     chB_tune_base     = $82D0  ; base of current sfx bytes for chB
     chC_tune_base     = $82E8  ; base of current sfx bytes for chC
     ;; ix+00 = ?
-    ;; ix+01, ix+02 = ptr 1 to pattern info (or maybe ptr->ptr of note data)
-    ;; ix+03, ix+04 = ptr 2 to pattern info (or maybe ptr->ptr of note data)
-    ;; ix+05, ix+06 = ptr 3 to pattern info (or maybe ptr->ptr of note data)
+    ;; ix+01, ix+02 = ptr 1 to pattern meta info
+    ;; ix+03, ix+04 = ptr 2 to ptr->ptr of note data
+    ;; ix+05, ix+06 = ptr 3 to ptr->ptr of note data
 
     ;; ix+07, ix+08 = notes1: pointer to pattern note data
     ;; ix+09, ix+0a = notes2: pointer to pattern note data
     ;; ix+0b, ix+0c = notes3: pointer to pattern note data
 
-    ;; ix+0D =
-    ;; ix+0e = ptr1.len
-    ;; ix+0f = ptr1.velocity
-    ;; ix+10 = ptr1.volume
-    ;; ix+11 = ptr1.transpose
+    ;; ix+$0D = "number of channels to configure". not sure, but it's 2 or 3.
+    ;; ix+$0e = ptr1.len
+    ;; ix+$0f = ptr1.velocity
+    ;; ix+$10 = ptr1.volume
+    ;; ix+$11 = ptr1.transpose
 
-    ;; ix+12 = note tick counter
-    ;; ix+13 = another timer
-    ;; ix+14 = another timer
+    ;; ix+$12 = note tick counter chA? ix is already channel specific
+    ;; ix+$13 = note tick counter chB? why have all 3 timers?
+    ;; ix+$14 = note tick counter chC?
 
     ;; iy
     ;; iy+00 = current note
@@ -290,6 +294,12 @@
     pal_blue          = $16 ; birds
     pal_blue_2        = $17 ; other blue things
 
+    ;; sound effects/tunes
+    sfx1              = $01
+    sfx2_death_ditty  = $02
+    sfx6_dance_scene  = $06
+    sfx7_post_dance   = $07
+    sfx9_extra_life   = $09
     ;; ========= 256 Tiles GFX ==========
 
     ;; first sixteen tiles are 0-9,A-F : Hex, lol!
@@ -2357,8 +2367,8 @@ _0CB2:
 ;;; ==========================================
 
 do_death_sequence:
-    ld   a,$02
-    ld   (chA_sfx),a
+    ld   a,sfx2_death_ditty
+    ld   (sfx_1),a
     ld   (sfx_prev),a
     call reset_dino_counter
     call _done_if_zero
@@ -4304,7 +4314,7 @@ play_intro_jingle:
     ld   a,$0F ; intro jingle
     ld   (chC_sfx),a
     xor  a
-    ld   (chA_sfx),a
+    ld   (sfx_1),a
     call delay_60_vblanks
     ret
 
@@ -5147,17 +5157,17 @@ move_dino_x:
 ;;;     : write_aysnd_chA_vol_fade
 ;;;
 ;;; 2. Queue and setup sfx data:
-;;;     if chA_sfx != 0:
+;;;     if sfx_1 != 0:
 ;;;        sfx_queuer_1
 ;;;     copy_sfx_data_chA:
 ;;;        reset_chA_cur_sfx
 ;;;        point_hl_to_sfx_data
 ;;;        copy_cur_sfx_data_to_RAM
-;;;        chA_sfx = 0
+;;;        sfx_1 = 0
 
 ;;; Starting to think things may have got convoluted in the audio
 ;;; system: seems like it WAS using structs for each channel, but
-;;; somehow at the bottom levels (like in "configure_sfx_chunk_chX" funcs)
+;;; somehow at the bottom levels (like in "calc_mixed_note_vol_chX" funcs)
 ;;; some channel-specific variables messed it all up, so everyone
 ;;; is using (ix+$0d) indexing, but in the end that's not helpful because
 ;;; have to copy/paste every routines anyway. (Biggest evidence of that
@@ -5721,8 +5731,8 @@ enter_hiscore_screen:
     push af
     ld   hl,sfx_reset_a_bunch - JMP_HL_OFFSET
     call jmp_hl_plus_4k
-    ld   a,$09 ; extra life /hiscore sfx
-    ld   (chA_sfx),a
+    ld   a,sfx9_extra_life ; extra life /hiscore sfx
+    ld   (sfx_1),a
     nop
     call reset_xoff_sprites_and_clear_screen
     call _37B8
@@ -7750,8 +7760,8 @@ update_dance_frames:
 ;;; ==========================================
 ;;; Cut sceen
 do_cutscene:
-    ld   a,$06
-    ld   (chA_sfx),a
+    ld   a,sfx6_dance_scene
+    ld   (sfx_1),a
     ld   (sfx_prev),a
     call reset_xoff_sprites_and_clear_screen
     ld   hl,header_text_data
@@ -7902,8 +7912,8 @@ _lp_3E7A:
     dc   38, $FF
 
 end_cutscene:
-    ld   a,$07 ; end of dance in cutscene
-    ld   (chA_sfx),a
+    ld   a,sfx7_post_dance ; end of dance in cutscene
+    ld   (sfx_1),a
     ld   hl,dino_x_legs ; set a bunch of bytes at 8150
     ld   (hl),$18 ; x
     inc  hl
@@ -8597,8 +8607,15 @@ blank_out_1up_text:
 
     dc   5, $FF
 
-;; _4320:
-configure_sfx_ch_1:
+;;; Calculate note data based on the song pattern meta data
+;;; ...Add transpose values and set note lengths based on velocity
+;;; ...Also sets the new_note flag
+;;; Called from:
+;;;     sfx_next_note_chA
+;;;     sfx_pattern_done
+;;;     copy_cur_sfx_data_to_RAM
+;;; _4320:
+configure_sfx_chA:
     ld   l,(ix+$07) ; ptr to pattern note data
     ld   h,(ix+$08)
     ld   a,(hl)
@@ -8606,21 +8623,21 @@ configure_sfx_ch_1:
     ret  z       ; ...we are done with this tune, leave.
     add  a,(ix+$11) ; add any transpose to the current note
     ld   iy,synth1
-    ld   (iy+$00),a ; move current note to synth1
+    ld   (iy+$00),a ; current note
 ;;; Set the synth note duration
     inc  hl         ;
     ld   b,(hl)     ; note duration in b
-    ld   a,(ix+$0f) ; ? what is starting value of a?
+    ld   a,(ix+$0f) ; pattern velocity
     ld   c,a        ; c = init value of a
 _433A:
     dec  b          ; for b to 0:
     jr   z,_4340    ;
     add  a,c        ;   a += init_a
     jr   _433A
-_4340:              ; (now a = ix+$0f * b)
+_4340:              ; (now a = velocity * duration)
     dec  a          ; a -= 1
-    ld   (ix+$12),a ; current note timer
-    call configure_sfx_chunk_ch_1
+    ld   (ix+$12),a ; current chA note timer
+    call calc_mixed_note_vol_chA
     ld   (iy+$02),a ; volume
     ld   a,(ix+$0e) ; "len" from meta
     ld   (iy+$03),a ; timer? copied to env timer later
@@ -8631,33 +8648,34 @@ _4340:              ; (now a = ix+$0f * b)
     dc   10, $FF
 
 ;;; _4360
-configure_sfx_ch_2:
-    ld   l,(ix+$09)
+configure_sfx_chB:
+    ld   l,(ix+$09) ; ptr to pattern note data
     ld   h,(ix+$0a)
     ld   a,(hl)
     cp   $FF
     ret  z
-    add  a,(ix+$11)
+    add  a,(ix+$11) ; add any transpose to the current note
     ld   iy,synth2
     ld   (iy+$00),a
+;;; Set the synth note duration
     inc  hl
     ld   b,(hl)
-    ld   a,(ix+$0f)
+    ld   a,(ix+$0f) ; velocity
     ld   c,a
 _437A:
     dec  b
     jr   z,_4380
     add  a,c
     jr   _437A
-_4380:
+_4380:              ; (now a = ix+$0f * b)
     dec  a
-    ld   (ix+$13),a  ; note tick chB
-    call configure_sfx_chunk_ch_2
-    ld   (iy+$02),a
-    ld   a,(ix+$0e)
+    ld   (ix+$13),a ; current chB note timer
+    call calc_mixed_note_vol_chB
+    ld   (iy+$02),a             ; volume
+    ld   a,(ix+$0e)             ; "len" from meta
     ld   (iy+$03),a
     ld   a,$01
-    ld   (iy+$04),a
+    ld   (iy+$04),a             ; set new_note flag
     ret
 
 ;; called?
@@ -8668,14 +8686,16 @@ _4380:
 
     dc   1, $FF
 
-;;
-configure_sfx_ch_3:
-    ld   l,(ix+$0b)
+;;; Calculate note data based on the song pattern meta data
+;;; See configure_sfx_chA.
+configure_sfx_chC:
+    ld   l,(ix+$0b) ; ptr to pattern note data
     ld   h,(ix+$0c)
     ld   a,(hl)
     cp   $FF
     ret  z
     add  a,(ix+$11)
+;;; Set the synth note duration
     inc  hl
     ld   iy,synth3
     ld   (iy+$00),a
@@ -8690,15 +8710,17 @@ _43BA:
 _43C0:
     dec  a
     ld   (ix+$14),a
-    call configure_sfx_chunk_ch_3
+    call calc_mixed_note_vol_chC
     ld   (iy+$02),a
     ld   a,(ix+$0e)
     ld   (iy+$03),a
     ld   a,$01
-    ld   (iy+$04),a
+    ld   (iy+$04),a ; set new_note flag
     ret
 
     dc   10, $FF
+
+;;;
 
     ld   a,$9F
     ld   (scr_pik_S_top),a
@@ -8707,6 +8729,8 @@ _43C0:
     ret
 
     dc   1, $FF
+
+;;;
 
     ld   a,$9C
     ld   (_9217),a
@@ -8802,7 +8826,7 @@ _more_cage:
 
 
 ;;; timer/sequencer: update current song
-sfx_tick_note_chA:
+sfx_tick_note_chA :
     ld   a,(ix+$12)
     and  a
     jr   z,sfx_next_note_chA   ; first timer = 0
@@ -8820,7 +8844,7 @@ sfx_next_note_chA:
     jr   z,sfx_pattern_done
     ld   (ix+$07),l
     ld   (ix+$08),h
-    call configure_sfx_ch_1
+    call configure_sfx_chA
     ret
 
 sfx_pattern_done:
@@ -8848,7 +8872,7 @@ sfx_pattern_done:
     ld   l,(ix+$07)
     ld   h,(ix+$08)
     ld   a,(hl)
-    call configure_sfx_ch_1
+    call configure_sfx_chA
     ret
 
 ;;; _4552:
@@ -8863,7 +8887,7 @@ ret_if_end_tune_chA:
     inc  hl
     ld   a,(hl)
     ld   (ix+$08),a
-    call configure_sfx_ch_1
+    call configure_sfx_chA
     ret
 
     dc   1, $FF
@@ -8907,7 +8931,7 @@ sfx_next_note_chB:
     jr   z,_45A2
     ld   (ix+$09),l
     ld   (ix+$0a),h
-    call configure_sfx_ch_2
+    call configure_sfx_chB
     ret
 
 ;; sfxsomething #5
@@ -8936,7 +8960,7 @@ _45A2:
     ld   l,(ix+$09)
     ld   h,(ix+$0a)
     ld   a,(hl)
-    call configure_sfx_ch_2
+    call configure_sfx_chB
     ret
 
 ;; sfxsomething #6
@@ -8949,7 +8973,7 @@ _45D2:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0a),a
-    call configure_sfx_ch_2
+    call configure_sfx_chB
     ret
 
     dc   1, $FF
@@ -8981,7 +9005,7 @@ sfx_next_note_chC:
     jr   z,_4622_ch_3
     ld   (ix+$0b),l
     ld   (ix+$0c),h
-    call configure_sfx_ch_3
+    call configure_sfx_chC
     ret
 
 ;; sfxsomething #8
@@ -9010,7 +9034,7 @@ _4622_ch_3:
     ld   l,(ix+$0b)
     ld   h,(ix+$0c)
     ld   a,(hl)
-    call configure_sfx_ch_3
+    call configure_sfx_chC
     ret
 
 ;; sfxsomething #9
@@ -9023,12 +9047,12 @@ _4652:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a
-    call configure_sfx_ch_3
+    call configure_sfx_chC
     ret
 
     dc   25, $FF
 
-;;; Gets here when there's no chA_sfx
+;;; Gets here when there's no sfx1
 ;;; ticks the things. weirdly. Ticks each channel, but
 ;;; 3 versions, all 3 times... I dunno.
 ;;; Why is chA ticking all channels?
@@ -9079,20 +9103,19 @@ _46C5:
 
 copy_sfx_data_chA:
     call reset_chA_cur_sfx
-    ld   a,(chA_sfx)
+    ld   a,(sfx_1)
     call point_hl_to_sfx_data
     ld   ix,chA_tune_base
     call copy_cur_sfx_data_to_RAM
     xor  a
-    ld   (chA_sfx),a ; clear sfx
+    ld   (sfx_1),a ; clear sfx
     ret
 
     dc   3, $FF
 
 ;;; Selects the tune to play for the current screen.
 ;;; If it's already playing this tune it skips setting it.
-;;; I think the reason it avoids setting it again is that
-;;; chA_sfx can be 0, but the tune is still playing (I think
+;;; sfx_1, B, C are set to 0 if new_note flag can be 0, but the tune is still playing (I think
 ;;; it's the "REPEAT" (or whatever ix+$0D is).
 play_tune_for_cur_screen:
     ld   a,(num_players)
@@ -9115,7 +9138,7 @@ _46FB:
     cp   b
     ret  z ; already playing this one
     ld   a,b
-    ld   (chA_sfx),a ; set new sfx id
+    ld   (sfx_1),a ; set new sfx id
     ld   (sfx_prev),a
     ret
 
@@ -9198,8 +9221,8 @@ copy_cur_sfx_data_to_RAM:
     nop
     nop
     nop
-    ld   a,(hl) ; 1. points at sfx data
-    ld   (ix+$0d),a ; number of ptrs? dunno. 2 or 3 usually
+    ld   a,(hl) ; 1. points at sfx meta data
+    ld   (ix+$0d),a ; "num channels to use"? 2 or 3 usually
     ld   b,a
     inc  hl
     ld   a,(hl) ; 2 ; sfx struct ptr lo
@@ -9262,16 +9285,20 @@ _here:
     inc  hl
     ld   a,(hl)
     ld   (ix+$0c),a  ; lo byte of note data
-    call configure_sfx_ch_1
-    ld   a,(ix+$0d)
+;;; Configure channels based on the ix+Od (always 2 or 3)
+;;; This is a bit confusing. ix is based on a particular channel,
+;;; but this "configures" all channels for each channel.
+;;; maybe it's why sfx will cut off a tune.
+    call configure_sfx_chA
+    ld   a,(ix+$0d)             ; +$0d > 1?
     dec  a
     ret  z
-    call configure_sfx_ch_2
-    ld   a,(ix+$0d)
+    call configure_sfx_chB      ; Yep, configure chB.
+    ld   a,(ix+$0d)             ; +$0d ? 2?
     dec  a
     dec  a
     ret  z
-    call configure_sfx_ch_3
+    call configure_sfx_chC      ; Yep, configur chC too.
     ret
 
     dc   27, $FF
@@ -9280,7 +9307,7 @@ _here:
 ;;; a sfx assigned to it...
 ;;; Note: The copy_sfx_data_chX routine also clear chX_sfx when done
 sfx_queue_and_copy_data:
-    ld   a,(chA_sfx)
+    ld   a,(sfx_1)
     and  a
     jr   nz,_play_chA
     call sfx_queuer_1 ; no sfx on chA
@@ -10504,24 +10531,19 @@ _51F8:
     dc   8, $FF
 
 
-;;; COpying some data to send to the synth?
-;;; configure_sfx_chunk_ch_1, 2, and 3 are identical except for the
-;;; RAM locations (not used anywhere else!) :
-;;; sfx_val_1 and sfx_val_4 for "ch_1".
+;;; (Maybe) calculating a "mixed" note volume depending on what is playing
+;;; on all channels.
+;;; calc_mixed_note_vol_chA/B/C are identical except for the RAM locations
+;;; sfx_val_1 and sfx_val_4 for "ch_1". (these are not used out of this func)
 ;;; sfx_val_2 and sfx_val_5 for "ch_2"
 ;;; sfx_val_3 and sfx_val_6 for "ch_3"
-;;; It seems like they are the synth values for each channel,
-;;; but then they are each looking at all chA_tune_base, chB_tune_base,
-;;; and chC_tune_base (by checking the low byte of HL). Not sure how this works...
-;;; why is there 3 of these routines, all checking 3 channels?
 ;;; [triggers every few frames]
-;;; The last instruction sets volume maybe... is this a sound mixer system?
 ;;; Maybe it normalizes the volume across all channels
 ;;; in:
 ;;;     ix ; chX_tune_base
 ;;; out:
-;;;      a ; ...volume? Is this "get channel volume" function?
-configure_sfx_chunk_ch_1:
+;;;      a ; volume for note
+calc_mixed_note_vol_chA:
     push ix                     ; ix is chX_tune_base
     pop  hl
     ld   a,l
@@ -10566,8 +10588,8 @@ _523D:
     dc   15, $FF
 
 ;; triggers every few frames.
-;; See note on configure_sfx_chunk_c1
-configure_sfx_chunk_ch_2:
+;; See note on calc_mixed_note_vol_chA
+calc_mixed_note_vol_chB:
     push ix
     pop  hl
     ld   a,l
@@ -10611,9 +10633,8 @@ _528D:
 
     dc   15, $FF
 
-;; triggers every few frames.
-;; See note on configure_sfx_chunk_c1
-configure_sfx_chunk_ch_3:
+;; See note on calc_mixed_note_vol_chA
+calc_mixed_note_vol_chC:
     push ix
     pop  hl
     ld   a,l
@@ -11680,7 +11701,7 @@ _5C86:
     dc   6, $FF
 
 sfx_1_data:
-    db   $02
+    db   $02                    ; num channels to use.
     dw   _meta_sfx_1
     dw   _5D14 ; ptr->notes
     dw   _5D14 ; same
