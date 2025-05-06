@@ -206,15 +206,15 @@
     sng3_base         = $82E8  ; base of current struct for song3
 ;; Song data structure:
     ;; ix+00 = ?
-    ;; ix+01, ix+02 = ptr 1 to pattern meta info
-    ;; ix+03, ix+04 = ptr 2 to ptr->ptr of note data
-    ;; ix+05, ix+06 = ptr 3 to ptr->ptr of note data
+    ;; ix+01, ix+02 = voice0 ptr->ptr->notes
+    ;; ix+03, ix+04 = voice1 ptr->ptr->notes
+    ;; ix+05, ix+06 = voice2 ptr->ptr->notes
 
-    ;; ix+07, ix+08 = notes1: pointer to pattern note data
-    ;; ix+09, ix+0a = notes2: pointer to pattern note data
-    ;; ix+0b, ix+0c = notes3: pointer to pattern note data
+    ;; ix+07, ix+08 = voice0: ptr->notes
+    ;; ix+09, ix+0a = voice1: ptr->notes
+    ;; ix+0b, ix+0c = voice2: ptr->notes
 
-    ;; ix+$0D = "number of channels to configure". not sure, but it's 2 or 3.
+    ;; ix+$0D = "number of voices". not sure, but it's 2 or 3.
     ;; ix+$0e = ptr1.len
     ;; ix+$0f = ptr1.velocity
     ;; ix+$10 = ptr1.volume
@@ -9143,21 +9143,21 @@ _46FB:
     dec  c
     dc   14, $FF
 
-;;; Points HL to some music data.
+;;; Points HL to music data.
 ;;; a: ptr to current note to data (eg sfx_1_data)
 ;;; sfx_X_data contains:
-;;; 1. Number - either 2 or 3
-;;; 2. Address to:
-;;; [[had a note that said: len/vel/vol/trans for the 4 vals]]
-;;; [[Yes for velocity and volume and transpose. Not sure on len[[
-;;;    1 (2): 01,08,0e,00, note_ptr, ee,03 ff
-;;;    2 (3): 01,04,0f,00, note_ptr, ff
-;;;    3 (3): 02,02,0f,10, note_ptr, ff
-;;;    4 (3): 01,01,0f,00, note_ptr, ff
-;;;    6 (2): 01,08,0f,00, note_ptr x 8!, ff
-;;; 3. Address -
-;;; 4. Address -
+;;; 1. $2 or $3. Number of voices?
+;;; 2. dw: Meta data ptr.
+;;;        eg: ->01,08,0e,00 ; len/vel/vol/trans
+;;;        sometimes there's another addr under this... not 100% sure
+;;; 3. dw ptr -> "voice 1"
+;;;        voice is a list of dw ptr to note data.
+;;;        terminated by $FF or $EE XX
+;;;        if $EE, then the song repeats by jumping back XX bytes
+;;; 4. dw ptr -> "voice 2"
+;;;        same as voice 1
 ;;; 5. $FF
+;;;
 point_hl_to_sfx_data:
     sla  a ; sfx id * 4
     sla  a
@@ -9217,34 +9217,34 @@ copy_cur_sfx_data_to_RAM:
     nop
     nop
     ld   a,(hl) ; 1. points at sfx meta data
-    ld   (ix+$0d),a ; "num channels to use"? 2 or 3 usually
+    ld   (ix+$0d),a ; "num voices"? $02 or $03
     ld   b,a
     inc  hl
-    ld   a,(hl) ; 2 ; sfx struct ptr lo
+    ld   a,(hl) ; 2 ; meta ptr->ptr lo
     ld   (ix+$01),a ;
     inc  hl
     ld   a,(hl) ; 3
-    ld   (ix+$02),a ; sfx struct ptr hi
+    ld   (ix+$02),a ; meta ptr->ptr hi
     dec  b          ; don't think there's a 1, so never branch?
     jr   z,_here ; branch...
     inc  hl
-    ld   a,(hl) ; 4 ; ptr 2 lo
+    ld   a,(hl) ; 4 ; voice 1 ptr->ptr lo
     ld   (ix+$03),a
     inc  hl
-    ld   a,(hl) ; 5 ; ptr 2 hi
+    ld   a,(hl) ; 5 ; voice 1 ptr->ptr hi
     ld   (ix+$04),a
     dec  b                      ; could be 0
     jr   z,_here
     inc  hl
-    ld   a,(hl) ; 6 ptr 3 lo
+    ld   a,(hl) ; 6 ; voice 2 ptr->ptr  lo
     ld   (ix+$05),a
     inc  hl
-    ld   a,(hl) ; 7 ptr 3 hi
+    ld   a,(hl) ; 7 ; voice 2 ptr->ptr hi
     ld   (ix+$06),a
 _here:
-    ld   h,(ix+$02)
+    ld   h,(ix+$02)   ; meta ptr hi/lo
     ld   l,(ix+$01)
-    ld   a,(hl)       ; first ptr to pat struct
+    ld   a,(hl)       ; meta ptr
     ld   (ix+$0e),a   ; len? 1 or 2
     inc  hl
     ld   a,(hl)
@@ -9255,31 +9255,31 @@ _here:
     inc  hl
     ld   a,(hl)
     ld   (ix+$11),a   ; transpose
-    ld   (ix+$12),$00 ; reset sfx timers
+    ld   (ix+$12),$00 ; reset channel timers
     ld   (ix+$13),$00
     ld   (ix+$14),$00
-    inc  hl
-    ld   (ix+$01),l  ; second ptr (ptr -> ptr of notes)
+    inc  hl          ; after META values: voice0 ptr->ptr.
+    ld   (ix+$01),l  ; (ptr -> ptr of notes)
     ld   (ix+$02),h  ;
-    ld   a,(hl)      ;
-    ld   (ix+$07),a  ; lo byte of note data
+    ld   a,(hl)
+    ld   (ix+$07),a  ; lo byte of voice0 note data
     inc  hl
     ld   a,(hl)
-    ld   (ix+$08),a  ; hi byte of note data
-    ld   l,(ix+$03)  ; third ptr (ptr -> ptr of notes)
-    ld   h,(ix+$04)
+    ld   (ix+$08),a  ; hi byte of voice0 note data
+    ld   l,(ix+$03)  ; voice1 ptr -> ptr -> notes
+    ld   h,(ix+$04)  ; (lo)
     ld   a,(hl)
-    ld   (ix+$09),a  ; lo byte of ptr
+    ld   (ix+$09),a  ; voice1 ptr -> notes (lo)
     inc  hl
     ld   a,(hl)
-    ld   (ix+$0a),a  ; hi byte of ptr
-    ld   l,(ix+$05)
-    ld   h,(ix+$04)
+    ld   (ix+$0a),a  ; voice1 ptr -> notes (hi)
+    ld   l,(ix+$05)  ; voice 2 ptr -> ptr -> notes
+    ld   h,(ix+$04)  ; (lo)
     ld   a,(hl)
-    ld   (ix+$0b),a  ; hi byte of note data
+    ld   (ix+$0b),a  ; voice2 ptr -> notes (lo)
     inc  hl
     ld   a,(hl)
-    ld   (ix+$0c),a  ; lo byte of note data
+    ld   (ix+$0c),a  ; voice2 ptr -> notes (hi)
 ;;; Configure channels based on the ix+Od (always 2 or 3)
 ;;; This is a bit confusing. ix is based on a particular channel,
 ;;; but this "configures" all channels for each channel.
@@ -9672,8 +9672,8 @@ intro_jingle:
     dc   2, $FF
 _sfx_15_meta:
     db   $01,$05,$0F,$00 ; len(rep?)/vel/vol/trans
-_4B36:
-    dw   intro_jingle  ; notes
+_sfx_15_voice0: ;_4B36
+    dw   intro_jingle           ; voice 0
     dc   4, $FF
     dw   _4B48
     dc   2, $FF
@@ -9681,8 +9681,8 @@ _4B36:
 sfx_15_data:
     db   $03
     dw   _sfx_15_meta
-    dw   _4B36
-    dw   _4B36
+    dw   _sfx_15_voice0         ; voice 1
+    dw   _sfx_15_voice0         ; voice 2
     db   $FF
 _4B48:
     db   $00,$01
@@ -9711,8 +9711,7 @@ your_being_chased_dino_sprite:
 
     dc   116, $FF ; 116 free bytes!
 
-;; sfx 2? notes
-_4BE0:
+_sfx_2_voice0: ;_4BE0
     db   $0E,$04,$0E,$02,$0C,$02,$0E,$04
     db   $11,$02,$10,$02,$0E,$02,$0E,$02
     db   $0C,$02,$0E,$10
@@ -9730,9 +9729,9 @@ _sfx_2_done:
     dc   4, $FF
 _meta_sfx_2:
     db   $01,$04,$0F,$00
-    dw   _4BE0  ; point at notes
-    db   $FF
-    db   $FF
+    dw   _sfx_2_voice0
+    dc   2, $FF
+
 _sfx_2_voice1:
     dw   _4BF6 ; pointn at notes
     db   $FF
@@ -9748,7 +9747,6 @@ sfx_2_data:
     dw   _meta_sfx_2
     dw   _sfx_2_voice1
     dw   _sfx_2_voice2 ; just ->$FF
-
     dc   3, $FF
 
 ;;
@@ -10283,7 +10281,7 @@ _5037:
 
 sfx_3_data:
     db   $03
-    dw   _meta_sfx_3
+    dw   _sfx_3_meta
     dw   _sfx_3_voice1 ; _5090
     dw   _sfx_3_voice2 ; _508C
     dc   6, $FF
@@ -10300,9 +10298,9 @@ sfx_3_data:
     db   $1F,$03
     dc   2, $FF
 
-_meta_sfx_3:
+_sfx_3_meta:
     db   $02,$02,$0F,$10
-    db   $60,$50
+    db   $60,$50                ; voice 0
     dc   2, $FF
 _sfx_3_voice2: ; _508C:
     db   $6E,$50
@@ -10312,7 +10310,7 @@ _sfx_3_voice1: ; _5090:
     dc   2, $FF
 
     ;; sfx 4 notes
-_5094:
+_sfx_4_voice0:
     db   $00,$01,$02,$01,$04,$01,$06,$01
     db   $08,$01,$0A,$01,$0C,$01,$0E,$01
     dc   8, $FF
@@ -10320,7 +10318,7 @@ _50AC:
     dc   4, $FF
 _sfx_4_meta: ; _50B0
     db   $01,$01,$0F,$00 ; len(rep?)/vel/vol/trans
-    dw   _5094
+    dw   _sfx_4_voice0
     dc   2, $FF
     db   $94,$10                ; wat bytes
     db   $FF,$FF
@@ -10337,7 +10335,7 @@ _50C8:
 
 ;;; ==== SFX 5 town ====
 
-_50CC;; notes
+_sfx_5_voice0:  ; _50CC
     db   $18,$01,$17,$01,$15,$01,$13,$01
     db   $11,$01,$10,$01,$0E,$01,$0C,$01
     db   $0B,$01,$09,$01,$07,$01,$05,$01
@@ -10348,13 +10346,12 @@ _50CC;; notes
 sfx_5_data:
     db   $03
     dw  _sfx_5_meta
-    dw   _sfx_7_ptr_ff ; voice 1?!!!
-    dw   _sfx_7_ptr_ff ; voice 2?!!!
+    dw   _sfx_7_ptr_ff ; ->$FF. No voice 1?
+    dw   _sfx_7_ptr_ff ; ->$FF. No voice 2?
     db   $FF
 _sfx_5_meta:
     db   $03,$03,$0F,$10 ; odd meta, odd voices.
-
-    dw   _50CC                ; who uses?
+    dw   _sfx_5_voice0
     db   $FF
     db   $FF
 
@@ -10390,8 +10387,9 @@ _sfx_5_meta:
 
 ;;; ==== SFX 6 town ======
 
-_5182:
+_sfx_6_meta:                    ;_5182
     db   $01,$08,$0F,$00
+;;; voice 0
     db   $32,$51
     db   $1E,$51
     db   $FC,$50
@@ -10400,18 +10398,15 @@ _5182:
     db   $1E,$51
     db   $FC,$50
     db   $26,$51
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    dc   4, $FF
 
 sfx_6_data:
     db   $02
-    dw   _5182
-    dw   _51A8
-    dw   _51A8
+    dw   _sfx_6_meta
+    dw   _51A8                  ; voice 1
+    dw   _51A8                  ; voice 2 (unused?)
     dc   2, $FF
-    db   $98,$11
+    db   $98,$11                ; wat
     dc   3, $FF
 _51A8:
     db   $FC,$50
@@ -10424,6 +10419,7 @@ _51A8:
     db   $76,$51
     db   $FF
     db   $FF
+
     db   $0C,$02,$18,$02,$0C,$02,$18,$02
     db   $0C,$02,$18,$02,$0C,$02,$18,$02
     db   $0C,$02,$18,$02,$0C,$02,$18,$02
@@ -10435,13 +10431,13 @@ _51A8:
 
 _sfx_7_meta:                    ; _51DA
     db   $03,$03,$0F,$10
-    db   $BA,$51
+    db   $BA,$51                ; voice 0
     db   $FF
     db   $FF
-    db   $CA,$11                ; wat bytes
+    db   $CA,$11                ; wat bytes (not addr)
     db   $FF
     db   $FF
-    db   $F8,$51                ; more wat bytes!
+    db   $F8,$51                ; more wat bytes! (addr)
     db   $FF
     db   $FF
 
@@ -10908,13 +10904,13 @@ _54DA:
 
 _sfx_8_meta:                    ; _5504
     db   $01,$03,$0F,$00
-    db   $E4,$54
+    db   $E4,$54                ; voice 0
     db   $FF
     db   $FF
-    db   $F4,$54
+    db   $F4,$54                ; wat bytes
     db   $FF
     db   $FF
-    dw   _556C
+    dw   _556C                  ; more wat bytes
     db   $FF
     db   $FF
 
@@ -10970,7 +10966,7 @@ _5550:
 _sfx_10_meta: ; _5558
     db   $04,$04,$0F,$10
 _555C:
-    dw   _5550
+    dw   _5550                  ; voice 0
     db   $FF,$FF
 
 sfx_10_data:
@@ -11204,7 +11200,8 @@ _56F8:    ;; notes
     db   $A0,$02,$D3,$01,$D3,$01,$D3,$01
     db   $D3,$01,$C0,$02,$C1,$02
     dc   10, $FF
-_5760:
+
+_sfx_9_meta:                    ;_5760
     db   $01,$08,$0F,$10
     dw   _56F8    ; notes
     db   $FF
@@ -11221,9 +11218,9 @@ _576E:
 
 sfx_9_data:
     db   $02
-    dw   _5760
-    dw   _5768
-    dw   _576C
+    dw   _sfx_9_meta
+    dw   _5768                  ; voice 1
+    dw   _576C                  ; voice 2
     dc   9, $FF
 _5780:                          ; notes
     db   $15,$01,$0E,$01,$15,$01,$0E,$01
@@ -11607,8 +11604,8 @@ jmp_hl:
 
     dc   1, $FF
 
-;;; Yet more notes. Fast weird ditty
-_5C86:
+;;; Fast weird ditty
+_sfx_1_voice0:  ; _5C86:
     db   $06,$01,$06,$01,$06,$01,$0E,$01
     db   $09,$01,$12,$01,$10,$01,$0E,$01
     db   $06,$01,$06,$01,$06,$01,$0E,$01
@@ -11627,18 +11624,18 @@ _5C86:
     dc   6, $FF
 
 sfx_1_data:
-    db   $02                    ; num channels to use.
+    db   $02                    ; num voices.
     dw   _meta_sfx_1
-    dw   _sfx_1_voice ;
-    dw   _sfx_1_voice ; also voice 2? maybe ignored cause num chan = 2?
+    dw   _sfx_1_voice1 ;
+    dw   _sfx_1_voice1 ; also voice 2? maybe ignored cause num chan = 2?
     db   $FF
 _meta_sfx_1:
     db   $01,$08,$0E,$00  ; len(rep?)/speed/volume/transpose
-    dw   _5C86 ; note data "fast weird ditty"
-    db   $EE,$03
+    dw   _sfx_1_voice0    ; note data "fast weird ditty"
+    db   $EE,$03          ; jump back 3 bytes.
     dc   4, $FF
 ;_5D14:
-_sfx_1_voice:
+_sfx_1_voice1:
     dw   _5C00 ; note dump
     db   $EE,$03 ; jump back 3 bytes
 
@@ -11696,15 +11693,15 @@ _5DAC:
 
 _sfx_11_meta:
     db   $01,$05,$0F,$00
-_sfx_11_voice_1:
+_sfx_11_voice_0:
     dw   _5D60    ; ptr->$19,$20 not ptr->note?!
-    dw   _5DAC    ; note data
-    dw   _5DAC    ; same
+    dw   _5DAC    ;
+    dw   _5DAC    ;
     db   $EE,$07  ; jump back 7 bytes (_sfx_11_voice_1)
 _5DDC:
     db   $CC,$1D  ; waaat
     db   $FF,$FF
-_5DE0: ; voice 2
+_5DE0: ; voice 1
     dw   _5D30 ; note data
     dw   _5D64 ; note data
     dw   _5D64 ; same
@@ -11747,7 +11744,7 @@ _5E4C:         ; notes
 
 _meta_sfx12 ; sfx meta:
     db   $01,$06,$0F,$00
-_5E79 ; voice 2: just points at $FF.
+_sfx_12_voice0 ; just points at $FF.
     db   $80,$5E
 
     dc   13, $FF
@@ -11756,7 +11753,7 @@ sfx_12_data:
     db   $03
     dw   _meta_sfx12
     dw   _5E90 ; voice 1
-    dw   _5E79 ; voice 2 (->$FF)
+    dw   _sfx_12_voice0 ; voice 2 = voice 0 = (->$FF)
     db   $FF
 _5E90:
     dw   _5DF4
@@ -11782,13 +11779,14 @@ _5EA0:
     db   $0E,$01,$10,$01,$13,$01,$17,$01
     db   $15,$02,$0E,$01,$17,$01,$15,$02
     db   $0E,$01,$13,$02,$0E,$02,$13,$01
-    dc   8,$FF
+_5F18:
+    dc   8,$FF                  ; 5f1c is in here
 
     dw   _5EA0 ; notes
     db   $EE,$03 ; jumps back 3 bytes
 _sfx_13_meta:  ; 5F24
     db   $03,$06,$0F,$10
-    db   $1C,$5F                ; magic addr. what
+    db   $1C,$5F                ; voice 0
     dc   6, $FF
 
 sfx_13_data:
@@ -11813,7 +11811,7 @@ notes_main_tune_part: ; part of played after intro riff on channel B
 ;;; SFX 14: the main tune from level 1
 sfx_14_data:
     db   $03
-    dw   _meta_sfx_14
+    dw   _sfx_14_meta
     dw   _sfx_14_voice1 ; notes for one channel
     dw   _sfx_14_voice2 ; notes for the other channel
     db   $FF
@@ -11827,9 +11825,9 @@ _sfx_14_voice1:
     db   $EE,$0B ; jump back 11 bytes (to _5f80)
 _sfx_14_done:
     dc   4, $FF
-_meta_sfx_14:
+_sfx_14_meta:
     db   $01,$05,$0F,$00
-    dw   _sfx_14_done
+    dw   _sfx_14_done           ; voice 0
     db   $FF
     db   $FF
 _sfx_14_voice2: ; ch2 notes
