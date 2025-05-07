@@ -453,7 +453,7 @@
     _911A             = $911A ; pickup
     scr_lives_p2      = $9122 ; icons for lives, p2
     scr_pik_n_n       = $915A ; pickup right "n_n" levels
-    _9184             = $9184 ; something in hiscore screen
+    scr_p1_on_hi      = $9184 ; player 1 or 2 on hiscore screen
     scr_cage_up       = $9189 ; top-right tile of cage at top of screen
     _918E             = $918E ; pickup
     scr_num_creds     = $9199
@@ -634,8 +634,8 @@ nmi_int_handler:
 attract_press_p1_screen:
     ld   a,$01
     ld   (_8090),a
-    xor  a ; nop this and you get galaxian stars!
-    ld   (stars_enable),a
+    xor  a
+    ld   (stars_enable),a ; boo, turns off galaxian stars
     ld   a,(credits)
     ld   b,a
     ld   a,(credits_umm)
@@ -1129,7 +1129,7 @@ game_over:
     call check_if_hiscore
     call reset_xoff_sprites_and_clear_screen
     xor  a
-    ld   (stars_enable),a
+    ld   (stars_enable),a ; boo, disable stars again for some reason
     jp   set_hiscore_and_reset_game
 
     dc   10, $FF
@@ -5569,18 +5569,18 @@ enemy_pattern_scr_4:
 hiscore_check_buttons:
     ld   a,(input_buttons)
     ld   b,a
-    ld   a,(_9184)
+    ld   a,(scr_p1_on_hi) ; is it p1?
     cp   $01
-    jr   z,_2C7F
-    bit  7,b
-    jr   nz,_2C88
-_2C7F:
+    jr   z,_hi_check_for_p1
+    bit  7,b                    ; bit 7?
+    jr   nz,_hi_check_for_p2
+_hi_check_for_p1:
     ld   a,(port_in0)
-    bit  5,a ; jump?
+    bit  5,a ; jump. why port0 directly? p2 uses reg b
     call nz,hiscore_select_letter
     ret
-_2C88:
-    bit  5,b ; jump?
+_hi_check_for_p2:
+    bit  5,b ; jump/action
     call nz,hiscore_select_letter
     ret
 
@@ -5784,14 +5784,14 @@ enter_hiscore_screen:
     ld   (hiscore_timer),a
     pop  af
     ld   iy,scr_hi_name_entry
-    ld   (_9184),a ; something else on screen...
+    ld   (scr_p1_on_hi),a ; "1" for PLAYER 1 or 2
     call hiscore_clear_name
     ld   hl,scr_cursor_line_hs
 set_cursor:
     ld   (hl),tile_cursor
     ld   ix,input_buttons
-    ld   a,(_9184) ; read from screen set above?
-    cp   $01 ; p1 (maybe)?
+    ld   a,(scr_p1_on_hi) ;
+    cp   $01 ; is p1?
     jr   z,_2E93
     bit  7,(ix+$00)
     jr   nz,_2E97
@@ -9446,6 +9446,9 @@ copy_sfx_data_chB:
 
     dc   11, $FF
 
+;; say, what is this. checks bits 0 to 7 of A.
+;; looks debug-y
+;; _4940:
     nop
     nop
     ld   c,$00
@@ -9493,6 +9496,9 @@ _4974:
 
     dc   3, $FF
 
+;; say, what is this. checks bits 0 to 3 of A.
+;; looks debug-y
+;; _4980:
     nop
     nop
     ld   c,$F0

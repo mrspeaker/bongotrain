@@ -40,11 +40,11 @@
 --]]
 
 start_screen = 1 -- [1 - 27]. Screen to start the game. 27 is the dino screen.
-loop_screens = {}--{13,14,18,21,25,27} -- Loop if you want to practise levels, eg:
+loop_screens = {} --{13,14,18,21,25,27} -- Loop if you want to practise levels, eg:
 -- {}: no looping, normal Bongo sequence
 -- {14}: repeat screen 14 over and over
 -- {14, 18, 26}: repeat a sequence of screens
-round = 2 -- starting round (1: initial speed, 2+: faster)
+round = 1 -- starting round (1: initial speed, 2+: faster)
 -- 1: default Bongo speed for dinosaur and enemies
 -- 2: faster movement for player and enemies, and dinosaur starts earlier
 -- 3+: each round after 2, the player and enemeies are the same speed,
@@ -53,9 +53,9 @@ infinite_lives = true
 fast_death = true             -- restart fast after death
 fast_wipe = true              -- fast transition to next screen
 disable_dino = false          -- no pesky dino (oh, but also now you can't catch 'im)
-disable_round_speed_up = true -- don't get faster after catching dino
+disable_round_speed_up = false -- don't get faster after catching dino
 disable_bonus_skip = false    -- don't skip screen on 6xbonus
-disable_cutscene = true       -- don't show the awesome cutscene
+disable_cutscene = false      -- don't show the awesome cutscene
 reset_score = false           -- reset score to 0 on death and new screen
 collision_indicator = false   -- show where ground and pickup collisions occur
 -- Bongo is bad at picking things up because of his bongoitis and bad knees.
@@ -72,6 +72,7 @@ allow_skip = true             -- use player1/player to navigate screens while pl
 theme = 0                     -- color theme (0-7). 0 = default, 7 = best one
 technicolor = false           -- randomize theme every death
 head_style = 0                -- 0 = normal, 1 = dance, 2 = dino, 3 = bongo, 4 = shy guy
+starry_night = true           -- starry starry background
 
 ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
@@ -101,7 +102,7 @@ ognob_mode = true             -- open-world Bongo. Can go out left or right.
 
 
 -- Removed features I found in the code, and tweaks/tests
-show_timers = false             -- speed run timers! Don't know why they removed them
+show_timers = false            -- speed run timers! Don't know why they removed them
 prevent_cloud_jump = false     -- makes jumping from underneath really crap!
 alt_bongo_place = false        -- maybe supposed to put lil guy on the ground for highwire levels?
 one_px_moves = false           -- test how it feels moving 1px per frame, not 3px per 3 frames.
@@ -228,6 +229,8 @@ if debug_mame == true then
 
    -- cpudebug:wpset(mem, "rw", 0xc080, 1, "1","{ printf \"Read @ %08X\n\",wpaddr ; g }")
    -- cpudebug:wpset(mem, "rw", 0x10d4bc, 1, 'printf "Read @ %08X\n",wpaddr ; g')
+   -- PC = current counter - add to wpsets
+   -- eg: wpset b004,1,w,,{ printf "w@%04X : %02X : %04X",wpaddr,wpdata,PC ; g }
    print("=== end dbg ===")
 end
 
@@ -751,6 +754,14 @@ if allow_skip == true then
         end
      end
    end)
+end
+
+
+if starry_night == true then
+    poke(0xb004, 1) -- set stars on
+    -- remove 'disable star' sets
+    poke_rom(0x00D6, { NOP, NOP, NOP, })
+    poke_rom(0x0420, { NOP, NOP, NOP, })
 end
 
 -------------------- OGNOB mode -------------------
