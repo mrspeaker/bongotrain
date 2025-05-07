@@ -4,6 +4,7 @@ import {
     chunk,
     get_sfx_ptrs,
     get_sfx,
+    to_hex,
 } from "./play_notes.js";
 
 const pal = [
@@ -340,21 +341,32 @@ const sfx_data = [
     0x5560, 0x5dea, 0x5e88, 0x5f30, 0x5f78, 0x4b40,
 ];
 
+// sfx 11, voice 0 is weird. points to 19,20 instead of note data
+
+const play = (bytes, id, phrase) => {
+    const ptrs = get_sfx_ptrs(bytes, sfx_data[id]);
+    const sfx = get_sfx(bytes, ptrs);
+    const n1 = get_note_sequence(bytes, sfx.voice0.ptrs[phrase]);
+    const n2 = get_note_sequence(bytes, sfx.voice1.ptrs[phrase]);
+    const n3 = get_note_sequence(bytes, sfx.voice2.ptrs[phrase]);
+
+    console.log(sfx, n1, n2, n3);
+
+    play_notes(n1);
+    play_notes(n2);
+    play_notes(n3);
+};
+
 async function handle_tunes() {
     const bytes = await get_bongo();
-    const val = parseInt(document.getElementById("notes").value) ?? 0;
-
-    const start = tunes_6[0];
-    const ptrs = get_sfx_ptrs(bytes, sfx_data[10]);
-    const sfx = get_sfx(bytes, ptrs);
-    console.log(ptrs, sfx);
-    const notes = get_note_sequence(bytes, start);
-    console.log("Notes: ", notes.length);
-
     document.getElementById("play").addEventListener(
         "click",
         () => {
-            play_notes(notes, 250);
+            const song =
+                parseInt(document.getElementById("notes").value, 10) ?? 0;
+            const phrase =
+                parseInt(document.getElementById("phrase").value, 10) ?? 0;
+            play(bytes, song, phrase);
         },
         false,
     );

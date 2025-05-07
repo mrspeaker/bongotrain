@@ -50,17 +50,17 @@ export const pairs = (bytes, start) => chunk(bytes);
 
 const as_byte = ([a]) => a;
 const as_dw = ([a, b]) => (b << 8) + a;
-const to_hex = (v) => "0x" + v.toString(16);
+export const to_hex = (v) => "0x" + v.toString(16);
 
 const follow = (bytes, ptr) => as_dw(take(bytes, ptr, 2));
 
 const get_ptr_list = (bytes, start) => {
     let i = start;
-    let jump_back = 0;
+    let back_bytes = 0;
     const is_end = () => {
         const byte = bytes[i];
         if (byte == 0xee) {
-            jump_back = bytes[i + 1];
+            back_bytes = bytes[i + 1];
         }
         return byte == 0xff || byte == 0xee;
     };
@@ -71,7 +71,7 @@ const get_ptr_list = (bytes, start) => {
     }
     return {
         ptrs,
-        jump_back, // todo: make it a index to ptrs
+        repeat_idx: back_bytes > 0 ? ptrs.length - (back_bytes - 1) / 2 : -1,
     };
 };
 const get_meta = (bytes, meta_ptr) => {};
