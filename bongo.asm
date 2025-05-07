@@ -9343,9 +9343,8 @@ _4875:
 
     dc   1, $FF
 
-;;; this is some routine, but for sng3
 ;;; see sng1_tick
-;;; Gets here when there's no sng3_id
+;;; Gets here when there's no sng3_id (cause it's already playing)
 sng3_tick:
     ld   ix,sng3_base
     ld   a,(ix+$0d)

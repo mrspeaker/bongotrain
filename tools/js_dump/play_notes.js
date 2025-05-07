@@ -9,13 +9,17 @@ export function play_notes(note_data, bpm = 120) {
     oscillator.start(time);
     oscillator.type = "square";
     let gainNode = audioContext.createGain();
-    gainNode.gain.value = 1;
+    gainNode.gain.value = 0.1;
 
     for (let i = 0; i < note_data.length; i++) {
         const note = note_data[i];
         oscillator.frequency.setValueAtTime(note.freq, time);
-        gainNode.gain.setValueAtTime(0.25, time);
-        gainNode.gain.setTargetAtTime(0.0, time + note.duration, 0.015);
+        gainNode.gain.setValueAtTime(0.1, time);
+        gainNode.gain.setTargetAtTime(
+            0.0,
+            time + note.duration * quarterNoteTime * 0.5,
+            0.015,
+        );
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         oscillator.stop(time + note.duration * quarterNoteTime);
@@ -79,8 +83,8 @@ const get_meta = (bytes, meta_ptr) => {};
 export const get_note_sequence = (bytes, start) =>
     pairs(get_until_$ff(bytes, start)).map(([note, dur]) => {
         return {
-            freq: 440 * Math.pow(2, (note - 16) / 12),
-            duration: dur / 3,
+            freq: 440 * Math.pow(2, (note - 16 - 6) / 12),
+            duration: dur / 4,
         };
     });
 
@@ -96,12 +100,27 @@ export const get_sfx_ptrs = (bytes, start) => {
     return ptrs;
 };
 
-export const get_sfx = (bytes, ptrs) => {
+const map_meta = ([len, speed, volume, transpose]) => ({
+    len,
+    speed,
+    volume,
+    transpose,
+});
+
+export const get_sfx_ptr_lists = (bytes, ptrs) => {
     return {
         voices: ptrs.voices,
-        meta: take(bytes, ptrs.meta, 4),
+        meta: map_meta(take(bytes, ptrs.meta, 4)),
         voice0: get_ptr_list(bytes, ptrs.voice0),
         voice1: get_ptr_list(bytes, ptrs.voice1),
         voice2: get_ptr_list(bytes, ptrs.voice2),
     };
+};
+
+export const get_sfx = (bytes, start) => {
+    if (!start) {
+        throw new Error("nop start");
+    }
+    const ptrs = get_sfx_ptrs(bytes, start);
+    return get_sfx_ptr_lists(bytes, ptrs);
 };

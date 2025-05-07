@@ -341,20 +341,23 @@ const sfx_data = [
     0x5560, 0x5dea, 0x5e88, 0x5f30, 0x5f78, 0x4b40,
 ];
 
-// sfx 11, voice 0 is weird. points to 19,20 instead of note data
-
 const play = (bytes, id, phrase) => {
-    const ptrs = get_sfx_ptrs(bytes, sfx_data[id]);
-    const sfx = get_sfx(bytes, ptrs);
-    const n1 = get_note_sequence(bytes, sfx.voice0.ptrs[phrase]);
-    const n2 = get_note_sequence(bytes, sfx.voice1.ptrs[phrase]);
-    const n3 = get_note_sequence(bytes, sfx.voice2.ptrs[phrase]);
+    const sfx = get_sfx(bytes, sfx_data[id]);
+    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
+    console.log(bpm, sfx);
 
-    console.log(sfx, n1, n2, n3);
-
-    play_notes(n1);
-    play_notes(n2);
-    play_notes(n3);
+    let any = false;
+    ["0", "1", "2"].forEach((ch) => {
+        const ptrs = sfx["voice" + ch].ptrs;
+        if (phrase < ptrs.length) {
+            const n = get_note_sequence(bytes, ptrs[phrase]);
+            play_notes(n, bpm);
+            any = true;
+        }
+    });
+    if (!any) {
+        throw new Error("no phrase #" + phrase);
+    }
 };
 
 async function handle_tunes() {
