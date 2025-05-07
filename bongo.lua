@@ -587,6 +587,13 @@ if collision_indicator == true then
    })
 end
 
+if starry_night == true then
+    poke(0xb004, 1) -- set stars on
+    -- remove 'disable star' sets
+    poke_rom(0x00D6, { NOP, NOP, NOP, })
+    poke_rom(0x0420, { NOP, NOP, NOP, })
+end
+
 ------------- RAM hacks -------------
 
 run_started = false
@@ -754,14 +761,6 @@ if allow_skip == true then
         end
      end
    end)
-end
-
-
-if starry_night == true then
-    poke(0xb004, 1) -- set stars on
-    -- remove 'disable star' sets
-    poke_rom(0x00D6, { NOP, NOP, NOP, })
-    poke_rom(0x0420, { NOP, NOP, NOP, })
 end
 
 -------------------- OGNOB mode -------------------
