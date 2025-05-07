@@ -5183,8 +5183,8 @@ audio_system:
     ld   hl,write_aysnd_data_chC - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     call reset_sfx_ids
-    ld   hl,sfx_queue_and_copy_data - JMP_HL_OFFSET
-    jr   call_sfx_queuer_and_reset_sfx_ids
+    ld   hl,tick_all_songs_or_load_new - JMP_HL_OFFSET
+    jr   call_tick_all_songs_or_load
 
     dc   2, $FF
 
@@ -5211,7 +5211,7 @@ _2931:
 
 ;;; ==========================================
 
-call_sfx_queuer_and_reset_sfx_ids:
+call_tick_all_songs_or_load:
     call jmp_hl_plus_4k ; hl+4k = sfx_queue_and_copy_data
     call reset_sfx_ids
     ret
@@ -8941,15 +8941,15 @@ sfx_pattern_done_chB:
     inc  hl
     inc  hl
     ld   a,(hl)
-    cp   $EE                    ;pattern continuation maybe
+    cp   $EE                    ;song repeat
     jr   nz,next_pattern_chB
     inc  hl
-    ld   a,(hl)
+    ld   a,(hl)                 ; amount to jump back
     ld   c,a
     ld   b,$00
     scf
     ccf
-    sbc  hl,bc
+    sbc  hl,bc                  ; jump back
     ld   (ix+$03),l
     ld   (ix+$04),h
     ld   a,(hl)
@@ -8976,7 +8976,7 @@ next_pattern_chB:
     call configure_chB
     ret
 
-    dc   1, $FF
+    db   $FF
 
 ;;
 add_pickup_pat_2:
@@ -9055,19 +9055,19 @@ next_pattern_chC:
 ;;; Gets here when sng1_tick = 0
 sng1_tick:
     ld   ix,sng1_base
-    ld   a,(ix+$0d) ; length? maybe "repeat"?
+    ld   a,(ix+$0d) ; num voices
     and  a
-    jr   z,_done_46A1 ; Repeats all done? maybe
+    jr   z,_done_46A1 ; only one? skip the others...
     call chA_tick_note
     ld   a,(ix+$0d)
     dec  a
     jr   z,_done_46A1
-    call chB_tick_note
+    call chB_tick_note ; at least 2 channels, tick the second
     ld   a,(ix+$0d)
     dec  a
     dec  a
     jr   z,_done_46A1
-    call chC_tick_note
+    call chC_tick_note ; 3 channels, tick the third
     ret
 _done_46A1:
     ret
@@ -9302,29 +9302,29 @@ _here:
 ;;; _4840: Checks each channel and plays if there is currently
 ;;; a sfx assigned to it...
 ;;; Note: The copy_sfx_data_chX routine also clear chX_sfx when done
-sfx_queue_and_copy_data:
-    ld   a,(sng1_id)
-    and  a
-    jr   nz,_play_chA
-    call sng1_tick ; no sfx on chA
+tick_all_songs_or_load_new:
+    ld   a,(sng1_id)            ; non-zero means a new song was selected,
+    and  a                      ; because it's zero'd straightaway
+    jr   nz,_new_song_chA
+    call sng1_tick ; zero means a song might be there already, so tick it
     jr   _checkB
-_play_chA:
+_new_song_chA:
     call copy_sfx_data_chA ;
 _checkB:
     ld   a,(sng2_id) ; and try chB?
     and  a
-    jr   nz,_play_chB
+    jr   nz,_new_song_chB
     call sng2_tick ; no sfx on chB
     jr   _checkC
-_play_chB:
+_new_song_chB:
     call copy_sfx_data_chB
 _checkC:
     ld   a,(sng3_id)
     and  a
-    jr   nz,_play_chC
+    jr   nz,_new_song_chC
     call sng3_tick ; no sfx on chC
     jr   _done_486A
-_play_chC:
+_new_song_chC:
     call copy_sfx_data_chC
 _done_486A:
     ret
@@ -9676,7 +9676,8 @@ _sfx_15_meta:
 _sfx_15_voice0: ;_4B36
     dw   intro_jingle           ; voice 0
     dc   4, $FF
-    dw   _4B48
+;; _4B3C
+    dw   _4B48                  ; BAD? points at $00,$01
     dc   2, $FF
 
 sfx_15_data:
@@ -9686,7 +9687,7 @@ sfx_15_data:
     dw   _sfx_15_voice0         ; voice 2
     db   $FF
 _4B48:
-    db   $00,$01
+    db   $00,$01                ; ?
     dc   6, $FF
 
 ;;
@@ -9738,7 +9739,7 @@ _sfx_2_voice1:
     db   $FF
     db   $FF
 
-    db   $0C,$0C ; what??
+    db   $0C,$0C ; what?? Hmm, also is in $FFs! Valid?!
     db   $FF
     db   $FF
 
@@ -10331,7 +10332,7 @@ sfx_4_data:
     dw   _50C8                  ; voice 2
     dc   5, $FF
 _50C8:
-    dw   _50AC  ; really? Middle of $ff's (should be _50CA? Yea, typo i reckon)
+    dw   _50AC  ; Middle of random $FFs. valid.
     dc   2, $FF
 
 ;;; ==== SFX 5 town ====
@@ -10407,7 +10408,8 @@ sfx_6_data:
     dw   _51A8                  ; voice 1
     dw   _51A8                  ; voice 2 (unused?)
     dc   2, $FF
-    db   $98,$11                ; wat
+_51A3:
+    db   $98,$11                ; wat. Is in some $FFs which is valid
     dc   3, $FF
 _51A8:
     db   $FC,$50
@@ -10435,10 +10437,12 @@ _sfx_7_meta:                    ; _51DA
     db   $BA,$51                ; voice 0
     db   $FF
     db   $FF
-    db   $CA,$11                ; wat bytes (not addr)
+; _51E2:
+    db   $CA,$11                ; $11ca = middle of $ffs
     db   $FF
     db   $FF
-    db   $F8,$51                ; more wat bytes! (addr)
+; _51E6:
+    dw   _51F8                 ; pointer to $ff
     db   $FF
     db   $FF
 
@@ -10893,11 +10897,13 @@ _54DA:
 
     rst  $38
 
-;; notes
+    ;; notes
+_54E4:
     db   $2D,$02,$2D,$01,$2D,$01,$2D,$02
     db   $2A,$02,$2D,$02,$32,$04
     db   $FF
     db   $FF
+_54F4:
     db   $21,$02,$21,$01,$21,$01,$21,$02
     db   $1E,$02,$21,$02,$26,$04
     db   $FF
@@ -10905,21 +10911,25 @@ _54DA:
 
 _sfx_8_meta:                    ; _5504
     db   $01,$03,$0F,$00
-    db   $E4,$54                ; voice 0
+_sfx_8_voice0_ptr:
+    dw   _54E4                  ; voice 0
     db   $FF
     db   $FF
-    db   $F4,$54                ; wat bytes
+
+    ;; _550C
+    dw   _54F4                  ; notes.
     db   $FF
     db   $FF
-    dw   _556C                  ; more wat bytes
+    ;; _5510
+    dw   _556C                  ; ->$ff
     db   $FF
     db   $FF
 
 sfx_8_data:
     db   $03
     dw   _sfx_8_meta
-    db   $08,$55                ; voice 1
-    db   $08,$55                ; voice 2
+    dw   _sfx_8_voice0_ptr      ; voice 1
+    dw   _sfx_8_voice0_ptr      ; voice 2 (0,1,2 all the same)
     dc   5, $FF
 
 ;;; This is weird. I think it must have been a debug function.
@@ -11183,11 +11193,11 @@ _sfx_9_meta:                    ;_5760
     dw   _56F8    ; notes
     db   $FF
     db   $FF
-_5768:
+_sfx_9_voice1:
     dw   _5780 ; notes
     db   $FF
     db   $FF
-_576C:
+_sfx_9_voice2:
     dw   _576E ; next byte $ff
 _576E:
     db   $FF
@@ -11196,10 +11206,11 @@ _576E:
 sfx_9_data:
     db   $02
     dw   _sfx_9_meta
-    dw   _5768                  ; voice 1
-    dw   _576C                  ; voice 2
+    dw   _sfx_9_voice1          ; voice 1
+    dw   _sfx_9_voice2          ; voice 2
     dc   9, $FF
-_5780:                          ; notes
+
+_5780:                          ; sfx_9_voice1 notes
     db   $15,$01,$0E,$01,$15,$01,$0E,$01
     db   $15,$01,$10,$01,$15,$01,$10,$01
     db   $13,$01,$0E,$01,$13,$01,$0E,$01
@@ -11676,7 +11687,7 @@ _sfx_11_voice_0:
     dw   _5DAC    ;
     db   $EE,$07  ; jump back 7 bytes (_sfx_11_voice_1)
 _5DDC:
-    db   $CC,$1D  ; waaat
+    db   $CC,$1D  ; BAD? This seems to land in data in level_bg__S. Not $FFs.
     db   $FF,$FF
 _5DE0: ; voice 1
     dw   _5D30 ; note data
@@ -11721,9 +11732,9 @@ _5E4C:         ; notes
 
 _meta_sfx12 ; sfx meta:
     db   $01,$06,$0F,$00
-_sfx_12_voice0 ; just points at $FF.
+_sfx_12_voice0 ; points into the following $FF.
     db   $80,$5E
-
+;; _5E7B
     dc   13, $FF
 
 sfx_12_data:
