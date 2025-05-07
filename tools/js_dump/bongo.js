@@ -1,4 +1,10 @@
-import { play_notes } from "./play_notes.js";
+import {
+    play_notes,
+    get_note_sequence,
+    chunk,
+    get_sfx_ptrs,
+    get_sfx,
+} from "./play_notes.js";
 
 const pal = [
     ["#3ea202", "#e01d01", "#e0e0d9"],
@@ -16,16 +22,6 @@ const pal = [
         b: parseInt(c.substring(5, 7), 16),
     })),
 );
-
-const chunk = (arr, size) => {
-    const out = [];
-    let i = 0;
-    while (i < arr.length) {
-        out.push(arr.slice(i, i + size));
-        i += size;
-    }
-    return out;
-};
 
 (async () => {
     const getRomBytes = (rom) =>
@@ -320,31 +316,40 @@ const getRomBytes = (rom) =>
         .then((r) => r.arrayBuffer())
         .then((buf) => [...new Uint8Array(buf)]);
 
-const tunes_5 = [0xb0c, 0xa80, 0x4c0, 0xa20];
+const tunes_5 = [
+    0x4ae4, 0x4ac4, 0x4aaa, 0x4a94, 0x4a80, 0x4b0c, 0x4a80, 0x44c0, 0x4a20,
+];
 const tunes_6 = [
-    0xf38, 0x132, 0x550, 0x6f8, 0xdf4, 0xc86, 0xd30, 0xd64, 0xe4c, 0xea0,
+    0x5f38, 0x5132, 0x5550, 0x56f8, 0x5df4, 0x5c86, 0x5d30, 0x5d64, 0x5e4c,
+    0x5ea0,
+];
+
+async function get_bongo() {
+    return [
+        ...(await getRomBytes("bg1.bin")),
+        ...(await getRomBytes("bg2.bin")),
+        ...(await getRomBytes("bg3.bin")),
+        ...(await getRomBytes("bg4.bin")),
+        ...(await getRomBytes("bg5.bin")),
+        ...(await getRomBytes("bg6.bin")),
+    ];
+}
+
+const sfx_data = [
+    0x5d00, 0x4c46, 0x5053, 0x50bc, 0x50ec, 0x519a, 0x51ea, 0x5514, 0x5770,
+    0x5560, 0x5dea, 0x5e88, 0x5f30, 0x5f78, 0x4b40,
 ];
 
 async function handle_tunes() {
-    const bytes = await getRomBytes("bg6.bin");
+    const bytes = await get_bongo();
     const val = parseInt(document.getElementById("notes").value) ?? 0;
 
     const start = tunes_6[0];
-    const notes = [];
-    let idx = 0;
-    let min = 9999;
-    let max = 0;
-    while (bytes[start + idx] != 0xff) {
-        const note = bytes[start + idx++];
-        const duration = bytes[start + idx++];
-        if (duration < min) min = duration;
-        if (duration > max) max = duration;
-        const freq = 440 * Math.pow(2, (note - 16) / 12);
-        notes.push(freq);
-        notes.push(duration / 3);
-    }
-
-    console.log("Notes: ", notes.length / 2, min, max);
+    const ptrs = get_sfx_ptrs(bytes, sfx_data[10]);
+    const sfx = get_sfx(bytes, ptrs);
+    console.log(ptrs, sfx);
+    const notes = get_note_sequence(bytes, start);
+    console.log("Notes: ", notes.length);
 
     document.getElementById("play").addEventListener(
         "click",

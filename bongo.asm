@@ -1018,7 +1018,8 @@ _lp_0351:
 ;;; - YOUR BEING CHASED screen
 play_attract_screens:
     call reset_xoff_sprites_and_clear_screen
-    ld   hl,check_for_new_sfx_notes - JMP_HL_OFFSET
+    ;;; why check notes... no music! (is it the _8046 var?)
+    ld   hl,check_for_new_notes - JMP_HL_OFFSET
     call jmp_hl_plus_4k
     ld   hl,attract_splash_bongo - JMP_HL_OFFSET
     call jmp_hl_plus_4k
@@ -5159,7 +5160,7 @@ move_dino_x:
 ;;;     if sng1_id != 0:
 ;;;        sng1_tick
 ;;;     copy_sfx_data_chA:
-;;;        reset_snd1
+;;;        reset_sng1
 ;;;        point_hl_to_sfx_data
 ;;;        copy_cur_sfx_data_to_RAM
 ;;;        sng1_id = 0
@@ -9085,7 +9086,7 @@ add_a_to_ret_addr:
 
 ;;; Resets 24 bytes for sound 1
 ;;; _46C0:
-reset_snd1:
+reset_sng1:
     ld   hl,sng1_base
     ld   b,$18
 _46C5:
@@ -9097,7 +9098,7 @@ _46C5:
     dc   5, $FF
 
 copy_sfx_data_chA:
-    call reset_snd1
+    call reset_sng1
     ld   a,(sng1_id)
     call point_hl_to_sfx_data
     ld   ix,sng1_base
@@ -9331,7 +9332,7 @@ _done_486A:
     dc   5, $FF
 
 ;;; Resets 24 bytes of sfx RAM for song 3
-reset_snd3:
+reset_sng3:
     ld   hl,sng3_base
     ld   b,$18
 _4875:
@@ -9365,7 +9366,7 @@ sng3_tick:
     dc   2, $FF
 
 copy_sfx_data_chC:
-    call reset_snd3
+    call reset_sng3
     ld   a,(sng3_id)
     call point_hl_to_sfx_data
     ld   ix,sng3_base
@@ -9423,7 +9424,7 @@ jump_rel_a_copy:  ; duplicate routine
     dc   7, $FF
 
 ;;; Resets 24 bytes of sfx RAM for channel B
-reset_snd2:
+reset_sng2:
     ld   hl,sng2_base
     ld   b,$18
 _4915:
@@ -9435,7 +9436,7 @@ _4915:
     dc   5, $FF
 
 copy_sfx_data_chB:
-    call reset_snd2
+    call reset_sng2
     ld   a,(sng2_id)
     call point_hl_to_sfx_data
     ld   ix,sng2_base
@@ -9727,7 +9728,7 @@ _sfx_2_voice2:
     dw   _sfx_2_done
 _sfx_2_done:
     dc   4, $FF
-_meta_sfx_2:
+_sfx_2_meta:
     db   $01,$04,$0F,$00
     dw   _sfx_2_voice0
     dc   2, $FF
@@ -9744,7 +9745,7 @@ _sfx_2_voice1:
 ;;; SFX2: Death ditty
 sfx_2_data:
     db   $03
-    dw   _meta_sfx_2
+    dw   _sfx_2_meta
     dw   _sfx_2_voice1
     dw   _sfx_2_voice2 ; just ->$FF
     dc   3, $FF
@@ -10925,7 +10926,7 @@ sfx_8_data:
 ;;; Sets reg A depending on which channel has a note in queue.
 ;;; But it's called from intro/reset routines where no sound
 ;;; is even playing...
-check_for_new_sfx_notes:
+check_for_new_notes:
     xor  a
     ld   (_8046),a            ; sets weird val to 0
     ld   a,(chA_new_note_flag)  ; new note in queue?
@@ -11087,33 +11088,12 @@ chased_by_a_dino_screen:
     db   $FF
     db   $FF
     db   $FF
-    db   $0E,$02
-    db   $13
-    db   $04
-    db   $13
-    db   $04
-    db   $13
-    db   $02
-    db   $13
-    db   $06,$1A
-    db   $04
-    db   $1A
-    db   $04
-    db   $1A
-    db   $02
-    db   $1E,$06
-    db   $1C
-    db   $04
-    db   $1E,$02
-    db   $1C
-    db   $02
-    db   $1A
-    db   $06,$17
-    db   $04
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    db   $0E,$02,$13,$04,$13,$04,$13,$02
+    db   $13,$06,$1A,$04,$1A,$04,$1A,$02
+    db   $1E,$06,$1C,$04,$1E,$02,$1C,$02
+    db   $1A,$06,$17,$04
+    dc   4, $FF
+
     db   $13,$02,$17,$02,$18,$02,$1A,$02
     db   $1A,$04,$1A,$04,$1A,$06,$1A,$02
     db   $18,$06,$18,$04,$18,$02,$18,$02
@@ -11134,12 +11114,9 @@ chased_by_a_dino_screen:
     db   $13,$06,$13,$04,$13,$02,$13,$02
     db   $13,$02,$13,$02,$13,$02,$0E,$04
     db   $13,$04,$13,$02,$15,$02
-    db   $FF
-    db   $FF
-    db   $FF
-    db   $FF
+    dc   4, $FF
 
-    db   $05
+    db   $05                    ; wat
     db   $05
     db   $0C
     db   $00
@@ -11176,10 +11153,10 @@ draw_buggy_border:
 
 ;;
 reset_sounds:
-    call reset_snd1
-    call reset_snd3
-    call reset_snd2
-    call check_for_new_sfx_notes
+    call reset_sng1
+    call reset_sng3
+    call reset_sng2
+    call check_for_new_notes
     ret
 
     dc   3, $FF
@@ -11625,11 +11602,11 @@ _sfx_1_voice0:  ; _5C86:
 
 sfx_1_data:
     db   $02                    ; num voices.
-    dw   _meta_sfx_1
+    dw   _sfx_1_meta
     dw   _sfx_1_voice1 ;
     dw   _sfx_1_voice1 ; also voice 2? maybe ignored cause num chan = 2?
     db   $FF
-_meta_sfx_1:
+_sfx_1_meta:
     db   $01,$08,$0E,$00  ; len(rep?)/speed/volume/transpose
     dw   _sfx_1_voice0    ; note data "fast weird ditty"
     db   $EE,$03          ; jump back 3 bytes.
