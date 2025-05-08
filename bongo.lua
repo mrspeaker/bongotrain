@@ -18,9 +18,10 @@
 
       infinite_lives = false
 
-   There are tonnes of things to set - some are really useful if you're trying to
+   There are stacks of options to try: some are really useful if you're trying to
    improve your Bongo runs, some are just for fun, and a bunch are things I was
    testing when I found it buried in unused code in the Bongo ROM dump.
+   (see https://github.com/mrspeaker/bongotrain/blob/main/bongo.asm)
 
    RUNNING
 
@@ -80,7 +81,7 @@ ognob_mode = true             -- open-world Bongo. Can go out left or right.
                 ======= Official OGNOB MODE Rules =======
 
    You've caught the dinosaur and danced with Bongo & friends, but your knees
-   can handle more? Then exit stage left... and try your luck in the wild world
+   can handle more? Exit stage left... and try your luck in the wild world
    of Ognob.
 
    Ognob competitive settings:
@@ -260,7 +261,7 @@ function peek_rom(addr)
    return mem:read_direct_u8(addr)
 end
 
-function poke_gfx(color, addr, byte)
+function poke_gfx(addr, byte, color)
    if color & 1 == 1 then
       gfx1:write_u8(addr, byte)
    end
@@ -541,30 +542,30 @@ end
 if collision_indicator == true then
    -- draw in empty "solid" tile graphics (otherwise it draws holes)
    for i = 0, 7 do
-      poke_gfx(2, 0xf9 * 0x8 + i, 0x7f)
-      poke_gfx(1, 0xfb * 0x8 + i, 0x7f)
-      poke_gfx(2, 0xff * 0x8 + i, 0x7f)
+      poke_gfx(0xf9 * 0x8 + i, 0x7f, 2)
+      poke_gfx(0xfb * 0x8 + i, 0x7f, 1)
+      poke_gfx(0xff * 0x8 + i, 0x7f, 2)
    end
 
    -- draw a "collision pole" in player graphics
    local feet_frames = {0x135, 0x13d, 0x145, 0x14d, 0x155, 0x161}
    for i, v in pairs(feet_frames) do
       -- middle pole
-      poke_gfx(1, v * 0x8 + 7, 0x55)
-      poke_gfx(2, v * 0x8 + 7, 0xAA)
+      poke_gfx(v * 0x8 + 7, 0x55, 1)
+      poke_gfx(v * 0x8 + 7, 0xAA, 2)
 
       -- blank out columns next
-      poke_gfx(3, v * 0x8 + 5, 0x00)
-      poke_gfx(3, v * 0x8 + 6, 0x00)
-      poke_gfx(3, v * 0x8 + 8 + 8, 0x00)
-      poke_gfx(3, v * 0x8 + 8 + 8 + 1, 0x00)
+      poke_gfx(v * 0x8 + 5, 0x00, 3)
+      poke_gfx(v * 0x8 + 6, 0x00, 3)
+      poke_gfx(v * 0x8 + 8 + 8, 0x00, 3)
+      poke_gfx(v * 0x8 + 8 + 8 + 1, 0x00, 3)
 
       -- fwd/back markers
-      --poke_gfx(2, v * 0x8, 0x3f)
-      poke_gfx(1, v * 0x8 + 8 + 8 + 3, 0x55)
-      poke_gfx(2, v * 0x8 + 8 + 8 + 3, 0xAA)
-      poke_gfx(3, v * 0x8 + 8 + 8 + 2, 0x00)
-      poke_gfx(3, v * 0x8 + 8 + 8 + 4, 0x00)
+      --poke_gfx(v * 0x8, 0x3f, 2)
+      poke_gfx(v * 0x8 + 8 + 8 + 3, 0x55, 1)
+      poke_gfx(v * 0x8 + 8 + 8 + 3, 0xAA, 2)
+      poke_gfx(v * 0x8 + 8 + 8 + 2, 0x00, 3)
+      poke_gfx(v * 0x8 + 8 + 8 + 4, 0x00, 3)
    end
 
    --- rotate through tiles as player walks
