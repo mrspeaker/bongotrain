@@ -1,10 +1,10 @@
 import { chunk, take, pairs, as_byte, as_dw, to_hex } from "./utils.js";
 
 //note_data = { freq, duration }
-export function play_notes(note_data, bpm = 120) {
+export function play_notes(note_data, start = 0, bpm = 120) {
     const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
-    let time = audioContext.currentTime + 0.1; // start in the future
+    let time = audioContext.currentTime + (start || 0.1); // start in the future
     let quarterNoteTime = 60 / bpm;
 
     let oscillator = audioContext.createOscillator();
@@ -29,6 +29,7 @@ export function play_notes(note_data, bpm = 120) {
         // advance time by length of note
         time += note.duration * quarterNoteTime;
     }
+    return time;
 }
 
 export const get_until_$ff = (bytes, start = 0) => {
@@ -105,7 +106,8 @@ export const get_sfx_ptr_lists = (bytes, ptrs) => {
     };
 };
 
-export const get_sfx = (bytes, start) => {
+export const get_song_ptrs = (bytes, start) => {
+    console.log(bytes, start);
     if (!start) {
         throw new Error("nop start");
     }

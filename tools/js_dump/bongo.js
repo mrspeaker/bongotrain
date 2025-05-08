@@ -1,10 +1,12 @@
 import { get_bongo_bytes, get_rom_bytes } from "./rom.js";
 
+import { $, $set, $get, $click } from "./dom.js";
+
 import {
     play_notes,
     get_note_sequence,
     get_sfx_ptrs,
-    get_sfx,
+    get_song_ptrs,
 } from "./play_notes.js";
 
 import { pal, mk_tiles_from_rom, draw_tile } from "./extract_gfx.js";
@@ -259,6 +261,13 @@ const sfx_data = [
     0x5560, 0x5dea, 0x5e88, 0x5f30, 0x5f78, 0x4b40,
 ];
 
+const mk_ui = () => ({
+    btnPlay: $("#play"),
+    notes: $("#notes"),
+    phrase: $("#phrase"),
+    songs: $("#songs"),
+});
+
 const play = (bytes, id, phrase) => {
     const sfx = get_sfx(bytes, sfx_data[id]);
     const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
@@ -269,7 +278,7 @@ const play = (bytes, id, phrase) => {
         const ptrs = sfx["voice" + ch].ptrs;
         if (phrase < ptrs.length) {
             const n = get_note_sequence(bytes, ptrs[phrase]);
-            play_notes(n, bpm);
+            play_notes(n, 0, bpm);
             any = true;
         }
     });
@@ -278,19 +287,51 @@ const play = (bytes, id, phrase) => {
     }
 };
 
+const play_song = (bytes, id) => {
+    const sfx = get_sfx(bytes, sfx_data[id]);
+    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
+    console.log(bpm, sfx);
+
+    const phrase = 0;
+    let any = false;
+    let lens = [[], [], []];
+    ["0", "1", "2"].forEach((ch, i) => {
+        const ptrs = sfx["voice" + ch].ptrs;
+        console.log(ch, ptrs.length);
+        if (phrase < ptrs.length) {
+            const n = get_note_sequence(bytes, ptrs[phrase]);
+            lens[i].push(n.length);
+            play_notes(n, 0, bpm);
+            any = true;
+        }
+    });
+    console.log(sfx, lens);
+    if (!any) {
+        throw new Error("no phrase #" + phrase);
+    }
+};
+
+const get_song = (bytes, id) => {
+    const sfx = get_song_ptrs(bytes, id);
+    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
+
+    return { sfx, bpm };
+};
+
 async function handle_tunes() {
     const bytes = await get_bongo_bytes();
-    document.getElementById("play").addEventListener(
-        "click",
-        () => {
-            const song =
-                parseInt(document.getElementById("notes").value, 10) ?? 0;
-            const phrase =
-                parseInt(document.getElementById("phrase").value, 10) ?? 0;
-            play(bytes, song, phrase);
-        },
-        false,
-    );
+    const all_songs = sfx_data.map((i) => get_song(bytes, i));
+
+    const ui = mk_ui();
+
+    $set(ui.songs, JSON.stringify(all_songs, null, 1));
+
+    $click(ui.btnPlay, () => {
+        const song = parseInt($get(ui.notes), 10) ?? 0;
+        const phrase = parseInt($get(ui.phrase), 10) ?? 0;
+        //play(bytes, song, phrase);
+        play_song(bytes, song);
+    });
 }
 
 handle_tunes();
