@@ -2198,8 +2198,17 @@ platform_scroll_data_addr:
     db $38,$0C,$38,$0C,$38,$0C,$38,$0C
     db $38,$0C,$38,$0C,$10,$0C
 
-;; 70 zeros/nops. That's a lotta nops. (free bytes?)
+;; _0B36: ; 70 zeros/nops. That's a lotta nops. (free bytes?)
     dc 70,$0
+;; NOP note: in bongo "set two" now these bytes are at 0xb40
+;; (though, nothing seems to call it):
+;; a7         and a
+;; c0         ret nz
+;; f5         push af
+;; 3e ff      ld a,$ff
+;; 32 00 b8   ld ($B800),a ; watchdog
+;; f1         pop af
+;; c9         ret
 
     dc 4,$FF
 

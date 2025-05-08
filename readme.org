@@ -84,9 +84,9 @@ dc 70,$0
 #+END_SRC
 
 Looks like somone thought the same and put that routine there.
-Thing is, it's loaded at 0x0b40... but nothing ever calls that :(
+Thing is, it's loaded at 0x0b40... but nothing ever calls that?! :(
 
-in rom 3: 00000288 3e -> c9 (ret
+in rom 3: 00000288 3e -> c9 (ret)
 
 #+BEGIN_SRC
 2288          	write_out_0_and_1:
@@ -109,20 +109,25 @@ in rom 3: 0000042c cd -> c9 (ret)
 242F  C9      	    ret
 #+END_SRC
 
-Func that's skipped is:
+The routine that is skipped over is weird (comments from my dissasembly):
 #+BEGIN_SRC
+		;;; seems odd: read input, write to sound
+		;;; then read from sound and update input?
+		;;; Happens every frame from from NMI
+		;;; Hmm, if there was some kind of hardware
+		;;; easter egg/cheat it would be here...
 3640          	check_buttons_for_something:
 3640  C5      	    push bc
-3641  3AF183  	    ld   a,(input_buttons)
-3644  E63F    	    and  $3F ; 0011 1111
-3646  4F      	    ld   c,a
-3647  3E0E    	    ld   a,$0E
-3649  D300    	    out  ($00),a
-364B  DB02    	    in   a,($02)
-364D  32F283  	    ld   (input_buttons_2),a
-3650  E6C0    	    and  $C0
-3652  81      	    add  a,c
-3653  32F183  	    ld   (input_buttons),a
+3641  3AF183  	    ld   a,(input_buttons) ; check button inputs
+3644  E63F    	    and  00111111b         ; keeps up/down/jump
+3646  4F      	    ld   c,a               ;
+3647  3E0E    	    ld   a,ay_port_a       ; value from data port A read
+3649  D300    	    out  (aysnd_write_0),a ; select reg?
+364B  DB02    	    in   a,(aysnd_read)    ; read from sound?
+364D  32F283  	    ld   (dsw_flags),a     ; set result as DSW?!
+3650  E6C0    	    and  11000000b         ; but only coinage+cabinet?!
+3652  81      	    add  a,c               ; add?!
+3653  32F183  	    ld   (input_buttons),a ; and save?! Crazy.
 3656  C1      	    pop  bc
 3657  C9      	    ret
 #+END_SRC
