@@ -30,9 +30,7 @@ The Bongo source can be compiled with the [[http://48k.ca/zmac.html][zmac]] z80 
 If you change bytes, the CRCs will fail - but you can still get a bootleg build of Bongo... why not make your very own version?
 
 ** TODOs
-Although most of the larger structure has been reversed, there are still heaps of unknown/unspecified symbols and addresses.
-
-Also, the audio routines have not been figured out at all... they are mostly towards the end of the file, and contain a lot of data. I'm not sure about the format of it, so I can't just squish it all into db's: there is obviously lots of "note" data, but also there are a lot of indirect address jumps: which is hard to verify. The best way is look at `bongo.lst` as you need to know where the addresses jump to!
+Although most of the larger structure has been reversed, there are still heaps of unknown/unspecified symbols and addresses. Code is data and data is code - so it's hard to verify when something is really not called. The best way is to use the MAME debugger, and to look at `zout/bongo.lst` as you need to know where the addresses jump to!
 
 ** BONGOA: Bongo Set 2
 A new bongo set came out - which was exciting... buuut, spoilers: absolutely nothin' in it.
@@ -66,7 +64,7 @@ cmp -l -x zout/bg3.bin dump/bongoa/3-2532.bin
 
 Total of 11 bytes changed. no new game modes, or gfx changes or anything :(
 
-There were also bytes added at 0xb40:
+This was the code added at 0x0b40:
 #+BEGIN_SRC
 a7         and a
 c0         ret nz
