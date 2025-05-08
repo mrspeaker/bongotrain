@@ -1,51 +1,15 @@
+import { get_bongo_bytes, get_rom_bytes } from "./rom.js";
+
 import {
     play_notes,
     get_note_sequence,
-    chunk,
     get_sfx_ptrs,
     get_sfx,
-    to_hex,
 } from "./play_notes.js";
 
-const pal = [
-    ["#3ea202", "#e01d01", "#e0e0d9"],
-    ["#c3c344", "#e00700", "#0b01d9"],
-    ["#e08500", "#e00700", "#e0e0d9"],
-    ["#00a200", "#005b94", "#e00700"],
-    ["#c3c344", "#0b01d9", "#e0e0d9"],
-    ["#e00700", "#e0e0d9", "#a23ed9"],
-    ["#c3c344", "#0085d9", "#e0e0d9"],
-    ["#e0e0d9", "#0085d9", "#c3c344"],
-].map((p) =>
-    p.map((c) => ({
-        r: parseInt(c.substring(1, 3), 16),
-        g: parseInt(c.substring(3, 5), 16),
-        b: parseInt(c.substring(5, 7), 16),
-    })),
-);
+import { pal, mk_tiles_from_rom, draw_tile } from "./extract_gfx.js";
 
 (async () => {
-    const getRomBytes = (rom) =>
-        fetch(`./dump/bongo/${rom}`)
-            .then((r) => r.arrayBuffer())
-            .then((buf) => [...new Uint8Array(buf)]);
-
-    const b = (byte) => byte.toString(2).padStart(8, "0");
-    const rot90 = (tile) => {
-        const out = [];
-        for (let col = 0; col < 8; col++) {
-            const mask = 1 << (7 - col); // 128, 64, 32, 16, 8, 4, 2, 1
-            const flp = [1, 2, 4, 8, 16, 32, 64, 128];
-            let v = 0;
-            for (let row = 0; row < 8; row++) {
-                const shr = row; // 0,1,2,3,4,5,6,7
-                v += !!(tile[row] & mask) << row;
-            }
-            out.push(v);
-        }
-        return out;
-    };
-
     const ctx = document.getElementById("board").getContext("2d");
     const ctx_dst = document.getElementById("dst").getContext("2d");
     const w = ctx.canvas.width;
@@ -53,40 +17,10 @@ const pal = [
     const pix = ctx.getImageData(0, 0, w, h);
     const pix_dst = ctx.getImageData(0, 0, w, h);
 
-    const bytes1 = await getRomBytes("b-h.bin");
-    const bytes2 = await getRomBytes("b-k.bin");
-    const tiles1 = chunk(bytes1, 8).map(rot90);
-    const tiles2 = chunk(bytes2, 8).map(rot90);
-    // smoosh tiles 1 and 2 bytes into an array of pixel values (0-3)
-    const tiles = tiles1.map((t, i) =>
-        t.map((byte1, j) => {
-            const px = [];
-            const byte2 = tiles2[i][j];
-            for (let k = 0; k < 8; k++) {
-                const mask = 1 << (7 - k);
-                const b1 = !!(byte1 & mask);
-                const b2 = !!(byte2 & mask);
-                // 4bits-per-pixel
-                px.push((b1 << 1) | b2);
-            }
-            return px;
-        }),
-    );
+    const bytes1 = await get_rom_bytes("b-h.bin");
+    const bytes2 = await get_rom_bytes("b-k.bin");
 
-    const drawTile = (tile, x, y, cols, px) => {
-        for (let j = 0; j < 8; j++) {
-            const row = tile[j];
-            for (let i = 0; i < 8; i++) {
-                const p = row[i];
-                if (p === 0) continue;
-                const off = (y * w + j * w + x + i) * 4;
-                (px || pix).data[off + 0] = cols[p - 1].r;
-                (px || pix).data[off + 1] = cols[p - 1].g;
-                (px || pix).data[off + 2] = cols[p - 1].b;
-                (px || pix).data[off + 3] = 255;
-            }
-        }
-    };
+    const tiles = mk_tiles_from_rom(bytes1, bytes2);
 
     const cell_size = 8; // each sprite cell is 8 x 8
     const spr_size = cell_size * 2; // a "sprite" is 2 x 2 cells
@@ -95,10 +29,10 @@ const pal = [
     // The format in memory is weird: [[1, 0], [1, 1], [0, 0], [0, 1]]
     const drawSpr = (spr, x, y, cols, px) => {
         const off = 0 + spr * 4;
-        drawTile(tiles[off], x + cell_size, y, cols, px);
-        drawTile(tiles[off + 1], x + cell_size, y + cell_size, cols, px);
-        drawTile(tiles[off + 2], x, y, cols, px);
-        drawTile(tiles[off + 3], x, y + cell_size, cols, px);
+        draw_tile(tiles[off], x + cell_size, y, w, cols, px);
+        draw_tile(tiles[off + 1], x + cell_size, y + cell_size, w, cols, px);
+        draw_tile(tiles[off + 2], x, y, w, cols, px);
+        draw_tile(tiles[off + 3], x, y + cell_size, w, cols, px);
     };
 
     // Render tiles (alphabet single tiles)
@@ -107,7 +41,7 @@ const pal = [
     for (let j = 0; j < th; j++) {
         for (let i = 0; i < tw; i++) {
             const t = j * tw + i;
-            drawTile(tiles[t], i * cell_size, j * cell_size, pal[0]);
+            draw_tile(tiles[t], i * cell_size, j * cell_size, w, pal[0], pix);
         }
     }
     // Render sprites
@@ -128,7 +62,7 @@ const pal = [
                     : spr > 115 && spr < 120
                     ? pal[7]
                     : pal[2];
-            drawSpr(spr, i * spr_size, j * spr_size + yoff, col);
+            drawSpr(spr, i * spr_size, j * spr_size + yoff, col, pix);
         }
     }
 
@@ -228,7 +162,7 @@ const pal = [
         [0x79 - o, 2 + o2, 23, 0],
         [0x7d - o, 3 + o2, 23, 0],
     ].forEach(([t, x, y, col]) => {
-        drawTile(tiles[t], x * cell_size, y * cell_size, pal[col], pix_dst);
+        draw_tile(tiles[t], x * cell_size, y * cell_size, w, pal[col], pix_dst);
     });
 
     // Map sprites to dest
@@ -312,11 +246,6 @@ const pal = [
     ctx_dst.putImageData(pix_dst, 0, 0);
 })();
 
-const getRomBytes = (rom) =>
-    fetch(`./dump/bongo/${rom}`)
-        .then((r) => r.arrayBuffer())
-        .then((buf) => [...new Uint8Array(buf)]);
-
 const tunes_5 = [
     0x4ae4, 0x4ac4, 0x4aaa, 0x4a94, 0x4a80, 0x4b0c, 0x4a80, 0x44c0, 0x4a20,
 ];
@@ -324,17 +253,6 @@ const tunes_6 = [
     0x5f38, 0x5132, 0x5550, 0x56f8, 0x5df4, 0x5c86, 0x5d30, 0x5d64, 0x5e4c,
     0x5ea0,
 ];
-
-async function get_bongo() {
-    return [
-        ...(await getRomBytes("bg1.bin")),
-        ...(await getRomBytes("bg2.bin")),
-        ...(await getRomBytes("bg3.bin")),
-        ...(await getRomBytes("bg4.bin")),
-        ...(await getRomBytes("bg5.bin")),
-        ...(await getRomBytes("bg6.bin")),
-    ];
-}
 
 const sfx_data = [
     0x5d00, 0x4c46, 0x5053, 0x50bc, 0x50ec, 0x519a, 0x51ea, 0x5514, 0x5770,
@@ -361,7 +279,7 @@ const play = (bytes, id, phrase) => {
 };
 
 async function handle_tunes() {
-    const bytes = await get_bongo();
+    const bytes = await get_bongo_bytes();
     document.getElementById("play").addEventListener(
         "click",
         () => {

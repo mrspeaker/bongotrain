@@ -8629,7 +8629,7 @@ configure_chA:
     inc  hl         ;
     ld   b,(hl)     ; note duration in b
     ld   a,(ix+$0f) ; pattern velocity
-    ld   c,a        ; c = init value of a
+    ld   c,a        ; c = velocity
 _433A:
     dec  b          ; for b to 0:
     jr   z,_4340    ;
@@ -9188,7 +9188,7 @@ _sfx_data_lookup:
     ret
     ld   hl,sfx_10_data ; a few notes, would be a good "inserted credit", but not sure where this is
     ret
-    ld   hl,sfx_11_data ; banjo intro to standard good time tune
+    ld   hl,sfx_11_data ; No.. not sure. Like sfx15
     ret
     ld   hl,sfx_12_data ; best one scary woods today song
     ret
@@ -11693,7 +11693,7 @@ _sfx_11_voice_0:
     db   $EE,$07  ; jump back 7 bytes (_sfx_11_voice_1)
 _5DDC:
     db   $CC,$1D  ; BAD? This seems to land in data in level_bg__S. Not $FFs.
-    db   $FF,$FF
+    db   $FF,$FF    ; - and plays VERY high notes in my web version xD
 _5DE0: ; voice 1
     dw   _5D30 ; note data
     dw   _5D64 ; note data
@@ -11827,7 +11827,7 @@ _sfx_14_voice2: ; ch2 notes
     dw   _4AC4
     dw   _4AE4
     dw   _4AE4
-    dw   _4B06  ; hmm, just $15,$20
+    dw   _4B06  ; hmm, just $15,$20. In the game there is a tone - like it repeat "rests" from the previous note?
     dw   _4B06  ; hmm, just $15,$20
     db   $EE,$0B ; jump back 11 bytes (to _sfx_14_voice2)
 

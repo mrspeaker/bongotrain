@@ -1,3 +1,5 @@
+import { chunk, take, pairs, as_byte, as_dw, to_hex } from "./utils.js";
+
 //note_data = { freq, duration }
 export function play_notes(note_data, bpm = 120) {
     const audioContext = new (window.AudioContext ||
@@ -17,7 +19,7 @@ export function play_notes(note_data, bpm = 120) {
         gainNode.gain.setValueAtTime(0.1, time);
         gainNode.gain.setTargetAtTime(
             0.0,
-            time + note.duration * quarterNoteTime * 0.5,
+            time + note.duration * quarterNoteTime * 0.6,
             0.015,
         );
         oscillator.connect(gainNode);
@@ -37,24 +39,6 @@ export const get_until_$ff = (bytes, start = 0) => {
     }
     return out;
 };
-
-const take = (bytes, start, n) => bytes.slice(start, start + n);
-
-export const chunk = (bytes, size = 2) => {
-    const out = [];
-    let i = 0;
-    while (i < bytes.length) {
-        out.push(take(bytes, i, size));
-        i += size;
-    }
-    return out;
-};
-
-export const pairs = (bytes, start) => chunk(bytes);
-
-const as_byte = ([a]) => a;
-const as_dw = ([a, b]) => (b << 8) + a;
-export const to_hex = (v) => "0x" + v.toString(16);
 
 const follow = (bytes, ptr) => as_dw(take(bytes, ptr, 2));
 
@@ -82,9 +66,13 @@ const get_meta = (bytes, meta_ptr) => {};
 
 export const get_note_sequence = (bytes, start) =>
     pairs(get_until_$ff(bytes, start)).map(([note, dur]) => {
+        // note: dur % 8 not right. Should figure out the calc
+        // from configure_chA where they do vel * duration
+        // this can wrap, which means the actual max duration
+        // is capped... to some value.
         return {
-            freq: 440 * Math.pow(2, (note - 16 - 6) / 12),
-            duration: dur / 4,
+            freq: 440 * Math.pow(2, (note - 22.5) / 12),
+            duration: (dur % 8) / 4,
         };
     });
 
