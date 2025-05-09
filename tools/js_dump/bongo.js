@@ -288,33 +288,16 @@ const play = (bytes, id, phrase) => {
 };
 
 const play_song = (song) => {
-    console.log("dddddd", song);
-    ["0", "1", "2"].forEach((ch, i) => {
-        // const b = song[
-    });
-    return;
-
-    const sfx = get_sfx(bytes, sfx_data[id]);
-    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
-    console.log(bpm, sfx);
-
-    const phrase = 0;
-    let any = false;
-    let lens = [[], [], []];
-    ["0", "1", "2"].forEach((ch, i) => {
-        const ptrs = sfx["voice" + ch].ptrs;
-        console.log(ch, ptrs.length);
-        if (phrase < ptrs.length) {
-            const n = get_note_sequence(bytes, ptrs[phrase]);
-            lens[i].push(n.length);
-            play_notes(n, 0, bpm);
-            any = true;
-        }
-    });
-    console.log(sfx, lens);
-    if (!any) {
-        throw new Error("no phrase #" + phrase);
-    }
+    // TODO: no, patterns have different durations - need to start next pattern after longest previous!
+    song.voice0.patterns.reduce((time, pattern) => {
+        return play_notes(pattern, time, song.bpm);
+    }, 0);
+    song.voice1.patterns.reduce((time, pattern) => {
+        return play_notes(pattern, time, song.bpm);
+    }, 0);
+    song.voice2.patterns.reduce((time, pattern) => {
+        return play_notes(pattern, time, song.bpm);
+    }, 0);
 };
 
 const expand_voice = (bytes, voice) => {

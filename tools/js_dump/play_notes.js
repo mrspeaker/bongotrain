@@ -4,7 +4,7 @@ import { chunk, take, pairs, as_byte, as_dw, to_hex } from "./utils.js";
 export function play_notes(note_data, start = 0, bpm = 120) {
     const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
-    let time = audioContext.currentTime + (start || 0.1); // start in the future
+    let time = start || audioContext.currentTime + 0.1; // start in the future
     let quarterNoteTime = 60 / bpm;
 
     let oscillator = audioContext.createOscillator();
