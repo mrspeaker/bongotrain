@@ -49,7 +49,7 @@ for index in ${!obj[*]}; do
     then
         echo
         echo "CRC error: ${obj[$index]} - ${rom[$index]} (${index}k):"
-        cmp -l -x ${obj[$index]} ${rom[$index]} | head -n 5
+        cmp -l ${obj[$index]} ${rom[$index]} | head -n 5
         err=$((err+1))
     fi
 done

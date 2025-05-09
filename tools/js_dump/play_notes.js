@@ -107,7 +107,6 @@ export const get_sfx_ptr_lists = (bytes, ptrs) => {
 };
 
 export const get_song_ptrs = (bytes, start) => {
-    console.log(bytes, start);
     if (!start) {
         throw new Error("nop start");
     }

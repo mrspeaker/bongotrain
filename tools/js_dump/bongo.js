@@ -287,7 +287,13 @@ const play = (bytes, id, phrase) => {
     }
 };
 
-const play_song = (bytes, id) => {
+const play_song = (song) => {
+    console.log("dddddd", song);
+    ["0", "1", "2"].forEach((ch, i) => {
+        // const b = song[
+    });
+    return;
+
     const sfx = get_sfx(bytes, sfx_data[id]);
     const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
     console.log(bpm, sfx);
@@ -311,16 +317,45 @@ const play_song = (bytes, id) => {
     }
 };
 
+const expand_voice = (bytes, voice) => {
+    const patterns = voice.ptrs.map((p) => get_note_sequence(bytes, p));
+    return {
+        repeat: voice.repeat_idx,
+        patterns,
+        pattern_duration: patterns.reduce(
+            (ac, notes) =>
+                ac +
+                notes.reduce((ac, note) => {
+                    return note.duration + ac;
+                }, 0),
+            0,
+        ),
+    };
+};
+
 const get_song = (bytes, id) => {
     const sfx = get_song_ptrs(bytes, id);
-    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
+    const { speed, len, volume, transpose } = sfx.meta;
+    const bpm = ((8 - speed) / 8) * 200 + 100;
+    const notes = 1;
 
-    return { sfx, bpm };
+    return {
+        sfx,
+        bpm,
+        len,
+        speed,
+        volume,
+        voices: sfx.voices,
+        voice0: expand_voice(bytes, sfx.voice0),
+        voice1: expand_voice(bytes, sfx.voice1),
+        voice2: expand_voice(bytes, sfx.voice2),
+    };
 };
 
 async function handle_tunes() {
     const bytes = await get_bongo_bytes();
     const all_songs = sfx_data.map((i) => get_song(bytes, i));
+    console.log(all_songs);
 
     const ui = mk_ui();
 
@@ -330,7 +365,7 @@ async function handle_tunes() {
         const song = parseInt($get(ui.notes), 10) ?? 0;
         const phrase = parseInt($get(ui.phrase), 10) ?? 0;
         //play(bytes, song, phrase);
-        play_song(bytes, song);
+        play_song(all_songs[song]);
     });
 }
 
