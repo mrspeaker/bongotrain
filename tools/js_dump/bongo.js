@@ -1,6 +1,8 @@
 import { get_bongo_bytes, get_rom_bytes } from "./rom.js";
 
-import { $, $set, $get, $click } from "./dom.js";
+import { $, $set, $get, $click, $inner } from "./dom.js";
+
+import { NUM_SCREENS, draw_level, level_name } from "./levels.js";
 
 import {
     get_note_sequence,
@@ -17,11 +19,12 @@ import { pal, mk_tiles_from_rom, draw_tile } from "./extract_gfx.js";
 
 (async () => {
     const ctx = document.getElementById("board").getContext("2d");
-    const ctx_dst = document.getElementById("dst").getContext("2d");
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
-    const pix = ctx.getImageData(0, 0, w, h);
-    const pix_dst = ctx.getImageData(0, 0, w, h);
+    // Blank buffers to draw into. Use createImageData, not getImageData: we
+    // never read existing canvas pixels, and a getImageData readback renders
+    // corrupted (vertical stripes) on Firefox/macOS Retina.
+    const pix = ctx.createImageData(w, h);
 
     const bytes1 = await get_rom_bytes("b-h.bin");
     const bytes2 = await get_rom_bytes("b-k.bin");
@@ -72,184 +75,7 @@ import { pal, mk_tiles_from_rom, draw_tile } from "./extract_gfx.js";
         }
     }
 
-    const o = 16;
-    const o2 = 3;
-
-    // Map tiles to dest
-    [
-        [0x10, 0, 0, 0], // blank
-        ...(() =>
-            Array(27)
-                .fill(0)
-                .map((_, i) => [0x11 + i, i, 0, 0]))(), // alphabet
-        [0x8b, 27, 0, 0], // copyright
-        [0x89, 28, 0, 0], // cursor up arrow
-        [0x51, 29, 0, 0], // red circle
-        [0x52, 30, 0, 0], // green
-        [0x53, 31, 0, 0], // white
-
-        ...(() =>
-            Array(28)
-                .fill(0)
-                .map((_, i) => [0xc0 + i, i, 1, 2]))(), // level nums
-
-        [0x2c, 28, 1, 0], // sq open
-        [0x2d, 29, 1, 0], // sq red
-        [0x2e, 30, 1, 0], // sq green
-        [0x2f, 31, 1, 0], // sq white
-
-        [0x58, 28, 2, 0], // RUB start
-        [0x59, 29, 2, 0], // RUB end
-        [0x5a, 30, 2, 0], // END start
-        [0x5b, 31, 2, 0], // END end
-
-        ...(() =>
-            Array(12)
-                .fill(0)
-                .map((_, i) => [0x90 + i, i, 2, 0]))(), // pickup numbers
-
-        [0x8a, 12, 2, 1], // lil guy
-        [0x8c, 13, 2, 0], // pickups 1
-        [0x8d, 14, 2, 0],
-        [0x8e, 15, 2, 0],
-        [0x8f, 16, 2, 0],
-        [0x9c, 17, 2, 0], // pickups 2
-        [0x9d, 18, 2, 0],
-        [0x9e, 19, 2, 0],
-        [0x9f, 20, 2, 0],
-
-        [0xb8, 26, 10, 0], // outline 1
-        [0xbf, 27, 10, 0],
-        [0xb7, 28, 10, 0],
-        [0xb9, 26, 11, 0],
-        [0xbe, 28, 11, 0],
-        [0xba, 26, 12, 0],
-        [0xbb, 27, 12, 0],
-        [0xbc, 28, 12, 0],
-        [0xb4, 26, 13, 0], // bonus1
-        [0xb5, 27, 13, 0],
-        [0xb6, 28, 13, 0],
-
-        [0xe0, 29, 10, 0], // ourline 2
-        [0xe7, 30, 10, 0],
-        [0xdf, 31, 10, 0],
-        [0xe1, 29, 11, 0],
-        [0xe6, 31, 11, 0],
-        [0xe2, 29, 12, 0],
-        [0xe3, 30, 12, 0],
-        [0xe4, 31, 12, 0],
-        [0xdc, 29, 13, 0], // bonus 2
-        [0xdd, 30, 13, 0],
-        [0xde, 31, 13, 0],
-
-        [0x76, 1, 20, 0], // dino cage
-        [0x74, 2, 20, 0],
-        [0x7e, 3, 20, 0],
-        [0x77, 1, 21, 0],
-        [0x75, 2, 21, 0],
-        [0x7f, 3, 21, 0],
-        [0x7a, 1, 22, 0],
-        [0x78, 2, 22, 0],
-        [0x7c, 3, 22, 0],
-        [0x7b, 1, 23, 0],
-        [0x79, 2, 23, 0],
-        [0x7d, 3, 23, 0],
-
-        [0x76 - o, 1 + o2, 20, 0], // dino cage
-        [0x74 - o, 2 + o2, 20, 0],
-        [0x7e - o, 3 + o2, 20, 0],
-        [0x77 - o, 1 + o2, 21, 0],
-        [0x75 - o, 2 + o2, 21, 0],
-        [0x7f - o, 3 + o2, 21, 0],
-        [0x7a - o, 1 + o2, 22, 0],
-        [0x78 - o, 2 + o2, 22, 0],
-        [0x7c - o, 3 + o2, 22, 0],
-        [0x7b - o, 1 + o2, 23, 0],
-        [0x79 - o, 2 + o2, 23, 0],
-        [0x7d - o, 3 + o2, 23, 0],
-    ].forEach(([t, x, y, col]) => {
-        draw_tile(tiles[t], x * cell_size, y * cell_size, w, pal[col], pix_dst);
-    });
-
-    // Map sprites to dest
-    [
-        [0x28, 0, 4, 0], // B
-        [0x29, 2, 4, 0],
-        [0x2a, 4, 4, 0],
-        [0x2b, 6, 4, 0],
-        [0x2c, 8, 4, 0], // O
-
-        [0x40, 10, 4, 2], // nugget dance frame 1
-        [0x41, 12, 4, 2],
-        [0x42, 14, 4, 2],
-        [0x43, 16, 4, 2],
-        [0x45, 18, 4, 2], // bongo dance frame 1
-        [0x46, 20, 4, 2],
-        [0x47, 22, 4, 2],
-        [0x48, 24, 4, 2],
-
-        [0x69, 26, 4, 2], // bongo walk
-        [0x6a, 28, 4, 2],
-        [0x6b, 30, 4, 2],
-
-        [0x4c, 0, 6, 1], // main man
-        [0x4d, 0, 8, 1], // mm feet
-        [0x4e, 2, 6, 1], // fr2
-        [0x4f, 2, 8, 1],
-        [0x50, 4, 6, 1], // fr3
-        [0x51, 4, 8, 1],
-        [0x52, 6, 6, 1], // fr4
-        [0x53, 6, 8, 1],
-        [0x54, 8, 6, 1], // fr5
-        [0x55, 8, 8, 1],
-        [0x57, 10, 6, 1], // back fr 1
-        [0x58, 10, 8, 1],
-        [0x59, 12, 6, 1], // back fr 2
-        [0x5a, 12, 8, 1],
-        [0x5b, 14, 6, 1], // back fr 3
-        [0x5c, 14, 8, 1],
-        [0x7a, 16, 6, 1], // dance 1
-        [0x7b, 16, 8, 1],
-        [0x7c, 18, 6, 1], // dance 2
-        [0x7d, 18, 8, 1],
-        [0x7e, 20, 6, 1], // dance 3
-        [0x7f, 20, 8, 1],
-        [0x66, 22, 6, 1], // die
-        [0x67, 24, 6, 1],
-        [0x56, 22, 8, 1], // jump legs
-        [0x68, 24, 8, 1], // die cross
-
-        [0x6c, 1, 10, 2], // dino (head offset 1 in x)
-        [0x70, 0, 12, 2],
-        [0x6d, 4, 10, 2],
-        [0x71, 3, 12, 2],
-        [0x6e, 7, 10, 2],
-        [0x72, 6, 12, 2],
-        [0x6f, 10, 10, 2],
-        [0x73, 9, 12, 2],
-
-        [0x78, 13, 10, 2], // dino cage intro top
-        [0x79, 12, 12, 2], // dino cage intro
-
-        [0x63, 0, 14, 6], // duck
-        [0x64, 2, 14, 6],
-        [0x74, 4, 14, 7], // blob guy
-        [0x75, 6, 14, 7],
-        [0x76, 8, 14, 7], // blue fire
-        [0x77, 10, 14, 7],
-        [0x62, 12, 14, 7], // arrow'd
-
-        [0x5d, 0, 16, 5], // rock fall
-        [0x5e, 2, 16, 5],
-        [0x5f, 4, 16, 5],
-        [0x60, 6, 16, 5],
-        [0x61, 8, 16, 5],
-    ].forEach(([t, x, y, col]) => {
-        drawSpr(t, x * cell_size, y * cell_size, pal[col], pix_dst);
-    });
-
     ctx.putImageData(pix, 0, 0);
-    ctx_dst.putImageData(pix_dst, 0, 0);
 })();
 
 const tunes_5 = [
@@ -417,3 +243,29 @@ async function handle_tunes() {
 }
 
 handle_tunes();
+
+// Level visualizer: flip through each screen's background with prev/next.
+async function handle_levels() {
+    const bytes = await get_bongo_bytes();
+    const gfx = mk_tiles_from_rom(
+        await get_rom_bytes("b-h.bin"),
+        await get_rom_bytes("b-k.bin"),
+    );
+    const ctx = $("#level").getContext("2d");
+    const label = $("#level-label");
+    let screen = 1;
+
+    const render = () => {
+        draw_level(ctx, gfx, bytes, screen);
+        $inner(label, `screen ${screen} / ${NUM_SCREENS}`);
+    };
+    const step = (d) => () => {
+        screen = ((screen - 1 + d + NUM_SCREENS) % NUM_SCREENS) + 1;
+        render();
+    };
+    $click($("#level-prev"), step(-1));
+    $click($("#level-next"), step(+1));
+    render();
+}
+
+handle_levels();

@@ -22,7 +22,15 @@
     <body>
         <div>
             <canvas id="board" width="256" height="256"></canvas>
-            <canvas id="dst" width="256" height="256"></canvas>
+        </div>
+        <div class="controls">
+            level:
+            <button id="level-prev">&#9664; prev</button>
+            <span id="level-label"></span>
+            <button id="level-next">next &#9654;</button>
+        </div>
+        <div>
+            <canvas id="level" width="232" height="256"></canvas>
         </div>
         <div class="controls">
             song:
