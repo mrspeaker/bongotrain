@@ -4560,11 +4560,13 @@ level_bg__nTn:
     db   $03,$40,$00,$09,$FC,$00,$1E,$FC,$FF
 
 ;;; ==========================================
-
+; 0 = enable, 1 = disable
+; bit 5/4/3 (noise C/B/A) = 1,1,1 -> noise OFF all channels
+; bit 2/1/0 (tone  C/B/A) = 0,0,0 -> tone ON all channels
 init_aysnd:
     ld   a,ay_enable
     out  (aysnd_write_0),a
-    ld   a,$38               ; 00111000 = all channels noise on.
+    ld   a,$38               ; 00111000 = tone on / noise off on all three channels
     out  (aysnd_write_1),a
     ret
 
