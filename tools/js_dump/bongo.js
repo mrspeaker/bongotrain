@@ -4,6 +4,8 @@ import { $, $set, $get, $click, $inner } from "./dom.js";
 
 import { NUM_SCREENS, draw_level, level_name } from "./levels.js";
 
+import { CHARS_W, CHARS_H, draw_chars } from "./chars.js";
+
 import {
     get_note_sequence,
     get_note_table,
@@ -269,3 +271,17 @@ async function handle_levels() {
 }
 
 handle_levels();
+
+// Character viewer: each game character's animation frames in a labelled row.
+async function handle_chars() {
+    const gfx = mk_tiles_from_rom(
+        await get_rom_bytes("b-h.bin"),
+        await get_rom_bytes("b-k.bin"),
+    );
+    const ctx = $("#chars").getContext("2d");
+    ctx.canvas.width = CHARS_W;
+    ctx.canvas.height = CHARS_H;
+    draw_chars(ctx, gfx);
+}
+
+handle_chars();

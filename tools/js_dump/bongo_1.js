@@ -52,7 +52,9 @@ const chunk = (arr, size) => {
     const ctx = document.getElementById("board").getContext("2d");
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
-    const pix = ctx.getImageData(0, 0, w, h);
+    // Blank buffer to draw into. Use createImageData, not getImageData: a
+    // getImageData readback renders corrupted (vertical stripes) on Firefox/macOS.
+    const pix = ctx.createImageData(w, h);
 
     const bytes1 = await getRomBytes("b-h.bin");
     const bytes2 = await getRomBytes("b-k.bin");
