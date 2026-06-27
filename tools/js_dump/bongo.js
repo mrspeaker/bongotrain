@@ -3,10 +3,14 @@ import { get_bongo_bytes, get_rom_bytes } from "./rom.js";
 import { $, $set, $get, $click } from "./dom.js";
 
 import {
-    play_notes,
     get_note_sequence,
-    get_sfx_ptrs,
+    get_note_table,
     get_song_ptrs,
+    play_notes,
+    play_block,
+    stop_notes,
+    find_hidden_tunes,
+    tune_note_count,
 } from "./play_notes.js";
 
 import { pal, mk_tiles_from_rom, draw_tile } from "./extract_gfx.js";
@@ -261,95 +265,155 @@ const sfx_data = [
     0x5560, 0x5dea, 0x5e88, 0x5f30, 0x5f78, 0x4b40,
 ];
 
+// Labels for each sfx_data entry, from point_hl_to_sfx_data in bongo.asm.
+const SONG_NAMES = [
+    "lil tune",
+    "death ditty",
+    "pickup sound",
+    "jump sfx",
+    "falling sound",
+    "fast low 1/8note tune",
+    "dino start sound",
+    "high-pitch win sound",
+    "game over song",
+    "credit? (few notes)",
+    "like sfx15",
+    "scary woods song",
+    "post-bonus tune",
+    "main tune (level 1)",
+    "intro riff",
+];
+
+// The author's hand-collected note-data block addresses from the sound ROM,
+// plus the "wass all this?" orphan at $5D1A. handle_tunes() surfaces whichever
+// of these no song references -- i.e. sound data normal play never triggers.
+const SOUND_BLOCKS = [...tunes_5, ...tunes_6, 0x5d1a];
+
+const options = (items) =>
+    items
+        .map(([value, label]) => `<option value="${value}">${label}</option>`)
+        .join("");
+
+// A complete two-voice tune found unused in the ROM. Two phrases (14- and
+// 19-note), each harmonized into an upper and lower line; the voices are
+// duration-synced at 108 frames so they loop together. No song header points
+// at it, so we hand-assemble one. Meta is borrowed from the neighbouring song
+// at 0x5770 (same region, also 2-voice) -- a best guess; tweak to taste.
+const HIDDEN_DUET = {
+    name: "hidden duet (reconstructed)",
+    sfx: {
+        voices: 2,
+        meta: { len: 1, speed: 8, volume: 15, transpose: 16 },
+        voice0: { ptrs: [0x5630, 0x5650], repeat_idx: 0 }, // upper line
+        voice1: { ptrs: [0x5678, 0x5696], repeat_idx: 0 }, // lower line
+        voice2: { ptrs: [], repeat_idx: -1 },
+    },
+};
+
+// A single-voice melody found unused in the ROM: three same-length (32-tick)
+// phrases of a descending theme, played in sequence. These blocks sit among
+// song 13's note data in the 0x4Axx region, so it borrows song 13's meta.
+const HIDDEN_MELODY = {
+    name: "hidden melody (3 phrases)",
+    sfx: {
+        voices: 1,
+        meta: { len: 1, speed: 5, volume: 15, transpose: 0 },
+        voice0: { ptrs: [0x4a80, 0x4a94, 0x4aaa], repeat_idx: 0 },
+        voice1: { ptrs: [], repeat_idx: -1 },
+        voice2: { ptrs: [], repeat_idx: -1 },
+    },
+};
+
 const mk_ui = () => ({
     btnPlay: $("#play"),
+    btnStop: $("#stop"),
+    btnPlayUnused: $("#play-unused"),
     notes: $("#notes"),
-    phrase: $("#phrase"),
-    songs: $("#songs"),
+    unused: $("#unused"),
 });
 
-const play = (bytes, id, phrase) => {
-    const sfx = get_sfx(bytes, sfx_data[id]);
-    const bpm = ((8 - sfx.meta.speed) / 8) * 200 + 100;
-    console.log(bpm, sfx);
-
-    let any = false;
-    ["0", "1", "2"].forEach((ch) => {
-        const ptrs = sfx["voice" + ch].ptrs;
-        if (phrase < ptrs.length) {
-            const n = get_note_sequence(bytes, ptrs[phrase]);
-            play_notes(n, 0, bpm);
-            any = true;
-        }
-    });
-    if (!any) {
-        throw new Error("no phrase #" + phrase);
-    }
+// Decode a voice's patterns for the on-screen debug dump (uses the real ROM
+// note table for pitches). Playback itself goes through play_notes.
+const expand_voice = (bytes, voice, note_table) => {
+    const patterns = voice.ptrs.map((p) =>
+        get_note_sequence(bytes, p, note_table),
+    );
+    return { repeat: voice.repeat_idx, patterns };
 };
 
-const play_song = (song) => {
-    // TODO: no, patterns have different durations - need to start next pattern after longest previous!
-    song.voice0.patterns.reduce((time, pattern) => {
-        return play_notes(pattern, time, song.bpm);
-    }, 0);
-    song.voice1.patterns.reduce((time, pattern) => {
-        return play_notes(pattern, time, song.bpm);
-    }, 0);
-    song.voice2.patterns.reduce((time, pattern) => {
-        return play_notes(pattern, time, song.bpm);
-    }, 0);
-};
-
-const expand_voice = (bytes, voice) => {
-    const patterns = voice.ptrs.map((p) => get_note_sequence(bytes, p));
-    return {
-        repeat: voice.repeat_idx,
-        patterns,
-        pattern_duration: patterns.reduce(
-            (ac, notes) =>
-                ac +
-                notes.reduce((ac, note) => {
-                    return note.duration + ac;
-                }, 0),
-            0,
-        ),
-    };
-};
-
-const get_song = (bytes, id) => {
+const get_song = (bytes, id, note_table) => {
     const sfx = get_song_ptrs(bytes, id);
     const { speed, len, volume, transpose } = sfx.meta;
-    const bpm = ((8 - speed) / 8) * 200 + 100;
-    const notes = 1;
 
     return {
         sfx,
-        bpm,
         len,
         speed,
         volume,
+        transpose,
         voices: sfx.voices,
-        voice0: expand_voice(bytes, sfx.voice0),
-        voice1: expand_voice(bytes, sfx.voice1),
-        voice2: expand_voice(bytes, sfx.voice2),
+        voice0: expand_voice(bytes, sfx.voice0, note_table),
+        voice1: expand_voice(bytes, sfx.voice1, note_table),
+        voice2: expand_voice(bytes, sfx.voice2, note_table),
     };
 };
 
 async function handle_tunes() {
     const bytes = await get_bongo_bytes();
-    const all_songs = sfx_data.map((i) => get_song(bytes, i));
-    console.log(all_songs);
-
+    const note_table = get_note_table(bytes);
+    const all_songs = [
+        ...sfx_data.map((i) => get_song(bytes, i, note_table)),
+        HIDDEN_DUET,
+        HIDDEN_MELODY,
+    ];
     const ui = mk_ui();
 
-    $set(ui.songs, JSON.stringify(all_songs, null, 1));
+    // Song dropdown (the last entry is the reconstructed hidden duet).
+    ui.notes.innerHTML = options(
+        all_songs.map((s, i) => [i, `${i}: ${s.name ?? SONG_NAMES[i] ?? "?"}`]),
+    );
+
+    // Unused/hidden sounds: tune-shaped note-data blocks that no song points
+    // at. Two sources are merged: the heuristic scanner (auto-discovery) and
+    // the author's hand-collected addresses (catches blocks the scanner's $FF
+    // alignment misses, e.g. 0x44c0). The same tune test drops non-musical
+    // data such as the 0x5D1A orphan.
+    const referenced = new Set();
+    all_songs.forEach((s) =>
+        ["voice0", "voice1", "voice2"]
+            .slice(0, s.sfx.voices)
+            .forEach((v) => s.sfx[v].ptrs.forEach((p) => referenced.add(p))),
+    );
+    const scanned = find_hidden_tunes(bytes, referenced).filter((t) => !t.ref);
+    const curated = SOUND_BLOCKS.filter((a) => !referenced.has(a)).map((a) => ({
+        addr: a,
+        notes: tune_note_count(bytes, a),
+    }));
+    const unused = [
+        ...new Map(
+            [...scanned, ...curated]
+                .filter((t) => t.notes > 0)
+                .map((t) => [t.addr, t]),
+        ).values(),
+    ].sort((a, b) => a.addr - b.addr);
+    ui.unused.innerHTML = options(
+        unused.map((t) => [
+            t.addr,
+            `0x${t.addr.toString(16)} (${t.notes} notes)`,
+        ]),
+    );
 
     $click(ui.btnPlay, () => {
-        const song = parseInt($get(ui.notes), 10) ?? 0;
-        const phrase = parseInt($get(ui.phrase), 10) ?? 0;
-        //play(bytes, song, phrase);
-        play_song(all_songs[song]);
+        const song = parseInt($get(ui.notes), 10) || 0;
+        play_notes(bytes, all_songs[song].sfx, note_table, { repeats: 1 });
     });
+
+    $click(ui.btnPlayUnused, () => {
+        const addr = parseInt($get(ui.unused), 10) || 0;
+        play_block(bytes, addr, note_table);
+    });
+
+    $click(ui.btnStop, () => stop_notes());
 }
 
 handle_tunes();
