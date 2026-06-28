@@ -9,7 +9,7 @@ const SPR = 16; // a sprite is a 2x2 group of cells (16x16)
 
 // Draw one sprite (16x16) at x,y. ROM cell order within a sprite is
 // [top-right, bottom-right, top-left, bottom-left].
-const draw_spr = (gfx, spr, x, y, cols, pix, w) => {
+export const draw_sprite = (gfx, spr, x, y, cols, pix, w) => {
     const o = spr * 4;
     draw_tile(gfx[o], x + CELL, y, w, cols, pix);
     draw_tile(gfx[o + 1], x + CELL, y + CELL, w, cols, pix);
@@ -78,7 +78,7 @@ export const draw_chars = (ctx, gfx) => {
         let x = LABEL_W;
         ch.frames.forEach((frame) => {
             frame.forEach(([spr, dx, dy]) =>
-                draw_spr(gfx, spr, x + dx, y + dy, pal[ch.theme], pix, w),
+                draw_sprite(gfx, spr, x + dx, y + dy, pal[ch.theme], pix, w),
             );
             x += Math.max(...frame.map(([, dx]) => dx)) + SPR + GAP;
         });
