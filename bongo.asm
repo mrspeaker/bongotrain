@@ -84,8 +84,8 @@
     enemy_3_timer     = $803C  ;
     enemy_4_active    = $803D  ; ...1 - active as well? two kinds of active?
     rock_left_timer   = $803E  ; Rock left timer
-    _803f             = $803F  ; ...2
-    _8040             = $8040  ; ?
+    _803f             = $803F  ; Rock left anim frame timer
+    _8040             = $8040  ; unused, written never read.
     enemy_6_active    = $8041  ;
 
 ;;; I'm starting to think it's not about channels, but about "songs" (tunes or sfx)
@@ -1518,9 +1518,9 @@ _06BE:
     jr   z,_06C6
     call player_move_right
     ret
-;; looks like bit 4 and 6 aren't used (up/dpwn?)
+;; bit 4 and 6 aren't used (up/dpwn)
 _06C6:
-    bit  4,a ; ?
+    bit  4,a ; is up?
     jr   z,_06CE
     nop
     nop
@@ -1528,7 +1528,7 @@ _06C6:
     ret
 ;; bit 6?
 _06CE:
-    bit  6,a
+    bit  6,a ; is down?
     ret  z
     nop
     nop
@@ -1541,7 +1541,11 @@ _06CE:
 
 ;; "Physics": do jumps according to jump lookup tables
 player_physics:
-    dc   5, 0                   ; some nops
+    nop                      ; some nops... what did it do before eh?
+    nop
+    nop
+    nop
+    nop
     ld   a,(jump_tbl_idx)
     dec  a ; idx - 1
     ld   (jump_tbl_idx),a
@@ -11114,12 +11118,18 @@ chased_by_a_dino_screen:
     db   $FF
     db   $FF
     db   $FF
+
+;; ===== Hidden song (checkout /tools/js_dump to hear it)! =====
+;;   Voice 0 (upper line): $5630 (phrase 1) + $5650 (phrase 2)
+;;   Voice 1 (lower line): $5678 (phrase 1) + $5696 (phrase 2)
+;; melody: $5630 - voice 0 (upper), phrase 1 (14 notes)
     db   $0E,$02,$13,$04,$13,$04,$13,$02
     db   $13,$06,$1A,$04,$1A,$04,$1A,$02
     db   $1E,$06,$1C,$04,$1E,$02,$1C,$02
     db   $1A,$06,$17,$04
     dc   4, $FF
 
+;; melody: $5650 - voice 0 (upper), phrase 2 (19 notes)
     db   $13,$02,$17,$02,$18,$02,$1A,$02
     db   $1A,$04,$1A,$04,$1A,$06,$1A,$02
     db   $18,$06,$18,$04,$18,$02,$18,$02
@@ -11128,6 +11138,7 @@ chased_by_a_dino_screen:
     db   $FF
     db   $FF
 
+;; melody: $5678 - voice 1 (lower), phrase 1 (14 notes)
     db   $09,$02,$0B,$04,$0B,$04,$0B,$02
     db   $0C,$06,$15,$04,$15,$04,$15,$02
     db   $1A,$06,$18,$04,$1A,$02,$18,$02
@@ -11135,6 +11146,7 @@ chased_by_a_dino_screen:
     db   $FF
     db   $FF
 
+;; melody: $5696 - voice 1 (lower), phrase 2 (19 notes)
     db   $0E,$02,$13,$02,$13,$02,$15,$02
     db   $15,$04,$15,$04,$15,$06,$15,$02
     db   $13,$06,$13,$04,$13,$02,$13,$02
@@ -11142,7 +11154,7 @@ chased_by_a_dino_screen:
     db   $13,$04,$13,$02,$15,$02
     dc   4, $FF
 
-    db   $05                    ; wat
+    db   $05                    ; wat... looks unused
     db   $05
     db   $0C
     db   $00
@@ -11171,7 +11183,7 @@ draw_buggy_border:
 
     dc   4, $FF
 
-;; ??? who knows...
+;; ??? who knows, looks unused...
     db   $03,$C0
     db   $16,$A0
     db   $18,$22
@@ -11767,7 +11779,7 @@ _5E90:
     db   $EE,$09 ; jump back 9 bytes (to _5e90)
     dc   6,$FF
 
-_5EA0:
+sfx_13_notes:                          ; SFX 13 fast-high weird post-bonus song
     db   $0E,$01,$10,$01,$13,$01,$17,$01
     db   $16,$01,$17,$01,$16,$01,$17,$01
     db   $16,$01,$17,$01,$16,$01,$18,$01
@@ -11786,7 +11798,7 @@ _5EA0:
 _5F18:
     dc   8,$FF                  ; 5f1c is in here
 
-    dw   _5EA0 ; notes
+    dw   sfx_13_notes ; notes
     db   $EE,$03 ; jumps back 3 bytes
 _sfx_13_meta:  ; 5F24
     db   $03,$06,$0F,$10
