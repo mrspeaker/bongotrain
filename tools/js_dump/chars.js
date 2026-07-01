@@ -25,6 +25,11 @@ const stack = (head, legs) => [
 
 // A frame is a list of parts [spr, dx, dy]. theme indexes pal[] (extract_gfx).
 // fps (optional) sets the per-character playback rate in the animation viewer.
+// seq (optional) is an explicit play order of frame indices; without it the
+// viewer just cycles frames 0,1,2,... The dances aren't linear: the game drives
+// them from dance_frame_data (see do_cutscene in bongo.asm), an 8-step table
+// stepped once per 8 vblanks (~7.5fps). Sprite id = frame byte in that table
+// + 0x40, which is how these seq/fps values were derived.
 const CHARS = [
     { name: "player walk", theme: 1, frames: [
         stack(0x4c, 0x4d), stack(0x4e, 0x4f), stack(0x50, 0x51),
@@ -33,22 +38,27 @@ const CHARS = [
     { name: "player back", theme: 1, frames: [
         stack(0x57, 0x58), stack(0x59, 0x5a), stack(0x5b, 0x5c),
     ] },
-    { name: "player dance", theme: 1, frames: [
+    { name: "player dance", theme: 1, fps: 7.5, seq: [1, 0, 1, 0, 2, 0, 2, 0],
+        frames: [
         stack(0x7a, 0x7b), stack(0x7c, 0x7d), stack(0x7e, 0x7f),
     ] },
     { name: "player die", theme: 1, frames: [
         [[0x66, 0, 0]], [[0x67, 0, 0]], [[0x68, 0, 0]],
     ] },
-    { name: "dino", theme: 2, frames: [
-        [[0x6c, CELL, 0], [0x70, 0, SPR]],
-        [[0x6d, CELL, 0], [0x71, 0, SPR]],
-        [[0x6e, CELL, 0], [0x72, 0, SPR]],
-        [[0x6f, CELL, 0], [0x73, 0, SPR]],
+    // Walk is dino_anim_lookup fr4-7 (the only head+legs poses): head 6D/6C
+    // (mouth open/closed) alternating over leg frames 70-73. Heads 6E (lunge)
+    // and 6F (small far head) are head-only, legs-hidden poses -- not shown.
+    { name: "dino walk", theme: 2, frames: [
+        [[0x6d, CELL, 0], [0x70, 0, SPR]],
+        [[0x6c, CELL, 0], [0x71, 0, SPR]],
+        [[0x6d, CELL, 0], [0x72, 0, SPR]],
+        [[0x6c, CELL, 0], [0x73, 0, SPR]],
     ] },
     { name: "bongo walk", theme: 2, frames: [
         [[0x69, 0, 0]], [[0x6a, 0, 0]], [[0x6b, 0, 0]],
     ] },
-    { name: "bongo dance", theme: 2, frames: [
+    { name: "bongo dance", theme: 2, fps: 7.5, seq: [1, 0, 1, 2, 3, 2, 3, 0],
+        frames: [
         [[0x45, 0, 0]], [[0x46, 0, 0]], [[0x47, 0, 0]], [[0x48, 0, 0]],
     ] },
     { name: "nugget", theme: 2, frames: [
@@ -103,7 +113,8 @@ export const draw_chars_anim = (ctx, gfx, t) => {
     CHARS.forEach((ch, r) => {
         const y = r * ROW_H + 4;
         const fps = ch.fps ?? DEFAULT_FPS;
-        const i = Math.floor((t / 1000) * fps) % ch.frames.length;
+        const seq = ch.seq ?? ch.frames.map((_, k) => k);
+        const i = seq[Math.floor((t / 1000) * fps) % seq.length];
         ch.frames[i].forEach(([spr, dx, dy]) =>
             draw_sprite(gfx, spr, LABEL_W + dx, y + dy, pal[ch.theme], pix, w),
         );
