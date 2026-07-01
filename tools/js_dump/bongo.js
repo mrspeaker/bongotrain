@@ -4,7 +4,7 @@ import { $, $set, $get, $click, $inner } from "./dom.js";
 
 import { NUM_SCREENS, draw_level, level_name } from "./levels.js";
 
-import { CHARS_W, CHARS_H, draw_chars } from "./chars.js";
+import { CHARS_W, CHARS_H, draw_chars, draw_chars_anim } from "./chars.js";
 
 import {
     get_note_sequence,
@@ -285,3 +285,22 @@ async function handle_chars() {
 }
 
 handle_chars();
+
+// Animated character viewer: same rows as #chars, but each character's frames
+// cycle in place via requestAnimationFrame.
+async function handle_anim() {
+    const gfx = mk_tiles_from_rom(
+        await get_rom_bytes("b-h.bin"),
+        await get_rom_bytes("b-k.bin"),
+    );
+    const ctx = $("#anim").getContext("2d");
+    ctx.canvas.width = CHARS_W;
+    ctx.canvas.height = CHARS_H;
+    const tick = (t) => {
+        draw_chars_anim(ctx, gfx, t);
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
+handle_anim();

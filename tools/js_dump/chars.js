@@ -24,6 +24,7 @@ const stack = (head, legs) => [
 ];
 
 // A frame is a list of parts [spr, dx, dy]. theme indexes pal[] (extract_gfx).
+// fps (optional) sets the per-character playback rate in the animation viewer.
 const CHARS = [
     { name: "player walk", theme: 1, frames: [
         stack(0x4c, 0x4d), stack(0x4e, 0x4f), stack(0x50, 0x51),
@@ -86,6 +87,29 @@ export const draw_chars = (ctx, gfx) => {
     ctx.putImageData(pix, 0, 0);
 
     // Row labels drawn straight to the canvas, on top of the sprites.
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px monospace";
+    ctx.textBaseline = "middle";
+    CHARS.forEach((ch, r) => ctx.fillText(ch.name, 4, r * ROW_H + 4 + CELL));
+};
+
+const DEFAULT_FPS = 8; // per-character frame rate unless ch.fps overrides
+
+// Animated view: each character's frames cycle in place over time. `t` is a
+// timestamp in ms (e.g. from requestAnimationFrame). Call this every rAF tick.
+export const draw_chars_anim = (ctx, gfx, t) => {
+    const w = ctx.canvas.width;
+    const pix = ctx.createImageData(w, ctx.canvas.height);
+    CHARS.forEach((ch, r) => {
+        const y = r * ROW_H + 4;
+        const fps = ch.fps ?? DEFAULT_FPS;
+        const i = Math.floor((t / 1000) * fps) % ch.frames.length;
+        ch.frames[i].forEach(([spr, dx, dy]) =>
+            draw_sprite(gfx, spr, LABEL_W + dx, y + dy, pal[ch.theme], pix, w),
+        );
+    });
+    ctx.putImageData(pix, 0, 0);
+
     ctx.fillStyle = "#fff";
     ctx.font = "10px monospace";
     ctx.textBaseline = "middle";
