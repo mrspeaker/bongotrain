@@ -3,7 +3,7 @@
 # relies on zmac (http://48k.ca/zmac.html) for compilation
 
 # Notes: making compileable listing from mame `dasm`
-# 1. In Mame: `dasm bongdump.asm,0,5fff,0`  ; note last 0 to omit something?
+# 1. In Mame: `dasm bongdump.asm,0,5fff,1`  ; last 1 is for opcodes on/off
 # 2. Manually chop off start of lines to only leave instructions
 # 3. zmac -j -c -n bongdump.asm ; try to compile with rel jumps fixed
 # .. rename any `rrd (hl)` to `rrd` (same for `rld`)
