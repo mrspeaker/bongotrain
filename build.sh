@@ -13,6 +13,18 @@
 # cmp  -l -x dump/bg1.bin zout/bg1
 #
 
+# Usage: ./build.sh [--hack]
+#   default: CRC errors are fatal - no zip is produced, exits non-zero.
+#   --hack:  CRC errors are only warnings - a (bootleg) zip is still produced.
+
+hack=0
+for arg in "$@"; do
+    case "$arg" in
+        --hack) hack=1 ;;
+        *) echo "Unknown option: $arg"; echo "Usage: $0 [--hack]"; exit 2 ;;
+    esac
+done
+
 set -e
 
 # clear previous output
@@ -27,9 +39,14 @@ echo "go."
 # split bytes into 4K chunks (to mimic ROMs)
 echo -n "split:     "
 split -b4k -d -a 1 zout/bongo.cim zout/bg
+# rename chunks to match the ROM names (bg0 -> bg1.bin, ...)
+for f in zout/bg[0-9]; do
+    n=${f#zout/bg}
+    mv "$f" "zout/bg$((n+1)).bin"
+done
 
 # check the checksums match to real ROM dumps
-obj=(`echo zout/bg*`)
+obj=(`echo zout/bg*.bin`)
 rom=(`echo dump/bongo/bg*.bin`)
 
 if [ ${#obj[@]} -eq "6" ]; then
@@ -47,27 +64,36 @@ for index in ${!obj[*]}; do
     b=`shasum ${rom[$index]} | awk '{ print $1 }'`
     if test "$a" != "$b"
     then
-        echo
-        echo "CRC error: ${obj[$index]} - ${rom[$index]} (${index}k):"
-        cmp -l ${obj[$index]} ${rom[$index]} | head -n 5
+        if [ "$hack" -eq "1" ]; then
+            printf "CRC warning: %s differs from %s (\$%04x)\n" ${obj[$index]} ${rom[$index]} $((index*0x1000))
+        else
+            echo
+            printf "CRC error: %s - %s (\$%04x):\n" ${obj[$index]} ${rom[$index]} $((index*0x1000))
+            cmp -l ${obj[$index]} ${rom[$index]} | head -n 5 || true
+        fi
         err=$((err+1))
     fi
 done
 
+if [ "$err" -ne "0" ] && [ "$hack" -eq "0" ]; then
+    echo
+    echo "no go."
+    exit 1
+fi
+
 # package up full Bongo MAME ROMs
 echo -n "zip:       "
 cd zout
-mv bg0 bg1.bin
-mv bg1 bg2.bin
-mv bg2 bg3.bin
-mv bg3 bg4.bin
-mv bg4 bg5.bin
-mv bg5 bg6.bin
 rm bongo.cim
 
 # copy over color and gfx ROMs
 cp ../dump/bongo/b-*.bin .
-zip -j -q bongo.zip *.bin
+# non-exact (--hack) builds get a -hack suffix so they're never mistaken for the real ROM set
+zipname=bongo.zip
+if [ "$err" -ne "0" ]; then
+    zipname=bongo-hack.zip
+fi
+zip -j -q "$zipname" *.bin
 cd ..
 
 if [ "$err" -eq "0" ]; then
@@ -75,9 +101,8 @@ if [ "$err" -eq "0" ]; then
     echo "bon:       go!"
 else
     echo "-"
-    echo "(bootleg) zip: go."
-    echo
-    echo "no go."
+    echo "(bootleg) zip: go. (zout/$zipname)"
+    echo "hack:      go. $err ROMs differ from original."
 fi
 
 echo
